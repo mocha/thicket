@@ -1,0 +1,12 @@
+build/
+dist/
+.env
+*.log
+node_modules/
+.scratch/
+.svelte-kit/
+
+# Project notes and planning live outside this repository.
+backlog/
+docs/DECISIONS.md
+docs/SCALE.md

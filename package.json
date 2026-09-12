@@ -1,0 +1,16 @@
+{
+  "name": "thicket",
+  "version": "0.1.0",
+  "description": "A feed reader for the rewilded web: follow sites, collect them, share collections.",
+  "license": "AGPL-3.0-only",
+  "repository": { "type": "git", "url": "git+https://github.com/mocha/thicket.git" },
+  "homepage": "https://github.com/mocha/thicket",
+  "private": true,
+  "scripts": {
+    "api": "pnpm --filter @thicket/api dev",
+    "web": "pnpm --filter @thicket/web dev",
+    "db:push": "pnpm --filter @thicket/api db:push",
+    "seed": "pnpm --filter @thicket/api seed",
+    "passwd": "pnpm --filter @thicket/api passwd"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "thicket",
+  "short_name": "thicket",
+  "description": "A feed reader for the rewilded web",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f1e8",
+  "theme_color": "#f6f1e8",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }],
+  "share_target": {
+    "action": "/add",
+    "method": "GET",
+    "params": { "url": "url", "text": "text", "title": "title" }
+  }
+}

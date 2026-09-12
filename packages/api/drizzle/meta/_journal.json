@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789128629533,
+      "tag": "0000_spicy_emma_frost",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789234547034,
+      "tag": "0001_handy_garia",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789241158258,
+      "tag": "0002_unsorted_exclusive",
+      "breakpoints": true
+    }
+  ]
+}

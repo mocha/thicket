@@ -1,0 +1,33 @@
+{
+  "name": "@thicket/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/index.ts",
+    "start": "node --enable-source-maps dist/index.js",
+    "build": "tsc -p tsconfig.build.json",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx --env-file=../../.env src/db/migrate.ts",
+    "db:baseline": "tsx --env-file=../../.env src/scripts/baseline.ts",
+    "db:push": "drizzle-kit push",
+    "seed": "tsx --env-file=../../.env src/scripts/seed.ts",
+    "icons": "tsx --env-file=../../.env src/scripts/icons.ts",
+    "passwd": "tsx --env-file=../../.env src/scripts/passwd.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
+    "feedsmith": "^2.9.6",
+    "hono": "^4.13.7",
+    "pg": "^8.23.0",
+    "undici": "^8.10.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}

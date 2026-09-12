@@ -1,0 +1,50 @@
+# The canonical small install: thicket + Postgres, one volume.
+#
+#   cp .env.example .env      # set PUBLIC_URL and POSTGRES_PASSWORD
+#   docker compose up -d
+#   open $PUBLIC_URL and sign up; the first account is the admin.
+#
+# Upgrade:  docker compose pull && docker compose up -d   (migrations run on boot)
+# Backup:   docker compose exec -T db pg_dump -U thicket thicket > thicket.sql
+#
+# Behind your own reverse proxy? Remove the `ports:` block and route to the
+# thicket container on 3000. Set PUBLIC_URL to the https address it answers at.
+
+services:
+  thicket:
+    image: ${THICKET_IMAGE:-ghcr.io/mocha/thicket:latest}
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://thicket:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/thicket
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
+      INSTANCE_NAME: ${INSTANCE_NAME:-}
+      SIGNUPS: ${SIGNUPS:-invite}
+      TRACK_ACTIVITY: ${TRACK_ACTIVITY:-true}
+      FETCH_CONCURRENCY: ${FETCH_CONCURRENCY:-8}
+      RETAIN_ITEMS_DAYS: ${RETAIN_ITEMS_DAYS:-0}
+      RETAIN_FETCH_LOG_DAYS: ${RETAIN_FETCH_LOG_DAYS:-90}
+      RETAIN_EVENTS_DAYS: ${RETAIN_EVENTS_DAYS:-90}
+    ports:
+      - "${PORT:-3000}:3000"
+
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: thicket
+      POSTGRES_DB: thicket
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thicket -d thicket"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

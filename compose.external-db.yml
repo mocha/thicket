@@ -1,0 +1,25 @@
+# thicket against a Postgres you already run (a shared lab server, Supabase,
+# Railway's, RDS). Only the app container; you own the database.
+#
+#   cp .env.example .env    # set DATABASE_URL and PUBLIC_URL
+#   docker compose -f compose.external-db.yml up -d
+#
+# Behind a reverse proxy, route your hostname to this host on ${PORT}.
+
+services:
+  thicket:
+    image: ${THICKET_IMAGE:-ghcr.io/mocha/thicket:latest}
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
+      INSTANCE_NAME: ${INSTANCE_NAME:-}
+      SIGNUPS: ${SIGNUPS:-invite}
+      TRACK_ACTIVITY: ${TRACK_ACTIVITY:-true}
+      FETCH_CONCURRENCY: ${FETCH_CONCURRENCY:-8}
+      RETAIN_ITEMS_DAYS: ${RETAIN_ITEMS_DAYS:-0}
+      RETAIN_FETCH_LOG_DAYS: ${RETAIN_FETCH_LOG_DAYS:-90}
+      RETAIN_EVENTS_DAYS: ${RETAIN_EVENTS_DAYS:-90}
+    ports:
+      - "${PORT:-3000}:3000"

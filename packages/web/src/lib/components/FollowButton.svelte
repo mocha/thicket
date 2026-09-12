@@ -1,0 +1,134 @@
+<script lang="ts">
+  /**
+   * The one control for "my relationship to this feed". A split button:
+   *   not following            → [ Follow | ▾ ]   primary follows into Unsorted
+   *   following, unsorted      → [ Following | ▾ ]
+   *   following, 1 collection  → [ In 1 collection | ▾ ]
+   *   following, N collections → [ In N collections | ▾ ]
+   * The ▾ opens a panel with the collection checklist and an explicit Unfollow.
+   * When following, the primary label also opens the panel (there is no
+   * one-click unfollow; that stays deliberate).
+   * `mainLabel` + `onmain` repurpose the main half for a page-specific action
+   * ("Remove from Tech News" on a Manage page) while ▾ still opens the same
+   * checklist, so filing is one control everywhere.
+   * `inline` renders the panel in flow under the button instead of floating.
+   * Use it inside dialogs: a transformed/top-layer ancestor breaks fixed
+   * positioning, and the panel would land off screen.
+   */
+  import { api } from '$lib/api';
+  import { collectionStore, loadCollections } from '$lib/collections.svelte';
+  import CollectionCheckList from './CollectionCheckList.svelte';
+  import { showToast } from '$lib/toast.svelte';
+
+  let { feedId, ids = $bindable(), name = 'this feed', compact = false, inline = false, mainLabel, onmain, onchange }: {
+    feedId: number; ids: number[]; name?: string; compact?: boolean; inline?: boolean; mainLabel?: string; onmain?: () => void; onchange?: (ids: number[]) => void;
+  } = $props();
+
+  let open = $state(false);
+  let anchor = $state<HTMLElement | null>(null);
+  let panel = $state<HTMLElement | null>(null);
+  let pos = $state<{ top: number; left: number; up: boolean }>({ top: 0, left: 0, up: false });
+
+  const following = $derived(ids.length > 0);
+  const named = $derived(ids.filter((id) => id !== collectionStore.rootId).length);
+  const label = $derived(!following ? 'Follow' : named === 0 ? 'Following' : named === 1 ? 'In 1 collection' : `In ${named} collections`);
+
+  async function follow() {
+    const r = await api.follow(feedId);
+    ids = r.collectionIds;
+    onchange?.(ids);
+    api.event('feed_followed', { feedId, via: 'follow_button' });
+    void loadCollections(true);
+  }
+
+  async function unfollow() {
+    const removed = await api.unfollow(feedId);
+    const prev = ids;
+    ids = [];
+    onchange?.(ids);
+    open = false;
+    api.event('feed_unfollowed', { feedId, via: 'follow_button' });
+    void loadCollections(true);
+    showToast(`Unfollowed ${name}`, {
+      label: 'Undo',
+      run: async () => { const r = await api.restore(feedId, removed.collectionIds.length ? removed.collectionIds : prev); ids = r.collectionIds; onchange?.(ids); void loadCollections(true); }
+    });
+  }
+
+  function place() {
+    if (!anchor) return;
+    const r = anchor.getBoundingClientRect();
+    const width = Math.min(320, window.innerWidth - 16);
+    const left = Math.max(8, Math.min(r.right - width, window.innerWidth - width - 8));
+    const spaceBelow = window.innerHeight - r.bottom;
+    const up = spaceBelow < 320 && r.top > spaceBelow;
+    // Never let a tall panel run off the top; the checklist scrolls instead (see .panel max-height).
+    pos = { top: up ? Math.max(r.top - 8, Math.min(r.top - 8, window.innerHeight - 8)) : r.bottom + 8, left, up };
+  }
+
+  function toggle() {
+    if (!open && !inline) place();
+    open = !open;
+    if (open) api.event('follow_panel_opened', { feedId });
+  }
+
+  $effect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => { if (!panel?.contains(e.target as Node) && !anchor?.contains(e.target as Node)) open = false; };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') open = false; };
+    const onScroll = () => place();
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', onScroll);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); window.removeEventListener('resize', onScroll); };
+  });
+</script>
+
+<div class="split" class:on={following && !onmain} class:neutral={!!onmain} class:compact bind:this={anchor}>
+  {#if onmain}
+    <button class="main" onclick={onmain}>{mainLabel ?? label}</button>
+  {:else if following}
+    <button class="main" onclick={toggle} aria-expanded={open}>{label}</button>
+  {:else}
+    <button class="main" onclick={follow}>{label}</button>
+  {/if}
+  <button class="more" onclick={toggle} aria-expanded={open} aria-label="More options for {name}">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+  </button>
+</div>
+
+{#if open}
+  <div class="panel" class:inline bind:this={panel} style:top={inline ? undefined : `${pos.top}px`} style:left={inline ? undefined : `${pos.left}px`} style:transform={inline || !pos.up ? 'none' : 'translateY(-100%)'} role={inline ? 'group' : 'dialog'} aria-label="Collections for {name}">
+    <div class="eyebrow">{following ? 'In your collections' : 'Follow into a collection'}</div>
+    <CollectionCheckList {feedId} bind:ids onchange={(next) => onchange?.(next)} />
+    {#if following}
+      <button class="unfollow" onclick={unfollow}>Unfollow</button>
+    {/if}
+  </div>
+{/if}
+
+<style>
+  .split { display: inline-flex; align-items: stretch; border-radius: 999px; border: 1px solid var(--accent); overflow: hidden; background: var(--surface); color: var(--accent); flex: none; }
+  .split.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
+  .split.neutral { border-color: var(--line); color: var(--text-2); }
+  .split.neutral .more { border-left-color: var(--line); }
+  .main { padding: 8px 12px 8px 14px; font-size: 14px; font-weight: 600; color: inherit; white-space: nowrap; }
+  .more { padding: 0 8px 0 6px; border-left: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); display: grid; place-items: center; color: inherit; }
+  .main:hover, .more:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .compact .main { padding: 6px 10px 6px 12px; font-size: 13px; }
+  .compact .more { padding: 0 6px 0 4px; }
+  .panel {
+    position: fixed; z-index: 60; width: min(320px, calc(100vw - 16px));
+    background: var(--surface); color: var(--text); border-radius: 14px; padding: 12px 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--line);
+    max-height: calc(100vh - 16px); display: flex; flex-direction: column;
+  }
+  /* A long list of collections scrolls inside the panel rather than pushing Unfollow (or the panel) off screen. */
+  .panel:not(.inline) :global(.checks) { overflow-y: auto; min-height: 0; max-height: 50vh; }
+  .panel.inline { position: static; width: 100%; flex-basis: 100%; order: 10; box-shadow: none; border: 1px solid var(--line); padding: 10px 12px; }
+  /* Inside a sheet the list scrolls on its own so Unfollow stays in reach. */
+  .panel.inline :global(.checks) { max-height: 34vh; overflow-y: auto; }
+  .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 4px; }
+  .unfollow { width: 100%; margin-top: 10px; padding: 9px; border-radius: 10px; color: var(--danger); font-weight: 600; font-size: 14px; border: 1px solid var(--line); }
+  .unfollow:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
+</style>
