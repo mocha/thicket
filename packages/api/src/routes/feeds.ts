@@ -98,8 +98,11 @@ feeds.get("/", async (c) => {
     order by ${order} limit ${limit + 1} offset ${offset}
   `);
   const [{ total }] = (await db.execute<{ total: number }>(sql`select count(*)::int as total from feeds f where ${sql.join(where, sql` and `)}`)).rows;
+  // The unfiltered size of the index, so the page can say "154 of 2,218"
+  // rather than leaving a filtered count to be read as the whole thing.
+  const [{ indexTotal }] = (await db.execute<{ indexTotal: number }>(sql`select count(*)::int as "indexTotal" from feeds`)).rows;
   const page = rows.rows.slice(0, limit).map(shape);
-  return c.json({ feeds: page, total, nextOffset: rows.rows.length > limit ? offset + limit : null });
+  return c.json({ feeds: page, total, indexTotal, nextOffset: rows.rows.length > limit ? offset + limit : null });
 });
 
 /** Add by URL. This is the endpoint the share target, bookmarklet, or any external tool hits. */

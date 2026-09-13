@@ -56,6 +56,7 @@
   /* ---- feeds ---- */
   let feeds = $state<Feed[]>([]);
   let feedsTotal = $state(0);
+  let feedsAll = $state(0);
   let feedsNext = $state<number | null>(null);
   const sorts = [
     { id: 'recent', label: 'Recently posted' },
@@ -70,13 +71,14 @@
     try {
       const res = await api.feeds({ q, network: feedsNetwork, since, sort, limit: 50, offset: reset ? 0 : feedsNext ?? 0 });
       feeds = reset ? res.feeds : [...feeds, ...res.feeds];
-      feedsTotal = res.total; feedsNext = res.nextOffset;
+      feedsTotal = res.total; feedsAll = res.indexTotal; feedsNext = res.nextOffset;
     } catch (e) { error = e instanceof Error ? e.message : String(e); } finally { loading = false; }
   }
 
   /* ---- collections ---- */
   let cols = $state<ExploreCollection[]>([]);
   let colsTotal = $state(0);
+  let colsAll = $state(0);
   let colsNext = $state<number | null>(null);
   async function loadCols(reset = false) {
     if (loading || (!reset && colsNext === null)) return;
@@ -84,13 +86,14 @@
     try {
       const res = await exploreApi.collections({ q, network: colsNetwork, limit: 30, offset: reset ? 0 : colsNext ?? 0 });
       cols = reset ? res.collections : [...cols, ...res.collections];
-      colsTotal = res.total; colsNext = res.nextOffset;
+      colsTotal = res.total; colsAll = res.indexTotal; colsNext = res.nextOffset;
     } catch (e) { error = e instanceof Error ? e.message : String(e); } finally { loading = false; }
   }
 
   /* ---- users ---- */
   let users = $state<ExploreUser[]>([]);
   let usersTotal = $state(0);
+  let usersAll = $state(0);
   let usersNext = $state<number | null>(null);
   async function loadUsers(reset = false) {
     if (loading || (!reset && usersNext === null)) return;
@@ -98,7 +101,7 @@
     try {
       const res = await exploreApi.users({ q, limit: 30, offset: reset ? 0 : usersNext ?? 0 });
       users = reset ? res.users : [...users, ...res.users];
-      usersTotal = res.total; usersNext = res.nextOffset;
+      usersTotal = res.total; usersAll = res.indexTotal; usersNext = res.nextOffset;
     } catch (e) { error = e instanceof Error ? e.message : String(e); } finally { loading = false; }
   }
   let followBusy = $state<string | null>(null);
@@ -143,6 +146,13 @@
   });
 
   const total = $derived(view === 'feeds' ? feedsTotal : view === 'collections' ? colsTotal : usersTotal);
+  const all = $derived(view === 'feeds' ? feedsAll : view === 'collections' ? colsAll : usersAll);
+  /**
+   * A search or filter makes this a count of results, not of everything there
+   * is. Saying so is the difference between "the index holds 154 feeds" and
+   * "154 of them match" — the first reading is what a bare number invites.
+   */
+  const count = $derived(total === all || !all ? `${total.toLocaleString()}` : `${total.toLocaleString()} of ${all.toLocaleString()}`);
   const empty = $derived(!loading && (view === 'feeds' ? feeds.length : view === 'collections' ? cols.length : users.length) === 0);
 </script>
 
@@ -163,13 +173,13 @@
   <div class="head">
     <div class="titles">
       {#if view === 'feeds'}
-        <h2>Find new feeds <span class="count">{total}</span></h2>
+        <h2>Find new feeds <span class="count">{count}</span></h2>
         <p>Every feed this instance knows about — the ones people here read, and a few thousand more it was seeded with. Search it, filter it, and take what looks good.</p>
       {:else if view === 'collections'}
-        <h2>Find new collections <span class="count">{total}</span></h2>
+        <h2>Find new collections <span class="count">{count}</span></h2>
         <p>Browse collections of feeds curated by other users and copy them to your profile.</p>
       {:else}
-        <h2>Find users <span class="count">{total}</span></h2>
+        <h2>Find users <span class="count">{count}</span></h2>
         <p>Search for people with public profiles, browse their collections, and follow them to see their notes and what they read.</p>
       {/if}
     </div>

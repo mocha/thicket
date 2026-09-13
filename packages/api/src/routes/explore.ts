@@ -28,6 +28,7 @@ explore.get("/collections", async (c) => {
   }
   if (network) where.push(sql`exists(select 1 from user_follows uf where uf.follower_id = ${viewerId} and uf.followee_id = col.user_id)`);
   const [{ total }] = (await db.execute<{ total: number }>(sql`select count(*)::int as total from collections col join users u on u.id = col.user_id where ${sql.join(where, sql` and `)}`)).rows;
+  const [{ indexTotal }] = (await db.execute<{ indexTotal: number }>(sql`select count(*)::int as "indexTotal" from collections col join users u on u.id = col.user_id where ${where[0]}`)).rows;
   const rows = await db.execute(sql`
     select col.id, col.name, col.slug, col.description, u.handle, u.display_name as "displayName",
            (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount",
@@ -44,7 +45,7 @@ explore.get("/collections", async (c) => {
   c.header("vary", "cookie");
   if (!viewer && !q) c.header("cache-control", "public, max-age=120");
   const page = rows.rows.slice(0, limit);
-  return c.json({ collections: page.map((r: any) => ({ ...r, id: Number(r.id) })), total, nextOffset: rows.rows.length > limit ? offset + limit : null });
+  return c.json({ collections: page.map((r: any) => ({ ...r, id: Number(r.id) })), total, indexTotal, nextOffset: rows.rows.length > limit ? offset + limit : null });
 });
 
 /**
@@ -118,6 +119,7 @@ explore.get("/users", async (c) => {
     where.push(sql`(u.handle ilike ${like} or u.display_name ilike ${like} or u.bio ilike ${like})`);
   }
   const [{ total }] = (await db.execute<{ total: number }>(sql`select count(*)::int as total from users u where ${sql.join(where, sql` and `)}`)).rows;
+  const [{ indexTotal }] = (await db.execute<{ indexTotal: number }>(sql`select count(*)::int as "indexTotal" from users u where ${where[0]}`)).rows;
   const rows = await db.execute(sql`
     select u.handle, u.display_name as "displayName", u.bio, u.created_at as "createdAt",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = u.id) as feeds,
@@ -128,5 +130,5 @@ explore.get("/users", async (c) => {
     order by "isFollowing" desc, lower(coalesce(u.display_name, u.handle)) limit ${limit + 1} offset ${offset}
   `);
   const page = rows.rows.slice(0, limit);
-  return c.json({ users: page.map((r: any) => ({ ...r, createdAt: new Date(r.createdAt).toISOString() })), total, nextOffset: rows.rows.length > limit ? offset + limit : null });
+  return c.json({ users: page.map((r: any) => ({ ...r, createdAt: new Date(r.createdAt).toISOString() })), total, indexTotal, nextOffset: rows.rows.length > limit ? offset + limit : null });
 });

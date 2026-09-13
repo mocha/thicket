@@ -24,7 +24,7 @@ export type Feed = {
   /** With ?network=, how many people in that network follow it. */
   networkFollowers?: number | null;
 };
-export type FeedIndexPage = { feeds: Feed[]; total: number; nextOffset: number | null };
+export type FeedIndexPage = { feeds: Feed[]; total: number; indexTotal: number; nextOffset: number | null };
 
 export type Collection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; feedCount: number; isPublic: boolean };
 
@@ -285,14 +285,14 @@ export const exploreApi = {
     if (o.network) q.set('network', '1');
     if (o.limit) q.set('limit', String(o.limit));
     if (o.offset) q.set('offset', String(o.offset));
-    return j<{ collections: ExploreCollection[]; total: number; nextOffset: number | null }>(`/api/explore/collections?${q}`);
+    return j<{ collections: ExploreCollection[]; total: number; indexTotal: number; nextOffset: number | null }>(`/api/explore/collections?${q}`);
   },
   users: (opts: { q?: string; limit?: number; offset?: number } = {}) => {
     const q = new URLSearchParams();
     if (opts.q) q.set('q', opts.q);
     if (opts.limit) q.set('limit', String(opts.limit));
     if (opts.offset) q.set('offset', String(opts.offset));
-    return j<{ users: ExploreUser[]; total: number; nextOffset: number | null }>(`/api/explore/users?${q}`);
+    return j<{ users: ExploreUser[]; total: number; indexTotal: number; nextOffset: number | null }>(`/api/explore/users?${q}`);
   },
   /** The instance's starter packs: one account's public collections. `from` is that handle, or null when falling back. */
   featured: () => j<{ from: string | null; collections: (ExploreCollection & { isMine: boolean })[] }>('/api/explore/featured')
