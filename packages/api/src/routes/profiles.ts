@@ -15,6 +15,7 @@ import { db, schema } from "../db/client.js";
 import { currentUser, normalizeHandle } from "../lib/auth.js";
 import { exportCollectionOpml } from "../lib/opml.js";
 import { PUBLIC_URL } from "../lib/config.js";
+import { slugify, uniqueCollectionSlug } from "../lib/slug.js";
 
 export const profiles = new Hono();
 
@@ -95,9 +96,11 @@ profiles.delete("/:handle/follow", async (c) => {
 type ColRow = { id: number; name: string; slug: string; description: string | null; isPublic: boolean; createdAt: string; depth: number };
 
 /**
- * Resolve a collection by handle + slug (shallowest match wins) with visibility
- * applied. The root is excluded for everyone, owner included: it is the tree's
- * parent, holds nothing, and has no page.
+ * Resolve a collection by handle + slug, with visibility applied. Slugs are
+ * unique per user (migration 0005), so a slug names exactly one collection at
+ * any depth — no shallowest-match tiebreak, and no collection that exists but
+ * has no working address. The root is excluded for everyone, owner included:
+ * it is the tree's parent, holds nothing, and has no page.
  */
 async function visibleCollection(c: Context, handleRaw: string, slug: string) {
   const u = await owner(handleRaw);
@@ -111,7 +114,7 @@ async function visibleCollection(c: Context, handleRaw: string, slug: string) {
       union all select col.id, col.parent_id, col.name, col.slug, col.description, col.is_public, col.created_at, t.depth + 1 from collections col join t on col.parent_id = t.id
     )
     select id, name, slug, description, is_public as "isPublic", created_at as "createdAt", depth
-    from t where slug = ${slug} and depth > 0 ${isMe ? sql`` : sql`and is_public`} order by depth limit 1
+    from t where slug = ${slug} and depth > 0 ${isMe ? sql`` : sql`and is_public`} limit 1
   `);
   const col = rows.rows[0];
   if (!col) return { error: "not found" as const, status: 404 as const };
@@ -174,16 +177,19 @@ profiles.post("/:handle/collections/:slug/copy", async (c) => {
   const raw = r.col;
 
   const created = await db.transaction(async (tx) => {
-    // Name dedupe within my root: "News", then "News (from @handle)", then "News (from @handle) 2"...
-    const mine = await tx.select({ slug: schema.collections.slug }).from(schema.collections).where(and(eq(schema.collections.userId, me.id), eq(schema.collections.parentId, me.rootCollectionId)));
+    // Name dedupe: "News", then "News (from @handle)", then "News (from @handle) 2"...
+    // Against every slug of mine, since slugs are unique per user rather than per parent.
+    const mine = await tx.select({ slug: schema.collections.slug }).from(schema.collections).where(eq(schema.collections.userId, me.id));
     const taken = new Set(mine.map((m) => m.slug));
-    const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "untitled";
     let name = raw.name;
     if (taken.has(slugify(name))) name = `${raw.name} (from @${r.u.handle})`;
     for (let n = 2; taken.has(slugify(name)); n++) name = `${raw.name} (from @${r.u.handle}) ${n}`;
 
+    // A sub-collection's name can collide with something elsewhere in my tree,
+    // so each one asks for its own free slug as it is created.
     async function copyTree(srcId: number, parentId: number, nm: string, description: string | null) {
-      const [col] = await tx.insert(schema.collections).values({ userId: me.id, parentId, name: nm, slug: slugify(nm), description, copiedFromId: srcId }).returning();
+      const slug = await uniqueCollectionSlug(me.id, nm, { tx });
+      const [col] = await tx.insert(schema.collections).values({ userId: me.id, parentId, name: nm, slug, description, copiedFromId: srcId }).returning();
       await tx.execute(sql`insert into collection_feeds (collection_id, feed_id, title_override) select ${col.id}, feed_id, title_override from collection_feeds where collection_id = ${srcId} on conflict do nothing`);
       // Private sub-collections stay behind; the owner chose not to show them.
       const kids = await tx.select().from(schema.collections).where(and(eq(schema.collections.parentId, srcId), eq(schema.collections.isPublic, true)));

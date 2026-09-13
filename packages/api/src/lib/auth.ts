@@ -167,7 +167,7 @@ export async function createUser(input: { handle: string; password: string; disp
     // First account on the instance is the admin.
     const [{ n }] = (await tx.execute<{ n: number }>(sql`select count(*)::int as n from users`)).rows;
     const [user] = await tx.insert(schema.users).values({ handle: input.handle, passwordHash, displayName: input.displayName?.trim() || null, isAdmin: n === 0 }).returning();
-    const [root] = await tx.insert(schema.collections).values({ userId: user.id, parentId: null, name: "All collections", slug: "all-collections" }).returning();
+    const [root] = await tx.insert(schema.collections).values({ userId: user.id, parentId: null, name: "All collections", slug: ROOT_SLUG }).returning();
     await tx.insert(schema.collections).values({ userId: user.id, parentId: root.id, name: FIRST_COLLECTION_NAME, slug: FIRST_COLLECTION_SLUG });
     return user;
   });
@@ -179,6 +179,10 @@ export async function findUserByHandle(handle: string) {
 }
 
 /** The collection a brand-new account starts with. Also the rescue name when someone deletes their last one. */
+/** The root is never rendered and never addressed. A leading double dash is
+ * something slugify() cannot produce, so no name anyone types can collide. */
+export const ROOT_SLUG = "--root";
+
 export const FIRST_COLLECTION_NAME = "My first collection";
 export const FIRST_COLLECTION_SLUG = "my-first-collection";
 

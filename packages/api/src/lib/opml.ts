@@ -8,6 +8,7 @@ import { eq, sql } from "drizzle-orm";
 import { generateOpml, parseOpml } from "feedsmith";
 import { db, schema } from "../db/client.js";
 import { addFeedToCollection, ensureFeedLazy } from "./subscribe.js";
+import { uniqueCollectionSlug } from "./slug.js";
 
 type Outline = { text: string; title?: string; type?: string; xmlUrl?: string; htmlUrl?: string; description?: string; outlines?: Outline[] };
 
@@ -57,10 +58,13 @@ export async function importOpml(userId: number, collectionId: number, text: str
         }
       } else if (o.outlines?.length) {
         const name = (o.title ?? o.text ?? "Untitled").trim() || "Untitled";
-        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "untitled";
-        let [child] = await db.select().from(schema.collections).where(sql`${schema.collections.parentId} = ${target} and ${schema.collections.slug} = ${slug}`);
+        // Re-importing the same document merges into the sub-collection it made
+        // last time rather than piling up copies, so match on the outline's own
+        // text. Not on the slug: slugs are unique per user now, so this folder's
+        // may carry a -2 that the document knows nothing about.
+        let [child] = await db.select().from(schema.collections).where(sql`${schema.collections.parentId} = ${target} and ${schema.collections.name} = ${name}`);
         if (!child) {
-          [child] = await db.insert(schema.collections).values({ userId, parentId: target, name, slug, description: o.description ?? null }).returning();
+          [child] = await db.insert(schema.collections).values({ userId, parentId: target, name, slug: await uniqueCollectionSlug(userId, name), description: o.description ?? null }).returning();
           result.collections++;
         }
         await walk(o.outlines, child.id);

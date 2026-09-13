@@ -61,23 +61,53 @@ river.get("/", async (c) => {
     ? sql`with recursive tree as (select col.id from collections col where col.id = ${collectionId} and ${readable} union all select c.id from collections c join tree t on c.parent_id = t.id join collections p on p.id = t.id where p.parent_id is not null and (c.is_public or c.user_id = ${userId}))`
     : sql`with tree as (select id from collections where user_id = ${userId})`;
 
+  /**
+   * Feeds and items are global, so "my river" is a merge across the feeds I
+   * follow. The obvious way — walk the global published_at index backwards and
+   * throw away everyone else's feeds — costs the whole instance's posting rate
+   * divided by my share of it. That is unbounded, and it is worst for the
+   * person following least, which is what every new account looks like.
+   *
+   * So: take each followed feed's newest page from items_feed_published_id_idx
+   * and merge them. Any item in the global newest N must be in its own feed's
+   * newest N, so the merge is exact, and the cost becomes proportional to how
+   * many feeds *I* follow rather than how big the instance is — flat forever.
+   *
+   * Measured on the alpha at 14,583 items, 2026-09-13: following 2 of 680 feeds
+   * went from 13,166 buffers (~103 MB) and 8.4 ms to 256 buffers and 0.40 ms.
+   * Following 648 went the other way, 47 buffers to 2,564 — about four buffers
+   * per followed feed, which is one btree descent each and the floor for this
+   * shape. That is the trade on purpose: an unbounded cost became a bounded one.
+   *
+   * A single feed's river needs none of it; that was always one index scan.
+   */
+  const perFeed = limit + 1;
+  const pageCte = feedId
+    ? sql`select i.id, i.published_at from items i where i.feed_id = ${feedId} ${cursorClause}
+           order by i.published_at desc, i.id desc limit ${perFeed}`
+    : sql`select p.id, p.published_at from followed cross join lateral (
+             select i.id, i.published_at from items i
+             where i.feed_id = followed.feed_id ${cursorClause}
+             order by i.published_at desc, i.id desc limit ${perFeed}
+           ) p
+           order by p.published_at desc, p.id desc limit ${perFeed}`;
+
   const rows = await db.execute<RiverItem & { blocked: boolean }>(sql`
     ${scope}
     , followed as (
       select distinct cf.feed_id from collection_feeds cf join tree on tree.id = cf.collection_id
     )
+    , page as (${pageCte})
     select i.id, i.feed_id as "feedId", f.title as "feedTitle", f.site_url as "siteUrl",
            i.url, i.title, i.author, i.summary, i.image_url as "imageUrl", i.published_at as "publishedAt",
            exists(select 1 from blocks b where b.user_id = ${userId} and b.feed_id = i.feed_id) as blocked,
            exists(select 1 from feed_icons fi where fi.feed_id = i.feed_id and not fi.generic) as "hasIcon",
            (select bm.id from bookmarks bm where bm.user_id = ${userId} and bm.item_id = i.id limit 1) as "bookmarkId",
            ${noteColumns(userId)}
-    from items i
+    from page
+    join items i on i.id = page.id
     join feeds f on f.id = i.feed_id
-    where ${feedId ? sql`i.feed_id = ${feedId}` : sql`i.feed_id in (select feed_id from followed)`}
-    ${cursorClause}
     order by i.published_at desc, i.id desc
-    limit ${limit + 1}
   `);
   const all = rows.rows;
   const hidden = all.filter((r) => r.blocked).length;

@@ -166,7 +166,9 @@ export const items = pgTable("items", {
 }, (t) => [
   uniqueIndex("items_feed_dedupe_uq").on(t.feedId, t.dedupeKey),
   index("items_published_idx").on(t.publishedAt),
-  index("items_feed_published_idx").on(t.feedId, t.publishedAt),
+  /** Covers the river's per-feed merge (routes/river.ts): feed_id to seek,
+   *  published_at + id to order, and id in the index so the scan needs no heap. */
+  index("items_feed_published_id_idx").on(t.feedId, t.publishedAt.desc(), t.id.desc()),
 ]);
 
 export const collections = pgTable("collections", {
@@ -183,7 +185,8 @@ export const collections = pgTable("collections", {
   copiedFromId: bigint("copied_from_id", { mode: "number" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
-  uniqueIndex("collections_user_parent_slug_uq").on(t.userId, t.parentId, t.slug),
+  /** One address per collection: /@handle/collections/:slug resolves to exactly one row. */
+  uniqueIndex("collections_user_slug_uq").on(t.userId, t.slug),
   index("collections_user_idx").on(t.userId),
 ]);
 

@@ -2,12 +2,9 @@ import { Hono } from "hono";
 import { and, eq, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
+import { slugify, slugTaken, uniqueCollectionSlug } from "../lib/slug.js";
 
 export const collections = new Hono();
-
-function slugify(s: string) {
-  return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "untitled";
-}
 /** Flat list with parent pointers and feed counts; the client builds the tree. */
 collections.get("/", async (c) => {
   const user = currentUser(c);
@@ -26,7 +23,11 @@ collections.post("/", async (c) => {
   const parentId = body.parentId ?? user.rootCollectionId;
   const [parent] = await db.select().from(schema.collections).where(and(eq(schema.collections.id, parentId), eq(schema.collections.userId, user.id)));
   if (!parent) return c.json({ error: "parent not found" }, 404);
-  const [row] = await db.insert(schema.collections).values({ userId: user.id, parentId, name: body.name.trim(), slug: slugify(body.name), description: body.description ?? null }).returning();
+  // A person typed this name. Say it is taken rather than quietly renaming it;
+  // the machine paths (copy, import) are the ones that dedupe on their own.
+  const slug = slugify(body.name);
+  if (await slugTaken(user.id, slug)) return c.json({ error: "You already have a collection with that name.", field: "name" }, 400);
+  const [row] = await db.insert(schema.collections).values({ userId: user.id, parentId, name: body.name.trim(), slug, description: body.description ?? null }).returning();
   return c.json(row, 201);
 });
 
@@ -42,7 +43,9 @@ collections.patch("/:id", async (c) => {
   }
   const patch: Partial<typeof schema.collections.$inferInsert> = {};
   if (body.name !== undefined) {
-    patch.name = body.name.trim(); patch.slug = slugify(body.name);
+    const slug = slugify(body.name);
+    if (await slugTaken(user.id, slug, id)) return c.json({ error: "You already have a collection with that name.", field: "name" }, 400);
+    patch.name = body.name.trim(); patch.slug = slug;
   }
   if (body.description !== undefined) patch.description = body.description;
   if (body.parentId !== undefined) patch.parentId = body.parentId;
@@ -192,8 +195,11 @@ collections.post("/import-url", async (c) => {
   } catch (err) {
     return c.json({ error: `That isn’t a collection we can read: ${err instanceof Error ? err.message : err}` }, 400);
   }
+  // Nobody is at the keyboard here, so this renames rather than refusing:
+  // "News", then "News 2". Checked against every slug of mine, not just my
+  // top-level ones, because slugs are unique per user now.
   const base = (body.name?.trim() || title || target.hostname).slice(0, 80);
-  const mine = await db.select({ slug: schema.collections.slug }).from(schema.collections).where(and(eq(schema.collections.userId, user.id), eq(schema.collections.parentId, user.rootCollectionId)));
+  const mine = await db.select({ slug: schema.collections.slug }).from(schema.collections).where(eq(schema.collections.userId, user.id));
   const taken = new Set(mine.map((x) => x.slug));
   let name = base;
   for (let n = 2; taken.has(slugify(name)); n++) name = `${base} ${n}`;
