@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { api, authApi, profileHref, ApiError } from '$lib/api';
+  import { api, authApi, profileHref, ApiError, type ShareLevel } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { appearance, setFont, setTheme, FONTS, THEMES, type Font, type Theme } from '$lib/theme.svelte';
   import { showToast } from '$lib/toast.svelte';
@@ -53,6 +53,34 @@
       showToast(e instanceof Error ? e.message : String(e));
     }
   }
+
+  /**
+   * The three shareable parts of a profile. Each has its own audience, and
+   * "People I follow" means exactly that: following someone is how you share
+   * with them. Someone following you gains nothing by it.
+   */
+  type VisKey = 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility';
+  const LEVELS: { value: ShareLevel; label: string }[] = [
+    { value: 'private', label: 'Only me' },
+    { value: 'friends', label: 'People I follow' },
+    { value: 'public', label: 'Anyone' }
+  ];
+  const SECTIONS: { key: VisKey; label: string; blurb: Record<ShareLevel, string> }[] = [
+    { key: 'collectionsVisibility', label: 'My collections', blurb: {
+      private: 'Nobody else can see any of your collections.',
+      friends: 'The people you follow can see them. To hide just one, open it, press Settings and switch it to Private.',
+      public: 'Anyone can see them. To hide just one, open it, press Settings and switch it to Private.' } },
+    { key: 'bookmarksVisibility', label: 'My bookmarks', blurb: {
+      private: 'Only you can see what you have saved.',
+      friends: 'The people you follow can browse them and save any to their own.',
+      public: 'Anyone can browse them and save any to their own.' } },
+    { key: 'notesVisibility', label: 'My notes', blurb: {
+      private: 'Your notes are only ever yours.',
+      friends: 'The people you follow see them under posts, and in your recent activity.',
+      public: 'Anyone sees them under posts, and in the recent activity on your profile.' } }
+  ];
+  const setVis = (sec: { key: VisKey; label: string }, l: { value: ShareLevel; label: string }) =>
+    set({ [sec.key]: l.value } as Parameters<typeof authApi.update>[0], `${sec.label}: ${l.label.toLowerCase()}`);
 
   let current = $state('');
   let next = $state('');
@@ -148,19 +176,19 @@
       <span><strong>Private</strong><small>Nothing is shown to anyone. You still count toward feed follower numbers, but no one can see it’s you.</small></span>
     </label>
   </fieldset>
-  <div class="toggles" class:dim={me.profileVisibility === 'private'}>
-    <label class="switch">
-      <input type="checkbox" checked={me.showCollections} onchange={(e) => set({ showCollections: e.currentTarget.checked }, e.currentTarget.checked ? 'Collections shown on your profile' : 'Collections hidden')} />
-      <span><strong>Show my collections</strong><small>All of them, or none. To hide just one, open the collection, press <strong>Settings</strong>, and switch it to Private; private collections never show here even when this is on.</small></span>
-    </label>
-    <label class="switch">
-      <input type="checkbox" checked={me.showBookmarks} onchange={(e) => set({ showBookmarks: e.currentTarget.checked }, e.currentTarget.checked ? 'Bookmarks shown on your profile' : 'Bookmarks hidden')} />
-      <span><strong>Show my bookmarks</strong><small>Others can browse them and save any to their own.</small></span>
-    </label>
-    <label class="switch">
-      <input type="checkbox" checked={me.showNotes} onchange={(e) => set({ showNotes: e.currentTarget.checked }, e.currentTarget.checked ? 'Your notes can be seen by others' : 'Your notes are yours alone')} />
-      <span><strong>Share my notes</strong><small>Your notes show under posts other people read, and in your recent activity on your profile, where anyone can see them. Off, and your notes are only ever yours.</small></span>
-    </label>
+  <div class="shares" class:dim={me.profileVisibility === 'private'}>
+    <p class="help">Each part of your profile has its own audience. <strong>People I follow</strong> means the people you have chosen to follow — someone following you gains nothing by it.</p>
+    {#each SECTIONS as sec (sec.key)}
+      <div class="share">
+        <strong>{sec.label}</strong>
+        <div class="seg" role="radiogroup" aria-label={sec.label}>
+          {#each LEVELS as l (l.value)}
+            <button type="button" role="radio" aria-checked={me[sec.key] === l.value} class:on={me[sec.key] === l.value} onclick={() => setVis(sec, l)}>{l.label}</button>
+          {/each}
+        </div>
+        <small>{sec.blurb[me[sec.key]]}</small>
+      </div>
+    {/each}
   </div>
 </section>
 
@@ -242,8 +270,14 @@
   .radio input, .switch input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
   .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
   .radio small, .switch small { font-size: 13px; color: var(--text-3); }
-  .toggles { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
-  .toggles.dim { opacity: 0.55; }
+  .shares.dim { opacity: 0.55; }
+  .shares { display: flex; flex-direction: column; gap: 18px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .share { display: flex; flex-direction: column; gap: 7px; }
+  .share small { font-size: 13px; color: var(--text-3); }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .seg button { flex: 1; padding: 9px 6px; font-size: 13px; font-weight: 600; color: var(--text-3); background: var(--surface); border-left: 1px solid var(--line); }
+  .seg button:first-child { border-left: 0; }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); }
   .bad { color: var(--danger); margin: 0; font-size: 14px; }
   .admin .help a { color: var(--accent); font-weight: 600; }
   .out { text-align: center; margin: 24px 0 0; }

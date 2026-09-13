@@ -53,7 +53,7 @@ river.get("/", async (c) => {
   }
   // A collection is readable if it is mine, or if its owner shows it: public profile, collections shown, collection public.
   const readable = sql`(col.user_id = ${userId} or exists(
-    select 1 from users u where u.id = col.user_id and u.profile_visibility = 'public' and u.show_collections and col.is_public and col.parent_id is not null))`;
+    select 1 from users u where u.id = col.user_id and u.profile_visibility = 'public' and u.collections_visibility = 'public' and col.is_public and col.parent_id is not null))`;
   // A single feed's river ignores collections entirely: you can read a feed you don't follow.
   const scope = feedId
     ? sql`with tree as (select null::bigint as id where false)`

@@ -72,6 +72,23 @@
   onMount(() => api.event('profile_view', { handle }));
 
   const joined = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+  /**
+   * What the owner is told about their own page: one sentence per section that
+   * isn't shown to everyone, so "who can actually see this" never needs a trip
+   * to Settings to answer.
+   */
+  const NAMES = { collections: 'collections', bookmarks: 'bookmarks', notes: 'notes' } as const;
+  const narrowed = $derived.by(() => {
+    const v = profile && !profile.private ? profile.visibility : undefined;
+    if (!v) return [];
+    const out: string[] = [];
+    for (const k of ['collections', 'bookmarks', 'notes'] as const) {
+      if (v[k] === 'private') out.push(`Nobody else sees your ${NAMES[k]}.`);
+      else if (v[k] === 'friends') out.push(`Only the people you follow see your ${NAMES[k]}.`);
+    }
+    return out;
+  });
 </script>
 
 <svelte:head><title>@{handle} · thicket</title></svelte:head>
@@ -111,8 +128,8 @@
   {#if profile.isMe && profile.visibility}
     {#if profile.visibility.profile === 'private'}
       <p class="note">Your profile is <strong>private</strong>. Only you can see this page. <a href="/settings">Change</a></p>
-    {:else if !profile.visibility.collections || !profile.visibility.bookmarks}
-      <p class="note">Others see this page without {#if !profile.visibility.collections}your collections{/if}{#if !profile.visibility.collections && !profile.visibility.bookmarks} or {/if}{#if !profile.visibility.bookmarks}your bookmarks{/if}. <a href="/settings">Change</a></p>
+    {:else if narrowed.length}
+      <p class="note">{narrowed.join(' ')} <a href="/settings">Change</a></p>
     {/if}
   {/if}
 
@@ -161,7 +178,7 @@
     <section>
       <h2>Notes <span class="n">{profile.notes.count}</span></h2>
       <p class="status">
-        {#if profile.isMe}Notes you’ve left on posts. <a href="/notes">Read them all</a>. Others see them on posts they come across, and in your recent activity above. <a href="/settings">Keep them to yourself</a>.
+        {#if profile.isMe}Notes you’ve left on posts. <a href="/notes">Read them all</a>. {#if profile.visibility?.notes === 'public'}Anyone sees them on posts they come across, and in your recent activity above.{:else if profile.visibility?.notes === 'friends'}The people you follow see them on posts they come across, and in your recent activity above.{:else}Only you can see them.{/if} <a href="/settings">Change</a>.
         {:else if profile.people.isFollowing}You see their notes on posts you come across{#if session.user?.notesFrom === 'none'}, once you allow notes in <a href="/settings">Settings</a>{/if}.
         {:else}Follow them to see their notes on posts you come across.{/if}
       </p>

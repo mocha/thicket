@@ -3,6 +3,7 @@
  * at save time) or from a bare URL. Filterable by source feed or by any
  * collection the source feed is in; both are joins, not stored membership.
  */
+import { allowsSql } from "../lib/visibility.js";
 import { Hono } from "hono";
 import { and, eq, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
@@ -77,7 +78,7 @@ bookmarks.post("/", async (c) => {
   if (body.bookmarkId) {
     const rows = await db.execute<typeof schema.bookmarks.$inferSelect>(sql`
       select b.* from bookmarks b join users u on u.id = b.user_id
-      where b.id = ${body.bookmarkId} and (b.user_id = ${user.id} or (u.profile_visibility = 'public' and u.show_bookmarks))
+      where b.id = ${body.bookmarkId} and (b.user_id = ${user.id} or (u.profile_visibility = 'public' and ${allowsSql("u.bookmarks_visibility", "u.id", user.id)}))
     `);
     const src = rows.rows[0] as any;
     if (!src) return c.json({ error: "bookmark not found" }, 404);

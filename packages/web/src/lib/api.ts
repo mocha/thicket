@@ -178,10 +178,13 @@ export const feedHref = (f: { id: number; slug?: string | null }) => (f.slug ? `
 // ---- accounts and profiles -------------------------------------------------
 
 /** The signed-in user, including settings only they can see. */
+/** Who a part of a profile is shared with. 'friends' is the people the owner follows. */
+export type ShareLevel = 'private' | 'friends' | 'public';
 export type Me = {
   id: number; handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null;
-  profileVisibility: 'public' | 'private'; showCollections: boolean; showBookmarks: boolean;
-  showNotes: boolean; notesFrom: 'none' | 'following' | 'everyone';
+  profileVisibility: 'public' | 'private';
+  collectionsVisibility: ShareLevel; bookmarksVisibility: ShareLevel; notesVisibility: ShareLevel;
+  notesFrom: 'none' | 'following' | 'everyone';
   /** null = follow the instance setting (instanceTracking). */
   trackActivity: boolean | null; instanceTracking: boolean; hasPassword: boolean; createdAt: string; isAdmin: boolean;
 };
@@ -195,7 +198,7 @@ export const authApi = {
   signup: (handle: string, password: string, displayName?: string, inviteCode?: string) => j<Me>('/api/auth/signup', { method: 'POST', body: JSON.stringify({ handle, password, displayName, inviteCode }) }),
   login: (handle: string, password: string) => j<Me>('/api/auth/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   logout: () => j<void>('/api/auth/logout', { method: 'POST' }),
-  update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'showCollections' | 'showBookmarks' | 'showNotes' | 'notesFrom' | 'trackActivity'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
+  update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'notesFrom' | 'trackActivity'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
   changePassword: (current: string, next: string) => j<void>('/api/auth/me/password', { method: 'POST', body: JSON.stringify({ current, next }) })
 };
 
@@ -231,7 +234,7 @@ export type Profile =
       /** null = the owner hides collections from others. */
       collections: ProfileCollection[] | null;
       bookmarks: { count: number } | null;
-      visibility?: { profile: 'public' | 'private'; collections: boolean; bookmarks: boolean; notes: boolean };
+      visibility?: { profile: 'public' | 'private'; collections: ShareLevel; bookmarks: ShareLevel; notes: ShareLevel };
     });
 export type PublicCollectionFeed = {
   id: number; url: string; siteUrl: string | null; title: string | null; description: string | null; slug: string;

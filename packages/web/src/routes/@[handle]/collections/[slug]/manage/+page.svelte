@@ -23,7 +23,8 @@
   let col = $state<CollectionDetail | null>(null);
 
   const profilePrivate = $derived(session.user?.profileVisibility === 'private');
-  const collectionsHidden = $derived(session.user?.showCollections === false);
+  const collectionsHidden = $derived(session.user?.collectionsVisibility === 'private');
+  const collectionsFriendsOnly = $derived(session.user?.collectionsVisibility === 'friends');
 
   let loadedKey = $state<string | undefined>(undefined);
   async function resolve() {
@@ -189,8 +190,9 @@
       {#if profilePrivate}
         <p class="info">Your profile is set to private, so your collections aren’t displayed anywhere. <a href="/settings">Change that in Settings.</a></p>
       {:else if collectionsHidden}
-        <p class="info">Your profile doesn’t show collections right now, so this setting has no effect until it does. <a href="/settings">Change that in Settings.</a></p>
+        <p class="info">Your profile doesn’t show collections to anyone right now, so this setting has no effect until it does. <a href="/settings">Change that in Settings.</a></p>
       {:else}
+        {#if collectionsFriendsOnly}<p class="info">Your collections are shown only to the people you follow. Public here means public to them. <a href="/settings">Change that in Settings.</a></p>{/if}
         <div class="radios" role="radiogroup" aria-label="Collection visibility">
           <label>
             <input type="radio" name="vis" checked={col.isPublic} onchange={() => setPublic(true)} />

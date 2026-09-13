@@ -34,7 +34,7 @@ const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 async function profileHead(handle: string): Promise<Head | null> {
   const rows = await db.execute<{ handle: string; displayName: string | null; bio: string | null; showCollections: boolean; following: number; collections: number }>(sql`
-    select u.handle, u.display_name as "displayName", u.bio, u.show_collections as "showCollections",
+    select u.handle, u.display_name as "displayName", u.bio, (u.collections_visibility = 'public') as "showCollections",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = u.id) as following,
            (select count(*)::int from collections col where col.user_id = u.id and col.parent_id is not null and col.is_public) as collections
     from users u where u.handle = ${handle.toLowerCase()} and u.profile_visibility = 'public'
@@ -50,7 +50,7 @@ async function collectionHead(handle: string, slug: string): Promise<Head | null
   const rows = await db.execute<{ handle: string; displayName: string | null; name: string; description: string | null; feeds: number; titles: string[] | null }>(sql`
     with recursive t as (
       select col.id, col.parent_id, col.name, col.slug, col.description, col.is_public, 0 as depth from collections col
-        join users u on u.id = col.user_id where u.handle = ${handle.toLowerCase()} and u.profile_visibility = 'public' and u.show_collections and col.parent_id is null
+        join users u on u.id = col.user_id where u.handle = ${handle.toLowerCase()} and u.profile_visibility = 'public' and u.collections_visibility = 'public' and col.parent_id is null
       union all select col.id, col.parent_id, col.name, col.slug, col.description, col.is_public, t.depth + 1 from collections col join t on col.parent_id = t.id
     ), pick as (select * from t where slug = ${slug} and depth > 0 and is_public order by depth limit 1)
     select u.handle, u.display_name as "displayName", p.name, p.description,

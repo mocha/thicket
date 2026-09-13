@@ -3,8 +3,10 @@
  *
  * Visibility is checked in layers, most restrictive first:
  *   profile private → only the handle and "this profile is private"
- *   section hidden (show_collections / show_bookmarks) → section absent
- *   collection private (is_public = false) → not listed, 404 if addressed
+ *   section not shared with this viewer → section absent. Each section has an
+ *     audience: private, the people the owner follows, or anyone.
+ *   collection private (is_public = false) → not listed, 404 if addressed.
+ *     A collection can only narrow its section, never widen it.
  * The owner always sees everything on their own profile, with a flag saying
  * what others would see. Follower counts include private profiles: opaque,
  * not absent.
@@ -17,6 +19,7 @@ import { exportCollectionOpml } from "../lib/opml.js";
 import { PUBLIC_URL } from "../lib/config.js";
 import { slugify, uniqueCollectionSlug } from "../lib/slug.js";
 import { activityForViewer } from "../lib/activity.js";
+import { allows, isFriendOf, type Audience } from "../lib/visibility.js";
 
 export const profiles = new Hono();
 
@@ -25,6 +28,15 @@ type Owner = typeof schema.users.$inferSelect;
 async function owner(handleRaw: string): Promise<Owner | null> {
   const [u] = await db.select().from(schema.users).where(eq(schema.users.handle, normalizeHandle(handleRaw)));
   return u ?? null;
+}
+
+/**
+ * What this viewer is to this owner. One follow lookup answers every section,
+ * so it is done once per request rather than per section.
+ */
+async function audienceFor(u: Owner, viewerId: number | undefined): Promise<Audience> {
+  const isMe = viewerId === u.id;
+  return { isMe, isFriend: isMe ? false : await isFriendOf(u.id, viewerId ?? null) };
 }
 
 const publicUser = (u: Owner) => ({ handle: u.handle, displayName: u.displayName, bio: u.bio, homepageUrl: u.homepageUrl, createdAt: u.createdAt.toISOString() });
@@ -44,7 +56,8 @@ profiles.get("/:handle", async (c) => {
   const u = await owner(c.req.param("handle"));
   if (!u) return c.json({ error: "not found" }, 404);
   const viewer = c.get("user");
-  const isMe = viewer?.id === u.id;
+  const who = await audienceFor(u, viewer?.id);
+  const isMe = who.isMe;
   if (u.profileVisibility === "private" && !isMe) return c.json({ handle: u.handle, private: true });
 
   const [{ following }] = (await db.execute<{ following: number }>(sql`
@@ -57,19 +70,19 @@ profiles.get("/:handle", async (c) => {
            exists(select 1 from user_follows where follower_id = ${viewer?.id ?? -1} and followee_id = ${u.id}) as "isFollowing"
   `)).rows;
   const [{ noteCount }] = (await db.execute<{ noteCount: number }>(sql`select count(*)::int as "noteCount" from notes where user_id = ${u.id}`)).rows;
-  const collections = u.showCollections || isMe ? (await collectionRows(u, isMe)).rows : null;
+  const collections = allows(u.collectionsVisibility, who) ? (await collectionRows(u, isMe)).rows : null;
 
   return c.json({
     ...publicUser(u), private: false, isMe, following,
     /** People: how many this person follows, how many follow them, and whether the viewer does. */
     people: { follows: people.follows, followers: people.followers, isFollowing: people.isFollowing },
-    /** Notes they have left, if they share them (always for the owner). */
-    notes: u.showNotes || isMe ? { count: noteCount } : null,
+    /** Notes they have left, if they share them with this viewer (always for the owner). */
+    notes: allows(u.notesVisibility, who) ? { count: noteCount } : null,
     /** null = the owner hides this section. */
     collections,
-    bookmarks: u.showBookmarks || isMe ? { count: bookmarkCount } : null,
-    /** For the owner: what the toggles are set to, so the page can say "hidden from others". */
-    visibility: isMe ? { profile: u.profileVisibility, collections: u.showCollections, bookmarks: u.showBookmarks, notes: u.showNotes } : undefined,
+    bookmarks: allows(u.bookmarksVisibility, who) ? { count: bookmarkCount } : null,
+    /** For the owner: who each section is shared with, so the page can say what others see. */
+    visibility: isMe ? { profile: u.profileVisibility, collections: u.collectionsVisibility, bookmarks: u.bookmarksVisibility, notes: u.notesVisibility } : undefined,
   });
 });
 
@@ -107,8 +120,9 @@ async function visibleCollection(c: Context, handleRaw: string, slug: string) {
   const u = await owner(handleRaw);
   if (!u) return { error: "not found" as const, status: 404 as const };
   const viewer = c.get("user");
-  const isMe = viewer?.id === u.id;
-  if (!isMe && (u.profileVisibility === "private" || !u.showCollections)) return { error: "not found" as const, status: 404 as const };
+  const who = await audienceFor(u, viewer?.id);
+  const isMe = who.isMe;
+  if (!isMe && (u.profileVisibility === "private" || !allows(u.collectionsVisibility, who))) return { error: "not found" as const, status: 404 as const };
   const rows = await db.execute<ColRow>(sql`
     with recursive t as (
       select col.id, col.parent_id, col.name, col.slug, col.description, col.is_public, col.created_at, 0 as depth from collections col where col.user_id = ${u.id} and col.parent_id is null
@@ -208,8 +222,9 @@ profiles.get("/:handle/bookmarks", async (c) => {
   const u = await owner(c.req.param("handle"));
   if (!u) return c.json({ error: "not found" }, 404);
   const viewer = c.get("user");
-  const isMe = viewer?.id === u.id;
-  if (!isMe && (u.profileVisibility === "private" || !u.showBookmarks)) return c.json({ error: "not found" }, 404);
+  const who = await audienceFor(u, viewer?.id);
+  const isMe = who.isMe;
+  if (!isMe && (u.profileVisibility === "private" || !allows(u.bookmarksVisibility, who))) return c.json({ error: "not found" }, 404);
   const limit = Math.min(100, Math.max(1, Number(c.req.query("limit") ?? 40)));
   const before = c.req.query("before");
   let cursor = sql``;
@@ -241,9 +256,9 @@ profiles.get("/:handle/activity", async (c) => {
   const u = await owner(c.req.param("handle"));
   if (!u) return c.json({ error: "not found" }, 404);
   const viewer = c.get("user");
-  const isMe = viewer?.id === u.id;
-  if (!isMe && u.profileVisibility === "private") return c.json({ error: "not found" }, 404);
+  const who = await audienceFor(u, viewer?.id);
+  if (!who.isMe && u.profileVisibility === "private") return c.json({ error: "not found" }, 404);
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 20)));
-  const { entries, nextCursor } = await activityForViewer(u, isMe, { limit, before: c.req.query("before") });
-  return c.json({ owner: publicUser(u), isMe, entries, nextCursor });
+  const { entries, nextCursor } = await activityForViewer(u, who, { limit, before: c.req.query("before") });
+  return c.json({ owner: publicUser(u), isMe: who.isMe, entries, nextCursor });
 });

@@ -43,6 +43,13 @@
       "when": 1789327360762,
       "tag": "0005_collection_slugs_unique_per_user",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789336487957,
+      "tag": "0006_share_levels",
+      "breakpoints": true
     }
   ]
 }

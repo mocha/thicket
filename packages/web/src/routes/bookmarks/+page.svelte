@@ -75,7 +75,7 @@
 
 <header class="top">
   <h1>My Bookmarks</h1>
-  <p class="sub">Posts you've saved. {#if session.user?.showBookmarks && session.user.profileVisibility === 'public'}Shown on <a href={profileHref(session.user.handle)}>your profile</a>.{:else}Only you can see them.{/if}</p>
+  <p class="sub">Posts you've saved. {#if session.user?.profileVisibility === 'public' && session.user.bookmarksVisibility === 'public'}Shown on <a href={profileHref(session.user.handle)}>your profile</a>.{:else if session.user?.profileVisibility === 'public' && session.user.bookmarksVisibility === 'friends'}Shown on <a href={profileHref(session.user.handle)}>your profile</a> to the people you follow.{:else}Only you can see them.{/if}</p>
 </header>
 
 {#if sources.collections.length || sources.feeds.length}

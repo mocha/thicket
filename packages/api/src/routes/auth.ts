@@ -3,6 +3,7 @@
  * settings. Public profile reads are in routes/profiles.ts.
  */
 import { Hono } from "hono";
+import { isShareLevel, type ShareLevel } from "../lib/visibility.js";
 import { eq } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import {
@@ -89,8 +90,9 @@ auth.patch("/me", async (c) => {
   const user = currentUser(c);
   type Patch = Partial<{
     displayName: string | null; bio: string | null; homepageUrl: string | null;
-    profileVisibility: "public" | "private"; showCollections: boolean; showBookmarks: boolean; trackActivity: boolean | null;
-    showNotes: boolean; notesFrom: "none" | "following" | "everyone";
+    profileVisibility: "public" | "private"; trackActivity: boolean | null;
+    collectionsVisibility: ShareLevel; bookmarksVisibility: ShareLevel; notesVisibility: ShareLevel;
+    notesFrom: "none" | "following" | "everyone";
   }>;
   const body = await c.req.json<Patch>().catch(() => ({} as Patch));
   const patch: Partial<typeof schema.users.$inferInsert> = {};
@@ -106,9 +108,9 @@ auth.patch("/me", async (c) => {
     patch.homepageUrl = url;
   }
   if (body.profileVisibility === "public" || body.profileVisibility === "private") patch.profileVisibility = body.profileVisibility;
-  if (typeof body.showCollections === "boolean") patch.showCollections = body.showCollections;
-  if (typeof body.showBookmarks === "boolean") patch.showBookmarks = body.showBookmarks;
-  if (typeof body.showNotes === "boolean") patch.showNotes = body.showNotes;
+  if (isShareLevel(body.collectionsVisibility)) patch.collectionsVisibility = body.collectionsVisibility;
+  if (isShareLevel(body.bookmarksVisibility)) patch.bookmarksVisibility = body.bookmarksVisibility;
+  if (isShareLevel(body.notesVisibility)) patch.notesVisibility = body.notesVisibility;
   if (body.notesFrom === "none" || body.notesFrom === "following" || body.notesFrom === "everyone") patch.notesFrom = body.notesFrom;
   if ("trackActivity" in body && (body.trackActivity === null || typeof body.trackActivity === "boolean")) patch.trackActivity = body.trackActivity;
   if (Object.keys(patch).length) await db.update(schema.users).set(patch).where(eq(schema.users.id, user.id));

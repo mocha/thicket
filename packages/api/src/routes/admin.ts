@@ -127,7 +127,7 @@ admin.get("/starter", async (c) => {
     from users u
     join collections col on col.user_id = u.id and col.parent_id is not null and col.is_public
     join collection_feeds cf on cf.collection_id = col.id
-    where u.profile_visibility = 'public' and u.show_collections
+    where u.profile_visibility = 'public' and u.collections_visibility = 'public'
     group by u.handle, u.display_name
     order by "collectionCount" desc, u.handle`);
   return c.json({ handle: handle || null, candidates: rows.rows });

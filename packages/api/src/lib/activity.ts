@@ -23,6 +23,7 @@
  */
 import { sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
+import { allows, type Audience } from "./visibility.js";
 
 type Owner = typeof schema.users.$inferSelect;
 
@@ -42,15 +43,17 @@ const ICON = (col: string) => sql`exists(select 1 from feed_icons fi where fi.fe
 
 export async function activityForViewer(
   u: Owner,
-  isMe: boolean,
+  who: Audience,
   opts: { limit: number; before?: string | null },
 ): Promise<{ entries: ActivityEntry[]; nextCursor: string | null }> {
-  // Each source is admitted or excluded whole, by the owner's own toggles. The
-  // shape of the query stays the same either way; Postgres prunes the branch.
-  const on = (yes: boolean) => (yes || isMe ? sql`true` : sql`false`);
-  const showCollections = on(u.showCollections);
-  const showBookmarks = on(u.showBookmarks);
-  const showNotes = on(u.showNotes);
+  const isMe = who.isMe;
+  // Each source is admitted or excluded whole, by whether this viewer is in
+  // that section's audience. The shape of the query stays the same either way;
+  // Postgres prunes the branch.
+  const on = (level: typeof u.notesVisibility) => (allows(level, who) ? sql`true` : sql`false`);
+  const showCollections = on(u.collectionsVisibility);
+  const showBookmarks = on(u.bookmarksVisibility);
+  const showNotes = on(u.notesVisibility);
   // A private collection is the owner's business: visible to them, absent for
   // everyone else, the same rule the Collections section already applies.
   const colVisible = isMe ? sql`` : sql`and col.is_public`;

@@ -25,14 +25,22 @@ export const feedKind = pgEnum("feed_kind", ["rss", "atom", "json", "rdf", "unkn
 export const profileVisibility = pgEnum("profile_visibility", ["public", "private"]);
 /** Whose notes a reader wants to see on posts: nobody's, the people they follow, or everyone who shares. */
 export const notesFrom = pgEnum("notes_from", ["none", "following", "everyone"]);
+/**
+ * Who I share a part of my profile with. "friends" means **the people I
+ * follow** — following someone is how you choose to share with them, and
+ * someone following me gains nothing by it. A feed document can only ever
+ * carry 'public'; see docs/DECISIONS.md in the notes repo.
+ */
+export const shareLevel = pgEnum("share_level", ["private", "friends", "public"]);
 
 /**
  * A person on this instance. Handle + password, no email: identity here is the
  * handle, and the instance is small enough that recovery is "ask the admin".
  * Everything on the profile is optional. Visibility is layered: the profile as
- * a whole, then collections and bookmarks as sections, then each collection
- * (collections.is_public). A private profile still counts toward follower
- * numbers; it is opaque, not absent.
+ * a whole, then notes / bookmarks / collections as sections with their own
+ * audience, then each collection (collections.is_public), which can only ever
+ * narrow its section. A private profile still counts toward follower numbers;
+ * it is opaque, not absent.
  */
 export const users = pgTable("users", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
@@ -44,10 +52,10 @@ export const users = pgTable("users", {
   bio: text("bio"),
   homepageUrl: text("homepage_url"),
   profileVisibility: profileVisibility("profile_visibility").notNull().default("public"),
-  showCollections: boolean("show_collections").notNull().default(true),
-  showBookmarks: boolean("show_bookmarks").notNull().default(true),
-  /** Let others (per their own notes_from setting) see the notes I leave on posts. Only matters when the profile is public. */
-  showNotes: boolean("show_notes").notNull().default(true),
+  collectionsVisibility: shareLevel("collections_visibility").notNull().default("public"),
+  bookmarksVisibility: shareLevel("bookmarks_visibility").notNull().default("public"),
+  /** Who may see the notes I leave on posts. A reader still has to want them (notes_from). */
+  notesVisibility: shareLevel("notes_visibility").notNull().default("public"),
   /** Whose notes appear on posts in my rivers. Default: people I follow. */
   notesFrom: notesFrom("notes_from").notNull().default("following"),
   /** Future: a "writes at" link to a feed in the index, verified via rel="me" on the site. Unverified claims are never shown. */
@@ -179,7 +187,12 @@ export const collections = pgTable("collections", {
   name: text("name").notNull(),
   slug: text("slug").notNull(),
   description: text("description"),
-  /** Shown on the owner's profile (when the profile shows collections at all). Public by default. */
+  /**
+   * The one individual override in thicket: a collection can always be made
+   * private, whatever the account's collections_visibility says. It only ever
+   * narrows — a private collection inside a public account is private; a public
+   * collection inside a friends-only account is still friends-only.
+   */
   isPublic: boolean("is_public").notNull().default(true),
   /** Provenance when copied from another user's collection. Informational; the copy is independent. */
   copiedFromId: bigint("copied_from_id", { mode: "number" }),
@@ -222,7 +235,12 @@ export const bookmarks = pgTable("bookmarks", {
   author: text("author"),
   publishedAt: timestamp("published_at", { withTimezone: true }),
   note: text("note"),
-  /** Future: let others see this bookmark on the profile. Private by default. */
+  /**
+   * Not enforced anywhere: bookmarks_visibility governs the whole set, and
+   * per-bookmark overrides are deliberately out of scope for now (collections
+   * are the only thing with an individual setting). Kept for when they are not
+   * — see backlog/per-bookmark-visibility.md.
+   */
   isPublic: boolean("is_public").notNull().default(false),
   savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
