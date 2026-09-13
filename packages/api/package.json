@@ -13,7 +13,8 @@
     "seed": "tsx --env-file=../../.env src/scripts/seed.ts",
     "icons": "tsx --env-file=../../.env src/scripts/icons.ts",
     "passwd": "tsx --env-file=../../.env src/scripts/passwd.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "ingest": "tsx --env-file=../../.env src/scripts/ingest.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
