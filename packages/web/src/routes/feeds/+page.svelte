@@ -20,18 +20,18 @@
   type View = 'feeds' | 'collections' | 'users';
   const view = $derived(((page.url.searchParams.get('view') as View | null) ?? 'feeds') as View);
   const q = $derived(page.url.searchParams.get('q') ?? '');
-  /** Feeds: '1' = feeds followed by people I follow (default when I follow anyone); 'all' = anyone. */
-  const feedsBy = $derived(page.url.searchParams.get('by'));
+  /**
+    * One filter, off by default: absent shows the whole index, 'following'
+    * narrows to what the people you follow read. Explore's job is to show
+    * what is here, so the unfiltered view is the one you land on.
+    */
+  const narrowToNetwork = $derived(page.url.searchParams.get('by') === 'following');
   const since = $derived(page.url.searchParams.get('since'));
   const sort = $derived(page.url.searchParams.get('sort') ?? 'recent');
-  /** Collections: 'all' = anyone; otherwise people I follow (default). */
-  const colsBy = $derived(page.url.searchParams.get('by'));
-
-  // The "people I follow" default only makes sense once you follow someone; before that it would show an empty page.
+  /** Checking the box is only useful once you follow someone. */
   let followsAnyone = $state<boolean | null>(null);
-  const networkDefault = $derived(followsAnyone === true);
-  const feedsNetwork = $derived(feedsBy === 'all' ? null : feedsBy === 'following' || (feedsBy === null && networkDefault) ? '1' : null);
-  const colsNetwork = $derived(colsBy === 'all' ? false : colsBy === 'following' || (colsBy === null && networkDefault));
+  const feedsNetwork = $derived(narrowToNetwork ? '1' : null);
+  const colsNetwork = $derived(narrowToNetwork);
 
   function setParams(patch: Record<string, string | null>) {
     const p = new URLSearchParams(page.url.searchParams);
@@ -39,8 +39,9 @@
     void goto(`/feeds${p.size ? `?${p}` : ''}`, { replaceState: true, keepFocus: true });
   }
   function switchView(v: View) {
-    // Filters are per view; the search box carries over.
-    setParams({ view: v === 'feeds' ? null : v, by: null, since: null, sort: null });
+    // Per-view filters reset; the search box and the follow filter carry over,
+    // since both tabs mean the same thing by it.
+    setParams({ view: v === 'feeds' ? null : v, since: null, sort: null });
     api.event('explore_view', { view: v });
   }
 
@@ -163,7 +164,7 @@
     <div class="titles">
       {#if view === 'feeds'}
         <h2>Find new feeds <span class="count">{total}</span></h2>
-        <p>Browse every feed followed by other thicket users, search and filter through them, and find new and interesting things to read.</p>
+        <p>Every feed this instance knows about — the ones people here read, and a few thousand more it was seeded with. Search it, filter it, and take what looks good.</p>
       {:else if view === 'collections'}
         <h2>Find new collections <span class="count">{total}</span></h2>
         <p>Browse collections of feeds curated by other users and copy them to your profile.</p>
@@ -181,13 +182,10 @@
 
   {#if view === 'feeds'}
     <div class="filters">
-      <div class="filter">
-        <span class="label">Followed by</span>
-        <div class="seg" role="radiogroup" aria-label="Followed by">
-          <button role="radio" aria-checked={feedsNetwork === '1'} onclick={() => setParams({ by: 'following' })} disabled={followsAnyone === false} title={followsAnyone === false ? 'Follow someone first' : ''}>Users I follow</button>
-          <button role="radio" aria-checked={feedsNetwork === null} onclick={() => setParams({ by: 'all' })}>Anyone</button>
-        </div>
-      </div>
+      <label class="filter check" title={followsAnyone === false ? 'Follow someone first' : ''}>
+        <input type="checkbox" checked={narrowToNetwork} disabled={followsAnyone === false} onchange={(e) => setParams({ by: e.currentTarget.checked ? 'following' : null })} />
+        <span class="label">Only what people I follow read</span>
+      </label>
       <label class="filter">
         <span class="label">Added in the last</span>
         <select value={since ?? ''} onchange={(e) => setParams({ since: e.currentTarget.value || null })}>
@@ -207,13 +205,10 @@
     </div>
   {:else if view === 'collections'}
     <div class="filters">
-      <div class="filter">
-        <span class="label">Created by</span>
-        <div class="seg" role="radiogroup" aria-label="Created by">
-          <button role="radio" aria-checked={colsNetwork} onclick={() => setParams({ by: 'following' })} disabled={followsAnyone === false} title={followsAnyone === false ? 'Follow someone first' : ''}>Users I follow</button>
-          <button role="radio" aria-checked={!colsNetwork} onclick={() => setParams({ by: 'all' })}>Anyone</button>
-        </div>
-      </div>
+      <label class="filter check" title={followsAnyone === false ? 'Follow someone first' : ''}>
+        <input type="checkbox" checked={narrowToNetwork} disabled={followsAnyone === false} onchange={(e) => setParams({ by: e.currentTarget.checked ? 'following' : null })} />
+        <span class="label">Only from people I follow</span>
+      </label>
     </div>
   {/if}
 
@@ -223,12 +218,12 @@
     <div class="empty">
       {#if view === 'feeds'}
         {#if q}<p>No feeds match “{q}”.</p>
-        {:else if feedsNetwork}<p>The people you follow haven’t followed anything you don’t already, or you don’t follow anyone yet. <button class="link" onclick={() => setParams({ by: 'all' })}>Show feeds from anyone</button>.</p>
+        {:else if feedsNetwork}<p>The people you follow haven’t followed anything you don’t already. <button class="link" onclick={() => setParams({ by: null })}>Show the whole index</button>.</p>
         {:else if since}<p>Nothing was added in that time.</p>
         {:else}<p>Nobody has added a feed yet. Be the first: press <strong>Add a new feed</strong> and paste a site’s address.</p>{/if}
       {:else if view === 'collections'}
         {#if q}<p>No collections match “{q}”.</p>
-        {:else if colsNetwork}<p>The people you follow haven’t shared any collections yet. <button class="link" onclick={() => setParams({ by: 'all' })}>Show collections from anyone</button>.</p>
+        {:else if colsNetwork}<p>The people you follow haven’t shared any collections yet. <button class="link" onclick={() => setParams({ by: null })}>Show everyone’s</button>.</p>
         {:else}<p>No one has shared a public collection yet. Yours could be first: open a collection, Manage, and set it to Public.</p>{/if}
       {:else}
         {#if q}<p>No one matches “{q}”.</p>{:else}<p>No other public profiles here yet.</p>{/if}
@@ -312,10 +307,10 @@
   .filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 12px; }
   .filter { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-3); }
   .label { white-space: nowrap; }
-  .seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-2); }
-  .seg button { padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text-2); }
-  .seg button[aria-checked='true'] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
-  .seg button:disabled { opacity: 0.45; }
+  .check { flex-direction: row; align-items: center; gap: 8px; cursor: pointer; }
+  .check input { width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
+  .check input:disabled { opacity: 0.45; }
+  .check:has(input:disabled) { cursor: default; opacity: 0.55; }
   .filter select { padding: 6px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: 13px; }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   li { display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 12px; border-top: 1px solid var(--line); }
