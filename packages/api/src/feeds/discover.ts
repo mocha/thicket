@@ -6,10 +6,11 @@
 import { httpGet } from "./http.js";
 import { normalizeFeedUrl } from "./normalize.js";
 import { parseFeedDocument, type ParsedFeed } from "./parse.js";
-import { resolveYouTube } from "./youtube.js";
+import { resolveYouTube, youTubeVariant } from "./youtube.js";
 import { resolveReddit } from "./reddit.js";
 
-export type Candidate = { url: string; title: string | null; kind: string | null };
+/** `note` replaces the raw address in the chooser when the address itself would mean nothing to a reader. */
+export type Candidate = { url: string; title: string | null; kind: string | null; note?: string | null };
 
 export type Discovery =
   | { status: "feed"; url: string; parsed: ParsedFeed; etag: string | null; lastModified: string | null }
@@ -57,12 +58,21 @@ export async function discover(input: string): Promise<Discovery> {
   if (known && "candidates" in known) return { status: "candidates", pageUrl: known.pageUrl, candidates: known.candidates };
   if (known) {
     const site = /reddit\.com/i.test(known.feedUrl) ? "Reddit" : "YouTube";
-    const res = await httpGet(known.feedUrl);
+    // A few YouTube addresses name a feed thicket derives from another one (feeds/youtube.ts): fetch
+    // what it's actually made of, then narrow it, but record the address the reader chose.
+    const variant = youTubeVariant(known.feedUrl);
+    const res = await httpGet(variant?.fetchUrl ?? known.feedUrl);
     if (res.status === 429) throw new Error(`${site} is rate-limiting us right now; try again in a minute.`);
     if (res.status >= 400) throw new Error(`${site}'s feed answered HTTP ${res.status}`);
     const parsed = tryParse(res.body, res.finalUrl);
     if (!parsed) throw new Error(`${site} returned something that isn't a feed.`);
-    return { status: "feed", url: normalizeFeedUrl(res.finalUrl), parsed, etag: res.headers.get("etag"), lastModified: res.headers.get("last-modified") };
+    return {
+      status: "feed",
+      url: normalizeFeedUrl(variant ? known.feedUrl : res.finalUrl),
+      parsed: variant ? await variant.transform(parsed) : parsed,
+      etag: res.headers.get("etag"),
+      lastModified: res.headers.get("last-modified"),
+    };
   }
 
   const url = normalizeFeedUrl(input);

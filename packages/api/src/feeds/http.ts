@@ -10,10 +10,10 @@ export type HttpResult = {
   body: string;
 };
 
-export async function httpGet(url: string, extra: Record<string, string> = {}): Promise<HttpResult> {
+export async function httpGet(url: string, extra: Record<string, string> = {}, opts: { redirect?: RequestRedirect } = {}): Promise<HttpResult> {
   const res = await fetch(url, {
     headers: { "user-agent": USER_AGENT, accept: "application/rss+xml, application/atom+xml, application/feed+json, application/xml;q=0.9, text/html;q=0.8, */*;q=0.5", ...extra },
-    redirect: "follow",
+    redirect: opts.redirect ?? "follow",
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   let body = "";
