@@ -16,15 +16,12 @@
    * anyone else is sent to the collection itself. Top to bottom: back, what
    * you are managing, rename, visibility, description, the feeds, and at the
    * very end the two things you do rarely: delete, export.
-   * The root "Unsorted" bucket has no name, visibility or description of its
-   * own, so those sections are absent for it.
    */
   const handle = $derived(page.params.handle ?? '');
   const slug = $derived(page.params.slug ?? '');
   let id = $state<number | null>(null);
   let col = $state<CollectionDetail | null>(null);
 
-  const isRoot = $derived(col?.parentId === null);
   const profilePrivate = $derived(session.user?.profileVisibility === 'private');
   const collectionsHidden = $derived(session.user?.showCollections === false);
 
@@ -128,13 +125,13 @@
   let showOrphans = $state(false);
   let deleting = $state(false);
   async function askDelete() {
-    if (!col || isRoot) return;
+    if (!col) return;
     orphans = null; showOrphans = false;
     confirmEl?.showModal();
     orphans = (await collectionsApi.orphans(col.id)).feeds;
   }
   async function deleteCollection() {
-    if (!col || isRoot || deleting) return;
+    if (!col || deleting) return;
     deleting = true;
     try {
       await collectionsApi.remove(col.id);
@@ -181,15 +178,14 @@
         </div>
       </form>
     {:else}
-      <h1>{isRoot ? 'Unsorted' : col.name}</h1>
-      {#if !isRoot}<button class="link" onclick={() => (renaming = true)}>Rename this collection</button>{/if}
+      <h1>{col.name}</h1>
+      <button class="link" onclick={() => (renaming = true)}>Rename this collection</button>
     {/if}
   </header>
 
-  {#if !isRoot}
-    <hr />
-    <section class="opt">
-      <h2>Collection visibility</h2>
+  <hr />
+  <section class="opt">
+    <h2>Collection visibility</h2>
       {#if profilePrivate}
         <p class="info">Your profile is set to private, so your collections aren’t displayed anywhere. <a href="/settings">Change that in Settings.</a></p>
       {:else if collectionsHidden}
@@ -208,25 +204,22 @@
       {/if}
     </section>
 
-    <section class="opt">
-      <h2><label for="desc">Description</label></h2>
-      <form onsubmit={(e) => { e.preventDefault(); void saveDescription(); }}>
-        <textarea id="desc" rows="2" bind:value={description} maxlength="300" placeholder="What’s in here, in a line or two." disabled={savingDesc}></textarea>
-        <div class="row">
-          <button type="submit" class="btn primary" disabled={!descDirty || savingDesc}>{savingDesc ? 'Saving…' : 'Save'}</button>
-          <span class="counter" class:near={description.length > 260}>{description.length}/300</span>
-        </div>
-      </form>
-    </section>
-  {:else}
-    <p class="info">Unsorted holds the feeds you follow that aren’t in any collection. All my feeds shows them along with the rest.</p>
-  {/if}
+  <section class="opt">
+    <h2><label for="desc">Description</label></h2>
+    <form onsubmit={(e) => { e.preventDefault(); void saveDescription(); }}>
+      <textarea id="desc" rows="2" bind:value={description} maxlength="300" placeholder="What’s in here, in a line or two." disabled={savingDesc}></textarea>
+      <div class="row">
+        <button type="submit" class="btn primary" disabled={!descDirty || savingDesc}>{savingDesc ? 'Saving…' : 'Save'}</button>
+        <span class="counter" class:near={description.length > 260}>{description.length}/300</span>
+      </div>
+    </form>
+  </section>
 
   <hr />
   <section class="feeds">
     <div class="feedhead">
       <h2>Feeds ({col.feeds.length})</h2>
-      <button class="btn" onclick={() => openAddFeed({ collectionIds: isRoot ? [] : [col!.id], via: 'manage' })}>Add a feed</button>
+      <button class="btn" onclick={() => openAddFeed({ collectionIds: [col!.id], via: 'manage' })}>Add a feed</button>
     </div>
     {#if col.feeds.length === 0}
       <p class="status">Nothing in here yet. Add a feed above, or file one from any feed’s Follow menu.</p>
@@ -240,10 +233,10 @@
               <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · last post {relativeTime(f.lastItemAt)}{/if}{#if f.consecutiveFailures > 0} · <span class="bad">failing</span>{/if}</div>
             </div>
             {#if memberships[f.id]}
-              <FollowButton feedId={f.id} ids={memberships[f.id]} name={f.title ?? hostOf(f.url)} compact mainLabel="Remove from {isRoot ? 'Unsorted' : col.name}" onmain={() => removeFeed(f)}
+              <FollowButton feedId={f.id} ids={memberships[f.id]} name={f.title ?? hostOf(f.url)} compact mainLabel="Remove from {col.name}" onmain={() => removeFeed(f)}
                 onchange={(next) => { memberships[f.id] = next; if (!next.includes(col!.id)) void load(); void loadCollections(true); }} />
             {:else}
-              <button class="chip" onclick={() => removeFeed(f)} aria-label="Remove {f.title ?? hostOf(f.url)}">Remove from {isRoot ? 'Unsorted' : col.name}</button>
+              <button class="chip" onclick={() => removeFeed(f)} aria-label="Remove {f.title ?? hostOf(f.url)}">Remove from {col.name}</button>
             {/if}
           </li>
         {/each}
@@ -261,7 +254,7 @@
 
   <hr />
   <div class="final">
-    {#if !isRoot}<button class="btn danger" onclick={askDelete}>Delete this collection</button>{/if}
+    <button class="btn danger" onclick={askDelete}>Delete this collection</button>
     <a class="btn" href={collectionsApi.opmlUrl(col.id)} download="{col.slug}.opml" onclick={() => api.event('opml_exported', { collectionId: col?.id })} title="Save this collection as a file other readers can open">Export collection to file</a>
   </div>
 {:else}

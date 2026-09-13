@@ -9,6 +9,17 @@
 		<link rel="manifest" href="/manifest.webmanifest" />
 		<link rel="icon" href="/icon.svg" type="image/svg+xml" />
 		<link rel="apple-touch-icon" href="/icon.svg" />
+		<!-- Light/dark and the reading font are chosen per device and kept in this
+		     browser (see lib/theme.svelte.ts). Read them here, before anything paints,
+		     so a dark reader is never flashed a white page on the way in. -->
+		<script>
+			try {
+				var t = localStorage.getItem('thicket:theme');
+				if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+				var f = localStorage.getItem('thicket:font');
+				if (f === 'serif' || f === 'dyslexic') document.documentElement.dataset.font = f;
+			} catch (e) {}
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

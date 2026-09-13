@@ -28,7 +28,10 @@ export type SessionUser = {
   id: number;
   handle: string;
   displayName: string | null;
+  /** The tree's parent row. Structural only: it is never shown and never holds feeds. */
   rootCollectionId: number;
+  /** Where a bare "Follow" files a feed: the oldest collection. Null only if every one was deleted. */
+  defaultCollectionId: number | null;
   /** Effective tracking flag: per-user override, else the instance setting. */
   trackActivity: boolean;
 };
@@ -110,10 +113,11 @@ export const attachUser: MiddlewareHandler = async (c, next) => {
     const id = tokenId(token);
     const rows = await db.execute<{
       id: number; handle: string; displayName: string | null; trackActivity: boolean | null; rootCollectionId: number | null;
-      lastSeenAt: string; expiresAt: string;
+      defaultCollectionId: number | null; lastSeenAt: string; expiresAt: string;
     }>(sql`
       select u.id, u.handle, u.display_name as "displayName", u.track_activity as "trackActivity",
              (select col.id from collections col where col.user_id = u.id and col.parent_id is null limit 1) as "rootCollectionId",
+             (select col.id from collections col where col.user_id = u.id and col.parent_id is not null order by col.id limit 1) as "defaultCollectionId",
              s.last_seen_at as "lastSeenAt", s.expires_at as "expiresAt"
       from sessions s join users u on u.id = s.user_id
       where s.id = ${id} and s.expires_at > now()
@@ -122,6 +126,7 @@ export const attachUser: MiddlewareHandler = async (c, next) => {
     if (row && row.rootCollectionId !== null) {
       c.set("user", {
         id: Number(row.id), handle: row.handle, displayName: row.displayName, rootCollectionId: Number(row.rootCollectionId),
+        defaultCollectionId: row.defaultCollectionId === null ? null : Number(row.defaultCollectionId),
         trackActivity: row.trackActivity ?? trackingEnabled(),
       });
       c.set("sessionId", id);
@@ -149,14 +154,21 @@ export function trackingEnabled(): boolean {
 
 // ---- users ----------------------------------------------------------------
 
-/** Create a user and their root collection together. */
+/**
+ * Create a user, the structural root of their collection tree, and the one
+ * collection they start with. Every feed a person follows lives in a
+ * collection, so an account with none would have nowhere to put its first
+ * feed; "My first collection" is an ordinary collection from the moment it
+ * exists — rename it, delete it once there is another, share it.
+ */
 export async function createUser(input: { handle: string; password: string; displayName?: string | null }) {
   const passwordHash = await hashPassword(input.password);
   return db.transaction(async (tx) => {
     // First account on the instance is the admin.
     const [{ n }] = (await tx.execute<{ n: number }>(sql`select count(*)::int as n from users`)).rows;
     const [user] = await tx.insert(schema.users).values({ handle: input.handle, passwordHash, displayName: input.displayName?.trim() || null, isAdmin: n === 0 }).returning();
-    await tx.insert(schema.collections).values({ userId: user.id, parentId: null, name: "Unsorted", slug: "unsorted" });
+    const [root] = await tx.insert(schema.collections).values({ userId: user.id, parentId: null, name: "All collections", slug: "all-collections" }).returning();
+    await tx.insert(schema.collections).values({ userId: user.id, parentId: root.id, name: FIRST_COLLECTION_NAME, slug: FIRST_COLLECTION_SLUG });
     return user;
   });
 }
@@ -165,6 +177,10 @@ export async function findUserByHandle(handle: string) {
   const [user] = await db.select().from(schema.users).where(eq(schema.users.handle, handle));
   return user ?? null;
 }
+
+/** The collection a brand-new account starts with. Also the rescue name when someone deletes their last one. */
+export const FIRST_COLLECTION_NAME = "My first collection";
+export const FIRST_COLLECTION_SLUG = "my-first-collection";
 
 export async function rootCollectionOf(userId: number): Promise<number | null> {
   const [root] = await db.select({ id: schema.collections.id }).from(schema.collections).where(and(eq(schema.collections.userId, userId), isNull(schema.collections.parentId)));

@@ -8,9 +8,9 @@
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
-  import { collectionStore, loadCollections } from '$lib/collections.svelte';
+  import { loadCollections } from '$lib/collections.svelte';
 
-  /** On your own profile the Collections section is also where you make one, and where Unsorted lives. */
+  /** On your own profile the Collections section is also where you make one. */
   let creating = $state(false);
   let newName = $state('');
   let newBusy = $state(false);
@@ -60,7 +60,6 @@
   let error = $state<string | null>(null);
   let loadedHandle = $state<string | undefined>(undefined);
   const isMe = $derived(!!profile && !profile.private && profile.isMe);
-  const unsorted = $derived(isMe ? collectionStore.list.find((c) => c.parentId === null) : undefined);
   $effect(() => { if (isMe) void loadCollections(); });
 
   $effect(() => {
@@ -135,15 +134,6 @@
               </a>
             </li>
           {/each}
-          {#if unsorted && unsorted.feedCount > 0}
-            <li class="root">
-              <a href={collectionHref(profile.handle, unsorted.slug)}>
-                <div class="meta2"><span class="name">Unsorted</span><span class="desc">Feeds you follow that aren’t in a collection</span></div>
-                <span class="count">{unsorted.feedCount} {unsorted.feedCount === 1 ? 'feed' : 'feeds'}</span>
-                <span class="chev" aria-hidden="true">›</span>
-              </a>
-            </li>
-          {/if}
           {#if profile.isMe}
             <li class="new">
               {#if creating}
@@ -216,7 +206,6 @@
   .desc { font-size: 13px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .count { font-size: 13px; color: var(--text-3); white-space: nowrap; }
   .chev { color: var(--text-3); font-size: 20px; }
-  .root .name { color: var(--text-2); font-style: italic; }
   .add { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: 15px; text-align: left; }
   li:first-child .add { border-top: 0; }
   .plus { font-size: 20px; line-height: 1; width: 14px; }

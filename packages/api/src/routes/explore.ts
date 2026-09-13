@@ -18,8 +18,10 @@ explore.get("/collections", async (c) => {
   const network = c.req.query("network") === "1"; // only collections by people I follow
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 6)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
+  // Never my own, and never one I already copied: both are already on my shelf.
   const where = [sql`col.parent_id is not null and col.is_public and u.profile_visibility = 'public' and u.show_collections
-      and exists(select 1 from collection_feeds cf where cf.collection_id = col.id) and col.user_id <> ${viewerId}`];
+      and exists(select 1 from collection_feeds cf where cf.collection_id = col.id) and col.user_id <> ${viewerId}
+      and not exists(select 1 from collections mine where mine.user_id = ${viewerId} and mine.copied_from_id = col.id)`];
   if (q) {
     const like = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
     where.push(sql`(col.name ilike ${like} or col.description ilike ${like})`);
@@ -38,6 +40,8 @@ explore.get("/collections", async (c) => {
     where ${sql.join(where, sql` and `)}
     order by "feedCount" desc, col.created_at desc limit ${limit + 1} offset ${offset}
   `);
+  // The answer depends on who is asking, so a shared cache must key on the cookie.
+  c.header("vary", "cookie");
   if (!viewer && !q) c.header("cache-control", "public, max-age=120");
   const page = rows.rows.slice(0, limit);
   return c.json({ collections: page.map((r: any) => ({ ...r, id: Number(r.id) })), total, nextOffset: rows.rows.length > limit ? offset + limit : null });
@@ -70,7 +74,7 @@ explore.get("/featured", async (c) => {
   const curated = handle
     ? (await db.execute<{ id: number }>(sql`select id from users where handle = ${handle} and profile_visibility = 'public' and show_collections`)).rows[0]
     : undefined;
-  const where = curated ? sql`${visible} and col.user_id = ${curated.id}` : sql`${visible} and col.user_id <> ${viewerId}`;
+  const where = sql`${visible} and col.user_id <> ${viewerId} ${curated ? sql`and col.user_id = ${curated.id}` : sql``}`;
   // A curated account's order is the order it built them in, so the curator
   // controls what leads by adding in the order they want — no separate ranking
   // to keep in sync. Left to size, the biggest collection wins, and the biggest
@@ -89,6 +93,7 @@ explore.get("/featured", async (c) => {
     where ${where}
     order by ${order} limit 6
   `);
+  c.header("vary", "cookie");
   if (!viewer) c.header("cache-control", "public, max-age=300");
   return c.json({
     from: curated ? handle : null,

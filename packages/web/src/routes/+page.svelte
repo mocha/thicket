@@ -1,5 +1,5 @@
 <script lang="ts">
-  /** Signed in: All my feeds, your whole stream. Signed out: the front door. */
+  /** Signed in: All collections, your whole stream. Signed out: the front door. */
   import { onMount } from 'svelte';
   import { api } from '$lib/api';
   import River from '$lib/components/River.svelte';
@@ -27,7 +27,10 @@
     </div>
   {:else}
     <header class="top">
-      <h1>All my feeds</h1>
+      <div class="titlerow">
+        <h1>All collections</h1>
+        <button class="btn" onclick={() => openAddFeed({ via: 'all_collections' })}><span aria-hidden="true">+</span> Add new feed</button>
+      </div>
       {#if stats}
         <p class="sub">Posts from all {n(stats.feeds, 'feed', 'feeds')} you follow across all {n(stats.collections, 'collection', 'collections')} of yours.<br />
           {#if stats.posts24h}{n(stats.posts24h, 'new post', 'new posts')} in the last 24 hours from {n(stats.feeds24h, 'feed', 'feeds')}.{:else}No new posts in the last 24 hours.{/if}</p>
@@ -43,7 +46,10 @@
 
 <style>
   .top { margin-bottom: 14px; }
-  h1 { font-family: var(--font-serif); font-size: 28px; margin: 0; }
+  .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  h1 { font-family: var(--font-serif); font-size: 28px; margin: 0; min-width: 0; }
+  .btn { flex: none; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+  .btn:hover { background: var(--surface-2); color: var(--text); }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: 14px; max-width: 62ch; }
   .start { display: flex; flex-direction: column; gap: 22px; margin-top: 22px; }
   .own { margin: 0; padding-top: 18px; border-top: 1px solid var(--line); color: var(--text-2); font-size: 15px; max-width: 62ch; line-height: 1.5; }

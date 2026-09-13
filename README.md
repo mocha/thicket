@@ -17,9 +17,11 @@ first. It is a reader, not a network, and the difference is the point:
   other, and an instance is one small server you can run yourself.
 
 It speaks RSS, Atom and JSON Feed, finds a feed from any page address you
-paste, and understands YouTube and Reddit URLs directly. Collections are
-public by default and copy from one instance to another, so a reading list is
-something you can hand to someone rather than a thing locked in an account.
+paste, and understands YouTube and Reddit URLs directly — a channel can be
+followed with Shorts or without them, a subreddit by whichever listing you
+read. Collections are public by default and copy from one instance to another,
+so a reading list is something you can hand to someone rather than a thing
+locked in an account.
 
 ## Run an instance
 
@@ -69,7 +71,8 @@ docs/DEPLOY.md Running an instance: Compose, reverse proxies, hosted platforms.
 Two shapes are worth knowing before reading the code. **Feeds are global**:
 one row per normalized URL, fetched once however many people follow it, so
 "following" is derived from collection membership rather than a subscriptions
-table. And **there is no read/unread state** — the river is chronological and
+table — and every followed feed is in at least one collection, so there is no
+unfiled state to reason about. And **there is no read/unread state** — the river is chronological and
 you scroll. Both are load-bearing; most of the data model follows from them.
 
 ## API
@@ -104,7 +107,7 @@ collection, its river) work signed out.
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/api/feeds` `{url}` | Follow any URL: page or feed. Returns `subscribed`, `choose` (several candidates), or `none` |
-| POST | `/api/feeds/:id/follow` | Follow into Unsorted, or `{collectionId}` |
+| POST | `/api/feeds/:id/follow` | Follow into your first collection, or `{collectionId}` |
 | DELETE | `/api/feeds/:id` | Unfollow; returns what was removed, for undo |
 | POST | `/api/feeds/:id/restore` | Undo an unfollow |
 | POST/DELETE | `/api/feeds/:id/block` | Block / unblock a feed (no UI yet) |

@@ -8,9 +8,6 @@ export const collections = new Hono();
 function slugify(s: string) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "untitled";
 }
-/** "unsorted" is the root's slug and the owner reaches it at /@me/collections/unsorted. */
-const RESERVED_SLUG = "unsorted";
-
 /** Flat list with parent pointers and feed counts; the client builds the tree. */
 collections.get("/", async (c) => {
   const user = currentUser(c);
@@ -26,7 +23,6 @@ collections.post("/", async (c) => {
   const user = currentUser(c);
   const body = await c.req.json<{ name: string; parentId?: number; description?: string }>();
   if (!body.name?.trim()) return c.json({ error: "name is required" }, 400);
-  if (slugify(body.name) === RESERVED_SLUG) return c.json({ error: "That name is taken by your Unsorted feeds.", field: "name" }, 400);
   const parentId = body.parentId ?? user.rootCollectionId;
   const [parent] = await db.select().from(schema.collections).where(and(eq(schema.collections.id, parentId), eq(schema.collections.userId, user.id)));
   if (!parent) return c.json({ error: "parent not found" }, 404);
@@ -46,7 +42,6 @@ collections.patch("/:id", async (c) => {
   }
   const patch: Partial<typeof schema.collections.$inferInsert> = {};
   if (body.name !== undefined) {
-    if (slugify(body.name) === RESERVED_SLUG) return c.json({ error: "That name is taken by your Unsorted feeds.", field: "name" }, 400);
     patch.name = body.name.trim(); patch.slug = slugify(body.name);
   }
   if (body.description !== undefined) patch.description = body.description;

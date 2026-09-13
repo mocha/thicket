@@ -1,9 +1,9 @@
 <script lang="ts">
   /**
-   * Which of my collections hold this feed. Saves on every toggle. Unsorted
-   * is not a row: it is what "none checked" means. Checking a named one takes
-   * the feed out of Unsorted; unchecking the last named one puts it back.
-   * Unchecking never unfollows; that is an explicit button elsewhere.
+   * Which of my collections hold this feed. Saves on every toggle. A followed
+   * feed lives in at least one collection, so the last ticked box will not
+   * come off here: unfollowing is a deliberate button, not a side effect of
+   * tidying.
    */
   import { api, collectionsApi } from '$lib/api';
   import { collectionStore, loadCollections, namedCollections } from '$lib/collections.svelte';
@@ -29,15 +29,16 @@
   }
 
   function toggle(id: number) {
-    const root = collectionStore.rootId;
     if (ids.includes(id)) {
-      const rest = ids.filter((x) => x !== id && x !== root);
-      return void save(rest.length ? rest : root !== null ? [root] : []);
+      if (ids.length === 1) {
+        showToast('A feed has to live somewhere. Add it to another collection first, or unfollow it.');
+        return;
+      }
+      return void save(ids.filter((x) => x !== id));
     }
-    const next = [...ids.filter((x) => x !== root), id];
     api.event('feed_filed', { feedId, collectionId: id });
     flashCount(id);
-    void save(next);
+    void save([...ids, id]);
   }
 
   async function createAndAdd() {
@@ -70,7 +71,7 @@
   {/each}
 </ul>
 {#if collectionStore.loaded}
-  <p class="hint">{namedCollections().length ? 'None checked means it sits in Unsorted; you still follow it.' : 'You have no collections yet. Start one below to file this feed.'}</p>
+  <p class="hint">{namedCollections().length ? 'Every feed you follow lives in at least one collection.' : 'You have no collections yet. Start one below to file this feed.'}</p>
 {/if}
 <form class="new" onsubmit={(e) => { e.preventDefault(); void createAndAdd(); }}>
   <span class="plus" aria-hidden="true">+</span>

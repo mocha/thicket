@@ -1,10 +1,12 @@
 <script lang="ts">
   /**
    * The one control for "my relationship to this feed". A split button:
-   *   not following            → [ Follow | ▾ ]   primary follows into Unsorted
-   *   following, unsorted      → [ Following | ▾ ]
+   *   not following            → [ Follow | ▾ ]   primary files it in your first collection
    *   following, 1 collection  → [ In 1 collection | ▾ ]
    *   following, N collections → [ In N collections | ▾ ]
+   * A feed always sits in at least one collection, so "following, but nowhere"
+   * is not a state this has to show. The primary Follow picks a collection for
+   * you rather than asking; the toast says which, and ▾ moves it.
    * The ▾ opens a panel with the collection checklist and an explicit Unfollow.
    * When following, the primary label also opens the panel (there is no
    * one-click unfollow; that stays deliberate).
@@ -30,15 +32,17 @@
   let pos = $state<{ top: number; left: number; up: boolean }>({ top: 0, left: 0, up: false });
 
   const following = $derived(ids.length > 0);
-  const named = $derived(ids.filter((id) => id !== collectionStore.rootId).length);
-  const label = $derived(!following ? 'Follow' : named === 0 ? 'Following' : named === 1 ? 'In 1 collection' : `In ${named} collections`);
+  const label = $derived(!following ? 'Follow' : ids.length === 1 ? 'In 1 collection' : `In ${ids.length} collections`);
 
   async function follow() {
     const r = await api.follow(feedId);
     ids = r.collectionIds;
     onchange?.(ids);
     api.event('feed_followed', { feedId, via: 'follow_button' });
-    void loadCollections(true);
+    await loadCollections(true);
+    // Where it went is never a guess: name the collection, and ▾ is right there to move it.
+    const where = collectionStore.list.find((c) => c.id === ids[0]);
+    showToast(where ? `Added ${name} to ${where.name}` : `Following ${name}`);
   }
 
   async function unfollow() {

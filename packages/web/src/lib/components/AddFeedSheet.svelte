@@ -1,20 +1,23 @@
 <script lang="ts">
   /**
    * Add a feed, in a sheet you can flick away. Top to bottom, in the order you
-   * decide things: the address, which of your collections it goes in (none is
-   * fine: that's Unsorted), then Follow. Success lands on the feed's own page.
-   * Nothing is saved until Follow, so closing is a true cancel.
+   * decide things: the address, which of your collections it goes in, then
+   * Follow. Every feed lives in a collection, so one is always ticked: the one
+   * the sheet was opened from, or your first. Success lands on the feed's own
+   * page. Nothing is saved until Follow, so closing is a true cancel.
    */
+  import { tick } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { api, collectionsApi, feedHref, type SubscribeOutcome } from '$lib/api';
   import { addFeed, closeAddFeed } from '$lib/addfeed.svelte';
-  import { collectionStore, loadCollections, namedCollections } from '$lib/collections.svelte';
+  import { collectionStore, defaultCollection, loadCollections, namedCollections } from '$lib/collections.svelte';
   import { hostOf } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let input = $state<HTMLInputElement | null>(null);
+  let list = $state<HTMLElement | null>(null);
   let url = $state('');
   let ids = $state<number[]>([]);
   let newName = $state('');
@@ -31,8 +34,16 @@
     url = o.url ?? '';
     ids = [...(o.collectionIds ?? [])];
     newName = ''; outcome = null; busy = false; landing = false;
-    // Unsorted is the default, not a choice; "put it in Unsorted" means "pick nothing".
-    void loadCollections().then((s) => { ids = ids.filter((id) => id !== s.rootId); });
+    // Opened from a collection, it goes there; opened from anywhere else, it goes
+    // where a bare Follow would put it. Either way the sheet shows the answer.
+    void loadCollections().then(async (s) => {
+      ids = ids.filter((id) => id !== s.rootId);
+      if (!ids.length) { const d = defaultCollection(); if (d) ids = [d.id]; }
+      // The list scrolls and is alphabetical, so the ticked one is often below
+      // the fold. Bring it up: where this is going should never be off screen.
+      await tick();
+      list?.querySelector('input:checked')?.closest('li')?.scrollIntoView({ block: 'nearest' });
+    });
     dialog?.showModal();
     if (o.autoSubmit && url) void submit(url);
     else queueMicrotask(() => input?.focus());
@@ -41,6 +52,8 @@
   function toggle(id: number) {
     ids = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
   }
+
+  const nameOf = (id: number) => namedCollections().find((c) => c.id === id)?.name ?? 'a collection';
 
   async function createCollection() {
     const name = newName.trim();
@@ -104,17 +117,17 @@
       <p class="result bad">No feed found at {hostOf(outcome.pageUrl)}. Try the site’s blog or news section.</p>
     {:else if outcome?.status === 'choose'}
       <div class="result">
-        <p>That site offers several feeds. Which one?</p>
+        <p>There’s more than one way to follow this. Which one?</p>
         <ul class="candidates">
           {#each outcome.candidates as c}
-            <li><button type="button" onclick={() => submit(c.url)} disabled={busy}><strong>{c.title ?? hostOf(c.url)}</strong><span>{c.url}</span></button></li>
+            <li><button type="button" onclick={() => submit(c.url)} disabled={busy}><strong>{c.title ?? hostOf(c.url)}</strong><span>{c.note ?? c.url}</span></button></li>
           {/each}
         </ul>
       </div>
     {/if}
 
-    <div class="eyebrow">Put it in a collection <span class="opt">optional</span></div>
-    <div class="scroll">
+    <div class="eyebrow">Put it in a collection</div>
+    <div class="scroll" bind:this={list}>
     <ul class="checks">
       {#each namedCollections() as c (c.id)}
         <li>
@@ -127,7 +140,7 @@
       {/each}
     </ul>
     </div>
-    <p class="hint">{namedCollections().length ? 'Pick none and it goes in Unsorted, which All my feeds still shows.' : 'No collections yet. It goes in Unsorted, which All my feeds shows; make a collection below if you want to file it.'}</p>
+    <p class="hint">{#if !namedCollections().length}No collections yet — one will be made for this feed.{:else if ids.length === 1}It goes in {nameOf(ids[0])}. Tick more if it belongs in several.{:else if ids.length}It goes in {ids.length} of your collections.{:else}Pick one, or it goes in {defaultCollection()?.name ?? 'your first collection'}.{/if}</p>
     {#if collectionStore.loaded}
       <div class="new">
         <span class="plus" aria-hidden="true">+</span>
@@ -172,7 +185,6 @@
   .checks input { width: 20px; height: 20px; accent-color: var(--accent); }
   .name { flex: 1; font-weight: 500; }
   .count { font-size: 13px; color: var(--text-3); }
-  .opt { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 4px; }
   .hint { margin: -4px 0 0; font-size: 12px; color: var(--text-3); }
   .new { display: flex; align-items: center; gap: 8px; }
   .plus { width: 20px; text-align: center; color: var(--accent); font-size: 20px; line-height: 1; font-weight: 600; }

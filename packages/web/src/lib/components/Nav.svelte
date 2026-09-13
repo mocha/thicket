@@ -8,13 +8,15 @@
   import Monogram from './Monogram.svelte';
 
   /**
-   * The sidebar is a list of things to read, under the heading "Read": All my
-   * feeds first (the superset, italic because it is not a collection), then
-   * each collection alphabetically, Unsorted when it has anything, and
-   * "+ New collection". Then My Bookmarks, My Notes and Explore. Nothing here
-   * manages anything: a collection is managed from its own page. Mobile has
-   * no room for the list, so its Collections tab opens your profile, which
-   * lists them.
+   * The sidebar is a list of things to read, under the heading "Read": All
+   * collections first (the superset, italic because it is not itself a
+   * collection), then each collection alphabetically, then "+ New collection".
+   * Then My Bookmarks, My Notes and Explore. Nothing here manages anything: a
+   * collection is managed from its own page. Mobile has no room for the list,
+   * so its Collections tab opens your profile, which lists them.
+   *
+   * On desktop the list scrolls and the account block stays put at the bottom:
+   * nav is a flex column whose middle child is the only thing that scrolls.
    */
   const path = $derived(page.url.pathname);
   const me = $derived(session.user);
@@ -23,7 +25,6 @@
   const onCollection = (slug: string) => path === colHref(slug) || path.startsWith(colHref(slug) + '/');
   const onAnyCollection = $derived(!!me && path.startsWith(meHref + '/collections/'));
   const current = (href: string) => path === href || (href !== '/' && path.startsWith(href + '/'));
-  const unsorted = $derived(collectionStore.list.find((c) => c.parentId === null));
 
   $effect(() => { void loadCollections(); });
 
@@ -67,7 +68,7 @@
 <nav aria-label="Primary">
   <a class="brand" href="/"><img src="/icon.svg" alt="" width="28" height="28" /><span>thicket</span></a>
   <ul>
-    <!-- Mobile: the first tab is All my feeds. Desktop: "Read" is a heading over the list below. -->
+    <!-- Mobile: the first tab is All collections. Desktop: "Read" is a heading over the list below. -->
     <li class="mobile-only">
       <a href="/" aria-current={path === '/' ? 'page' : undefined}>{@render icon(icons.everything)}<span class="shortl">Read</span></a>
     </li>
@@ -77,13 +78,10 @@
     <li class="collections">
       <div class="heading">{@render icon(icons.everything)}<span>Read</span></div>
       <ul class="cols" aria-label="Things to read">
-        <li class="all"><a href="/" aria-current={path === '/' ? 'page' : undefined}><span class="name">All my feeds</span></a></li>
+        <li class="all"><a href="/" aria-current={path === '/' ? 'page' : undefined}><span class="name">All collections</span></a></li>
         {#each namedCollections() as c (c.id)}
           <li><a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined}><span class="name">{c.name}</span><span class="n">{c.feedCount}</span></a></li>
         {/each}
-        {#if unsorted && unsorted.feedCount > 0}
-          <li class="unsorted"><a href={colHref(unsorted.slug)} aria-current={onCollection(unsorted.slug) ? 'page' : undefined} title="Feeds you follow that aren’t in a collection"><span class="name">Unsorted</span><span class="n">{unsorted.feedCount}</span></a></li>
-        {/if}
         <li class="new">
           {#if creating}
             <form onsubmit={(e) => { e.preventDefault(); void create(); }}>
@@ -147,13 +145,15 @@
   /* Desktop: the sidebar. */
   @media (min-width: 900px) {
     nav {
-      top: 0; bottom: auto; right: auto; width: 240px; height: 100vh; padding: 20px 12px 90px; overflow-y: auto;
+      top: 0; bottom: auto; right: auto; width: 240px; height: 100vh; padding: 20px 12px 0; overflow: hidden;
+      display: flex; flex-direction: column;
       border-top: 0; border-right: 1px solid var(--line); background: var(--bg); backdrop-filter: none;
     }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; padding: 6px 10px 22px; letter-spacing: -0.01em; }
+    .brand { display: flex; flex: none; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; padding: 6px 10px 22px; letter-spacing: -0.01em; }
     .long { display: inline; }
     .shortl, li.mobile-only { display: none; }
-    ul { flex-direction: column; height: auto; gap: 2px; }
+    /* The only scrolling part, so the account block below it never drifts up into the list. */
+    ul { flex-direction: column; height: auto; gap: 2px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     li { flex: none; }
     li > a { flex-direction: row; justify-content: flex-start; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 15px; color: var(--text-2); white-space: normal; }
     li > a:hover { background: var(--surface-2); }
@@ -167,13 +167,12 @@
     .cols li > a { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px; font-size: 14px; color: var(--text-2); }
     .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .cols .n { font-size: 12px; color: var(--text-3); }
-    .cols .unsorted > a { color: var(--text-3); font-style: italic; }
     .cols .new button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--accent); text-align: left; }
     .cols .new button:hover { background: var(--surface-2); }
     .plus { font-size: 16px; line-height: 1; width: 10px; }
     .cols .new input { width: 100%; font-size: 14px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--surface); color: var(--text); }
 
-    .account { display: flex; align-items: center; gap: 4px; position: absolute; left: 12px; right: 12px; bottom: 0; padding: 12px 0 16px; border-top: 1px solid var(--line); background: var(--bg); }
+    .account { display: flex; flex: none; align-items: center; gap: 4px; padding: 12px 0 16px; border-top: 1px solid var(--line); background: var(--bg); }
     .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; }
     .who:hover { background: var(--surface-2); }
     .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }

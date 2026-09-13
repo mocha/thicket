@@ -19,7 +19,16 @@ export function resetCollections() {
   collectionStore.loaded = false;
 }
 
-/** Named collections (everything except the root "Unsorted" bucket), for pickers and pills. */
+/** Every real collection. The root row is the tree's parent, never a place to put anything. */
 export function namedCollections(): Collection[] {
   return collectionStore.list.filter((c) => c.parentId !== null);
+}
+
+/**
+ * Where a feed goes when you press Follow without choosing: your oldest
+ * collection, which on a new account is the one you were given. The server
+ * picks the same one; this is so the UI can say its name out loud.
+ */
+export function defaultCollection(): Collection | null {
+  return namedCollections().reduce<Collection | null>((best, c) => (!best || c.id < best.id ? c : best), null);
 }

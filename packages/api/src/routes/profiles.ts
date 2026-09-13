@@ -96,8 +96,8 @@ type ColRow = { id: number; name: string; slug: string; description: string | nu
 
 /**
  * Resolve a collection by handle + slug (shallowest match wins) with visibility
- * applied. The owner may also address the root by its slug ("unsorted"), which
- * is why that slug is reserved for named collections; visitors never see the root.
+ * applied. The root is excluded for everyone, owner included: it is the tree's
+ * parent, holds nothing, and has no page.
  */
 async function visibleCollection(c: Context, handleRaw: string, slug: string) {
   const u = await owner(handleRaw);
@@ -111,7 +111,7 @@ async function visibleCollection(c: Context, handleRaw: string, slug: string) {
       union all select col.id, col.parent_id, col.name, col.slug, col.description, col.is_public, col.created_at, t.depth + 1 from collections col join t on col.parent_id = t.id
     )
     select id, name, slug, description, is_public as "isPublic", created_at as "createdAt", depth
-    from t where slug = ${slug} ${isMe ? sql`` : sql`and depth > 0 and is_public`} order by depth limit 1
+    from t where slug = ${slug} and depth > 0 ${isMe ? sql`` : sql`and is_public`} order by depth limit 1
   `);
   const col = rows.rows[0];
   if (!col) return { error: "not found" as const, status: 404 as const };

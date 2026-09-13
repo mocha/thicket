@@ -1,39 +1,107 @@
 /* Design tokens. Everything visual hangs off these so the UI can be re-skinned
-   without touching components. */
+   without touching components.
+
+   Three states, not two. A reader who has chosen light or dark carries
+   data-theme on <html> (see lib/theme.svelte.ts); everyone else carries
+   nothing and only prefers-color-scheme separates them. So the palettes are
+   declared once as --l-* and --d-*, and the two blocks below decide which set
+   the live names point at. */
 :root {
-  --bg: #f6f1e8;
-  --surface: #fffdf9;
-  --surface-2: #efe8db;
-  --text: #1d1a14;
-  --text-2: #5d574b;
-  --text-3: #8c8574;
-  --accent: #2f5d3a;
-  --accent-ink: #f6f1e8;
-  --danger: #a33b2c;
-  --line: #e2d9c8;
+  --l-bg: #f6f1e8;
+  --l-surface: #fffdf9;
+  --l-surface-2: #efe8db;
+  --l-text: #1d1a14;
+  --l-text-2: #5d574b;
+  --l-text-3: #8c8574;
+  --l-accent: #2f5d3a;
+  --l-accent-ink: #f6f1e8;
+  --l-danger: #a33b2c;
+  --l-line: #e2d9c8;
+  --l-shadow: 0 1px 2px rgba(30, 20, 0, 0.06), 0 6px 20px -12px rgba(30, 20, 0, 0.25);
+
+  --d-bg: #16140f;
+  --d-surface: #1f1c15;
+  --d-surface-2: #2a261d;
+  --d-text: #efe9dc;
+  --d-text-2: #b6ad99;
+  --d-text-3: #7f7864;
+  --d-accent: #7fb08a;
+  --d-accent-ink: #10190f;
+  --d-danger: #e07a6a;
+  --d-line: #322d22;
+  --d-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+
+  --bg: var(--l-bg);
+  --surface: var(--l-surface);
+  --surface-2: var(--l-surface-2);
+  --text: var(--l-text);
+  --text-2: var(--l-text-2);
+  --text-3: var(--l-text-3);
+  --accent: var(--l-accent);
+  --accent-ink: var(--l-accent-ink);
+  --danger: var(--l-danger);
+  --line: var(--l-line);
+  --shadow: var(--l-shadow);
+
   --radius: 16px;
   --radius-sm: 10px;
-  --shadow: 0 1px 2px rgba(30, 20, 0, 0.06), 0 6px 20px -12px rgba(30, 20, 0, 0.25);
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
+  --font: var(--font-sans);
   --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --nav-h: 56px;
   --safe-b: env(safe-area-inset-bottom, 0px);
+  color-scheme: light dark;
 }
+/* No choice made, device says dark. Guarded so an explicit "light" still wins. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #16140f;
-    --surface: #1f1c15;
-    --surface-2: #2a261d;
-    --text: #efe9dc;
-    --text-2: #b6ad99;
-    --text-3: #7f7864;
-    --accent: #7fb08a;
-    --accent-ink: #10190f;
-    --danger: #e07a6a;
-    --line: #322d22;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  :root:not([data-theme='light']) {
+    --bg: var(--d-bg);
+    --surface: var(--d-surface);
+    --surface-2: var(--d-surface-2);
+    --text: var(--d-text);
+    --text-2: var(--d-text-2);
+    --text-3: var(--d-text-3);
+    --accent: var(--d-accent);
+    --accent-ink: var(--d-accent-ink);
+    --danger: var(--d-danger);
+    --line: var(--d-line);
+    --shadow: var(--d-shadow);
   }
 }
+/* Chose dark, whatever the device is doing. */
+:root[data-theme='dark'] {
+  --bg: var(--d-bg);
+  --surface: var(--d-surface);
+  --surface-2: var(--d-surface-2);
+  --text: var(--d-text);
+  --text-2: var(--d-text-2);
+  --text-3: var(--d-text-3);
+  --accent: var(--d-accent);
+  --accent-ink: var(--d-accent-ink);
+  --danger: var(--d-danger);
+  --line: var(--d-line);
+  --shadow: var(--d-shadow);
+  color-scheme: dark;
+}
+:root[data-theme='light'] { color-scheme: light; }
+
+/* OpenDyslexic, served from this instance so no reading habit leaves it.
+   SIL Open Font Licence 1.1; the licence ships alongside in /fonts. Nothing
+   downloads it unless someone picks it. */
+@font-face { font-family: 'OpenDyslexic'; src: url('/fonts/opendyslexic-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'OpenDyslexic'; src: url('/fonts/opendyslexic-latin-400-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'OpenDyslexic'; src: url('/fonts/opendyslexic-latin-700-normal.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'OpenDyslexic'; src: url('/fonts/opendyslexic-latin-700-italic.woff2') format('woff2'); font-weight: 700; font-style: italic; font-display: swap; }
+
+/* The reading font. Serif leaves the display face alone — it already was one.
+   OpenDyslexic replaces both: a setting for reading that left the headings in
+   Palatino would be doing half a job. */
+:root[data-font='serif'] { --font: var(--font-serif); }
+:root[data-font='dyslexic'] {
+  --font: 'OpenDyslexic', var(--font-sans);
+  --font-serif: 'OpenDyslexic', var(--font-sans);
+}
+
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {

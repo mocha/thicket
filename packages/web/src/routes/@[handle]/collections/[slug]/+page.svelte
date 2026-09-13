@@ -14,8 +14,10 @@
 
   /**
    * A collection, mine or anyone's, at its one address. The owner reads it
-   * here too (Manage is one level down), so the URL in the bar is always the
-   * shareable one. For visitors there is one action:
+   * here too (Settings is one level down), so the URL in the bar is always
+   * the shareable one. The owner's two actions are named rather than hidden
+   * behind a kebab: add something to this collection, or change the collection
+   * itself. For visitors there is one action:
    * "Copy this collection". Signed in here, it copies at once. Signed out, a
    * sheet explains: make an account here (and come straight back), or keep
    * the link for the cross-thicket import that is still to come. The portable
@@ -29,18 +31,6 @@
   let loadedKey = $state<string | undefined>(undefined);
   let showFeeds = $state(false);
   let explain = $state<HTMLDialogElement | null>(null);
-  let menuOpen = $state(false);
-  let menuEl = $state<HTMLElement | null>(null);
-
-  // The owner's actions live behind one button beside the title; tap outside or Escape closes it.
-  $effect(() => {
-    if (!menuOpen) return;
-    const down = (e: PointerEvent) => { if (menuEl && !menuEl.contains(e.target as Node)) menuOpen = false; };
-    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') menuOpen = false; };
-    document.addEventListener('pointerdown', down);
-    document.addEventListener('keydown', key);
-    return () => { document.removeEventListener('pointerdown', down); document.removeEventListener('keydown', key); };
-  });
 
   $effect(() => {
     const key = `${handle}/${slug}`;
@@ -90,18 +80,8 @@
       <h1>{col.name}</h1>
       <div class="actions">
         {#if col.isMe}
-          <div class="menu" bind:this={menuEl}>
-            <button class="kebab" aria-label="Collection actions" aria-haspopup="menu" aria-expanded={menuOpen} onclick={() => (menuOpen = !menuOpen)}>
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
-            </button>
-            {#if menuOpen}
-              <div class="dropdown" role="menu">
-                <a role="menuitem" href={manageCollectionHref(handle, slug)} onclick={() => (menuOpen = false)}>Manage this collection</a>
-                <button role="menuitem" onclick={() => { menuOpen = false; openAddFeed({ collectionIds: [col!.id], via: 'collection_page' }); }}>Add a new feed</button>
-                {#if col.isPublic}<button role="menuitem" onclick={() => { menuOpen = false; void copyLink(); }}>Copy link to collection</button>{/if}
-              </div>
-            {/if}
-          </div>
+          <button class="btn" onclick={() => openAddFeed({ collectionIds: [col!.id], via: 'collection_page' })}><span aria-hidden="true">+</span> Add new feed</button>
+          <a class="btn" href={manageCollectionHref(handle, slug)}>Settings</a>
         {:else if session.user}
           <button class="btn primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</button>
         {:else}
@@ -184,15 +164,10 @@
   .sub a { color: var(--accent); font-weight: 600; }
   .reveal { display: inline-flex; align-items: center; gap: 3px; font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
   .reveal svg { transition: transform 150ms ease; }
-  .menu { position: relative; }
-  .kebab { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; }
-  .kebab[aria-expanded="true"] { background: var(--surface-2); }
-  .dropdown { position: absolute; right: 0; top: calc(100% + 6px); min-width: 230px; white-space: nowrap; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 6px; z-index: 30; display: flex; flex-direction: column; }
-  .dropdown [role="menuitem"] { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--text); }
-  .dropdown [role="menuitem"]:hover { background: var(--surface-2); }
   .tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
-  .actions { flex: none; display: flex; gap: 8px; align-items: center; padding-top: 2px; }
-  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 600; color: var(--text-2); }
+  .actions { flex: none; display: flex; gap: 8px; align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
+  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+  .btn:hover { background: var(--surface-2); color: var(--text); }
   .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .btn:disabled { opacity: 0.6; }
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }

@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { api, authApi, profileHref, ApiError } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
+  import { appearance, setFont, setTheme, FONTS, THEMES, type Font, type Theme } from '$lib/theme.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   /**
@@ -9,6 +10,9 @@
    * toggles save the moment they change. Visibility is layered: the whole
    * profile, then each section; per-collection privacy lives on the
    * collection's manage page.
+   *
+   * Appearance is the odd one out: it is kept in this browser, not on the
+   * account, and applies the moment you pick it. See lib/theme.svelte.ts.
    */
   const me = $derived(session.user!);
   let displayName = $state('');
@@ -82,6 +86,9 @@
 
   const tracking = $derived(me.trackActivity ?? me.instanceTracking);
 
+  function chooseTheme(t: Theme) { setTheme(t); api.event('theme_changed', { theme: t }); }
+  function chooseFont(f: Font) { setFont(f); api.event('font_changed', { font: f }); }
+
 </script>
 
 <svelte:head><title>Settings · thicket</title></svelte:head>
@@ -103,6 +110,33 @@
 </section>
 
 <section class="card">
+  <h2>Appearance</h2>
+  <p class="help">Kept on this device rather than your account, so each screen you read on can differ. Changes apply as you pick them.</p>
+  <fieldset>
+    <legend>Theme</legend>
+    {#each THEMES as t (t.id)}
+      <label class="radio">
+        <input type="radio" name="theme" value={t.id} checked={appearance.theme === t.id} onchange={() => chooseTheme(t.id)} />
+        <span><strong>{t.label}</strong><small>{t.note}</small></span>
+      </label>
+    {/each}
+  </fieldset>
+  <fieldset class="fonts">
+    <legend>Reading font</legend>
+    {#each FONTS as f (f.id)}
+      <label class="radio">
+        <input type="radio" name="font" value={f.id} checked={appearance.font === f.id} onchange={() => chooseFont(f.id)} />
+        <span>
+          <strong>{f.label}</strong><small>{f.note}</small>
+          <span class="sample" data-sample={f.id}>Whatever you read, it arrives here in order.</span>
+        </span>
+      </label>
+    {/each}
+  </fieldset>
+  <p class="help foot">Colour themes beyond light and dark are coming; for now these two are the choice.</p>
+</section>
+
+<section class="card">
   <h2>Who can see your profile</h2>
   <fieldset>
     <label class="radio">
@@ -117,7 +151,7 @@
   <div class="toggles" class:dim={me.profileVisibility === 'private'}>
     <label class="switch">
       <input type="checkbox" checked={me.showCollections} onchange={(e) => set({ showCollections: e.currentTarget.checked }, e.currentTarget.checked ? 'Collections shown on your profile' : 'Collections hidden')} />
-      <span><strong>Show my collections</strong><small>All of them, or none. To hide just one, open the collection, choose <strong>Manage this collection</strong> from its ⋯ menu, and switch it to Private; private collections never show here even when this is on.</small></span>
+      <span><strong>Show my collections</strong><small>All of them, or none. To hide just one, open the collection, press <strong>Settings</strong>, and switch it to Private; private collections never show here even when this is on.</small></span>
     </label>
     <label class="switch">
       <input type="checkbox" checked={me.showBookmarks} onchange={(e) => set({ showBookmarks: e.currentTarget.checked }, e.currentTarget.checked ? 'Bookmarks shown on your profile' : 'Bookmarks hidden')} />
@@ -196,6 +230,14 @@
   button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   button:disabled { opacity: 0.5; }
   fieldset { border: 0; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 10px; }
+  legend { padding: 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .fonts { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+  /* Each sample is set in the face it names, so the choice is visible before it is made. */
+  .sample { margin-top: 4px; font-size: 15px; color: var(--text-2); }
+  .sample[data-sample='sans'] { font-family: var(--font-sans); }
+  .sample[data-sample='serif'] { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; }
+  .sample[data-sample='dyslexic'] { font-family: 'OpenDyslexic', var(--font-sans); }
+  .foot { margin: 14px 0 0; }
   .radio, .switch { flex-direction: row; align-items: flex-start; gap: 12px; font-weight: 400; color: var(--text); cursor: pointer; }
   .radio input, .switch input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
   .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }

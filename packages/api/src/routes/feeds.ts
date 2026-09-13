@@ -8,7 +8,7 @@ import { Hono } from "hono";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
-import { subscribe, addFeedToCollection } from "../lib/subscribe.js";
+import { subscribe, addFeedToCollection, defaultCollectionFor } from "../lib/subscribe.js";
 import { refreshFeed } from "../feeds/refresh.js";
 import { isHttpUrl, normalizeFeedUrl } from "../feeds/normalize.js";
 import { refreshIcon } from "../feeds/icons.js";
@@ -121,7 +121,7 @@ feeds.post("/", async (c) => {
     ? (await db.select({ id: schema.collections.id }).from(schema.collections).where(and(eq(schema.collections.userId, user.id), inArray(schema.collections.id, wanted)))).map((r) => r.id)
     : [];
   try {
-    const outcome = await subscribe(user.rootCollectionId, normalized, mine[0]);
+    const outcome = await subscribe(user, normalized, mine[0]);
     if (outcome.status === "subscribed") for (const id of mine.slice(1)) await addFeedToCollection(id, outcome.feed.id);
     return c.json(outcome, outcome.status === "none" ? 404 : 200);
   } catch (err) {
@@ -157,14 +157,15 @@ feeds.post("/:id/refresh", async (c) => {
   return c.json(result);
 });
 
-/** Follow = put it in Unsorted (or a chosen collection). Filing into other collections is PUT /:id/collections. */
+/** Follow = put it in a collection: the one named, or the default. Filing into more is PUT /:id/collections. */
 feeds.post("/:id/follow", async (c) => {
   const user = currentUser(c);
   const feedId = Number(c.req.param("id"));
   const body = await c.req.json<{ collectionId?: number }>().catch(() => ({} as { collectionId?: number }));
-  const target = body.collectionId ?? user.rootCollectionId;
+  const target = body.collectionId ?? (await defaultCollectionFor(user));
   const [col] = await db.select().from(schema.collections).where(and(eq(schema.collections.id, target), eq(schema.collections.userId, user.id)));
   if (!col) return c.json({ error: "collection not found" }, 404);
+  if (col.parentId === null) return c.json({ error: "pick a collection to follow into" }, 400);
   await addFeedToCollection(target, feedId);
   return c.json({ feedId, collectionIds: [target] });
 });
@@ -184,7 +185,7 @@ feeds.post("/:id/restore", async (c) => {
   const user = currentUser(c);
   const feedId = Number(c.req.param("id"));
   const body = await c.req.json<{ collectionIds?: number[] }>().catch(() => ({ collectionIds: [] as number[] }));
-  const ids = body.collectionIds?.length ? body.collectionIds : [user.rootCollectionId];
+  const ids = body.collectionIds?.length ? body.collectionIds : [await defaultCollectionFor(user)];
   await db.insert(schema.collectionFeeds).values(ids.map((collectionId) => ({ collectionId, feedId }))).onConflictDoNothing();
   return c.json({ feedId, collectionIds: ids });
 });
@@ -194,11 +195,11 @@ feeds.put("/:id/collections", async (c) => {
   const user = currentUser(c);
   const feedId = Number(c.req.param("id"));
   const body = await c.req.json<{ collectionIds: number[] }>().catch(() => ({ collectionIds: [] as number[] }));
-  const mine = await db.select({ id: schema.collections.id }).from(schema.collections).where(eq(schema.collections.userId, user.id));
+  const mine = await db.select({ id: schema.collections.id, parentId: schema.collections.parentId }).from(schema.collections).where(eq(schema.collections.userId, user.id));
   const allowed = new Set(mine.map((m) => m.id));
-  let wanted = [...new Set(body.collectionIds ?? [])].filter((id) => allowed.has(id));
-  // Unsorted is exclusive with named collections: if any named one is wanted, the root is not.
-  if (wanted.some((id) => id !== user.rootCollectionId)) wanted = wanted.filter((id) => id !== user.rootCollectionId);
+  const named = new Set(mine.filter((m) => m.parentId !== null).map((m) => m.id));
+  // The root is never a destination; asking for it alone is the same as unfollowing.
+  const wanted = [...new Set(body.collectionIds ?? [])].filter((id) => named.has(id));
   await db.transaction(async (tx) => {
     await tx.delete(schema.collectionFeeds).where(and(eq(schema.collectionFeeds.feedId, feedId), inArray(schema.collectionFeeds.collectionId, [...allowed])));
     if (wanted.length) await tx.insert(schema.collectionFeeds).values(wanted.map((collectionId) => ({ collectionId, feedId }))).onConflictDoNothing();

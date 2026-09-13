@@ -1,5 +1,6 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
+import { FIRST_COLLECTION_NAME, FIRST_COLLECTION_SLUG, type SessionUser } from "./auth.js";
 import { discover, type Discovery } from "../feeds/discover.js";
 import { normalizeFeedUrl } from "../feeds/normalize.js";
 import { storeItems, chooseInterval } from "../feeds/refresh.js";
@@ -51,22 +52,36 @@ export async function ensureFeedLazy(url: string) {
 }
 
 /**
- * Put a feed in a collection. Unsorted (the root) means "followed but not
- * filed", so it is exclusive with the named collections: filing into a named
- * one removes the root membership, and adding to the root is a no-op when a
- * named one already holds the feed. Every write path goes through here.
+ * Where a bare "Follow" files a feed: the person's oldest collection, which for
+ * a new account is the one they were given. Following has no unfiled state, so
+ * this can never answer "nowhere" — if every collection has been deleted, the
+ * first one comes back.
+ */
+export async function defaultCollectionFor(user: SessionUser): Promise<number> {
+  if (user.defaultCollectionId !== null) return user.defaultCollectionId;
+  const [existing] = await db
+    .select({ id: schema.collections.id })
+    .from(schema.collections)
+    .where(and(eq(schema.collections.userId, user.id), isNotNull(schema.collections.parentId)))
+    .orderBy(schema.collections.id)
+    .limit(1);
+  if (existing) return existing.id;
+  const [made] = await db
+    .insert(schema.collections)
+    .values({ userId: user.id, parentId: user.rootCollectionId, name: FIRST_COLLECTION_NAME, slug: FIRST_COLLECTION_SLUG })
+    .returning();
+  return made.id;
+}
+
+/**
+ * Put a feed in a collection. Every write path goes through here. The root row
+ * is the tree's parent and nothing else: a feed filed there would be followed
+ * but in no collection, which is the state this app no longer has.
  */
 export async function addFeedToCollection(collectionId: number, feedId: number) {
   const [col] = await db.select({ userId: schema.collections.userId, parentId: schema.collections.parentId }).from(schema.collections).where(eq(schema.collections.id, collectionId));
-  if (!col) return;
-  if (col.parentId === null) {
-    const named = await db.execute(sql`select 1 from collection_feeds cf join collections c on c.id = cf.collection_id where c.user_id = ${col.userId} and c.parent_id is not null and cf.feed_id = ${feedId} limit 1`);
-    if (named.rows.length) return;
-  }
+  if (!col || col.parentId === null) return;
   await db.insert(schema.collectionFeeds).values({ collectionId, feedId }).onConflictDoNothing();
-  if (col.parentId !== null) {
-    await db.execute(sql`delete from collection_feeds cf using collections root where cf.collection_id = root.id and root.user_id = ${col.userId} and root.parent_id is null and cf.feed_id = ${feedId}`);
-  }
 }
 
 export type SubscribeOutcome =
@@ -75,12 +90,12 @@ export type SubscribeOutcome =
   | { status: "none"; pageUrl: string };
 
 /** The one acquisition path: any URL in, a followed feed (or a choice) out. */
-export async function subscribe(userRootCollectionId: number, input: string, collectionId?: number): Promise<SubscribeOutcome> {
+export async function subscribe(user: SessionUser, input: string, collectionId?: number): Promise<SubscribeOutcome> {
   const d = await discover(input);
   if (d.status === "candidates") return { status: "choose", candidates: d.candidates };
   if (d.status === "none") return { status: "none", pageUrl: d.pageUrl };
   const feed = await ensureFeedFromDiscovery(d);
-  const target = collectionId ?? userRootCollectionId;
+  const target = collectionId ?? (await defaultCollectionFor(user));
   const [before] = await db.select({ n: sql<number>`count(*)::int` }).from(schema.collectionFeeds).where(eq(schema.collectionFeeds.feedId, feed.id));
   await addFeedToCollection(target, feed.id);
   return { status: "subscribed", feed, alreadyFollowed: before.n > 0 };

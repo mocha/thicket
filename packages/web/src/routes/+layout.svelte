@@ -8,6 +8,7 @@
   import AddFeedSheet from '$lib/components/AddFeedSheet.svelte';
   import { addFeed } from '$lib/addfeed.svelte';
   import { session, loadMe, isPublicPath } from '$lib/session.svelte';
+  import { loadAppearance } from '$lib/theme.svelte';
   let { children } = $props();
 
   /**
@@ -16,7 +17,7 @@
    * Public paths (/@handle…, /login, /signup) render for anyone; everything
    * else bounces to /login and comes back afterwards.
    */
-  onMount(() => { void loadMe(); });
+  onMount(() => { loadAppearance(); void loadMe(); });
 
   const path = $derived(page.url.pathname);
   const isPublic = $derived(isPublicPath(path));
