@@ -159,7 +159,7 @@
     </label>
     <label class="switch">
       <input type="checkbox" checked={me.showNotes} onchange={(e) => set({ showNotes: e.currentTarget.checked }, e.currentTarget.checked ? 'Your notes can be seen by others' : 'Your notes are yours alone')} />
-      <span><strong>Share my notes</strong><small>People who follow you (or everyone, if they choose) see your notes under posts they come across. Off, and your notes are only ever yours.</small></span>
+      <span><strong>Share my notes</strong><small>Your notes show under posts other people read, and in your recent activity on your profile, where anyone can see them. Off, and your notes are only ever yours.</small></span>
     </label>
   </div>
 </section>

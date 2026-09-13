@@ -250,8 +250,20 @@ export const profilesApi = {
   collection: (handle: string, slug: string) => j<PublicCollection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}`),
   copyCollection: (handle: string, slug: string) => j<Collection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/copy`, { method: 'POST' }),
   opmlUrl: (handle: string, slug: string) => `/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/opml`,
-  bookmarks: (handle: string, before?: string | null) => j<{ owner: PublicUser; isMe: boolean; bookmarks: PublicBookmark[]; nextCursor: string | null }>(`/api/profiles/${encodeURIComponent(handle)}/bookmarks${before ? `?before=${encodeURIComponent(before)}` : ''}`)
+  bookmarks: (handle: string, before?: string | null) => j<{ owner: PublicUser; isMe: boolean; bookmarks: PublicBookmark[]; nextCursor: string | null }>(`/api/profiles/${encodeURIComponent(handle)}/bookmarks${before ? `?before=${encodeURIComponent(before)}` : ''}`),
+  activity: (handle: string, before?: string | null) => j<{ owner: PublicUser; isMe: boolean; entries: ActivityEntry[]; nextCursor: string | null }>(`/api/profiles/${encodeURIComponent(handle)}/activity${before ? `?before=${encodeURIComponent(before)}` : ''}`)
 };
+
+/**
+ * One thing a person did, newest first. A run of feed adds to one collection
+ * (an import, a copy) arrives as a single 'feeds' entry with a count, not one
+ * entry per feed.
+ */
+export type ActivityEntry =
+  | { kind: 'feeds'; at: string; id: number; payload: { collection: { name: string; slug: string; isPublic: boolean }; count: number; feeds: { id: number; title: string; hasIcon: boolean }[] } }
+  | { kind: 'collection'; at: string; id: number; payload: { name: string; slug: string; isPublic: boolean; copiedFrom: { handle: string; name: string; slug: string } | null } }
+  | { kind: 'bookmark'; at: string; id: number; payload: { url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean } }
+  | { kind: 'note'; at: string; id: number; payload: { body: string; itemId: number; url: string; title: string | null; siteTitle: string | null; feedId: number; hasIcon: boolean } };
 
 export type ExploreCollection = {
   id: number; name: string; slug: string; description: string | null; handle: string; displayName: string | null; feedCount: number;

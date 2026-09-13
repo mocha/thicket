@@ -5,6 +5,7 @@
   import { session } from '$lib/session.svelte';
   import { hostOf } from '$lib/time';
   import Monogram from '$lib/components/Monogram.svelte';
+  import ActivityList from '$lib/components/ActivityList.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
@@ -154,11 +155,13 @@
     </section>
   {/if}
 
+  <ActivityList handle={profile.handle} isMe={profile.isMe} />
+
   {#if profile.notes && (profile.notes.count > 0 || profile.isMe)}
     <section>
       <h2>Notes <span class="n">{profile.notes.count}</span></h2>
       <p class="status">
-        {#if profile.isMe}Notes you’ve left on posts. <a href="/notes">Read them all</a>. Others see them on posts they come across, if they let notes through in their settings.
+        {#if profile.isMe}Notes you’ve left on posts. <a href="/notes">Read them all</a>. Others see them on posts they come across, and in your recent activity above. <a href="/settings">Keep them to yourself</a>.
         {:else if profile.people.isFollowing}You see their notes on posts you come across{#if session.user?.notesFrom === 'none'}, once you allow notes in <a href="/settings">Settings</a>{/if}.
         {:else}Follow them to see their notes on posts you come across.{/if}
       </p>

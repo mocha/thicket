@@ -16,6 +16,7 @@ import { currentUser, normalizeHandle } from "../lib/auth.js";
 import { exportCollectionOpml } from "../lib/opml.js";
 import { PUBLIC_URL } from "../lib/config.js";
 import { slugify, uniqueCollectionSlug } from "../lib/slug.js";
+import { activityForViewer } from "../lib/activity.js";
 
 export const profiles = new Hono();
 
@@ -229,4 +230,20 @@ profiles.get("/:handle/bookmarks", async (c) => {
   const page = all.slice(0, limit);
   const last = all.length > limit ? page[page.length - 1] : null;
   return c.json({ owner: publicUser(u), isMe, bookmarks: page, nextCursor: last ? `${new Date(last.savedAt).toISOString()}|${last.id}` : null });
+});
+
+/**
+ * What this person has been up to. The page version: it takes a viewer and
+ * shows what that viewer is allowed to see, which for the owner is everything.
+ * A private profile is a 404 here as everywhere else.
+ */
+profiles.get("/:handle/activity", async (c) => {
+  const u = await owner(c.req.param("handle"));
+  if (!u) return c.json({ error: "not found" }, 404);
+  const viewer = c.get("user");
+  const isMe = viewer?.id === u.id;
+  if (!isMe && u.profileVisibility === "private") return c.json({ error: "not found" }, 404);
+  const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 20)));
+  const { entries, nextCursor } = await activityForViewer(u, isMe, { limit, before: c.req.query("before") });
+  return c.json({ owner: publicUser(u), isMe, entries, nextCursor });
 });
