@@ -163,10 +163,15 @@ export const items = pgTable("items", {
   url: text("url"),
   title: text("title"),
   author: text("author"),
-  /** Short text for the river card. Plain text, truncated. */
+  /** Short text for the river card. Plain text, truncated. A display string. */
   summary: text("summary"),
-  /** Full content as delivered by the feed, if any. Kept for future search;
-   *  never rendered in-app in the current reading model. */
+  /**
+   * The item's body as delivered by the feed, whole and unmodified: the rich
+   * field where there is one (`content:encoded`, Atom `<content>`,
+   * `content_html`), otherwise the description. Raw publisher HTML — it feeds
+   * search (the tsvector strips tags) and is never rendered in-app in the
+   * current reading model. Anything that does render it has to sanitize first.
+   */
   content: text("content"),
   imageUrl: text("image_url"),
   publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),

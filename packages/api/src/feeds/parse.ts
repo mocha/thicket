@@ -11,7 +11,20 @@ export type ParsedItem = {
   url: string | null;
   title: string | null;
   author: string | null;
+  /** Plain text for the river card, capped at SUMMARY_LEN. A display string, never the record. */
   summary: string | null;
+  /**
+   * Everything the publisher gave us for this item's body, whole: the rich
+   * field (`content:encoded`, Atom `<content>`, `content_html`) when there is
+   * one, otherwise the description. Both are stored at full length.
+   *
+   * These used to be different columns' business — rich content here, the
+   * description only ever as a 280-character `summary`. That silently discarded
+   * the rest of the description for 46% of the index, and since most feeds
+   * expose only their newest 10–25 entries, anything that scrolled out of the
+   * window was gone for good. Feeds hand us this text; the least we can do is
+   * keep it.
+   */
   content: string | null;
   imageUrl: string | null;
   publishedAt: Date | null;
@@ -100,11 +113,11 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
     const f = feed as any;
     const siteUrl = f.link ?? null;
     for (const it of f.items ?? []) {
-      const content: string | null = it.content?.encoded ?? null;
+      const rich: string | null = it.content?.encoded ?? null;
       const permalinkGuid = it.guid?.isPermaLink && /^https?:\/\//.test(it.guid?.value ?? "") ? it.guid.value : null;
       const link = absolutize(it.link ?? permalinkGuid, siteUrl ?? feedUrl);
       const title = it.title ? stripHtml(it.title) : null;
-      const body = content ?? it.description ?? null;
+      const body = rich ?? it.description ?? null;
       const mediaThumb = it.media?.thumbnails?.[0]?.url ?? it.media?.groups?.[0]?.thumbnails?.[0]?.url ?? it.media?.contents?.find((c: any) => c.medium === "image")?.url;
       const enclosureImg = it.enclosures?.find((e: any) => e.type?.startsWith("image/"))?.url;
       items.push({
@@ -112,8 +125,8 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         url: link,
         title,
         author: cleanAuthor(it.dc?.creators?.[0]) ?? cleanAuthor(it.authors?.[0]),
-        summary: summarize(it.description, content),
-        content,
+        summary: summarize(it.description, rich),
+        content: body,
         imageUrl: mediaThumb ?? enclosureImg ?? firstImg(body) ?? null,
         publishedAt: toDate(it.pubDate) ?? toDate(it.dc?.dates?.[0]) ?? null,
       });
@@ -128,15 +141,15 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
     for (const e of f.entries ?? []) {
       const link = absolutize(pick(e.links, "alternate") ?? null, siteUrl ?? feedUrl);
       const title = e.title ? stripHtml(e.title) : null;
-      const content: string | null = e.content ?? null;
-      const body = content ?? e.summary ?? null;
+      const rich: string | null = e.content ?? null;
+      const body = rich ?? e.summary ?? null;
       items.push({
         dedupeKey: dedupeKey(e.id, link, title, body),
         url: link,
         title,
         author: e.authors?.[0]?.name ?? f.authors?.[0]?.name ?? null,
-        summary: summarize(e.summary, content),
-        content,
+        summary: summarize(e.summary, rich),
+        content: body,
         imageUrl: e.media?.thumbnails?.[0]?.url ?? e.media?.groups?.[0]?.thumbnails?.[0]?.url ?? firstImg(body),
         publishedAt: toDate(e.published) ?? toDate(e.updated) ?? null,
       });
@@ -150,14 +163,15 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
   for (const it of f.items ?? []) {
     const link = absolutize(it.url ?? it.external_url ?? null, siteUrl ?? feedUrl);
     const title = it.title ? stripHtml(it.title) : null;
-    const content: string | null = it.content_html ?? it.content_text ?? null;
+    const rich: string | null = it.content_html ?? it.content_text ?? null;
+    const body = rich ?? it.summary ?? null;
     items.push({
-      dedupeKey: dedupeKey(it.id, link, title, content),
+      dedupeKey: dedupeKey(it.id, link, title, rich),
       url: link,
       title,
       author: it.authors?.[0]?.name ?? f.authors?.[0]?.name ?? null,
       summary: summarize(it.summary, it.content_text, it.content_html),
-      content,
+      content: body,
       imageUrl: it.image ?? it.banner_image ?? firstImg(it.content_html),
       publishedAt: toDate(it.date_published) ?? toDate(it.date_modified) ?? null,
     });

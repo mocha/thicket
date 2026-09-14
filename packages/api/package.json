@@ -14,7 +14,8 @@
     "icons": "tsx --env-file=../../.env src/scripts/icons.ts",
     "passwd": "tsx --env-file=../../.env src/scripts/passwd.ts",
     "typecheck": "tsc --noEmit",
-    "ingest": "tsx --env-file=../../.env src/scripts/ingest.ts"
+    "ingest": "tsx --env-file=../../.env src/scripts/ingest.ts",
+    "recover-bodies": "tsx --env-file=../../.env src/scripts/recover-bodies.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
