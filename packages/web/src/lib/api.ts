@@ -298,6 +298,52 @@ export const exploreApi = {
   featured: () => j<{ from: string | null; collections: (ExploreCollection & { isMine: boolean })[] }>('/api/explore/featured')
 };
 
+// ---- search ----------------------------------------------------------------
+
+/**
+ * One query, four kinds of answer. Feeds and collections are aggregations over
+ * the posts that matched, so every row carries its own evidence — `matches`,
+ * `posts`, `lastMatchAt` — and the UI says it in words instead of showing a
+ * rank. `nameMatch` marks a row found by its name rather than by its posts.
+ */
+export type SearchScope = 'all' | 'feeds' | 'collections' | 'posts' | 'people';
+export type SearchFeed = {
+  id: number; url: string; siteUrl: string | null; title: string | null; description: string | null; slug: string;
+  lastItemAt: string | null; consecutiveFailures: number; postsLast30d: number; hasIcon: boolean; myCollectionIds: number[];
+  matches: number; posts: number; lastMatchAt: string | null; nameMatch: boolean;
+};
+export type SearchCollection = ExploreCollection & {
+  isMine: boolean; matches: number; matchingFeeds: number; lastMatchAt: string | null; nameMatch: boolean;
+};
+export type SearchPost = {
+  id: number; feedId: number; feedTitle: string | null; siteUrl: string | null; url: string | null;
+  title: string | null; author: string | null; imageUrl: string | null; publishedAt: string;
+  /** Matched words are fenced by … so the page highlights them without rendering feed HTML. */
+  snippet: string | null;
+  hasIcon: boolean; bookmarkId: number | null; myCollectionIds: number[];
+};
+export type SearchPerson = {
+  handle: string; displayName: string | null; bio: string | null;
+  nameMatch: boolean; notesMatch: number; marksMatch: number;
+  feeds: number; collections: number; isFollowing: boolean;
+};
+export type SearchGroup<T> = { rows: T[]; total: number; nextOffset: number | null };
+export type SearchResults = {
+  q: string; scope: SearchScope;
+  feeds: SearchGroup<SearchFeed>; collections: SearchGroup<SearchCollection>;
+  posts: SearchGroup<SearchPost>; people: SearchGroup<SearchPerson>;
+};
+
+export const searchApi = {
+  run: (opts: { q: string; scope?: SearchScope; limit?: number; offset?: number }) => {
+    const p = new URLSearchParams({ q: opts.q });
+    if (opts.scope && opts.scope !== 'all') p.set('scope', opts.scope);
+    if (opts.limit) p.set('limit', String(opts.limit));
+    if (opts.offset) p.set('offset', String(opts.offset));
+    return j<SearchResults>(`/api/search?${p}`);
+  }
+};
+
 export const profileHref = (handle: string) => `/@${handle}`;
 /** THE collection page: /@handle/collections/slug. Owner or visitor, the address is the same, so any copied URL is shareable. */
 export const collectionHref = (handle: string, slug: string) => `/@${handle}/collections/${slug}`;

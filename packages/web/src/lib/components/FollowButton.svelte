@@ -2,7 +2,7 @@
   /**
    * The one control for "my relationship to this feed". A split button:
    *   not following            → [ Follow | ▾ ]
-   *   following, 1 collection  → [ In 1 collection | ▾ ]
+   *   following, 1 collection  → [ In Tech News | ▾ ]
    *   following, N collections → [ In N collections | ▾ ]
    * Either half opens the same panel. Following is *filing*: you pick where it
    * goes, and picking nowhere is how you stop following. Follow used to file
@@ -19,7 +19,7 @@
    * positioning, and the panel would land off screen.
    */
   import { api } from '$lib/api';
-  import { loadCollections } from '$lib/collections.svelte';
+  import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import CollectionCheckList from './CollectionCheckList.svelte';
   import { showToast } from '$lib/toast.svelte';
 
@@ -33,7 +33,17 @@
   let pos = $state<{ top: number; left: number; up: boolean }>({ top: 0, left: 0, up: false });
 
   const following = $derived(ids.length > 0);
-  const label = $derived(!following ? 'Follow' : ids.length === 1 ? 'In 1 collection' : `In ${ids.length} collections`);
+  /**
+   * Filed in exactly one place, the button names it: "In Tech News" answers
+   * "where did this go" outright, where "In 1 collection" makes you open the
+   * panel to find out. Past one there is no name to give, so it counts.
+   * The name comes from the shared list, which may not have loaded yet — until
+   * it does, the count is the honest thing to show.
+   */
+  const only = $derived(ids.length === 1 ? collectionStore.list.find((c) => c.id === ids[0]) : null);
+  const label = $derived(
+    !following ? 'Follow' : only ? `In ${only.name}` : ids.length === 1 ? 'In 1 collection' : `In ${ids.length} collections`
+  );
 
   async function unfollow() {
     const removed = await api.unfollow(feedId);
@@ -65,6 +75,9 @@
     open = !open;
     if (open) api.event('follow_panel_opened', { feedId });
   }
+
+  // Needed to name the one collection on the button, before the panel is opened.
+  $effect(() => { if (following) void loadCollections(); });
 
   $effect(() => {
     if (!open) return;
@@ -104,7 +117,8 @@
   .split.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
   .split.neutral { border-color: var(--line); color: var(--text-2); }
   .split.neutral .more { border-left-color: var(--line); }
-  .main { padding: 8px 12px 8px 14px; font-size: 14px; font-weight: 600; color: inherit; white-space: nowrap; }
+  /* A collection name can be long; the button gives it room, then ellipsis. */
+  .main { padding: 8px 12px 8px 14px; font-size: 14px; font-weight: 600; color: inherit; white-space: nowrap; max-width: 20ch; overflow: hidden; text-overflow: ellipsis; }
   .more { padding: 0 8px 0 6px; border-left: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); display: grid; place-items: center; color: inherit; }
   .main:hover, .more:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
   .compact .main { padding: 6px 10px 6px 12px; font-size: 13px; }
