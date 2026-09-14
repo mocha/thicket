@@ -54,9 +54,24 @@ polls feeds from inside the process, so platforms that scale to zero (Cloud
 Run, Lambda-style) need a minimum of one instance or `SCHEDULER=off` plus an
 external fetcher, which doesn't exist yet.
 
-**Railway.** New project → Deploy from repo (it finds the Dockerfile) or from
-the published image. Add a Postgres service or point `DATABASE_URL` at
-Supabase. Set `PUBLIC_URL` to the Railway domain (or your CNAME).
+**Railway.** New project → deploy from the GitHub repo, or from the published
+image. Railway's monorepo detection offers a service per package
+(`@thicket/web`, `@thicket/api`) with `pnpm --filter …` start commands and
+per-package watch paths — all wrong for thicket, which is one container. Keep
+one service and, in its settings, set the start command to the image's CMD
+(`node --enable-source-maps dist/index.js`; a dashboard start command overrides
+it), clear the build command and watch paths, and set the health check to
+`/api/health`.
+
+Run **one service with one replica.** The feed fetcher runs inside the web
+process, so every extra copy is another fetcher polling every feed; add replicas
+only with `SCHEDULER=off` on the extras. Add a Postgres service in the same
+region and set `DATABASE_URL` to its private URL (`${{Postgres.DATABASE_URL}}`);
+set `PUBLIC_URL` to the Railway domain, or your own once it points there.
+
+There is deliberately no `railway.toml`: Railway's config-as-code files are
+deprecated, override the dashboard while they last, and stop being read on
+2026-12-01.
 
 **Supabase as the database.** Use the *direct* or *session-mode* connection
 string from the dashboard, not the transaction-mode pooler; the transaction
