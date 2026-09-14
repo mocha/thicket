@@ -1,0 +1,23 @@
+# Railway: build the same Dockerfile every other deploy uses, and only send
+# traffic to a container once thicket says it is healthy. /api/health answers
+# after migrations have run on boot, so a deploy with a broken migration never
+# takes over from the one that works.
+#
+# Run ONE replica. The feed fetcher runs inside the web process (SCHEDULER=on),
+# so a second replica is a second fetcher polling every feed twice. Scale out by
+# setting SCHEDULER=off on the extra replicas, not by adding more of these.
+#
+# Railway sets PORT; thicket reads it. Required variables: DATABASE_URL and
+# PUBLIC_URL (see .env.example and docs/DEPLOY.md).
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+# Generous on purpose: the first boot against a restored database runs any
+# pending migrations before the health check can pass.
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
