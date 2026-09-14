@@ -201,6 +201,12 @@ feeds.post("/:id/refresh", async (c) => {
     return c.json({ error: "refreshed recently", retryAfterS, lastFetchedAt: feed.lastFetchedAt?.toISOString() }, 429);
   }
   const result = await refreshFeed(id);
+  // The feed's site is paused (feeds/hosts.ts): nothing was fetched, and asking again won't help until it ends.
+  if (result.deferredUntil) {
+    const retryAfterS = Math.max(1, Math.ceil((result.deferredUntil.getTime() - Date.now()) / 1000));
+    c.header("retry-after", String(retryAfterS));
+    return c.json({ error: "site paused", reason: result.deferredReason, retryAfterS }, 429);
+  }
   return c.json(result);
 });
 

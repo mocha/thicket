@@ -254,6 +254,23 @@ export const feedSettings = pgTable("feed_settings", {
 ]);
 
 /**
+ * Sites that told thicket to back off, and until when (feeds/hosts.ts). Kept in
+ * the database only so a restart in the middle of a pause does not forget it
+ * and ask again straight away. `host` is the registrable domain (reddit.com).
+ * A row is removed when a feed on that host next fetches successfully.
+ */
+export const hostCooldowns = pgTable("host_cooldowns", {
+  host: text("host").primaryKey(),
+  until: timestamp("until", { withTimezone: true }).notNull(),
+  reason: text("reason"),
+  /** 429s in a row, for the doubling default pause when a site gives no Retry-After. */
+  strikes: integer("strikes").notNull().default(0),
+  /** Host-wide outages in a row, for the doubling outage pause. */
+  outageStrikes: integer("outage_strikes").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
  * Bookmarks are ONE private set per user, not a list inside a collection.
  * They can be filtered by the feed they came from, or by the collections that
  * feed is in, but that is a query-time join, never stored membership.

@@ -99,9 +99,10 @@ export const api = {
   unfollow: (id: number) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${id}`, { method: 'DELETE' }),
   restore: (id: number, collectionIds: number[]) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${id}/restore`, { method: 'POST', body: JSON.stringify({ collectionIds }) }),
   /** Refresh is rate-limited per feed; a 429 comes back as { cooldown: seconds } instead of throwing. */
-  refresh: async (id: number): Promise<{ ok: true } | { ok: false; cooldown: number }> => {
+  /** `reason` is set when the feed's whole site is paused (it asked thicket to slow down, or seems down), rather than this feed being fetched recently. */
+  refresh: async (id: number): Promise<{ ok: true } | { ok: false; cooldown: number; reason: string | null }> => {
     const res = await fetch(`/api/feeds/${id}/refresh`, { method: 'POST' });
-    if (res.status === 429) { const b = await res.json().catch(() => ({})); return { ok: false, cooldown: Number(b.retryAfterS ?? 300) }; }
+    if (res.status === 429) { const b = await res.json().catch(() => ({})); return { ok: false, cooldown: Number(b.retryAfterS ?? 300), reason: b.reason ?? null }; }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return { ok: true };
   },

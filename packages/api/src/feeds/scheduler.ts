@@ -1,15 +1,21 @@
 /**
  * In-process poller. Every tick, grab due feeds and refresh them with bounded
- * global and per-host concurrency.
+ * global concurrency and one feed at a time per host.
  *
  * Deliberate shortcut: this runs inside the API process. The upgrade path is to
  * move this file into a separate worker process reading the same table, which
  * changes nothing about the data model. Until a single box can't keep up, the
  * simple version wins.
+ *
+ * Politeness lives in feeds/hosts.ts, underneath every request: the gap between
+ * requests to a host, pausing a host that says slow down, and noticing a host
+ * that is down. This file only makes sure it never asks one host for two feeds
+ * at once.
  */
 import { dueFeeds, refreshFeed } from "./refresh.js";
+import { hostKey, loadHosts } from "./hosts.js";
 
-const PER_HOST = 2;
+const PER_HOST = 1;
 
 export type SchedulerStats = { ticks: number; refreshed: number; errors: number; inFlight: number; lastTickAt: string | null };
 
@@ -24,14 +30,15 @@ export function startScheduler(opts: { tickMs: number; concurrency: number; log?
     if (stopped) return;
     stats.ticks++;
     stats.lastTickAt = new Date().toISOString();
+    await loadHosts();
     const free = opts.concurrency - inFlightIds.size;
     if (free <= 0) return;
-    const due = await dueFeeds(free * 3);
+    const due = await dueFeeds(free * 4);
     let launched = 0;
     for (const f of due) {
       if (launched >= free) break;
       if (inFlightIds.has(f.id)) continue;
-      const host = safeHost(f.url);
+      const host = hostKey(f.url);
       if ((perHost.get(host) ?? 0) >= PER_HOST) continue;
       inFlightIds.add(f.id);
       perHost.set(host, (perHost.get(host) ?? 0) + 1);
@@ -65,12 +72,4 @@ export function startScheduler(opts: { tickMs: number; concurrency: number; log?
   const timer = setInterval(() => void tick().catch((e) => log(`tick failed: ${e}`)), opts.tickMs);
   void tick();
   return { stats, stop: () => { stopped = true; clearInterval(timer); } };
-}
-
-function safeHost(url: string): string {
-  try {
-    return new URL(url).host;
-  } catch {
-    return url;
-  }
 }

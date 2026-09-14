@@ -2,19 +2,21 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { api, feedHref, type Feed } from '$lib/api';
-  import { hostOf } from '$lib/time';
+  import { hostOf, relativeTime } from '$lib/time';
   import { feedName } from '$lib/feedname';
+  import { resetNotice } from '$lib/feedsettings';
   import { loadCollections } from '$lib/collections.svelte';
   import CollectionCheckList from '$lib/components/CollectionCheckList.svelte';
+  import Banner from '$lib/components/Banner.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
   /**
    * My settings on one feed, at /feeds/:id/settings. Laid out like managing a
    * collection: back, what you are managing, your settings for it, where it is
-   * filed, and at the very end the raw facts about the feed, for when something
-   * looks wrong. Everything here is yours alone. The feed is shared, and nothing
-   * on this page changes it for anyone else.
+   * filed, and at the very end the diagnostics: the raw facts about the feed
+   * and a way to fetch it now. Everything above the diagnostics is yours
+   * alone. The feed is shared, and nothing here changes it for anyone else.
    */
   const id = $derived(Number(page.params.id));
   let feed = $state<Feed | null>(null);
@@ -53,12 +55,13 @@
     }
   }
 
-  /* Shorts: two radios, saved on change. */
+  /* Shorts: two radios, saved on change. Changing what is hidden brings the feed page's notice back. */
   async function setHideShorts(hide: boolean) {
     if (!feed || feed.hideShorts === hide) return;
     feed.hideShorts = hide;
     const r = await api.feedSettings(feed.id, { hideShorts: hide });
     feed.hideShorts = r.hideShorts;
+    resetNotice(feed.id);
     api.event('feed_hide_shorts', { feedId: feed.id, hide });
     showToast(hide ? 'Shorts hidden from this feed' : 'Shorts are back in this feed');
   }
@@ -80,6 +83,32 @@
         void loadCollections(true);
       }
     });
+  }
+
+  /* Diagnostics: fetch the feed now. The site may be paused for everyone (it asked thicket to slow down), and then this says so rather than asking again. */
+  let refreshing = $state(false);
+  let refreshNote = $state<{ tone: 'error' | 'info' | 'success'; text: string } | null>(null);
+  async function refresh() {
+    if (!feed || refreshing) return;
+    refreshing = true;
+    refreshNote = null;
+    try {
+      const r = await api.refresh(feed.id);
+      if (!r.ok) {
+        refreshNote = { tone: 'info', text: r.reason ?? `This feed was fetched a few minutes ago. Try again in ${Math.ceil(r.cooldown / 60)} min.` };
+        return;
+      }
+      const next = await api.feed(feed.id);
+      feed = { ...next, displayName: feed.displayName };
+      refreshNote = next.consecutiveFailures > 0
+        ? { tone: 'error', text: `Fetched, and it failed again: ${next.lastError ?? `HTTP ${next.lastStatus}`}` }
+        : { tone: 'success', text: 'Fetched just now.' };
+      api.event('feed_refreshed', { feedId: feed.id, via: 'feed_settings' });
+    } catch (e) {
+      refreshNote = { tone: 'error', text: e instanceof Error ? e.message : String(e) };
+    } finally {
+      refreshing = false;
+    }
   }
 
   const when = (v: string | null) => (v ? new Date(v).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : null);
@@ -111,6 +140,7 @@
     if (loadedId === id) return;
     loadedId = id;
     feed = null;
+    refreshNote = null;
     void load();
     api.event('feed_settings_view', { feedId: id });
   });
@@ -173,17 +203,31 @@
   </section>
 
   <hr />
-  <details class="facts">
-    <summary>
-      Feed metadata
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-    </summary>
-    <ul>
-      {#each facts as [k, v] (k)}
-        <li><strong>{k}:</strong> <span class:none={v === null}>{v ?? '—'}</span></li>
-      {/each}
-    </ul>
-  </details>
+  <section class="diag">
+    <h2>Diagnostics</h2>
+    {#if feed.consecutiveFailures > 0}
+      <Banner tone="error">Last fetch failed: {feed.lastError ?? `HTTP ${feed.lastStatus}`}</Banner>
+    {/if}
+    <div class="row">
+      <button class="btn" onclick={refresh} disabled={refreshing}>{refreshing ? 'Fetching…' : 'Refresh now'}</button>
+      <span class="hint inline">{feed.lastFetchedAt ? `Last checked ${relativeTime(feed.lastFetchedAt)}` : 'Not fetched yet'}</span>
+    </div>
+    {#if refreshNote}
+      <Banner tone={refreshNote.tone} dismissible ondismiss={() => (refreshNote = null)}>{refreshNote.text}</Banner>
+    {/if}
+
+    <details class="facts">
+      <summary>
+        Feed metadata
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+      </summary>
+      <ul>
+        {#each facts as [k, v] (k)}
+          <li><strong>{k}:</strong> <span class:none={v === null}>{v ?? '—'}</span></li>
+        {/each}
+      </ul>
+    </details>
+  </section>
 {:else}
   <p class="status">Loading…</p>
 {/if}
@@ -202,6 +246,7 @@
   input[type='text']::placeholder { color: var(--text-3); }
   .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   .hint { margin: 8px 0 0; font-size: 13px; color: var(--text-3); overflow-wrap: anywhere; }
+  .hint.inline { margin: 0; }
   .radios { display: flex; flex-direction: column; gap: 8px; }
   .radios label { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
   .radios label:has(input:checked) { border-color: var(--accent); }
@@ -213,6 +258,9 @@
   .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
   .btn:disabled { opacity: 0.5; }
+  .diag { display: flex; flex-direction: column; gap: 12px; }
+  .diag > h2 { margin: 0; }
+  .diag .row { margin-top: 0; }
   .facts summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 15px; font-weight: 600; list-style: none; }
   .facts summary::-webkit-details-marker { display: none; }
   .facts summary svg { transition: transform 150ms ease; color: var(--text-3); }
