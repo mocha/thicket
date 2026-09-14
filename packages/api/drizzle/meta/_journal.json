@@ -50,6 +50,13 @@
       "when": 1789336487957,
       "tag": "0006_share_levels",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789430000000,
+      "tag": "0007_search_index",
+      "breakpoints": true
     }
   ]
 }
