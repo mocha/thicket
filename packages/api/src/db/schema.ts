@@ -211,12 +211,46 @@ export const collections = pgTable("collections", {
 export const collectionFeeds = pgTable("collection_feeds", {
   collectionId: bigint("collection_id", { mode: "number" }).notNull().references(() => collections.id, { onDelete: "cascade" }),
   feedId: bigint("feed_id", { mode: "number" }).notNull().references(() => feeds.id, { onDelete: "cascade" }),
-  /** Per-collection display override. Presentational metadata is local. */
+  /**
+   * Never set by anything. A feed's name is now per person rather than per
+   * collection (feed_settings.display_name, 2026-09-14). Still read by older
+   * queries as coalesce(title_override, title), which is just the title.
+   */
   titleOverride: text("title_override"),
   addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   primaryKey({ columns: [t.collectionId, t.feedId] }),
   index("collection_feeds_feed_idx").on(t.feedId),
+]);
+
+/**
+ * A person's settings on one feed. Feeds are shared; this is the layer that is
+ * yours: what you call it, and what of it reaches your rivers. Nothing here
+ * changes the feed for anyone else, and a collection you share or someone
+ * copies does not carry it.
+ *
+ * Per person, not per collection: the same feed in two of my collections is one
+ * relationship with one source. And a feed is still the address fetched — a
+ * setting never becomes a second feed (see feeds/youtube.ts, "Shorts").
+ *
+ * A row exists only while something differs from the default (the settings
+ * endpoint deletes an all-default row), so rows per feed count the people who
+ * changed something. That is the signal for, later, turning a choice most
+ * people make into the default for everyone. Typed columns rather than a JSON
+ * blob for the same reason: "how many hide Shorts on this channel" is a count.
+ */
+export const feedSettings = pgTable("feed_settings", {
+  userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  feedId: bigint("feed_id", { mode: "number" }).notNull().references(() => feeds.id, { onDelete: "cascade" }),
+  /** Shown instead of the feed's own title wherever this person reads it. */
+  displayName: text("display_name"),
+  /** YouTube only: leave Shorts out of this person's rivers. */
+  hideShorts: boolean("hide_shorts").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.feedId] }),
+  index("feed_settings_feed_idx").on(t.feedId),
 ]);
 
 /**

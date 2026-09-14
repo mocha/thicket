@@ -6,6 +6,7 @@
   import { openAddFeed } from '$lib/addfeed.svelte';
   import { loadCollections } from '$lib/collections.svelte';
   import { feedOrigin, hostOf, relativeTime } from '$lib/time';
+  import { feedListName } from '$lib/feedname';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import { showToast } from '$lib/toast.svelte';
@@ -231,7 +232,7 @@
           <li>
             <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={36} />
             <div class="meta">
-              <a class="title" href={f.siteUrl ?? f.url} target="_blank" rel="noopener">{f.title ?? hostOf(f.url)}</a>
+              <a class="title" href={f.siteUrl ?? f.url} target="_blank" rel="noopener">{feedListName(f)}</a>
               <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · last post {relativeTime(f.lastItemAt)}{/if}{#if f.consecutiveFailures > 0} · <span class="bad">failing</span>{/if}</div>
             </div>
             {#if memberships[f.id]}

@@ -3,6 +3,7 @@
   import { page } from '$app/state';
   import { replaceState } from '$app/navigation';
   import { api, feedHref, type Feed } from '$lib/api';
+  import { feedName } from '$lib/feedname';
   import { feedOrigin, hostOf, relativeTime } from '$lib/time';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import River from '$lib/components/River.svelte';
@@ -61,9 +62,9 @@
 
 {#if feed}
   <header class="profile">
-    <SourceIcon feedId={feed.id} hasIcon={feed.hasIcon} name={feed.title ?? hostOf(feed.url)} size={64} />
+    <SourceIcon feedId={feed.id} hasIcon={feed.hasIcon} name={feedName(feed)} size={64} />
     <div class="who">
-      <h1>{feed.title ?? hostOf(feed.url)}</h1>
+      <h1>{feedName(feed)}</h1>
       <a class="host" href={feed.siteUrl ?? feed.url} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
       {#if feed.description}<p class="desc">{feed.description}</p>{/if}
     </div>
@@ -79,6 +80,8 @@
   <div class="actions">
     <FollowButton feedId={feed.id} bind:ids name={feed.title ?? hostOf(feed.url)} onchange={() => void loadFeed()} />
     <button class="btn" onclick={refresh} disabled={refreshing} title={feed.lastFetchedAt ? `Last fetched ${relativeTime(feed.lastFetchedAt)}` : ''}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
+    <a class="btn" href="/feeds/{feed.id}/settings">Settings</a>
+    {#if feed.hideShorts}<a class="note" href="/feeds/{feed.id}/settings">Shorts hidden</a>{/if}
     {#if feed.consecutiveFailures > 0}<span class="bad">Last fetch failed: {feed.lastError ?? feed.lastStatus}</span>{/if}
   </div>
 {:else}
@@ -103,5 +106,6 @@
   .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 600; color: var(--text-2); }
   .btn:disabled { opacity: 0.6; }
   .bad { font-size: 13px; color: var(--danger); }
+  .note { font-size: 13px; color: var(--text-3); }
   .status { text-align: center; color: var(--text-3); font-size: 14px; padding: 18px 0; margin: 0; }
 </style>

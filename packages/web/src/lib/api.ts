@@ -23,7 +23,14 @@ export type Feed = {
   myCollectionIds: number[]; blocked: boolean;
   /** With ?network=, how many people in that network follow it. */
   networkFollowers?: number | null;
+  /** The caller's own settings on this feed (feed_settings). Nobody else sees them. */
+  displayName: string | null; hideShorts: boolean;
+  /** A YouTube feed, which is what makes "Hide Shorts" available. */
+  isYouTube: boolean;
+  /** Conditional-GET state, shown on the settings page for diagnosing a feed. */
+  etag: string | null; lastModified: string | null;
 };
+export type FeedSettings = { feedId: number; displayName: string | null; hideShorts: boolean };
 export type FeedIndexPage = { feeds: Feed[]; total: number; indexTotal: number; nextOffset: number | null };
 
 export type Collection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; feedCount: number; isPublic: boolean };
@@ -85,6 +92,8 @@ export const api = {
     return j<FeedIndexPage>(`/api/feeds?${q}`);
   },
   feed: (id: number) => j<Feed>(`/api/feeds/${id}`),
+  /** My settings on a feed. Send only what changes. */
+  feedSettings: (id: number, patch: { displayName?: string | null; hideShorts?: boolean }) => j<FeedSettings>(`/api/feeds/${id}/settings`, { method: 'PUT', body: JSON.stringify(patch) }),
   follow: (id: number, collectionId?: number) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${id}/follow`, { method: 'POST', body: JSON.stringify({ collectionId }) }),
   addFeed: (url: string, collectionIds: number[] = []) => j<SubscribeOutcome>('/api/feeds', { method: 'POST', body: JSON.stringify({ url, collectionIds }) }),
   unfollow: (id: number) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${id}`, { method: 'DELETE' }),
@@ -107,6 +116,8 @@ export type CollectionFeed = {
   id: number; url: string; siteUrl: string | null; title: string | null; kind: string;
   consecutiveFailures: number; lastError: string | null; lastStatus: number | null;
   lastFetchedAt: string | null; lastItemAt: string | null; addedAt: string | null; hasIcon: boolean; sameTitle: number;
+  /** My own name for this feed, if I gave it one. */
+  displayName: string | null;
 };
 export type CollectionDetail = Collection & { userId: number; feeds: CollectionFeed[]; children: Collection[] };
 export type ImportResult = { feeds: number; collections: number; skipped: string[] };
@@ -239,6 +250,8 @@ export type Profile =
 export type PublicCollectionFeed = {
   id: number; url: string; siteUrl: string | null; title: string | null; description: string | null; slug: string;
   lastItemAt: string | null; hasIcon: boolean; followerCount: number; myCollectionIds: number[]; sameTitle: number;
+  /** The viewer's own name for this feed, if they gave it one. */
+  displayName: string | null;
 };
 export type PublicCollection = {
   id: number; name: string; slug: string; description: string | null; isPublic: boolean; createdAt: string | null;
@@ -311,6 +324,7 @@ export type SearchFeed = {
   id: number; url: string; siteUrl: string | null; title: string | null; description: string | null; slug: string;
   lastItemAt: string | null; consecutiveFailures: number; postsLast30d: number; hasIcon: boolean; myCollectionIds: number[];
   matches: number; posts: number; lastMatchAt: string | null; nameMatch: boolean;
+  displayName: string | null;
 };
 export type SearchCollection = ExploreCollection & {
   isMine: boolean; matches: number; matchingFeeds: number; lastMatchAt: string | null; nameMatch: boolean;

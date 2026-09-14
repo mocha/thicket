@@ -3,12 +3,15 @@
  * Optional ?collection=<id> scopes to that collection's subtree.
  * Blocked feeds are excluded and the count of hidden items is reported, so the
  * UI can say "N posts hidden by your blocks" without saying which.
+ * The reader's own feed settings apply here: their name for a feed, and Shorts
+ * left out of a YouTube feed they have set to hide them (feed_settings).
  */
 import { Hono } from "hono";
 import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { noteColumns } from "../lib/notes.js";
+import { SHORTS_URL_PATTERN } from "../feeds/youtube.js";
 
 export const river = new Hono();
 
@@ -20,6 +23,9 @@ export type RiverItem = {
   notes: { id: number; body: string; createdAt: string; updatedAt: string; author: { handle: string; displayName: string | null } }[];
 };
 
+/** Is this item a Short? False, not null, when the item has no address: a hidden post must be one we are sure of. */
+const isShort = sql`coalesce(i.url ~ ${SHORTS_URL_PATTERN}, false)`;
+
 /** The numbers under "All my feeds": what you follow, and what arrived in the last day. */
 river.get("/stats", async (c) => {
   const user = currentUser(c);
@@ -27,7 +33,8 @@ river.get("/stats", async (c) => {
     with followed as (select distinct cf.feed_id from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = ${user.id}),
          fresh as (select i.feed_id from items i join followed on followed.feed_id = i.feed_id
                    where i.published_at > now() - interval '24 hours' and i.published_at <= now() + interval '1 hour'
-                     and not exists(select 1 from blocks b where b.user_id = ${user.id} and b.feed_id = i.feed_id))
+                     and not exists(select 1 from blocks b where b.user_id = ${user.id} and b.feed_id = i.feed_id)
+                     and not (${isShort} and exists(select 1 from feed_settings fs where fs.user_id = ${user.id} and fs.feed_id = i.feed_id and fs.hide_shorts)))
     select (select count(*)::int from followed) as feeds,
            (select count(*)::int from collections where user_id = ${user.id} and parent_id is not null) as collections,
            (select count(*)::int from fresh) as "posts24h",
@@ -80,14 +87,20 @@ river.get("/", async (c) => {
    * shape. That is the trade on purpose: an unbounded cost became a bounded one.
    *
    * A single feed's river needs none of it; that was always one index scan.
+   *
+   * Hidden Shorts are filtered inside each feed's scan, before its limit, so a
+   * page is still a full page. The setting rides along on `followed` so the
+   * scan checks a column rather than looking the setting up per item.
    */
   const perFeed = limit + 1;
   const pageCte = feedId
     ? sql`select i.id, i.published_at from items i where i.feed_id = ${feedId} ${cursorClause}
+             and not (${isShort} and exists(select 1 from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = i.feed_id and fs.hide_shorts))
            order by i.published_at desc, i.id desc limit ${perFeed}`
     : sql`select p.id, p.published_at from followed cross join lateral (
              select i.id, i.published_at from items i
              where i.feed_id = followed.feed_id ${cursorClause}
+               and not (followed.hide_shorts and ${isShort})
              order by i.published_at desc, i.id desc limit ${perFeed}
            ) p
            order by p.published_at desc, p.id desc limit ${perFeed}`;
@@ -95,10 +108,13 @@ river.get("/", async (c) => {
   const rows = await db.execute<RiverItem & { blocked: boolean }>(sql`
     ${scope}
     , followed as (
-      select distinct cf.feed_id from collection_feeds cf join tree on tree.id = cf.collection_id
+      select cf.feed_id, bool_or(coalesce(fs.hide_shorts, false)) as hide_shorts
+      from collection_feeds cf join tree on tree.id = cf.collection_id
+      left join feed_settings fs on fs.user_id = ${userId} and fs.feed_id = cf.feed_id
+      group by cf.feed_id
     )
     , page as (${pageCte})
-    select i.id, i.feed_id as "feedId", f.title as "feedTitle", f.site_url as "siteUrl",
+    select i.id, i.feed_id as "feedId", coalesce(fs.display_name, f.title) as "feedTitle", f.site_url as "siteUrl",
            i.url, i.title, i.author, i.summary, i.image_url as "imageUrl", i.published_at as "publishedAt",
            exists(select 1 from blocks b where b.user_id = ${userId} and b.feed_id = i.feed_id) as blocked,
            exists(select 1 from feed_icons fi where fi.feed_id = i.feed_id and not fi.generic) as "hasIcon",
@@ -107,6 +123,7 @@ river.get("/", async (c) => {
     from page
     join items i on i.id = page.id
     join feeds f on f.id = i.feed_id
+    left join feed_settings fs on fs.user_id = ${userId} and fs.feed_id = i.feed_id
     order by i.published_at desc, i.id desc
   `);
   const all = rows.rows;

@@ -7,6 +7,7 @@
   import { session } from '$lib/session.svelte';
   import { loadCollections } from '$lib/collections.svelte';
   import { feedOrigin, hostOf, relativeTime } from '$lib/time';
+  import { feedListName } from '$lib/feedname';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import River from '$lib/components/River.svelte';
@@ -125,9 +126,9 @@
             <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={36} />
             <div class="meta">
               {#if session.user}
-                <a class="title" href={feedHref(f)}>{f.title ?? hostOf(f.url)}</a>
+                <a class="title" href={feedHref(f)}>{feedListName(f)}</a>
               {:else}
-                <a class="title" href={f.siteUrl ?? f.url} target="_blank" rel="noopener">{f.title ?? hostOf(f.url)}</a>
+                <a class="title" href={f.siteUrl ?? f.url} target="_blank" rel="noopener">{feedListName(f)}</a>
               {/if}
               <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · {relativeTime(f.lastItemAt)}{/if} · {f.followerCount} {f.followerCount === 1 ? 'follower' : 'followers'}</div>
             </div>

@@ -1,0 +1,225 @@
+<script lang="ts">
+  import { page } from '$app/state';
+  import { goto } from '$app/navigation';
+  import { api, feedHref, type Feed } from '$lib/api';
+  import { hostOf } from '$lib/time';
+  import { feedName } from '$lib/feedname';
+  import { loadCollections } from '$lib/collections.svelte';
+  import CollectionCheckList from '$lib/components/CollectionCheckList.svelte';
+  import { showToast } from '$lib/toast.svelte';
+  import { session } from '$lib/session.svelte';
+
+  /**
+   * My settings on one feed, at /feeds/:id/settings. Laid out like managing a
+   * collection: back, what you are managing, your settings for it, where it is
+   * filed, and at the very end the raw facts about the feed, for when something
+   * looks wrong. Everything here is yours alone. The feed is shared, and nothing
+   * on this page changes it for anyone else.
+   */
+  const id = $derived(Number(page.params.id));
+  let feed = $state<Feed | null>(null);
+  let ids = $state<number[]>([]);
+  let loadedId = $state<number | undefined>(undefined);
+
+  const original = $derived(feed ? (feed.title ?? hostOf(feed.url)) : '');
+
+  async function load() {
+    try {
+      feed = await api.feed(id);
+    } catch {
+      return void goto('/feeds', { replaceState: true });
+    }
+    ids = feed.myCollectionIds;
+    displayName = feed.displayName ?? '';
+  }
+
+  /* Display name: a field whose Save wakes up once something changed. Empty goes back to the feed's own title. */
+  let displayName = $state('');
+  let savingName = $state(false);
+  const nameDirty = $derived(!!feed && displayName.trim() !== (feed.displayName ?? ''));
+  async function saveName(next: string) {
+    if (!feed || savingName) return;
+    savingName = true;
+    try {
+      const r = await api.feedSettings(feed.id, { displayName: next.trim() || null });
+      feed.displayName = r.displayName;
+      displayName = r.displayName ?? '';
+      api.event('feed_renamed', { feedId: feed.id, cleared: !r.displayName });
+      showToast(r.displayName ? `You’ll see this feed as “${r.displayName}”` : `Back to “${original}”`);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    } finally {
+      savingName = false;
+    }
+  }
+
+  /* Shorts: two radios, saved on change. */
+  async function setHideShorts(hide: boolean) {
+    if (!feed || feed.hideShorts === hide) return;
+    feed.hideShorts = hide;
+    const r = await api.feedSettings(feed.id, { hideShorts: hide });
+    feed.hideShorts = r.hideShorts;
+    api.event('feed_hide_shorts', { feedId: feed.id, hide });
+    showToast(hide ? 'Shorts hidden from this feed' : 'Shorts are back in this feed');
+  }
+
+  /* One click out of every collection, which is unfollowing; undo puts it back where it was. */
+  async function removeFromAll() {
+    if (!feed || ids.length === 0) return;
+    const f = feed;
+    const prev = ids;
+    const removed = await api.unfollow(f.id);
+    ids = [];
+    void loadCollections(true);
+    api.event('feed_unfollowed', { feedId: f.id, via: 'feed_settings' });
+    showToast(`Removed ${feedName(f)} from all your collections`, {
+      label: 'Undo',
+      run: async () => {
+        const r = await api.restore(f.id, removed.collectionIds.length ? removed.collectionIds : prev);
+        ids = r.collectionIds;
+        void loadCollections(true);
+      }
+    });
+  }
+
+  const when = (v: string | null) => (v ? new Date(v).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : null);
+  const every = (s: number) => (s < 3600 ? `${Math.round(s / 60)} minutes` : s < 86400 ? `${+(s / 3600).toFixed(1)} hours` : `${+(s / 86400).toFixed(1)} days`);
+  const facts = $derived<[string, string | null][]>(feed ? [
+    ['Address being read', feed.url],
+    ['Website', feed.siteUrl],
+    ['Title, as the feed gives it', feed.title],
+    ['Description, as the feed gives it', feed.description],
+    ['Format', feed.kind],
+    ['Feed number', String(feed.id)],
+    ['Added to thicket', when(feed.createdAt)],
+    ['Last checked', when(feed.lastFetchedAt)],
+    ['Next check', when(feed.nextFetchAt)],
+    ['Checked every', every(feed.fetchIntervalS)],
+    ['Last response', feed.lastStatus ? `HTTP ${feed.lastStatus}` : null],
+    ['Last error', feed.lastError],
+    ['Failed checks in a row', String(feed.consecutiveFailures)],
+    ['Newest post', when(feed.lastItemAt)],
+    ['Posts stored', String(feed.itemCount)],
+    ['Followers', String(feed.followerCount)],
+    ['ETag', feed.etag],
+    ['Last-Modified', feed.lastModified],
+  ] : []);
+
+  $effect(() => {
+    if (!session.loaded) return;
+    if (!session.user) return void goto(`/login?next=${encodeURIComponent(page.url.pathname)}`, { replaceState: true });
+    if (loadedId === id) return;
+    loadedId = id;
+    feed = null;
+    void load();
+    api.event('feed_settings_view', { feedId: id });
+  });
+</script>
+
+<svelte:head><title>{feed ? `Managing ${feedName(feed)}` : 'Feed settings'} · thicket</title></svelte:head>
+
+{#if feed}
+  <a class="back" href={feedHref(feed)}>
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+    Back to feed
+  </a>
+
+  <header class="top">
+    <p class="pre">Managing feed:</p>
+    <h1>{feedName(feed)}</h1>
+  </header>
+
+  <hr />
+  <section>
+    <h2>Settings</h2>
+
+    <div class="opt">
+      <h3><label for="dname">Display name</label></h3>
+      <form onsubmit={(e) => { e.preventDefault(); void saveName(displayName); }}>
+        <input id="dname" type="text" bind:value={displayName} maxlength="120" placeholder={original} disabled={savingName} />
+        <div class="row">
+          <button type="submit" class="btn primary" disabled={!nameDirty || savingName}>{savingName ? 'Saving…' : 'Save'}</button>
+          {#if feed.displayName}
+            <button type="button" class="btn" onclick={() => saveName('')} disabled={savingName}>Use “{original}”</button>
+          {/if}
+        </div>
+      </form>
+      <p class="hint">Only you see this name. Where feeds are listed to choose from, it shows as “Your name ({original})”.</p>
+    </div>
+
+    {#if feed.isYouTube}
+      <div class="opt">
+        <h3>Hide YouTube Shorts</h3>
+        <div class="radios" role="radiogroup" aria-label="Hide YouTube Shorts">
+          <label>
+            <input type="radio" name="shorts" checked={feed.hideShorts} onchange={() => setHideShorts(true)} />
+            <span><strong>Yes</strong><small>Leave Shorts out wherever you read this channel.</small></span>
+          </label>
+          <label>
+            <input type="radio" name="shorts" checked={!feed.hideShorts} onchange={() => setHideShorts(false)} />
+            <span><strong>No</strong><small>Show everything the channel posts.</small></span>
+          </label>
+        </div>
+      </div>
+    {/if}
+  </section>
+
+  <section class="opt">
+    <h2>Collections ({ids.length})</h2>
+    <div class="card">
+      <CollectionCheckList feedId={feed.id} bind:ids name={feedName(feed)} />
+    </div>
+    <button class="btn danger" onclick={removeFromAll} disabled={ids.length === 0}>Remove from all collections</button>
+  </section>
+
+  <hr />
+  <details class="facts">
+    <summary>
+      Feed metadata
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+    </summary>
+    <ul>
+      {#each facts as [k, v] (k)}
+        <li><strong>{k}:</strong> <span class:none={v === null}>{v ?? '—'}</span></li>
+      {/each}
+    </ul>
+  </details>
+{:else}
+  <p class="status">Loading…</p>
+{/if}
+
+<style>
+  .back { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: var(--accent); padding: 6px 0; margin-bottom: 8px; }
+  .top { margin-bottom: 6px; }
+  .pre { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+  h1 { font-family: var(--font-serif); font-size: 28px; margin: 2px 0 0; overflow-wrap: anywhere; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
+  section > h2 { font-size: 15px; margin: 0 0 12px; }
+  .opt { margin-bottom: 18px; }
+  h3 { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+  input[type='text'] { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+  input[type='text']:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input[type='text']::placeholder { color: var(--text-3); }
+  .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .hint { margin: 8px 0 0; font-size: 13px; color: var(--text-3); overflow-wrap: anywhere; }
+  .radios { display: flex; flex-direction: column; gap: 8px; }
+  .radios label { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
+  .radios label:has(input:checked) { border-color: var(--accent); }
+  .radios input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .radios span { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+  .radios small { font-size: 13px; color: var(--text-3); }
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 4px 14px 12px; margin-bottom: 12px; }
+  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 600; color: var(--text-2); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+  .btn:disabled { opacity: 0.5; }
+  .facts summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 15px; font-weight: 600; list-style: none; }
+  .facts summary::-webkit-details-marker { display: none; }
+  .facts summary svg { transition: transform 150ms ease; color: var(--text-3); }
+  .facts[open] summary svg { transform: rotate(180deg); }
+  .facts ul { margin: 12px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-2); }
+  .facts li { overflow-wrap: anywhere; }
+  .facts strong { color: var(--text); font-weight: 600; }
+  .facts .none { color: var(--text-3); }
+  .status { text-align: center; color: var(--text-3); padding: 24px 0; margin: 0; font-size: 14px; }
+</style>

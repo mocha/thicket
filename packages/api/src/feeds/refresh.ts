@@ -7,7 +7,6 @@ import { db, schema } from "../db/client.js";
 import { httpGet } from "./http.js";
 import { parseFeedDocument, type ParsedFeed } from "./parse.js";
 import { ICON_RECHECK_MS, refreshIcon } from "./icons.js";
-import { youTubeVariant } from "./youtube.js";
 
 const MIN_INTERVAL_S = 15 * 60;
 const MAX_INTERVAL_S = 24 * 60 * 60;
@@ -77,10 +76,7 @@ export async function refreshFeed(feedId: number): Promise<RefreshResult> {
     const conditional: Record<string, string> = {};
     if (feed.etag) conditional["if-none-match"] = feed.etag;
     if (feed.lastModified) conditional["if-modified-since"] = feed.lastModified;
-    // Some addresses name a feed thicket derives from another one (feeds/youtube.ts). The etag and
-    // last-modified below then belong to the document we actually fetch, which is what 304 should track.
-    const variant = youTubeVariant(feed.url);
-    const res = await httpGet(variant?.fetchUrl ?? feed.url, conditional);
+    const res = await httpGet(feed.url, conditional);
 
     if (res.status === 304) {
       const interval = chooseInterval(feed.lastItemAt);
@@ -88,8 +84,7 @@ export async function refreshFeed(feedId: number): Promise<RefreshResult> {
     }
     if (res.status >= 400) throw new Error(`HTTP ${res.status}`);
 
-    const document = parseFeedDocument(res.body, res.finalUrl);
-    const parsed = variant ? await variant.transform(document) : document;
+    const parsed = parseFeedDocument(res.body, res.finalUrl);
     const { inserted, newestAt } = await storeItems(feedId, parsed, { firstFetch: feed.lastFetchedAt === null });
     // Site icon: checked on first successful fetch and then monthly. Failures are recorded so we don't hammer sites.
     if (!feed.iconCheckedAt || Date.now() - feed.iconCheckedAt.getTime() > ICON_RECHECK_MS) {

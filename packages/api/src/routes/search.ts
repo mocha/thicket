@@ -175,6 +175,7 @@ async function searchFeeds(q: string, userId: number, limit: number, offset: num
     ${base}
     select s.matches, s.posts::int as posts, s.last_match as "lastMatchAt", s.name_match as "nameMatch",
            f.id, f.url, f.site_url as "siteUrl", f.title, f.description,
+           (select fs.display_name from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = f.id) as "displayName",
            coalesce(
              nullif(left(trim(both '-' from regexp_replace(lower(f.title), '[^a-z0-9]+', '-', 'g')), 60), ''),
              nullif(trim(both '-' from regexp_replace(lower(split_part(coalesce(f.site_url, f.url), '/', 3)), '[^a-z0-9]+', '-', 'g')), ''),
@@ -272,7 +273,7 @@ async function searchPosts(q: string, viewerId: number | null, limit: number, of
   const [{ total }] = (await db.execute<{ total: number }>(sql`${base} select count(*)::int as total from ranked`)).rows;
   const rows = await db.execute(sql`
     ${base}
-    select i.id, i.feed_id as "feedId", f.title as "feedTitle", f.site_url as "siteUrl",
+    select i.id, i.feed_id as "feedId", coalesce((select fs.display_name from feed_settings fs where fs.user_id = ${me} and fs.feed_id = i.feed_id), f.title) as "feedTitle", f.site_url as "siteUrl",
            i.url, i.title, i.author, i.image_url as "imageUrl", i.published_at as "publishedAt",
            ts_headline('english', regexp_replace(coalesce(nullif(i.summary, ''), left(coalesce(i.content, ''), 4000), ''), '<[^>]*>', ' ', 'g'),
                        websearch_to_tsquery('english', ${q}), ${HL}) as snippet,

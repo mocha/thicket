@@ -125,6 +125,7 @@ collections.get("/:id", async (c) => {
   if (!col) return c.json({ error: "not found" }, 404);
   const feeds = await db.execute(sql`
     select f.id, f.url, f.site_url as "siteUrl", coalesce(cf.title_override, f.title) as title, f.kind,
+           (select fs.display_name from feed_settings fs where fs.user_id = ${user.id} and fs.feed_id = f.id) as "displayName",
            f.consecutive_failures as "consecutiveFailures", f.last_error as "lastError", f.last_status as "lastStatus",
            f.last_fetched_at as "lastFetchedAt", f.last_item_at as "lastItemAt", cf.added_at as "addedAt",
            exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon",

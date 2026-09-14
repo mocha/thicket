@@ -143,6 +143,7 @@ profiles.get("/:handle/collections/:slug", async (c) => {
   const viewerId = r.viewer?.id ?? -1;
   const feeds = await db.execute(sql`
     select f.id, f.url, f.site_url as "siteUrl", coalesce(cf.title_override, f.title) as title, f.description,
+           (select fs.display_name from feed_settings fs where fs.user_id = ${viewerId} and fs.feed_id = f.id) as "displayName",
            coalesce(nullif(left(trim(both '-' from regexp_replace(lower(f.title), '[^a-z0-9]+', '-', 'g')), 60), ''), 'feed') as slug,
            f.last_item_at as "lastItemAt",
            exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon",

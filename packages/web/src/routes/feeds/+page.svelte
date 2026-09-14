@@ -9,6 +9,7 @@
   } from '$lib/api';
   import { feedOrigin, hostOf, longAgo, postRate, relativeTime } from '$lib/time';
   import { highlight, plural, shareOfOutput } from '$lib/words';
+  import { feedListName } from '$lib/feedname';
   import { session } from '$lib/session.svelte';
   import { openAddFeed } from '$lib/addfeed.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
@@ -297,7 +298,7 @@
     <a class="row" href={feedHref(f)}>
       <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={40} />
       <div class="meta">
-        <span class="title">{f.title ?? hostOf(f.url)}</span>
+        <span class="title">{feedListName(f)}</span>
         {#if f.description}<span class="desc">{f.description}</span>{/if}
         {#if ev && ev.matches > 0}
           <span class="why">

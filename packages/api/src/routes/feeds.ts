@@ -12,6 +12,7 @@ import { subscribe, addFeedToCollection, defaultCollectionFor } from "../lib/sub
 import { refreshFeed } from "../feeds/refresh.js";
 import { isHttpUrl, normalizeFeedUrl } from "../feeds/normalize.js";
 import { refreshIcon } from "../feeds/icons.js";
+import { isYouTubeUrl, YOUTUBE_FEED_PATTERN } from "../feeds/youtube.js";
 
 export const feeds = new Hono();
 
@@ -27,14 +28,17 @@ const feedColumns = (userId: number) => sql`
   ) as slug,
   f.last_fetched_at as "lastFetchedAt", f.next_fetch_at as "nextFetchAt", f.fetch_interval_s as "fetchIntervalS",
   f.consecutive_failures as "consecutiveFailures", f.last_status as "lastStatus", f.last_error as "lastError",
-  f.last_item_at as "lastItemAt", f.created_at as "createdAt",
+  f.last_item_at as "lastItemAt", f.created_at as "createdAt", f.etag, f.last_modified as "lastModified",
   exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon",
   (select count(*)::int from feeds g where g.title = f.title) as "sameTitle",
   (select count(*)::int from items i where i.feed_id = f.id) as "itemCount",
   (select count(*)::int from items i where i.feed_id = f.id and i.published_at > now() - interval '30 days') as "postsLast30d",
   (select count(distinct col.user_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where cf.feed_id = f.id) as "followerCount",
   coalesce((select array_agg(cf.collection_id order by cf.collection_id) from collection_feeds cf join collections col on col.id = cf.collection_id and col.user_id = ${userId} where cf.feed_id = f.id), '{}') as "myCollectionIds",
-  exists(select 1 from blocks b where b.user_id = ${userId} and b.feed_id = f.id) as "blocked"
+  exists(select 1 from blocks b where b.user_id = ${userId} and b.feed_id = f.id) as "blocked",
+  (select fs.display_name from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = f.id) as "displayName",
+  coalesce((select fs.hide_shorts from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = f.id), false) as "hideShorts",
+  f.url ~* ${YOUTUBE_FEED_PATTERN} as "isYouTube"
 `;
 
 function shape(row: any) {
@@ -42,9 +46,9 @@ function shape(row: any) {
 }
 
 /**
- * The index. ?q= searches title/description/url, ?following=1|0 restricts to feeds the
- * user does or does not follow, ?sort= recent|title|followers|posts|added. Offset paginated;
- * fine at tens of thousands, revisit past that.
+ * The index. ?q= searches title/description/url (and the caller's own name for a feed),
+ * ?following=1|0 restricts to feeds the user does or does not follow, ?sort= recent|title|followers|posts|added.
+ * Offset paginated; fine at tens of thousands, revisit past that.
  */
 feeds.get("/", async (c) => {
   const user = currentUser(c);
@@ -59,7 +63,8 @@ feeds.get("/", async (c) => {
   const where = [sql`true`];
   if (q) {
     const like = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
-    where.push(sql`(f.title ilike ${like} or f.description ilike ${like} or f.url ilike ${like} or f.site_url ilike ${like})`);
+    where.push(sql`(f.title ilike ${like} or f.description ilike ${like} or f.url ilike ${like} or f.site_url ilike ${like}
+      or exists(select 1 from feed_settings fs where fs.user_id = ${user.id} and fs.feed_id = f.id and fs.display_name ilike ${like}))`);
   }
   const sinceInterval = since === "24h" ? "1 day" : since === "week" ? "7 days" : since === "month" ? "30 days" : since === "year" ? "365 days" : null;
   if (sinceInterval) where.push(sql`f.created_at > now() - ${sinceInterval}::interval`);
@@ -140,6 +145,45 @@ feeds.get("/:id", async (c) => {
   const rows = await db.execute(sql`select ${feedColumns(user.id)} from feeds f where f.id = ${id}`);
   const row = rows.rows[0];
   return row ? c.json(shape(row)) : c.json({ error: "not found" }, 404);
+});
+
+/**
+ * My settings on this feed: what I call it, and for YouTube whether its Shorts
+ * reach my rivers. Per person, and nobody else sees them. Send only what
+ * changes; anything left out keeps its current value.
+ *
+ * A row that would hold only defaults is deleted instead of kept, so a row
+ * always means somebody changed something. That keeps the table readable as
+ * the answer to "what do people change about this feed?", which is what a
+ * later pass will use to suggest defaults for everyone.
+ */
+feeds.put("/:id/settings", async (c) => {
+  const user = currentUser(c);
+  const feedId = Number(c.req.param("id"));
+  if (!Number.isFinite(feedId)) return c.json({ error: "not found" }, 404);
+  const [feed] = await db.select({ title: schema.feeds.title, url: schema.feeds.url }).from(schema.feeds).where(eq(schema.feeds.id, feedId));
+  if (!feed) return c.json({ error: "not found" }, 404);
+  type Body = { displayName?: string | null; hideShorts?: boolean };
+  const body = await c.req.json<Body>().catch(() => ({} as Body));
+  const mine = and(eq(schema.feedSettings.userId, user.id), eq(schema.feedSettings.feedId, feedId));
+  const [current] = await db.select().from(schema.feedSettings).where(mine);
+
+  let displayName = current?.displayName ?? null;
+  if (body.displayName !== undefined) {
+    const next = (body.displayName ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
+    // Naming a feed what it is already called is the same as not renaming it.
+    displayName = next && next !== feed.title ? next : null;
+  }
+  // Only a YouTube feed has Shorts to hide; elsewhere the setting cannot be switched on.
+  const hideShorts = body.hideShorts !== undefined ? body.hideShorts === true && isYouTubeUrl(feed.url) : (current?.hideShorts ?? false);
+
+  if (displayName === null && !hideShorts) {
+    await db.delete(schema.feedSettings).where(mine);
+  } else {
+    await db.insert(schema.feedSettings).values({ userId: user.id, feedId, displayName, hideShorts })
+      .onConflictDoUpdate({ target: [schema.feedSettings.userId, schema.feedSettings.feedId], set: { displayName, hideShorts, updatedAt: new Date() } });
+  }
+  return c.json({ feedId, displayName, hideShorts });
 });
 
 const REFRESH_COOLDOWN_S = 5 * 60;
