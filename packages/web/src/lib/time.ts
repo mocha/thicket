@@ -13,6 +13,38 @@ export function relativeTime(iso: string, now = Date.now()): string {
 }
 
 /**
+ * "13 minutes ago", not "13m". The river is scanned, so it gets the short
+ * form; a directory entry is read, and a reader deciding whether to follow
+ * something should not have to decode it.
+ */
+export function longAgo(iso: string, now = Date.now()): string {
+  const s = Math.max(0, (now - new Date(iso).getTime()) / 1000);
+  const units: [number, string][] = [[60, 'second'], [60, 'minute'], [24, 'hour'], [7, 'day'], [4.35, 'week'], [12, 'month']];
+  let v = s;
+  let name = 'second';
+  for (const [step, next] of units) {
+    if (v < step) break;
+    v /= step;
+    name = next;
+  }
+  if (name === 'second' && v < 60) return 'just now';
+  const n = Math.max(1, Math.floor(v));
+  return `${n} ${name}${n === 1 ? '' : 's'} ago`;
+}
+
+/**
+ * How often something posts, in words. `n` is posts in the last 30 days, so
+ * this is already a monthly rate; below one a month it is the rate that is
+ * uncertain, not the wording, hence "less than".
+ */
+export function postRate(n: number): string {
+  if (n <= 0) return '';
+  if (n >= 60) return `~${Math.round(n / 30)} posts per day`;
+  if (n >= 8) return `~${Math.round(n / 4.35)} posts per week`;
+  return `~${n} post${n === 1 ? '' : 's'} per month`;
+}
+
+/**
  * The line under a feed's name. Normally the site's host. When another feed on
  * this instance has the same title (a site's main feed and one of its section
  * feeds, say), the feed's own host and path, so the two can be told apart.

@@ -1,15 +1,16 @@
 <script lang="ts">
   /**
    * The one control for "my relationship to this feed". A split button:
-   *   not following            → [ Follow | ▾ ]   primary files it in your first collection
+   *   not following            → [ Follow | ▾ ]
    *   following, 1 collection  → [ In 1 collection | ▾ ]
    *   following, N collections → [ In N collections | ▾ ]
-   * A feed always sits in at least one collection, so "following, but nowhere"
-   * is not a state this has to show. The primary Follow picks a collection for
-   * you rather than asking; the toast says which, and ▾ moves it.
-   * The ▾ opens a panel with the collection checklist and an explicit Unfollow.
-   * When following, the primary label also opens the panel (there is no
-   * one-click unfollow; that stays deliberate).
+   * Either half opens the same panel. Following is *filing*: you pick where it
+   * goes, and picking nowhere is how you stop following. Follow used to file
+   * into your oldest collection and tell you which in a toast; being moved
+   * somewhere you didn't choose read as the app deciding for you, so now the
+   * choice comes first.
+   * Unfollow stays in the panel as a shortcut for "take it out of all of
+   * these", which is worth one click when a feed sits in five collections.
    * `mainLabel` + `onmain` repurpose the main half for a page-specific action
    * ("Remove from Tech News" on a Manage page) while ▾ still opens the same
    * checklist, so filing is one control everywhere.
@@ -18,7 +19,7 @@
    * positioning, and the panel would land off screen.
    */
   import { api } from '$lib/api';
-  import { collectionStore, loadCollections } from '$lib/collections.svelte';
+  import { loadCollections } from '$lib/collections.svelte';
   import CollectionCheckList from './CollectionCheckList.svelte';
   import { showToast } from '$lib/toast.svelte';
 
@@ -33,17 +34,6 @@
 
   const following = $derived(ids.length > 0);
   const label = $derived(!following ? 'Follow' : ids.length === 1 ? 'In 1 collection' : `In ${ids.length} collections`);
-
-  async function follow() {
-    const r = await api.follow(feedId);
-    ids = r.collectionIds;
-    onchange?.(ids);
-    api.event('feed_followed', { feedId, via: 'follow_button' });
-    await loadCollections(true);
-    // Where it went is never a guess: name the collection, and ▾ is right there to move it.
-    const where = collectionStore.list.find((c) => c.id === ids[0]);
-    showToast(where ? `Added ${name} to ${where.name}` : `Following ${name}`);
-  }
 
   async function unfollow() {
     const removed = await api.unfollow(feedId);
@@ -91,10 +81,8 @@
 <div class="split" class:on={following && !onmain} class:neutral={!!onmain} class:compact bind:this={anchor}>
   {#if onmain}
     <button class="main" onclick={onmain}>{mainLabel ?? label}</button>
-  {:else if following}
-    <button class="main" onclick={toggle} aria-expanded={open}>{label}</button>
   {:else}
-    <button class="main" onclick={follow}>{label}</button>
+    <button class="main" onclick={toggle} aria-expanded={open}>{label}</button>
   {/if}
   <button class="more" onclick={toggle} aria-expanded={open} aria-label="More options for {name}">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
@@ -104,7 +92,7 @@
 {#if open}
   <div class="panel" class:inline bind:this={panel} style:top={inline ? undefined : `${pos.top}px`} style:left={inline ? undefined : `${pos.left}px`} style:transform={inline || !pos.up ? 'none' : 'translateY(-100%)'} role={inline ? 'group' : 'dialog'} aria-label="Collections for {name}">
     <div class="eyebrow">{following ? 'In your collections' : 'Follow into a collection'}</div>
-    <CollectionCheckList {feedId} bind:ids onchange={(next) => onchange?.(next)} />
+    <CollectionCheckList {feedId} bind:ids {name} onchange={(next) => onchange?.(next)} />
     {#if following}
       <button class="unfollow" onclick={unfollow}>Unfollow</button>
     {/if}

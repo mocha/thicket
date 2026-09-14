@@ -3,7 +3,7 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { api, exploreApi, feedHref, collectionHref, profileHref, profilesApi, type Feed, type ExploreCollection, type ExploreUser } from '$lib/api';
-  import { feedOrigin, hostOf, relativeTime } from '$lib/time';
+  import { feedOrigin, hostOf, longAgo, postRate } from '$lib/time';
   import { session } from '$lib/session.svelte';
   import { openAddFeed } from '$lib/addfeed.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
@@ -247,10 +247,11 @@
             <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={40} />
             <div class="meta">
               <span class="title">{f.title ?? hostOf(f.url)}</span>
+              {#if f.description}<span class="desc">{f.description}</span>{/if}
               <span class="sub2">
                 {feedOrigin(f)}
-                {#if f.lastItemAt} · {relativeTime(f.lastItemAt)}{/if}
-                {#if f.postsLast30d} · {f.postsLast30d}/mo{/if}
+                {#if f.lastItemAt} · last post {longAgo(f.lastItemAt)}{/if}
+                {#if f.postsLast30d} · {postRate(f.postsLast30d)}{/if}
                 {#if feedsNetwork && f.networkFollowers} · <span class="net-n">{f.networkFollowers} {f.networkFollowers === 1 ? 'person' : 'people'} you follow</span>{/if}
                 {#if f.consecutiveFailures >= 3} · <span class="bad">failing</span>{/if}
               </span>
@@ -323,13 +324,21 @@
   .check:has(input:disabled) { cursor: default; opacity: 0.55; }
   .filter select { padding: 6px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: 13px; }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  li { display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 12px; border-top: 1px solid var(--line); }
+  li { display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 12px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  /* On a phone the Follow control would squeeze the description into a column
+     four words wide, so it drops to its own line and the text gets the row. */
+  @media (max-width: 560px) {
+    li > :global(.row) { flex-basis: 100%; }
+    li > :global(.split) { margin-left: auto; }
+  }
   li:first-child { border-top: 0; }
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .handle { font-weight: 400; color: var(--text-3); font-size: 13px; margin-left: 4px; }
-  .sub2 { font-size: 13px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Wraps rather than truncates: every part of it is a fact someone is deciding on. */
+  .sub2 { font-size: 13px; color: var(--text-3); }
+  .desc { font-size: 13px; color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .who { color: var(--text-2); font-weight: 600; }
   .net-n { color: var(--accent); font-weight: 600; }
   .bad { color: var(--danger); }

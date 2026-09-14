@@ -1,15 +1,17 @@
 <script lang="ts">
   /**
-   * Which of my collections hold this feed. Saves on every toggle. A followed
-   * feed lives in at least one collection, so the last ticked box will not
-   * come off here: unfollowing is a deliberate button, not a side effect of
-   * tidying.
+   * Which of my collections hold this feed. Saves on every toggle, and the
+   * boxes are the whole of "do I follow this": ticking the first one follows
+   * it, unticking the last one unfollows it. A feed still lives in at least
+   * one collection — "followed but filed nowhere" remains impossible — it is
+   * just that emptying the list is a legitimate way to say you are done with
+   * a feed, rather than an error to be corrected.
    */
   import { api, collectionsApi } from '$lib/api';
   import { collectionStore, loadCollections, namedCollections } from '$lib/collections.svelte';
   import { showToast } from '$lib/toast.svelte';
 
-  let { feedId, ids = $bindable(), onchange }: { feedId: number; ids: number[]; onchange?: (ids: number[]) => void } = $props();
+  let { feedId, ids = $bindable(), name = 'this feed', onchange }: { feedId: number; ids: number[]; name?: string; onchange?: (ids: number[]) => void } = $props();
   let newName = $state('');
   let busy = $state(false);
   /** Collection ids whose count just went up; drives the green flash. */
@@ -30,13 +32,20 @@
 
   function toggle(id: number) {
     if (ids.includes(id)) {
-      if (ids.length === 1) {
-        showToast('A feed has to live somewhere. Add it to another collection first, or unfollow it.');
-        return;
+      const next = ids.filter((x) => x !== id);
+      const prev = ids;
+      void save(next);
+      // Taking it out of the last collection is unfollowing. Say so plainly and
+      // offer the way back, the same as the Unfollow button does.
+      if (next.length === 0) {
+        api.event('feed_unfollowed', { feedId, via: 'checklist' });
+        showToast(`Unfollowed ${name}`, { label: 'Undo', run: () => save(prev) });
+      } else {
+        api.event('feed_unfiled', { feedId, collectionId: id });
       }
-      return void save(ids.filter((x) => x !== id));
+      return;
     }
-    api.event('feed_filed', { feedId, collectionId: id });
+    api.event(ids.length === 0 ? 'feed_followed' : 'feed_filed', { feedId, collectionId: id });
     flashCount(id);
     void save([...ids, id]);
   }
