@@ -18,7 +18,9 @@ export function shareOfOutput(matches: number, posts: number): string | null {
   const r = matches / posts;
   if (r >= 0.9) return 'nearly everything it publishes';
   if (r >= 0.66) return 'most of what it publishes';
-  if (r >= 0.5) return 'about half of what it publishes';
+  // Wide enough that the next step down is "1 in 3": "about 1 in 2" and "about
+  // half" in the same list read as two different measurements of one thing.
+  if (r >= 0.4) return 'about half of what it publishes';
   const one = Math.round(posts / matches);
   return `about 1 in ${one} of what it publishes`;
 }
