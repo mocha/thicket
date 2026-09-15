@@ -19,6 +19,17 @@ export type RiverItem = {
  */
 export type RiverPage = { items: RiverItem[]; nextCursor: string | null; hidden: number; cappedAt?: number | null };
 
+/** A post's body for the in-app reader, sanitized on the server (api/src/lib/sanitize.ts). */
+export type ItemContent = {
+  id: number; feedId: number; url: string | null; title: string | null; author: string | null; publishedAt: string;
+  feedTitle: string | null; siteUrl: string | null;
+  html: string; hasImages: boolean; textLength: number;
+  /** Median text length of this feed's recent posts, for telling a teaser from a post. */
+  typicalLength: number | null;
+  /** The server's guess that this is a teaser, not the whole post. */
+  partial: boolean;
+};
+
 export type Feed = {
   id: number; url: string; siteUrl: string | null; title: string | null; description: string | null; kind: string; slug: string;
   lastFetchedAt: string | null; nextFetchAt: string; fetchIntervalS: number;
@@ -182,6 +193,10 @@ export const notesApi = {
 };
 
 export type BookmarkSources = { feeds: { feedId: number; title: string | null; count: number }[]; collections: { id: number; name: string; count: number }[] };
+
+export const itemsApi = {
+  content: (id: number) => j<ItemContent>(`/api/items/${id}/content`)
+};
 
 export const bookmarksApi = {
   list: (opts: { before?: string | null; feed?: number | null; collection?: number | null; limit?: number } = {}) => {

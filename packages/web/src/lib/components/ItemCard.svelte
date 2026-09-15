@@ -1,51 +1,33 @@
 <script lang="ts">
   import type { Note, RiverItem } from '$lib/api';
-  import { api, bookmarksApi } from '$lib/api';
+  import { api } from '$lib/api';
   import { relativeTime, hostOf } from '$lib/time';
   import { session } from '$lib/session.svelte';
   import SourceIcon from './SourceIcon.svelte';
   import FeedPopover from './FeedPopover.svelte';
   import NoteBlock from './NoteBlock.svelte';
   import NoteEditor from './NoteEditor.svelte';
+  import ItemActions from './ItemActions.svelte';
+  import { openReader, readsInline } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   let { item, showSource = true }: { item: RiverItem; showSource?: boolean } = $props();
   let imgFailed = $state(false);
   let popover = $state(false);
-  let bookmarkId = $state<number | null>(null);
-  let saving = $state(false);
   let myNote = $state<Note | null>(null);
   let editing = $state(false);
-  $effect(() => { bookmarkId = item.bookmarkId; });
   $effect(() => { myNote = item.myNote ?? null; });
   const source = $derived(item.feedTitle ?? hostOf(item.siteUrl ?? item.url));
   const others = $derived(item.notes ?? []);
 
-  function opened() {
-    api.event('item_opened', { itemId: item.id, feedId: item.feedId });
-  }
-
-  /** Save this post. Post-level, private, one set. Tap again to remove. */
-  async function toggleBookmark() {
-    if (saving) return;
-    saving = true;
-    try {
-      if (bookmarkId) {
-        const id = bookmarkId;
-        bookmarkId = null;
-        await bookmarksApi.remove(id);
-        api.event('bookmark_removed', { itemId: item.id, via: 'card' });
-      } else {
-        const b = await bookmarksApi.saveItem(item.id);
-        bookmarkId = b.id;
-        api.event('bookmark_saved', { itemId: item.id, feedId: item.feedId, via: 'card' });
-        showToast('Saved to Bookmarks');
-      }
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : String(err));
-    } finally {
-      saving = false;
+  /** The body is a real link to the post. In-app readers intercept a plain click; middle-click and long-press still get the tab. */
+  function opened(e: MouseEvent) {
+    if (e.type === 'click' && readsInline() && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+      e.preventDefault();
+      openReader(item);
+      return;
     }
+    api.event('item_opened', { itemId: item.id, feedId: item.feedId });
   }
 
   /** The note button: no note yet opens the editor; a note already there opens it for editing. */
@@ -63,7 +45,7 @@
 <!--
   The card is about the POST. The source line at the top is the one feed-level
   thing on it, and tapping it opens the feed's profile rather than the post.
-  The body is the link out; click out is the reading model. Notes (mine, then
+  The body is the link out, or opens the reader for those who read here. Notes (mine, then
   the ones I'm allowed to see) hang off the bottom.
 -->
 <article class="card">
@@ -78,12 +60,7 @@
     <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{relativeTime(item.publishedAt)}</time>
     <span class="spacer"></span>
     {#if session.user}
-      <button class="act" class:on={!!myNote} onclick={noteButton} aria-pressed={!!myNote} aria-expanded={editing} aria-label={myNote ? 'Edit my note' : 'Add a note'} title={myNote ? 'My note' : 'Add a note'}>
-        <svg viewBox="0 0 24 24" width="18" height="18" fill={myNote ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H10l-5 4v-4H5.5A1.5 1.5 0 0 1 4 14.5z" /></svg>
-      </button>
-      <button class="act" class:on={!!bookmarkId} onclick={toggleBookmark} aria-pressed={!!bookmarkId} aria-label={bookmarkId ? 'Remove bookmark' : 'Bookmark this post'} title={bookmarkId ? 'Bookmarked' : 'Bookmark'}>
-        <svg viewBox="0 0 24 24" width="18" height="18" fill={bookmarkId ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4z" /></svg>
-      </button>
+      <ItemActions {item} noteOpen={editing} onnote={noteButton} via="card" />
     {/if}
   </header>
   <a class="link" href={item.url ?? item.siteUrl ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
@@ -143,9 +120,6 @@
   .dot { color: var(--text-3); }
   time { color: var(--text-3); white-space: nowrap; }
   .spacer { flex: 1; }
-  .act { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--text-3); flex: none; }
-  .act:hover { background: var(--surface-2); color: var(--accent); }
-  .act.on { color: var(--accent); }
   .link { display: block; padding: 8px 16px 16px; -webkit-tap-highlight-color: transparent; }
   @media (hover: hover) { .link:hover h2 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   .hero {

@@ -1,0 +1,186 @@
+<script lang="ts">
+  /**
+   * Read a post here, over the list. Full screen on a phone, a tall sheet on a
+   * desk; the list dims behind it and a tap on the dim closes it, as does the
+   * back button. What shows is what the feed sent, made safe on the server;
+   * when that is only a teaser the reader says so and the way out to the
+   * original is right there. The original is always one press away regardless.
+   */
+  import { page } from '$app/state';
+  import { api, itemsApi, type ItemContent, type Note } from '$lib/api';
+  import { hostOf, relativeTime } from '$lib/time';
+  import { reader, readerClosed } from '$lib/reader.svelte';
+  import { showToast } from '$lib/toast.svelte';
+  import SourceIcon from './SourceIcon.svelte';
+  import ItemActions from './ItemActions.svelte';
+  import NoteEditor from './NoteEditor.svelte';
+  import NoteBlock from './NoteBlock.svelte';
+
+  let dialog = $state<HTMLDialogElement | null>(null);
+  let content = $state<ItemContent | null>(null);
+  let error = $state<string | null>(null);
+  let editing = $state(false);
+  let scroller = $state<HTMLElement | null>(null);
+
+  const item = $derived(reader.item);
+  const source = $derived(item ? item.feedTitle ?? hostOf(item.siteUrl ?? item.url) : '');
+  const href = $derived(item?.url ?? item?.siteUrl ?? '#');
+  const others = $derived(item?.notes ?? []);
+  /** A video post is watched, not read. */
+  const isVideo = $derived(/(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/.test(hostOf(href)));
+  /** The card's picture leads the article unless the body brings its own. */
+  const showHero = $derived(!!item?.imageUrl && content !== null && !content.hasImages);
+
+  // History is the source of truth for "open": the store sets it, the state entry keeps it.
+  const openFor = $derived(page.state.reader);
+  $effect(() => {
+    if (item && openFor === item.id) {
+      if (!dialog?.open) dialog?.showModal();
+    } else if (item) {
+      dialog?.close();
+      readerClosed();
+    }
+  });
+
+  $effect(() => {
+    const it = item;
+    content = null; error = null; editing = false;
+    if (!it) return;
+    scroller?.scrollTo({ top: 0 });
+    api.event('item_opened', { itemId: it.id, feedId: it.feedId, inline: true });
+    itemsApi.content(it.id).then((c) => { if (reader.item?.id === it.id) content = c; }, (e) => { if (reader.item?.id === it.id) error = e instanceof Error ? e.message : String(e); });
+  });
+
+  /** Close = go back to where the reader was opened; the effect above does the rest. */
+  function close() {
+    if (page.state.reader !== undefined) history.back();
+    else { dialog?.close(); readerClosed(); }
+  }
+  /** Escape closes the dialog natively; keep history in step. */
+  function cancelled(e: Event) { e.preventDefault(); close(); }
+
+  function noteButton() {
+    editing = !editing;
+    if (editing) { api.event('note_editor_opened', { itemId: item!.id, existing: !!item!.myNote, via: 'reader' }); scroller?.scrollTo({ top: 0, behavior: 'smooth' }); }
+  }
+  function noteSaved(n: Note) { if (!item) return; showToast(item.myNote ? 'Note updated' : 'Note saved'); item.myNote = n; editing = false; }
+
+  function outbound() { if (item) api.event('item_opened', { itemId: item.id, feedId: item.feedId, via: 'reader' }); }
+</script>
+
+<dialog bind:this={dialog} onclose={() => { if (page.state.reader !== undefined) history.back(); else readerClosed(); }} oncancel={cancelled} onclick={(e) => { if (e.target === dialog) close(); }} aria-label={item?.title ?? 'Post'}>
+  {#if item}
+    <article class="reader">
+      <header>
+        <span class="source"><SourceIcon feedId={item.feedId} hasIcon={item.hasIcon} name={source} /><span class="name">{source}</span></span>
+        <time datetime={item.publishedAt}>{relativeTime(item.publishedAt)}</time>
+        <span class="spacer"></span>
+        <ItemActions {item} noteOpen={editing} onnote={noteButton} via="reader" />
+        <button class="close" onclick={close} aria-label="Close">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+
+      <div class="scroll" bind:this={scroller}>
+        <div class="page">
+          {#if editing}
+            <NoteEditor itemId={item.id} note={item.myNote} onsaved={noteSaved} ondeleted={() => { if (item) item.myNote = null; editing = false; }} oncancel={() => (editing = false)} />
+          {/if}
+
+          <h1>{item.title ?? item.summary ?? item.url}</h1>
+          <p class="byline">
+            {#if item.author}<span>{item.author}</span><span class="dot">·</span>{/if}
+            <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{new Date(item.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</time>
+          </p>
+
+          {#if showHero}<img class="hero" src={item.imageUrl} alt="" referrerpolicy="no-referrer" />{/if}
+
+          {#if content}
+            {#if content.html.trim()}
+              <div class="body">{@html content.html}</div>
+            {:else}
+              <p class="nobody">This site didn’t send the post’s text, only its title.</p>
+            {/if}
+          {:else if error}
+            <p class="nobody">Couldn’t load the post: {error}</p>
+          {:else}
+            {#if item.summary && item.summary !== item.title}<p class="teaser">{item.summary}</p>{/if}
+            <p class="loading" aria-live="polite">Loading…</p>
+          {/if}
+
+          <footer>
+            {#if content?.partial}
+              <p class="partial">
+                {#if content.typicalLength !== null && content.typicalLength < 1000}This site only sends a preview of its posts.{:else}This looks like a preview, not the whole post.{/if}
+              </p>
+            {/if}
+            <a class="out" {href} target="_blank" rel="noopener" onclick={outbound}>{isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : 'Read on original site'} <span aria-hidden="true">↗</span></a>
+          </footer>
+
+          {#if item.myNote && !editing}<NoteBlock note={item.myNote} mine onedit={() => (editing = true)} />{/if}
+          {#each others as n (n.id)}<NoteBlock note={n} />{/each}
+        </div>
+      </div>
+    </article>
+  {/if}
+</dialog>
+
+<style>
+  dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+  .reader {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    background: var(--surface); color: var(--text);
+  }
+  @media (min-width: 760px) {
+    .reader { inset: 24px auto 24px 50%; transform: translateX(-50%); width: min(760px, calc(100vw - 48px)); border-radius: var(--radius); box-shadow: var(--shadow); border: var(--card-border, 0); overflow: hidden; }
+  }
+  header {
+    display: flex; align-items: center; gap: 8px; flex: none;
+    padding: 10px 8px 8px 16px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--text-2); min-width: 0;
+  }
+  .source { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  header time { color: var(--text-3); white-space: nowrap; }
+  .spacer { flex: 1; }
+  .close { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--text-2); flex: none; margin-left: 4px; }
+  .close:hover { background: var(--surface-2); color: var(--text); }
+  .close:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .page { max-width: 680px; margin: 0 auto; padding: 20px 16px calc(24px + var(--safe-b)); }
+  h1 { margin: 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(27px * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
+  .byline { margin: 10px 0 0; font-size: 14px; color: var(--text-3); display: flex; gap: 6px; flex-wrap: wrap; }
+  .hero { width: 100%; border-radius: var(--radius-sm); margin-top: 18px; background: var(--surface-2); }
+  .teaser { font-family: var(--font-reading); font-size: calc(17px * var(--size-reading)); color: var(--text-2); margin: 18px 0 0; }
+  .loading, .nobody { margin: 20px 0 0; color: var(--text-3); font-size: 15px; }
+
+  /* The article. Publisher HTML, sanitized to a known set of tags, set in the reading face. */
+  .body { margin-top: 20px; font-family: var(--font-reading); font-size: calc(17px * var(--size-reading)); line-height: 1.6; color: var(--text); overflow-wrap: anywhere; }
+  .body :global(p), .body :global(ul), .body :global(ol), .body :global(blockquote), .body :global(pre), .body :global(table), .body :global(figure), .body :global(details), .body :global(hr) { margin: 0 0 1em; }
+  .body :global(h2), .body :global(h3), .body :global(h4), .body :global(h5), .body :global(h6) { font-family: var(--font-headings); line-height: 1.25; margin: 1.5em 0 0.5em; letter-spacing: -0.01em; }
+  .body :global(h2) { font-size: 1.35em; } .body :global(h3) { font-size: 1.18em; } .body :global(h4), .body :global(h5), .body :global(h6) { font-size: 1em; }
+  .body :global(a) { color: var(--accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent); text-underline-offset: 3px; }
+  .body :global(a:hover) { text-decoration-color: var(--accent); }
+  .body :global(img), .body :global(video) { max-width: 100%; height: auto; border-radius: var(--radius-sm); margin: 0.4em auto; background: var(--surface-2); }
+  .body :global(figure) { margin-left: 0; margin-right: 0; }
+  .body :global(figcaption) { font-size: 0.85em; color: var(--text-3); text-align: center; margin-top: 0.3em; }
+  .body :global(blockquote) { border-left: 3px solid var(--line); padding-left: 1em; color: var(--text-2); }
+  .body :global(pre) { overflow-x: auto; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--surface-2); font-size: 0.85em; line-height: 1.5; }
+  .body :global(code) { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
+  .body :global(:not(pre) > code) { background: var(--surface-2); padding: 0.1em 0.35em; border-radius: 5px; }
+  .body :global(table) { display: block; overflow-x: auto; border-collapse: collapse; font-size: 0.9em; }
+  .body :global(th), .body :global(td) { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+  .body :global(hr) { border: 0; border-top: 1px solid var(--line); }
+  .body :global(sup) { font-size: 0.75em; }
+  .body :global(mark) { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; }
+  /* An embedded player, replaced on the server by a link to it. */
+  .body :global(a[data-embed]) { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 22px 16px; margin: 0 0 1em; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px dashed var(--line); font-weight: 600; text-decoration: none; }
+  .body :global(a[data-embed])::before { content: '▶'; font-size: 0.85em; }
+
+  footer { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+  .partial { margin: 0; font-size: 14px; color: var(--text-2); }
+  .out { display: inline-flex; align-items: center; gap: 6px; padding: 12px 20px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 15px; }
+  .out:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  footer + :global(.note) { margin-top: 18px; }
+</style>

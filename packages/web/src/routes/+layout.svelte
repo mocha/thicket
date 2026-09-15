@@ -6,6 +6,7 @@
   import Nav from '$lib/components/Nav.svelte';
   import Toast from '$lib/components/Toast.svelte';
   import AddFeedSheet from '$lib/components/AddFeedSheet.svelte';
+  import Reader from '$lib/components/Reader.svelte';
   import { addFeed } from '$lib/addfeed.svelte';
   import { session, loadMe, isPublicPath } from '$lib/session.svelte';
   import { loadDisplay } from '$lib/display.svelte';
@@ -54,6 +55,7 @@
   {/if}
 </main>
 {#if signedIn && addFeed.open}<AddFeedSheet />{/if}
+{#if signedIn}<Reader />{/if}
 <Toast />
 
 <style>
