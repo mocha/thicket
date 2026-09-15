@@ -17,23 +17,64 @@ export type HttpResult = {
   body: string;
 };
 
-export async function httpGet(url: string, extra: Record<string, string> = {}, opts: { redirect?: RequestRedirect } = {}): Promise<HttpResult> {
+export type HttpBytes = Omit<HttpResult, "body"> & { bytes: Buffer };
+
+export type HttpOptions = {
+  redirect?: RequestRedirect;
+  /** Largest body to accept. Over it the request fails, unless `truncate` is set. */
+  maxBytes?: number;
+  /** Keep the first `maxBytes` and stop downloading, rather than failing. For pages we only need the top of. */
+  truncate?: boolean;
+};
+
+const FEED_ACCEPT = "application/rss+xml, application/atom+xml, application/feed+json, application/xml;q=0.9, text/html;q=0.8, */*;q=0.5";
+
+export async function httpGet(url: string, extra: Record<string, string> = {}, opts: HttpOptions = {}): Promise<HttpResult> {
+  const { res, bytes } = await request(url, { accept: FEED_ACCEPT, ...extra }, opts);
+  return { status: res.status, finalUrl: res.url || url, headers: res.headers, body: bytes.length ? decode(bytes, res.headers.get("content-type")) : "" };
+}
+
+/** The same polite request, for images and anything else that isn't text. */
+export async function httpGetBytes(url: string, extra: Record<string, string> = {}, opts: HttpOptions = {}): Promise<HttpBytes> {
+  const { res, bytes } = await request(url, { accept: "image/*, */*;q=0.5", ...extra }, opts);
+  return { status: res.status, finalUrl: res.url || url, headers: res.headers, bytes };
+}
+
+async function request(url: string, headers: Record<string, string>, opts: HttpOptions) {
   const host = await awaitTurn(url);
   const res = await fetch(url, {
-    headers: { "user-agent": USER_AGENT, accept: "application/rss+xml, application/atom+xml, application/feed+json, application/xml;q=0.9, text/html;q=0.8, */*;q=0.5", ...extra },
+    headers: { "user-agent": USER_AGENT, ...headers },
     redirect: opts.redirect ?? "follow",
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   await afterResponse(host, res.status, res.headers);
-  let body = "";
-  if (res.status !== 304 && res.body) {
-    const len = Number(res.headers.get("content-length") ?? 0);
-    if (len > MAX_BYTES) throw new Error(`response too large (${len} bytes)`);
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.byteLength > MAX_BYTES) throw new Error(`response too large (${buf.byteLength} bytes)`);
-    body = decode(buf, res.headers.get("content-type"));
+  const limit = opts.maxBytes ?? MAX_BYTES;
+  if (res.status === 304 || !res.body) return { res, bytes: Buffer.alloc(0) };
+  const len = Number(res.headers.get("content-length") ?? 0);
+  if (len > limit && !opts.truncate) {
+    await res.body.cancel().catch(() => {});
+    throw new Error(`response too large (${len} bytes)`);
   }
-  return { status: res.status, finalUrl: res.url || url, headers: res.headers, body };
+  return { res, bytes: await readUpTo(res.body, limit, !!opts.truncate) };
+}
+
+/** Read a body up to `limit` bytes. Past it: stop downloading, then either fail or keep what arrived. */
+async function readUpTo(body: ReadableStream<Uint8Array>, limit: number, truncate: boolean): Promise<Buffer> {
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    total += value.byteLength;
+    if (total > limit) {
+      await reader.cancel().catch(() => {});
+      if (!truncate) throw new Error(`response too large (${total} bytes)`);
+      return Buffer.concat(chunks, total).subarray(0, limit);
+    }
+  }
+  return Buffer.concat(chunks, total);
 }
 
 /** Honor the declared charset when it isn't UTF-8; fall back to the XML prolog. */

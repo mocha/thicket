@@ -164,7 +164,7 @@ export async function refreshFeed(feedId: number): Promise<RefreshResult> {
     await outcome(null);
     // Site icon: checked on first successful fetch and then monthly. Failures are recorded so we don't hammer sites.
     if (!feed.iconCheckedAt || Date.now() - feed.iconCheckedAt.getTime() > ICON_RECHECK_MS) {
-      await refreshIcon(feedId, parsed.siteUrl ?? feed.siteUrl, feed.url).catch(() => {});
+      await refreshIcon(feedId, parsed.siteUrl ?? feed.siteUrl, feed.url, parsed.image).catch(() => {});
     }
     const lastItemAt = newestAt && (!feed.lastItemAt || newestAt > feed.lastItemAt) ? newestAt : feed.lastItemAt;
     const interval = chooseInterval(lastItemAt);

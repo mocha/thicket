@@ -5,18 +5,37 @@
  * wide. Anything that fails renders as a monogram in the UI. Icons are cached
  * in Postgres and served from our own origin, so a dead or slow site can never
  * break a card, and the browser never hits third-party hosts.
+ *
+ * Accounts on platforms come first with their own picture. A YouTube channel's
+ * website is YouTube, so its site icon is YouTube's logo, and every one of 432
+ * channels wore it. Nico's feedback (2026-09-15): a feed that follows a person
+ * on a platform should show that person, not the platform. So for a feed that
+ * is an account (isAccountFeed), the account's picture is tried before any site
+ * icon:
+ * - YouTube: the channel's avatar, from the og:image on the channel page.
+ * - Everything else that is an account: the image the feed document declares
+ *   for itself (RSS <image>, Atom <icon>/<logo>, JSON Feed icon or avatar),
+ *   which is how Mastodon profiles and Medium authors carry theirs.
+ * Reddit is the exception: its pages answer non-browsers with a script
+ * challenge, and its feeds carry only Reddit's own icon, so subreddits keep it.
+ *
+ * Every request goes through feeds/http.ts and waits its turn per host. A host
+ * that is paused leaves the icon exactly as it was, to be tried again later.
  */
 import { createHash } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
-import { USER_AGENT } from "./http.js";
+import { httpGet, httpGetBytes } from "./http.js";
+import { HostCoolingDown } from "./hosts.js";
+import { isYouTubeUrl } from "./youtube.js";
 
 const MIN_WIDTH = 32;
 /** An icon shared by this many distinct sites is a platform default, not a brand. */
 export const GENERIC_THRESHOLD = 3;
 const MAX_BYTES = 512 * 1024;
-const TIMEOUT_MS = 10_000;
 export const ICON_RECHECK_MS = 30 * 24 * 3600 * 1000;
+/** A YouTube channel page is 2 MB or more, and the avatar is named about 750 KB in. */
+const CHANNEL_PAGE_BYTES = 1_200_000;
 
 type Candidate = { url: string; declaredSize: number; rank: number };
 
@@ -87,14 +106,66 @@ export function imageWidth(buf: Buffer, contentType: string): number | null {
   return null;
 }
 
+/** Hosts where each feed is one account among many, whatever its address looks like. */
+const ACCOUNT_HOSTS = /(^|\.)(medium\.com|bsky\.app|github\.com|gitlab\.com|twitch\.tv|vimeo\.com|soundcloud\.com|letterboxd\.com|micro\.blog|dev\.to|write\.as)$/i;
+/** Addresses that name a person: /@name (Mastodon and friends), /user/, /users/, /u/, /profile/. */
+const ACCOUNT_PATH = /^\/(@[^/]+|users?\/[^/]+|u\/[^/]+|profile\/[^/]+)/i;
+
+/** Is this feed one account on a platform, whose site icon would be the platform's logo? Kept in step with drizzle/0012_account_icons.sql. */
+export function isAccountFeed(feedUrl: string): boolean {
+  try {
+    const u = new URL(feedUrl);
+    if (/(^|\.)reddit\.com$/i.test(u.hostname)) return false;
+    return isYouTubeUrl(feedUrl) || ACCOUNT_HOSTS.test(u.hostname) || ACCOUNT_PATH.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/** A channel's avatar, from its channel page. Null for playlists, which have no single owner's page to read. */
+async function youtubeAvatar(feedUrl: string): Promise<string | null> {
+  const id = /[?&]channel_id=(UC[\w-]{22})/.exec(feedUrl)?.[1];
+  if (!id) return null;
+  const page = await httpGet(`https://www.youtube.com/channel/${id}`, { accept: "text/html", "accept-language": "en" }, { maxBytes: CHANNEL_PAGE_BYTES, truncate: true });
+  if (page.status !== 200) return null;
+  const m = /<meta property="og:image" content="(https:\/\/yt3\.googleusercontent\.com\/[^"]+)"/.exec(page.body)
+    ?? /"avatar":\{"thumbnails":\[\{"url":"(https:\/\/yt3\.googleusercontent\.com\/[^"]+)"/.exec(page.body);
+  // The address carries its size (=s900-…); ask for one big enough for any place an icon is shown.
+  return m ? m[1].replace(/=s\d+(?=-|$)/, "=s240") : null;
+}
+
+/** The account's own picture, if it is an account and has one. */
+async function accountPicture(feedUrl: string, feedImage: string | null): Promise<string | null> {
+  if (!isAccountFeed(feedUrl)) return null;
+  if (isYouTubeUrl(feedUrl)) return youtubeAvatar(feedUrl);
+  if (!feedImage) return null;
+  try {
+    const url = new URL(feedImage, feedUrl).toString();
+    return /^https?:/.test(url) ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The icons a site advertises, best first, then /favicon.ico. */
+async function siteIcons(base: string): Promise<Candidate[]> {
+  try {
+    const res = await httpGet(base, { accept: "text/html,*/*;q=0.5" }, { maxBytes: 300_000, truncate: true });
+    if (res.status < 200 || res.status >= 300) return [];
+    const at = res.finalUrl || base;
+    return [...extractIconLinks(res.body, at), { url: new URL("/favicon.ico", at).toString(), declaredSize: 0, rank: -1 }];
+  } catch (err) {
+    if (err instanceof HostCoolingDown) throw err;
+    return [{ url: new URL("/favicon.ico", base).toString(), declaredSize: 0, rank: -1 }];
+  }
+}
+
 async function fetchIcon(url: string): Promise<{ buf: Buffer; contentType: string; width: number } | null> {
   try {
-    const res = await fetch(url, { headers: { "user-agent": USER_AGENT, accept: "image/*,*/*;q=0.5" }, redirect: "follow", signal: AbortSignal.timeout(TIMEOUT_MS) });
-    if (!res.ok) return null;
-    const len = Number(res.headers.get("content-length") ?? 0);
-    if (len > MAX_BYTES) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length < 64 || buf.length > MAX_BYTES) return null;
+    const res = await httpGetBytes(url, {}, { maxBytes: MAX_BYTES });
+    if (res.status < 200 || res.status >= 300) return null;
+    const buf = res.bytes;
+    if (buf.length < 64) return null;
     let contentType = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
     const width = imageWidth(buf, contentType);
     if (width === null) return null; // HTML error pages, empty files, unknown formats
@@ -104,30 +175,14 @@ async function fetchIcon(url: string): Promise<{ buf: Buffer; contentType: strin
     }
     if (width < MIN_WIDTH) return null;
     return { buf, contentType, width: Number.isFinite(width) ? width : 0 };
-  } catch {
+  } catch (err) {
+    if (err instanceof HostCoolingDown) throw err;
     return null;
   }
 }
 
-/**
- * Find and cache an icon for a feed. Cheap when it fails; we record the attempt
- * so the scheduler won't retry for a month. Returns true if an icon was stored.
- */
-export async function refreshIcon(feedId: number, siteUrl: string | null, feedUrl: string): Promise<boolean> {
-  const base = siteUrl ?? new URL(feedUrl).origin;
-  const mark = () => db.update(schema.feeds).set({ iconCheckedAt: new Date() }).where(eq(schema.feeds.id, feedId));
-  let candidates: Candidate[] = [];
-  try {
-    const res = await fetch(base, { headers: { "user-agent": USER_AGENT, accept: "text/html,*/*;q=0.5" }, redirect: "follow", signal: AbortSignal.timeout(TIMEOUT_MS) });
-    if (res.ok) {
-      const html = (await res.text()).slice(0, 300_000);
-      candidates = extractIconLinks(html, res.url || base);
-      candidates.push({ url: new URL("/favicon.ico", res.url || base).toString(), declaredSize: 0, rank: -1 });
-    }
-  } catch {
-    candidates = [{ url: new URL("/favicon.ico", base).toString(), declaredSize: 0, rank: -1 }];
-  }
-  // Try best-ranked first; stop at the first one that passes the bar. Cap attempts to stay polite.
+/** Try candidates best first and store the first that passes the bar. Capped to stay polite. */
+async function storeFirst(feedId: number, candidates: Candidate[]): Promise<boolean> {
   for (const c of candidates.slice(0, 4)) {
     const got = await fetchIcon(c.url);
     if (!got) continue;
@@ -135,12 +190,40 @@ export async function refreshIcon(feedId: number, siteUrl: string | null, feedUr
     const row = { sourceUrl: c.url, contentType: got.contentType, width: got.width || null, bytes: got.buf, hash, fetchedAt: new Date() };
     await db.insert(schema.feedIcons).values({ feedId, ...row }).onConflictDoUpdate({ target: schema.feedIcons.feedId, set: row });
     await markGeneric(hash);
-    await mark();
     return true;
   }
-  await db.delete(schema.feedIcons).where(eq(schema.feedIcons.feedId, feedId));
-  await mark();
   return false;
+}
+
+/**
+ * Find and cache an icon for a feed. Cheap when it fails; we record the attempt
+ * so the scheduler won't retry for a month. Returns true if an icon was stored.
+ * `feedImage` is the image the feed document declares, when the caller has the
+ * document to hand.
+ */
+export async function refreshIcon(feedId: number, siteUrl: string | null, feedUrl: string, feedImage: string | null = null): Promise<boolean> {
+  const mark = () => db.update(schema.feeds).set({ iconCheckedAt: new Date() }).where(eq(schema.feeds.id, feedId));
+  try {
+    const picture = await accountPicture(feedUrl, feedImage).catch((err) => {
+      if (err instanceof HostCoolingDown) throw err;
+      return null;
+    });
+    if (picture && (await storeFirst(feedId, [{ url: picture, declaredSize: 0, rank: 3 }]))) {
+      await mark();
+      return true;
+    }
+    if (await storeFirst(feedId, await siteIcons(siteUrl ?? new URL(feedUrl).origin))) {
+      await mark();
+      return true;
+    }
+    await db.delete(schema.feedIcons).where(eq(schema.feedIcons.feedId, feedId));
+    await mark();
+    return false;
+  } catch (err) {
+    // A site that asked us to slow down: change nothing, and look again on a later fetch.
+    if (err instanceof HostCoolingDown) return false;
+    throw err;
+  }
 }
 
 /** Recompute the platform-default flag for every icon sharing this hash. */

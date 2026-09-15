@@ -35,6 +35,8 @@ export type ParsedFeed = {
   title: string | null;
   description: string | null;
   siteUrl: string | null;
+  /** The image the feed declares for itself: RSS <image>, Atom <icon>/<logo>, JSON Feed icon or author avatar. An account's picture, for feeds that are accounts (feeds/icons.ts). */
+  image: string | null;
   items: ParsedItem[];
 };
 
@@ -145,7 +147,8 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         publishedAt: toDate(it.pubDate) ?? toDate(it.dc?.dates?.[0]) ?? null,
       });
     }
-    return { kind: format, title: f.title ? stripHtml(f.title) : null, description: f.description ? stripHtml(f.description) : null, siteUrl, items };
+    const image = absolutize(f.image?.url ?? null, feedUrl);
+    return { kind: format, title: f.title ? stripHtml(f.title) : null, description: f.description ? stripHtml(f.description) : null, siteUrl, image, items };
   }
 
   if (format === "atom") {
@@ -169,7 +172,8 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         publishedAt: toDate(e.published) ?? toDate(e.updated) ?? null,
       });
     }
-    return { kind: "atom", title: f.title ? stripHtml(f.title) : null, description: f.subtitle ? stripHtml(f.subtitle) : null, siteUrl, items };
+    const image = absolutize(f.icon ?? f.logo ?? null, feedUrl);
+    return { kind: "atom", title: f.title ? stripHtml(f.title) : null, description: f.subtitle ? stripHtml(f.subtitle) : null, siteUrl, image, items };
   }
 
   // json
@@ -191,5 +195,6 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       publishedAt: toDate(it.date_published) ?? toDate(it.date_modified) ?? null,
     });
   }
-  return { kind: "json", title: f.title ?? null, description: f.description ?? null, siteUrl, items };
+  const image = absolutize(f.icon ?? f.authors?.[0]?.avatar ?? f.author?.avatar ?? f.favicon ?? null, feedUrl);
+  return { kind: "json", title: f.title ?? null, description: f.description ?? null, siteUrl, image, items };
 }
