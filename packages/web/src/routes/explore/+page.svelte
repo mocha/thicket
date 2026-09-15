@@ -59,7 +59,7 @@
   function setParams(patch: Record<string, string | null>) {
     const p = new URLSearchParams(page.url.searchParams);
     for (const [k, v] of Object.entries(patch)) v ? p.set(k, v) : p.delete(k);
-    void goto(`/feeds${p.size ? `?${p}` : ''}`, { replaceState: true, keepFocus: true });
+    void goto(`/explore${p.size ? `?${p}` : ''}`, { replaceState: true, keepFocus: true });
   }
   function setScope(s: SearchScope) {
     setParams({ scope: s === 'all' ? null : s, since: null, sort: null });
