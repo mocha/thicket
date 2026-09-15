@@ -10,6 +10,8 @@
   import ItemCard from './ItemCard.svelte';
   import { openAddFeed } from '$lib/addfeed.svelte';
   import { dayKey, dayLabel } from '$lib/time';
+  import { session } from '$lib/session.svelte';
+  import VisitorMore from './VisitorMore.svelte';
 
   let { collection = null, feed = null, showSource = true, emptyTitle = 'Nothing here yet', emptyBody = 'thicket shows the posts of sites you follow, newest first, with nothing in between. Add a site by its address and its posts start arriving here, or look through Explore to see what other people here read.', emptyHref = null, emptyCta = 'Add a feed', emptyAction = () => openAddFeed({ via: 'empty_river' }) }: {
     collection?: number | null; feed?: number | null; showSource?: boolean;
@@ -24,6 +26,8 @@
   let loading = $state(false);
   let error = $state<string | null>(null);
   let hidden = $state(0);
+  /** Set when a visitor without an account has had all the instance lets visitors see; the number is that limit. */
+  let cappedAt = $state<number | null>(null);
   let sentinel = $state<HTMLElement | null>(null);
   let loadedKey = $state<string | undefined>(undefined);
 
@@ -46,11 +50,13 @@
     loading = true;
     error = null;
     try {
-      const pg = await api.river({ before: reset ? null : cursor, collection, feed, limit: 30 });
+      // Signed out, a limited instance sends one page and no more, so ask for all of it at once.
+      const pg = await api.river({ before: reset ? null : cursor, collection, feed, limit: session.user ? 30 : 100 });
       items = reset ? pg.items : [...items, ...pg.items];
       cursor = pg.nextCursor;
       done = pg.nextCursor === null;
       hidden = reset ? pg.hidden : hidden + pg.hidden;
+      cappedAt = pg.cappedAt ?? null;
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -59,7 +65,7 @@
   }
 
   export function reload() {
-    items = []; cursor = null; done = false; hidden = 0;
+    items = []; cursor = null; done = false; hidden = 0; cappedAt = null;
     return loadMore(true);
   }
 
@@ -100,7 +106,7 @@
   {/if}
   {#if error}<p class="status error">Couldn’t load posts: {error}</p>{/if}
   {#if loading}<p class="status">Loading…</p>{/if}
-  {#if done && items.length > 0}<p class="status">That’s everything.{#if hidden} {hidden} hidden by your blocks.{/if}</p>{/if}
+  {#if cappedAt}<VisitorMore cap={cappedAt} />{:else if done && items.length > 0}<p class="status">That’s everything.{#if hidden} {hidden} hidden by your blocks.{/if}</p>{/if}
   <div bind:this={sentinel} class="sentinel" aria-hidden="true"></div>
 </section>
 

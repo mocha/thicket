@@ -12,7 +12,12 @@ export type RiverItem = {
   /** Earlier posts on the same feed this one appears to repeat, newest first. Absent outside the river. */
   repeatOf?: { id: number; publishedAt: string; url: string | null; title: string | null }[];
 };
-export type RiverPage = { items: RiverItem[]; nextCursor: string | null; hidden: number };
+/**
+ * `cappedAt` is set when the reader is a visitor without an account, the
+ * instance holds visitors to its newest items, and there were more than this
+ * page. The number is that limit. No next page comes after it.
+ */
+export type RiverPage = { items: RiverItem[]; nextCursor: string | null; hidden: number; cappedAt?: number | null };
 
 export type Feed = {
   id: number; url: string; siteUrl: string | null; title: string | null; description: string | null; kind: string; slug: string;
@@ -163,7 +168,7 @@ export type Bookmark = {
   savedAt: string; hasIcon: boolean;
 };
 export const NOTE_MAX = 2000;
-export type NotesPage = { items: RiverItem[]; nextCursor: string | null };
+export type NotesPage = { items: RiverItem[]; nextCursor: string | null; cappedAt?: number | null };
 export const notesApi = {
   list: (opts: { before?: string | null; limit?: number } = {}) => {
     const q = new URLSearchParams();
@@ -216,7 +221,8 @@ export type Me = {
   hideShortsByDefault: boolean;
 };
 export type SignupPolicy = 'open' | 'invite' | 'closed';
-export type InstanceStatus = { name: string; url: string; signups: SignupPolicy };
+/** `visitorLimit`: visitors without an account see only the newest items of anything a page lists. */
+export type InstanceStatus = { name: string; url: string; signups: SignupPolicy; visitorLimit: boolean };
 export type Invite = { code: string; url: string; note: string | null; createdAt: string; expiresAt: string | null; usedAt: string | null; usedByHandle: string | null; createdByHandle: string };
 
 export const authApi = {
@@ -240,7 +246,7 @@ export const adminApi = {
   resetPassword: (id: number) => j<{ handle: string; password: string }>(`/api/admin/users/${id}/password`, { method: 'POST' }),
   deleteUser: (id: number) => j<void>(`/api/admin/users/${id}`, { method: 'DELETE' }),
   settings: () => j<InstanceStatus & { signupsStored: SignupPolicy | null; signupsDefault: SignupPolicy }>('/api/admin/settings'),
-  update: (patch: { signups?: SignupPolicy; name?: string }) => j<InstanceStatus>('/api/admin/settings', { method: 'PATCH', body: JSON.stringify(patch) }),
+  update: (patch: { signups?: SignupPolicy; name?: string; visitorLimit?: boolean }) => j<InstanceStatus>('/api/admin/settings', { method: 'PATCH', body: JSON.stringify(patch) }),
   invites: () => j<{ invites: Invite[] }>('/api/admin/invites'),
   createInvite: (note?: string) => j<Invite>('/api/admin/invites', { method: 'POST', body: JSON.stringify({ note }) }),
   revokeInvite: (code: string) => j<void>(`/api/admin/invites/${encodeURIComponent(code)}`, { method: 'DELETE' }),
@@ -282,8 +288,18 @@ export const profilesApi = {
   collection: (handle: string, slug: string) => j<PublicCollection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}`),
   copyCollection: (handle: string, slug: string) => j<Collection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/copy`, { method: 'POST' }),
   opmlUrl: (handle: string, slug: string) => `/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/opml`,
-  bookmarks: (handle: string, before?: string | null) => j<{ owner: PublicUser; isMe: boolean; bookmarks: PublicBookmark[]; nextCursor: string | null }>(`/api/profiles/${encodeURIComponent(handle)}/bookmarks${before ? `?before=${encodeURIComponent(before)}` : ''}`),
-  activity: (handle: string, before?: string | null) => j<{ owner: PublicUser; isMe: boolean; entries: ActivityEntry[]; nextCursor: string | null }>(`/api/profiles/${encodeURIComponent(handle)}/activity${before ? `?before=${encodeURIComponent(before)}` : ''}`),
+  bookmarks: (handle: string, before?: string | null, limit?: number) => {
+    const q = new URLSearchParams();
+    if (before) q.set('before', before);
+    if (limit) q.set('limit', String(limit));
+    return j<{ owner: PublicUser; isMe: boolean; bookmarks: PublicBookmark[]; nextCursor: string | null; cappedAt?: number | null }>(`/api/profiles/${encodeURIComponent(handle)}/bookmarks?${q}`);
+  },
+  activity: (handle: string, before?: string | null, limit?: number) => {
+    const q = new URLSearchParams();
+    if (before) q.set('before', before);
+    if (limit) q.set('limit', String(limit));
+    return j<{ owner: PublicUser; isMe: boolean; entries: ActivityEntry[]; nextCursor: string | null; cappedAt?: number | null }>(`/api/profiles/${encodeURIComponent(handle)}/activity?${q}`);
+  },
   /** Their notes, as the posts they noted. 404 when they don't share notes with me. */
   notes: (handle: string, opts: { before?: string | null; limit?: number } = {}) => {
     const q = new URLSearchParams();

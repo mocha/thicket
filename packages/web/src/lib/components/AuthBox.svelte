@@ -27,7 +27,7 @@
   const canSignup = $derived(handleOk && password.length >= 8 && (!needsInvite || inviteCode.trim().length > 0));
 
   onMount(() => {
-    authApi.status().then((s) => { status = s; if (s.signups === 'closed') mode = 'login'; }).catch(() => (status = { name: 'thicket', url: '', signups: 'open' }));
+    authApi.status().then((s) => { status = s; if (s.signups === 'closed') mode = 'login'; }).catch(() => (status = { name: 'thicket', url: '', signups: 'open', visitorLimit: true }));
   });
 
   async function submit() {

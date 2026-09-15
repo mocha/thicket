@@ -39,7 +39,7 @@
   }
   onMount(() => {
     inviteCode = page.url.searchParams.get('invite') ?? '';
-    authApi.status().then((s) => (status = s)).catch(() => (status = { name: 'thicket', url: '', signups: 'open' }));
+    authApi.status().then((s) => (status = s)).catch(() => (status = { name: 'thicket', url: '', signups: 'open', visitorLimit: true }));
   });
   const needsInvite = $derived(status?.signups === 'invite');
   const canSubmit = $derived(handleOk && password.length >= 8 && (!needsInvite || inviteCode.trim().length > 0));

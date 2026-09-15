@@ -4,6 +4,7 @@
   import { api, bookmarksApi, profileHref, profilesApi, type PublicBookmark, type PublicUser } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
+  import VisitorMore from '$lib/components/VisitorMore.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   /** Someone's bookmarks. Tap the bookmark icon on any of them to keep a copy in your own set. */
@@ -15,6 +16,7 @@
   let done = $state(false);
   let loading = $state(false);
   let error = $state<string | null>(null);
+  let cappedAt = $state<number | null>(null);
   let sentinel = $state<HTMLElement | null>(null);
   let loadedHandle = $state<string | undefined>(undefined);
 
@@ -22,11 +24,13 @@
     if (loading || (done && !reset)) return;
     loading = true; error = null;
     try {
-      const pg = await profilesApi.bookmarks(handle, reset ? null : cursor);
+      // Signed out, a limited instance sends one page and no more, so ask for all of it at once.
+      const pg = await profilesApi.bookmarks(handle, reset ? null : cursor, session.user ? undefined : 100);
       owner = pg.owner; isMe = pg.isMe;
       list = reset ? pg.bookmarks : [...list, ...pg.bookmarks];
       cursor = pg.nextCursor;
       done = pg.nextCursor === null;
+      cappedAt = pg.cappedAt ?? null;
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
       done = true;
@@ -58,7 +62,7 @@
   $effect(() => {
     if (loadedHandle === handle) return;
     loadedHandle = handle;
-    list = []; cursor = null; done = false;
+    list = []; cursor = null; done = false; cappedAt = null;
     void loadMore(true);
   });
   $effect(() => {
@@ -89,6 +93,7 @@
     {/each}
   </ul>
   {#if loading}<p class="status">Loading…</p>{/if}
+  {#if cappedAt}<VisitorMore cap={cappedAt} />{/if}
   <div bind:this={sentinel} aria-hidden="true"></div>
 {/if}
 

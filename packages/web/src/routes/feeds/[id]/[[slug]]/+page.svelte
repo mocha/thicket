@@ -10,6 +10,7 @@
   import River from '$lib/components/River.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import Banner from '$lib/components/Banner.svelte';
+  import { session } from '$lib/session.svelte';
 
   /**
    * A feed on its own terms: who they are, how active, whether I follow them,
@@ -17,6 +18,8 @@
    * of any user, which is what makes it the unit of discovery.
    * URL is /feeds/:id/:slug; the id is canonical, the slug is corrected in place.
    * Refreshing by hand lives on the settings page now, as a diagnostic.
+   * Signed out it is the same page without Follow, Settings or the way to
+   * Explore; how far back a visitor can read is the instance's setting.
    */
   const id = $derived(Number(page.params.id));
   let feed = $state<Feed | null>(null);
@@ -44,7 +47,7 @@
   });
 </script>
 
-<nav class="crumbs"><a href="/explore">Explore</a> <span aria-hidden="true">›</span></nav>
+{#if session.user}<nav class="crumbs"><a href="/explore">Explore</a> <span aria-hidden="true">›</span></nav>{/if}
 
 {#if feed}
   <header class="profile">
@@ -52,10 +55,12 @@
     <div class="who">
       <div class="titlerow">
         <h1>{feedName(feed)}</h1>
-        <div class="actions">
-          <FollowButton feedId={feed.id} bind:ids name={feedName(feed)} onchange={() => void loadFeed()} />
-          <a class="btn" href="/feeds/{feed.id}/settings">Settings</a>
-        </div>
+        {#if session.user}
+          <div class="actions">
+            <FollowButton feedId={feed.id} bind:ids name={feedName(feed)} onchange={() => void loadFeed()} />
+            <a class="btn" href="/feeds/{feed.id}/settings">Settings</a>
+          </div>
+        {/if}
       </div>
       <a class="host" href={feed.siteUrl ?? feed.url} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
       {#if feed.description}<p class="desc">{feed.description}</p>{/if}

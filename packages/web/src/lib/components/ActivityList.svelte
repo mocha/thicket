@@ -11,21 +11,34 @@
   import { api } from '$lib/api';
   import SourceIcon from './SourceIcon.svelte';
   import { relativeTime, hostOf } from '$lib/time';
+  import { session } from '$lib/session.svelte';
+  import VisitorMore from './VisitorMore.svelte';
 
   let { handle, isMe }: { handle: string; isMe: boolean } = $props();
 
+  /**
+   * Shown PAGE at a time. Signed in, each Show more asks the server for the
+   * next page. Signed out, a limited instance sends everything a visitor may
+   * see in one response and nothing after, so Show more reveals what is
+   * already here, and the end of it says there is more for an account.
+   */
+  const PAGE = 20;
   let entries = $state<ActivityEntry[] | null>(null);
   let cursor = $state<string | null>(null);
+  let cappedAt = $state<number | null>(null);
+  let shown = $state(PAGE);
   let busy = $state(false);
   let failed = $state<string | null>(null);
   let loadedFor = $state<string | undefined>(undefined);
+  const visible = $derived((entries ?? []).slice(0, shown));
 
   async function load(before: string | null) {
     busy = true;
     try {
-      const r = await profilesApi.activity(handle, before);
+      const r = await profilesApi.activity(handle, before, session.user ? PAGE : 100);
       entries = [...(before ? (entries ?? []) : []), ...r.entries];
       cursor = r.nextCursor;
+      cappedAt = r.cappedAt ?? null;
     } catch (e) {
       failed = e instanceof Error ? e.message : String(e);
     } finally {
@@ -36,13 +49,15 @@
   $effect(() => {
     if (loadedFor === handle) return;
     loadedFor = handle;
-    entries = null; cursor = null; failed = null;
+    entries = null; cursor = null; failed = null; cappedAt = null; shown = PAGE;
     void load(null);
   });
 
-  function more() {
+  async function more() {
     api.event('activity_more', { handle });
-    void load(cursor);
+    if (shown < (entries?.length ?? 0)) { shown += PAGE; return; }
+    await load(cursor);
+    shown += PAGE;
   }
 
   const key = (e: ActivityEntry) => `${e.kind}:${e.id}:${e.at}`;
@@ -60,7 +75,7 @@
     <p class="status">{isMe ? 'Follow a feed, save a post or write a note and it shows up here.' : 'Nothing to show yet.'}</p>
   {:else}
     <ul class="acts">
-      {#each entries as e (key(e))}
+      {#each visible as e (key(e))}
         <li>
           {#if e.kind === 'feeds'}
             <div class="row">
@@ -117,8 +132,10 @@
         </li>
       {/each}
     </ul>
-    {#if cursor}
+    {#if cursor || shown < entries.length}
       <button class="more" onclick={more} disabled={busy}>{busy ? 'Loading…' : 'Show more'}</button>
+    {:else if cappedAt}
+      <VisitorMore cap={cappedAt} />
     {/if}
   {/if}
 </section>

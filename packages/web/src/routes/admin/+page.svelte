@@ -58,6 +58,12 @@
     api.event('instance_signups_changed', { signups });
     showToast(signups === 'open' ? 'Anyone can sign up' : signups === 'invite' ? 'Sign-ups need an invite' : 'Sign-ups closed');
   }
+  async function setVisitorLimit(visitorLimit: boolean) {
+    if (!instance) return;
+    instance = { ...instance, ...(await adminApi.update({ visitorLimit })) };
+    api.event('instance_visitor_limit_changed', { visitorLimit });
+    showToast(visitorLimit ? 'Visitors see the newest 100' : 'Visitors see everything');
+  }
   async function saveName() {
     if (!instance || name.trim() === instance.name) return;
     instance = { ...instance, ...(await adminApi.update({ name: name.trim() })) };
@@ -151,6 +157,11 @@
       <label class="radio"><input type="radio" name="signups" checked={instance.signups === 'invite'} onchange={() => setPolicy('invite')} /><span><strong>By invite</strong><small>You mint invite links below and send them to people.</small></span></label>
       <label class="radio"><input type="radio" name="signups" checked={instance.signups === 'open'} onchange={() => setPolicy('open')} /><span><strong>Anyone</strong><small>Right for a private network. On a public address, expect spam accounts.</small></span></label>
       <label class="radio"><input type="radio" name="signups" checked={instance.signups === 'closed'} onchange={() => setPolicy('closed')} /><span><strong>Nobody</strong><small>Existing accounts keep working.</small></span></label>
+    </fieldset>
+    <fieldset>
+      <legend>What visitors without an account can read</legend>
+      <label class="radio"><input type="radio" name="visitors" checked={instance.visitorLimit} onchange={() => setVisitorLimit(true)} /><span><strong>The newest 100</strong><small>Feed pages, collections, and people’s notes, bookmarks and activity show their 100 most recent items, then ask visitors to log in or make an account.</small></span></label>
+      <label class="radio"><input type="radio" name="visitors" checked={!instance.visitorLimit} onchange={() => setVisitorLimit(false)} /><span><strong>Everything</strong><small>Visitors can scroll back as far as anyone signed in.</small></span></label>
     </fieldset>
   </section>
 
@@ -265,6 +276,7 @@
   button.danger { color: var(--danger); }
   button:disabled { opacity: 0.5; }
   fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  fieldset + fieldset { margin-top: 18px; }
   legend { font-size: 13px; font-weight: 600; color: var(--text-2); padding: 0; margin-bottom: 6px; }
   .radio { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
   .radio input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }

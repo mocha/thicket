@@ -21,6 +21,7 @@ import { slugify, uniqueCollectionSlug } from "../lib/slug.js";
 import { activityForViewer } from "../lib/activity.js";
 import { noteColumns } from "../lib/notes.js";
 import { allows, isFriendOf, type Audience } from "../lib/visibility.js";
+import { visitorCap } from "../lib/instance.js";
 
 export const profiles = new Hono();
 
@@ -227,8 +228,11 @@ profiles.get("/:handle/bookmarks", async (c) => {
   const who = await audienceFor(u, viewer?.id);
   const isMe = who.isMe;
   if (!isMe && (u.profileVisibility === "private" || !allows(u.bookmarksVisibility, who))) return c.json({ error: "not found" }, 404);
-  const limit = Math.min(100, Math.max(1, Number(c.req.query("limit") ?? 40)));
+  // Signed out, one page of at most VISITOR_CAP and nothing after it (lib/instance.ts).
+  const cap = await visitorCap(viewer);
+  const limit = Math.min(cap ?? 100, Math.max(1, Number(c.req.query("limit") ?? 40)));
   const before = c.req.query("before");
+  if (cap && before) return c.json({ owner: publicUser(u), isMe, bookmarks: [], nextCursor: null, cappedAt: cap });
   let cursor = sql``;
   if (before) {
     const [ts, id] = before.split("|");
@@ -246,7 +250,7 @@ profiles.get("/:handle/bookmarks", async (c) => {
   const all = rows.rows as any[];
   const page = all.slice(0, limit);
   const last = all.length > limit ? page[page.length - 1] : null;
-  return c.json({ owner: publicUser(u), isMe, bookmarks: page, nextCursor: last ? `${new Date(last.savedAt).toISOString()}|${last.id}` : null });
+  return c.json({ owner: publicUser(u), isMe, bookmarks: page, nextCursor: last && !cap ? `${new Date(last.savedAt).toISOString()}|${last.id}` : null, cappedAt: cap && last ? cap : null });
 });
 
 /**
@@ -260,9 +264,13 @@ profiles.get("/:handle/activity", async (c) => {
   const viewer = c.get("user");
   const who = await audienceFor(u, viewer?.id);
   if (!who.isMe && u.profileVisibility === "private") return c.json({ error: "not found" }, 404);
-  const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 20)));
-  const { entries, nextCursor } = await activityForViewer(u, who, { limit, before: c.req.query("before") });
-  return c.json({ owner: publicUser(u), isMe: who.isMe, entries, nextCursor });
+  // Signed out, one page of at most VISITOR_CAP and nothing after it (lib/instance.ts).
+  const cap = await visitorCap(viewer);
+  const before = c.req.query("before");
+  if (cap && before) return c.json({ owner: publicUser(u), isMe: who.isMe, entries: [], nextCursor: null, cappedAt: cap });
+  const limit = Math.min(cap ?? 50, Math.max(1, Number(c.req.query("limit") ?? 20)));
+  const { entries, nextCursor } = await activityForViewer(u, who, { limit, before });
+  return c.json({ owner: publicUser(u), isMe: who.isMe, entries, nextCursor: cap ? null : nextCursor, cappedAt: cap && nextCursor ? cap : null });
 });
 
 /**
@@ -277,8 +285,11 @@ profiles.get("/:handle/notes", async (c) => {
   const viewer = c.get("user");
   const who = await audienceFor(u, viewer?.id);
   if (!who.isMe && (u.profileVisibility === "private" || !allows(u.notesVisibility, who))) return c.json({ error: "not found" }, 404);
-  const limit = Math.min(100, Math.max(1, Number(c.req.query("limit") ?? 30)));
+  // Signed out, one page of at most VISITOR_CAP and nothing after it (lib/instance.ts).
+  const cap = await visitorCap(viewer);
+  const limit = Math.min(cap ?? 100, Math.max(1, Number(c.req.query("limit") ?? 30)));
   const before = c.req.query("before"); // "<iso>|<noteId>"
+  if (cap && before) return c.json({ owner: publicUser(u), isMe: who.isMe, items: [], nextCursor: null, cappedAt: cap });
   let cursor = sql``;
   if (before) {
     const [ts, id] = before.split("|");
@@ -305,6 +316,7 @@ profiles.get("/:handle/notes", async (c) => {
   return c.json({
     owner: publicUser(u), isMe: who.isMe,
     items: page.map(({ noteId, notedAt, ...r }: any) => ({ ...r, publishedAt: new Date(r.publishedAt).toISOString() })),
-    nextCursor: last ? `${new Date(last.notedAt).toISOString()}|${last.noteId}` : null,
+    nextCursor: last && !cap ? `${new Date(last.notedAt).toISOString()}|${last.noteId}` : null,
+    cappedAt: cap && last ? cap : null,
   });
 });

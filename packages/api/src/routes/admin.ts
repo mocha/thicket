@@ -30,12 +30,15 @@ admin.get("/settings", async (c) => {
 
 admin.patch("/settings", async (c) => {
   await requireAdmin(c);
-  const body = await c.req.json<{ signups?: SignupPolicy; name?: string }>().catch(() => ({} as { signups?: SignupPolicy; name?: string }));
+  type Body = { signups?: SignupPolicy; name?: string; visitorLimit?: boolean };
+  const body = await c.req.json<Body>().catch(() => ({} as Body));
   if (body.signups) {
     if (!["open", "invite", "closed"].includes(body.signups)) return c.json({ error: "signups must be open, invite, or closed" }, 400);
     await setSetting("signups", body.signups);
   }
   if (typeof body.name === "string") await setSetting("name", body.name.trim().slice(0, 60) || null);
+  // true holds visitors without an account to their newest VISITOR_CAP of anything; false shows them everything.
+  if (typeof body.visitorLimit === "boolean") await setSetting("visitorLimit", body.visitorLimit);
   return c.json(await publicStatus());
 });
 

@@ -9,6 +9,7 @@
   import { feedOrigin, hostOf, relativeTime } from '$lib/time';
   import SourceIcon from './SourceIcon.svelte';
   import FollowButton from './FollowButton.svelte';
+  import { session } from '$lib/session.svelte';
 
   let { feedId, onclose }: { feedId: number; onclose: () => void } = $props();
   let feed = $state<Feed | null>(null);
@@ -39,7 +40,7 @@
         <div><dt>Followers</dt><dd>{feed.followerCount}</dd></div>
       </dl>
       <footer>
-        <FollowButton feedId={feed.id} bind:ids name={feed.title ?? hostOf(feed.url)} inline />
+        {#if session.user}<FollowButton feedId={feed.id} bind:ids name={feed.title ?? hostOf(feed.url)} inline />{/if}
         <a class="btn" href={feedHref(feed)} onclick={() => dialog?.close()}>Open feed</a>
       </footer>
     {:else}

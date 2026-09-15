@@ -125,11 +125,7 @@
           <li>
             <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={36} />
             <div class="meta">
-              {#if session.user}
-                <a class="title" href={feedHref(f)}>{feedListName(f)}</a>
-              {:else}
-                <a class="title" href={f.siteUrl ?? f.url} target="_blank" rel="noopener">{feedListName(f)}</a>
-              {/if}
+              <a class="title" href={feedHref(f)}>{feedListName(f)}</a>
               <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · {relativeTime(f.lastItemAt)}{/if} · {f.followerCount} {f.followerCount === 1 ? 'follower' : 'followers'}</div>
             </div>
             {#if session.user}

@@ -71,11 +71,33 @@ async function collectionHead(handle: string, slug: string): Promise<Head | null
   };
 }
 
+/** A feed page. Feeds are the instance's shared index, so there is no visibility to apply: every feed is public. */
+async function feedHead(id: number): Promise<Head | null> {
+  const rows = await db.execute<{ title: string | null; description: string | null; siteUrl: string | null; url: string; posts: number }>(sql`
+    select f.title, f.description, f.site_url as "siteUrl", f.url,
+           (select count(*)::int from items i where i.feed_id = f.id and i.published_at > now() - interval '30 days') as posts
+    from feeds f where f.id = ${id}
+  `);
+  const f = rows.rows[0];
+  if (!f) return null;
+  const host = new URL(f.siteUrl ?? f.url).hostname.replace(/^www\./, "");
+  const about = f.description ? f.description.trim().slice(0, 240).replace(/([^.!?])$/, "$1.") + " " : "";
+  return { title: f.title ?? host, description: `${about}A feed from ${host} on thicket, ${plural(f.posts, "post")} in the last 30 days.`, url: `${PUBLIC_URL}/feeds/${id}` };
+}
+
 /** The head fragment for a path. Always returns something; public pages get specifics, everything else the instance's generic head. */
 export async function headForPath(path: string): Promise<string> {
   const status = await publicStatus();
   const site = status.name;
   const generic: Head = { title: site, description: "Read the web on your own terms. Follow the sites you like and get every new post in one calm stream, newest first. No ranking, no ads, nothing about you for sale.", url: `${PUBLIC_URL}${path === "/" ? "" : path}` };
+  const feed = /^\/feeds\/(\d+)(?:\/([^/]+))?\/?$/.exec(path);
+  if (feed && feed[2] !== "settings") {
+    try {
+      return render((await feedHead(Number(feed[1]))) ?? generic, site);
+    } catch {
+      return render(generic, site);
+    }
+  }
   const m = /^\/@([^/]+)(?:\/collections\/([^/]+))?\/?$/.exec(path);
   if (!m) return render(generic, site);
   try {

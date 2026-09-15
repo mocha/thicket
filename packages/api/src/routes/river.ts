@@ -12,6 +12,7 @@ import { sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { noteColumns } from "../lib/notes.js";
+import { visitorCap } from "../lib/instance.js";
 import { SHORTS_URL_PATTERN } from "../feeds/youtube.js";
 
 export const river = new Hono();
@@ -54,14 +55,17 @@ river.get("/stats", async (c) => {
 });
 
 river.get("/", async (c) => {
-  const limit = Math.min(100, Math.max(1, Number(c.req.query("limit") ?? 40)));
-  const before = c.req.query("before"); // "<iso>|<id>" cursor
   const collectionId = c.req.query("collection") ? Number(c.req.query("collection")) : null;
   const feedId = c.req.query("feed") ? Number(c.req.query("feed")) : null;
   // "Everything" is mine and needs me signed in. A single feed or a public
   // collection can be read by anyone; bookmark/block columns just come back empty.
   const user = feedId || collectionId ? c.get("user") : currentUser(c);
   const userId = user?.id ?? -1;
+  // Signed out, one page of at most VISITOR_CAP and nothing after it (lib/instance.ts).
+  const cap = await visitorCap(user);
+  const limit = Math.min(cap ?? 100, Math.max(1, Number(c.req.query("limit") ?? 40)));
+  const before = c.req.query("before"); // "<iso>|<id>" cursor
+  if (cap && before) return c.json({ items: [], nextCursor: null, hidden: 0, cappedAt: cap });
   // A collection is someone's page: its owner's notes show to whoever they share notes with, signed out included (lib/notes.ts).
   const pageOwnerId = collectionId
     ? Number((await db.execute<{ userId: string }>(sql`select user_id as "userId" from collections where id = ${collectionId}`)).rows[0]?.userId ?? 0) || null
@@ -149,5 +153,9 @@ river.get("/", async (c) => {
   const page = visible.slice(0, limit);
   const last = all.length > limit ? all[limit - 1] : null;
   const nextCursor = last ? `${new Date(last.publishedAt).toISOString()}|${last.id}` : null;
-  return c.json({ items: page.map(({ blocked, ...r }) => ({ ...r, publishedAt: new Date(r.publishedAt).toISOString() })), nextCursor, hidden });
+  return c.json({
+    items: page.map(({ blocked, ...r }) => ({ ...r, publishedAt: new Date(r.publishedAt).toISOString() })),
+    nextCursor: cap ? null : nextCursor, hidden,
+    cappedAt: cap && last ? cap : null,
+  });
 });

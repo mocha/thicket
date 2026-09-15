@@ -4,6 +4,7 @@
   import { api, profileHref, profilesApi, type PublicUser, type RiverItem } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import ItemCard from '$lib/components/ItemCard.svelte';
+  import VisitorMore from '$lib/components/VisitorMore.svelte';
 
   /**
    * Someone's notes as a body of work: the posts they noted, newest note
@@ -19,6 +20,7 @@
   let done = $state(false);
   let loading = $state(false);
   let error = $state<string | null>(null);
+  let cappedAt = $state<number | null>(null);
   let sentinel = $state<HTMLElement | null>(null);
   let loadedHandle = $state<string | undefined>(undefined);
 
@@ -26,11 +28,13 @@
     if (loading || (done && !reset)) return;
     loading = true; error = null;
     try {
-      const pg = await profilesApi.notes(handle, { before: reset ? null : cursor });
+      // Signed out, a limited instance sends one page and no more, so ask for all of it at once.
+      const pg = await profilesApi.notes(handle, { before: reset ? null : cursor, limit: session.user ? undefined : 100 });
       owner = pg.owner; isMe = pg.isMe;
       items = reset ? pg.items : [...items, ...pg.items];
       cursor = pg.nextCursor;
       done = pg.nextCursor === null;
+      cappedAt = pg.cappedAt ?? null;
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
       done = true;
@@ -46,7 +50,7 @@
   $effect(() => {
     if (loadedHandle === handle) return;
     loadedHandle = handle;
-    items = []; cursor = null; done = false;
+    items = []; cursor = null; done = false; cappedAt = null;
     void loadMore(true);
   });
   $effect(() => {
@@ -76,7 +80,7 @@
     {/each}
   </section>
   {#if loading}<p class="status">Loading…</p>{/if}
-  {#if done && shown.length > 0}<p class="status">That’s all of them.</p>{/if}
+  {#if cappedAt}<VisitorMore cap={cappedAt} />{:else if done && shown.length > 0}<p class="status">That’s all of them.</p>{/if}
   <div bind:this={sentinel} aria-hidden="true"></div>
 {/if}
 

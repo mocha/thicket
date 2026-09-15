@@ -32,9 +32,28 @@ export async function signupPolicy(): Promise<SignupPolicy> {
   return (await getSetting<SignupPolicy>("signups")) ?? SIGNUPS_DEFAULT;
 }
 
+/**
+ * Visitors without an account read at most this many of anything a page lists
+ * (a feed's posts, a collection's, a person's notes, bookmarks or activity),
+ * unless an admin lets them read everything. One page and no page after it,
+ * enforced by the API rather than the web app, so the API is not a way round it.
+ */
+export const VISITOR_CAP = 100;
+
+/** Whether visitors are held to VISITOR_CAP. On unless an admin has turned it off. */
+export async function visitorsLimited(): Promise<boolean> {
+  return (await getSetting<boolean>("visitorLimit")) ?? true;
+}
+
+/** The cap for this request: null when someone is signed in, or when the instance shows visitors everything. */
+export async function visitorCap(user: unknown): Promise<number | null> {
+  if (user) return null;
+  return (await visitorsLimited()) ? VISITOR_CAP : null;
+}
+
 /** What the sign-up page needs to render itself. Public. */
 export async function publicStatus() {
-  return { name: (await getSetting<string>("name")) ?? INSTANCE_NAME, url: PUBLIC_URL, signups: await signupPolicy() };
+  return { name: (await getSetting<string>("name")) ?? INSTANCE_NAME, url: PUBLIC_URL, signups: await signupPolicy(), visitorLimit: await visitorsLimited() };
 }
 
 /** Self-healing: if nobody is admin, the oldest account is. Runs at boot and after the first sign-up. */

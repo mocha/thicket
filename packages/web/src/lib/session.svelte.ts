@@ -55,7 +55,7 @@ setUnauthorizedHandler(() => {
   if (session.user) applyUser(null);
 });
 
-/** Public routes render signed out; everything else needs a user. */
+/** Public routes render signed out; everything else needs a user. A feed's page is public; its settings page is not. */
 export function isPublicPath(pathname: string): boolean {
-  return pathname === '/' || pathname.startsWith('/@') || pathname === '/login' || pathname === '/signup';
+  return pathname === '/' || pathname.startsWith('/@') || pathname === '/login' || pathname === '/signup' || /^\/feeds\/\d+(\/(?!settings\/?$)[^/]+)?\/?$/.test(pathname);
 }

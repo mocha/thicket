@@ -143,12 +143,12 @@ feeds.post("/", async (c) => {
   }
 });
 
-/** One feed with stats and the caller's relationship to it. */
+/** One feed with stats and the caller's relationship to it. Readable signed out: a feed page is public, and a visitor simply has no relationship to it. */
 feeds.get("/:id", async (c) => {
-  const user = currentUser(c);
+  const userId = c.get("user")?.id ?? -1;
   const id = Number(c.req.param("id"));
   if (!Number.isFinite(id)) return c.json({ error: "not found" }, 404);
-  const rows = await db.execute(sql`select ${feedColumns(user.id)} from feeds f where f.id = ${id}`);
+  const rows = await db.execute(sql`select ${feedColumns(userId)} from feeds f where f.id = ${id}`);
   const row = rows.rows[0];
   return row ? c.json(shape(row)) : c.json({ error: "not found" }, 404);
 });
