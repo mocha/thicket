@@ -96,8 +96,8 @@
   const CARD_H = 148;
   const GAP = 12;
   const PAGEHEAD_H = 34;
-  /** Cards go side by side when the frame is wide enough for more than one of at least this width. */
-  const CARD_MIN_W = 340;
+  /** Cards go side by side when the frame is wide enough for more than one of at least this width; narrower than this a card reads oddly. */
+  const CARD_MIN_W = 500;
   let frame = $state<HTMLElement | null>(null);
   let frameTop = $state(0);
   let frameH = $state(0);

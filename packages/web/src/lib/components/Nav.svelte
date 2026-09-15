@@ -75,7 +75,7 @@
       <a href="/" aria-current={path === '/' ? 'page' : undefined}>{@render icon(icons.everything)}<span class="shortl">Read</span></a>
     </li>
     <li class="mobile-only">
-      <a href={meHref} aria-current={onAnyCollection || (!!me && path === meHref) ? 'page' : undefined}>{@render icon(icons.collections)}<span class="shortl">Collections</span></a>
+      <a href={meHref} aria-current={onAnyCollection ? 'page' : undefined}>{@render icon(icons.collections)}<span class="shortl">Collections</span></a>
     </li>
     <li class="collections">
       <div class="heading">{@render icon(icons.everything)}<span>Read</span></div>
@@ -106,6 +106,12 @@
     <li>
       <a href="/explore" aria-current={current('/explore') || path.startsWith('/feeds/') ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
     </li>
+    <!-- Mobile: you. The profile is where Settings lives when there is no sidebar. -->
+    {#if me}
+      <li class="mobile-only you">
+        <a href={meHref} aria-current={path === meHref || current('/settings') ? 'page' : undefined}><span class="mono"><Monogram name={me.displayName ?? me.handle} size={24} /></span><span class="shortl">You</span></a>
+      </li>
+    {/if}
     {#if me?.isAdmin}
       <li class="admin">
         <a href="/admin" aria-current={current('/admin') ? 'page' : undefined}>{@render icon(icons.admin)}<span class="long">Admin</span><span class="shortl">Admin</span></a>
@@ -143,6 +149,8 @@
     height: 100%; font-size: calc(10.5px * var(--size-app)); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
   }
   li > a[aria-current='page'] { color: var(--accent); }
+  .mono { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; }
+  li.you > a[aria-current='page'] .mono { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   /* Desktop: the sidebar. */
   @media (min-width: 900px) {
