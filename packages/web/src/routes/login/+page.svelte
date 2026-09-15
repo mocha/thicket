@@ -39,7 +39,7 @@
 
 <style>
   .auth { max-width: 380px; margin: 40px auto 0; }
-  h1 { font-family: var(--font-serif); font-size: 30px; margin: 0 0 20px; }
+  h1 { font-family: var(--font-headings); font-size: 30px; margin: 0 0 20px; }
   form { display: flex; flex-direction: column; gap: 14px; }
   label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-2); }
   input { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: 16px; }

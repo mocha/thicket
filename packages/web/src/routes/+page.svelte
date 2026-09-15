@@ -47,7 +47,7 @@
 <style>
   .top { margin-bottom: 14px; }
   .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  h1 { font-family: var(--font-serif); font-size: 28px; margin: 0; min-width: 0; }
+  h1 { font-family: var(--font-headings); font-size: 28px; margin: 0; min-width: 0; }
   .btn { flex: none; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
   .btn:hover { background: var(--surface-2); color: var(--text); }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: 14px; max-width: 62ch; }

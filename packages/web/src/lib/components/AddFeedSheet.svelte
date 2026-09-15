@@ -166,7 +166,7 @@
     .scroll { max-height: 300px; }
   }
   header { display: flex; align-items: center; justify-content: space-between; }
-  h2 { margin: 0; font-size: 22px; font-family: var(--font-serif); }
+  h2 { margin: 0; font-size: 22px; font-family: var(--font-headings); }
   .close { width: 32px; height: 32px; border-radius: 50%; font-size: 22px; color: var(--text-3); }
   .lede { color: var(--text-2); margin: -6px 0 0; font-size: 14px; }
   input[type='url'] { padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 16px; width: 100%; }

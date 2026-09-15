@@ -239,7 +239,7 @@
 <style>
   .who { display: flex; gap: 16px; align-items: flex-start; margin: 8px 0 18px; }
   .names { flex: 1; min-width: 0; }
-  h1 { font-family: var(--font-serif); font-size: 28px; margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
+  h1 { font-family: var(--font-headings); font-size: 28px; margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
   .handle { margin: 2px 0 0; color: var(--text-3); font-size: 15px; }
   .bio { margin: 10px 0 0; color: var(--text); font-size: 15px; white-space: pre-line; }
   .meta { margin: 8px 0 0; font-size: 13px; color: var(--text-3); }

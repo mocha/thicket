@@ -8,7 +8,7 @@
   import AddFeedSheet from '$lib/components/AddFeedSheet.svelte';
   import { addFeed } from '$lib/addfeed.svelte';
   import { session, loadMe, isPublicPath } from '$lib/session.svelte';
-  import { loadAppearance } from '$lib/theme.svelte';
+  import { loadDisplay } from '$lib/display.svelte';
   let { children } = $props();
 
   /**
@@ -17,7 +17,7 @@
    * Public paths (/@handle…, /login, /signup) render for anyone; everything
    * else bounces to /login and comes back afterwards.
    */
-  onMount(() => { loadAppearance(); void loadMe(); });
+  onMount(() => { loadDisplay(); void loadMe(); });
 
   const path = $derived(page.url.pathname);
   const isPublic = $derived(isPublicPath(path));
@@ -63,7 +63,7 @@
   }
   main.anon { padding-bottom: 40px; }
   .unreachable { text-align: center; padding: 80px 20px; color: var(--text-2); }
-  .unreachable h1 { font-family: var(--font-serif); font-size: 24px; margin: 0 0 8px; color: var(--text); }
+  .unreachable h1 { font-family: var(--font-headings); font-size: 24px; margin: 0 0 8px; color: var(--text); }
   .unreachable p { margin: 0; }
   header.anon {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;

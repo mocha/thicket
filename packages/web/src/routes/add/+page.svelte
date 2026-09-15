@@ -20,6 +20,6 @@
 <p class="lede">Paste the address of a site, a blog, or a feed.</p>
 
 <style>
-  h1 { font-family: var(--font-serif); font-size: 26px; margin: 0 0 6px; }
+  h1 { font-family: var(--font-headings); font-size: 26px; margin: 0 0 6px; }
   .lede { color: var(--text-2); margin: 0; }
 </style>

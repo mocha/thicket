@@ -156,7 +156,7 @@
   .crumbs a { color: var(--accent); font-weight: 600; }
   .top { margin-bottom: 16px; }
   .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  h1 { font-family: var(--font-serif); font-size: 28px; margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1; }
+  h1 { font-family: var(--font-headings); font-size: 28px; margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1; }
   .sub { margin: 4px 0 0; color: var(--text-3); font-size: 14px; }
   .sub a { color: var(--accent); font-weight: 600; }
   .reveal { display: inline-flex; align-items: center; gap: 3px; font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
@@ -171,7 +171,7 @@
   dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: 20px 20px 0 0; padding: 20px 18px calc(18px + var(--safe-b)); box-shadow: 0 -10px 40px rgba(0,0,0,0.25); }
   @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 560px; border-radius: 20px; } }
-  .sheet h2 { font-family: var(--font-serif); font-size: 22px; margin: 0 0 14px; }
+  .sheet h2 { font-family: var(--font-headings); font-size: 22px; margin: 0 0 14px; }
   .ways { display: grid; gap: 12px; }
   @media (min-width: 700px) { .ways { grid-template-columns: 1fr 1fr; } }
   .ways section { background: var(--bg); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }

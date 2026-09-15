@@ -2,7 +2,11 @@
   import { goto } from '$app/navigation';
   import { api, authApi, profileHref, ApiError, type ShareLevel } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
-  import { appearance, setFont, setTheme, FONTS, THEMES, type Font, type Theme } from '$lib/theme.svelte';
+  import { display, setDisplay, APPEARANCES, READING_MODES, LAYOUTS, type Display } from '$lib/display.svelte';
+  import Tiles from '$lib/components/display/Tiles.svelte';
+  import ThemePicker from '$lib/components/display/ThemePicker.svelte';
+  import FontTable from '$lib/components/display/FontTable.svelte';
+  import { APPEARANCE_ART, READING_ART, LAYOUT_ART } from '$lib/components/display/art';
   import { showToast } from '$lib/toast.svelte';
 
   /**
@@ -11,8 +15,8 @@
    * profile, then each section; per-collection privacy lives on the
    * collection's manage page.
    *
-   * Appearance is the odd one out: it is kept in this browser, not on the
-   * account, and applies the moment you pick it. See lib/theme.svelte.ts.
+   * Display is the odd one out: it is kept in this browser, not on the
+   * account, and applies the moment you pick it. See lib/display.svelte.ts.
    */
   const me = $derived(session.user!);
   let displayName = $state('');
@@ -114,8 +118,7 @@
 
   const tracking = $derived(me.trackActivity ?? me.instanceTracking);
 
-  function chooseTheme(t: Theme) { setTheme(t); api.event('theme_changed', { theme: t }); }
-  function chooseFont(f: Font) { setFont(f); api.event('font_changed', { font: f }); }
+  function choose(patch: Partial<Omit<Display, 'fonts'>>, key: string) { setDisplay(patch); api.event('display_changed', { key, value: Object.values(patch)[0] }); }
 
 </script>
 
@@ -137,32 +140,31 @@
   </form>
 </section>
 
-<section class="card">
-  <h2>Appearance</h2>
+<section class="card" id="display">
+  <h2>Display</h2>
   <p class="help">Kept on this device rather than your account, so each screen you read on can differ. Changes apply as you pick them.</p>
   <fieldset>
-    <legend>Theme</legend>
-    {#each THEMES as t (t.id)}
-      <label class="radio">
-        <input type="radio" name="theme" value={t.id} checked={appearance.theme === t.id} onchange={() => chooseTheme(t.id)} />
-        <span><strong>{t.label}</strong><small>{t.note}</small></span>
-      </label>
-    {/each}
+    <legend>Appearance</legend>
+    <Tiles name="Appearance" options={APPEARANCES} value={display.appearance} art={APPEARANCE_ART} onchange={(v) => choose({ appearance: v }, 'appearance')} />
   </fieldset>
-  <fieldset class="fonts">
-    <legend>Reading font</legend>
-    {#each FONTS as f (f.id)}
-      <label class="radio">
-        <input type="radio" name="font" value={f.id} checked={appearance.font === f.id} onchange={() => chooseFont(f.id)} />
-        <span>
-          <strong>{f.label}</strong><small>{f.note}</small>
-          <span class="sample" data-sample={f.id}>Whatever you read, it arrives here in order.</span>
-        </span>
-      </label>
-    {/each}
+  <fieldset>
+    <legend>Colour theme</legend>
+    <ThemePicker />
   </fieldset>
-  <p class="help foot">Colour themes beyond light and dark are coming; for now these two are the choice.</p>
+  <fieldset>
+    <legend>Fonts</legend>
+    <FontTable />
+  </fieldset>
+  <fieldset>
+    <legend>Opening a post</legend>
+    <Tiles name="Opening a post" options={READING_MODES} value={display.reading} art={READING_ART} notes onchange={(v) => choose({ reading: v }, 'reading')} />
+  </fieldset>
+  <fieldset>
+    <legend>Moving through the list</legend>
+    <Tiles name="Moving through the list" options={LAYOUTS} value={display.layout} art={LAYOUT_ART} notes onchange={(v) => choose({ layout: v }, 'layout')} />
+  </fieldset>
 </section>
+
 
 <section class="card">
   <h2>Who can see your profile</h2>
@@ -259,7 +261,7 @@
 
 <style>
   .top { margin-bottom: 14px; }
-  h1 { font-family: var(--font-serif); font-size: 28px; margin: 0; }
+  h1 { font-family: var(--font-headings); font-size: 28px; margin: 0; }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: 14px; }
   .sub a { color: var(--accent); font-weight: 600; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
@@ -275,13 +277,8 @@
   button:disabled { opacity: 0.5; }
   fieldset { border: 0; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 10px; }
   legend { padding: 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
-  .fonts { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
-  /* Each sample is set in the face it names, so the choice is visible before it is made. */
-  .sample { margin-top: 4px; font-size: 15px; color: var(--text-2); }
-  .sample[data-sample='sans'] { font-family: var(--font-sans); }
-  .sample[data-sample='serif'] { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; }
-  .sample[data-sample='dyslexic'] { font-family: 'OpenDyslexic', var(--font-sans); }
-  .foot { margin: 14px 0 0; }
+  #display fieldset + fieldset { margin-top: 18px; }
+  #display fieldset + fieldset legend { width: 100%; padding-top: 14px; border-top: 1px solid var(--line); }
   .radio, .switch { flex-direction: row; align-items: flex-start; gap: 12px; font-weight: 400; color: var(--text); cursor: pointer; }
   .radio input, .switch input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
   .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }

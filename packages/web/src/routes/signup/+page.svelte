@@ -93,7 +93,7 @@
 
 <style>
   .auth { max-width: 380px; margin: 40px auto 0; }
-  h1 { font-family: var(--font-serif); font-size: 30px; margin: 0 0 6px; }
+  h1 { font-family: var(--font-headings); font-size: 30px; margin: 0 0 6px; }
   .lede { color: var(--text-2); margin: 0 0 20px; }
   form { display: flex; flex-direction: column; gap: 16px; }
   label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-2); }
@@ -112,7 +112,7 @@
   .bad { color: var(--danger); margin: 0; font-size: 14px; }
   .alt { margin: 22px 0 0; color: var(--text-2); }
   .what { margin: 28px 0 0; padding-top: 18px; border-top: 1px solid var(--line); }
-  .what h2 { font-family: var(--font-serif); font-size: 17px; margin: 0 0 7px; }
+  .what h2 { font-family: var(--font-headings); font-size: 17px; margin: 0 0 7px; }
   .what p { margin: 0 0 9px; color: var(--text-2); font-size: 14px; line-height: 1.5; }
   .what p:last-child { margin-bottom: 0; }
   .alt a { color: var(--accent); font-weight: 600; }

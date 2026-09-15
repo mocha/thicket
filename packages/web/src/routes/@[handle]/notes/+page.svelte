@@ -88,12 +88,12 @@
   .crumbs { font-size: 13px; color: var(--text-3); margin-bottom: 4px; }
   .crumbs a { color: var(--accent); font-weight: 600; }
   .top { margin-bottom: 14px; }
-  h1 { font-family: var(--font-serif); font-size: 26px; margin: 0; overflow-wrap: anywhere; }
+  h1 { font-family: var(--font-headings); font-size: 26px; margin: 0; overflow-wrap: anywhere; }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: 14px; }
   .sub a { color: var(--accent); font-weight: 600; }
   .list { display: flex; flex-direction: column; gap: 14px; }
   .empty { text-align: center; padding: 50px 20px; color: var(--text-2); }
-  .empty h2 { font-family: var(--font-serif); color: var(--text); font-size: 22px; margin: 0 0 6px; }
+  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: 22px; margin: 0 0 6px; }
   .empty p { margin: 0; }
   .status { text-align: center; color: var(--text-3); font-size: 14px; padding: 18px 0; margin: 0; }
 </style>

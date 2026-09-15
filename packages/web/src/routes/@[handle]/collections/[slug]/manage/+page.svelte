@@ -373,7 +373,7 @@
   dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: 20px 20px 0 0; padding: 20px 18px calc(18px + var(--safe-b)); box-shadow: 0 -10px 40px rgba(0,0,0,0.25); max-height: 88vh; overflow: auto; }
   @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 520px; border-radius: 20px; } }
-  .sheet h2 { font-family: var(--font-serif); font-size: 21px; margin: 0 0 10px; overflow-wrap: anywhere; }
+  .sheet h2 { font-family: var(--font-headings); font-size: 21px; margin: 0 0 10px; overflow-wrap: anywhere; }
   .sheet p { margin: 0 0 10px; font-size: 15px; color: var(--text-2); }
   .reveal { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 8px; }
   .reveal svg { transition: transform 150ms ease; }
@@ -389,10 +389,10 @@
   .back { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: var(--accent); padding: 6px 0; margin-bottom: 8px; }
   .top { margin-bottom: 6px; }
   .pre { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
-  h1 { font-family: var(--font-serif); font-size: 28px; margin: 2px 0 0; overflow-wrap: anywhere; }
+  h1 { font-family: var(--font-headings); font-size: 28px; margin: 2px 0 0; overflow-wrap: anywhere; }
   .link { font-size: 13px; color: var(--accent); font-weight: 600; margin-top: 4px; }
   .rename { margin-top: 4px; }
-  .rename input { font-family: var(--font-serif); font-size: 26px; font-weight: 600; width: 100%; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+  .rename input { font-family: var(--font-headings); font-size: 26px; font-weight: 600; width: 100%; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
   hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
   .opt { margin-bottom: 18px; }
   h2 { font-size: 15px; margin: 0 0 8px; }

@@ -128,6 +128,7 @@
     background: var(--surface);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
+    border: var(--card-border, 0);
     overflow: hidden;
     transition: transform 120ms ease;
   }
@@ -152,11 +153,11 @@
     background: var(--surface-2);
   }
   h2 {
-    margin: 0; font-family: var(--font-serif); font-weight: 600;
-    font-size: 21px; line-height: 1.25; letter-spacing: -0.01em; overflow-wrap: anywhere;
+    margin: 0; font-family: var(--font-headings); font-weight: 600;
+    font-size: calc(21px * var(--size-headings)); line-height: 1.25; letter-spacing: -0.01em; overflow-wrap: anywhere;
   }
   p {
-    margin: 8px 0 0; color: var(--text-2); font-size: 15px;
+    margin: 8px 0 0; color: var(--text-2); font-family: var(--font-reading); font-size: calc(15px * var(--size-reading));
     display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
   }
   footer { margin-top: 10px; font-size: 13px; color: var(--text-3); }

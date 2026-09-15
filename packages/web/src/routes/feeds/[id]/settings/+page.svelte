@@ -246,7 +246,7 @@
   .back { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: var(--accent); padding: 6px 0; margin-bottom: 8px; }
   .top { margin-bottom: 6px; }
   .pre { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
-  h1 { font-family: var(--font-serif); font-size: 28px; margin: 2px 0 0; overflow-wrap: anywhere; }
+  h1 { font-family: var(--font-headings); font-size: 28px; margin: 2px 0 0; overflow-wrap: anywhere; }
   hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
   section > h2 { font-size: 15px; margin: 0 0 12px; }
   .opt { margin-bottom: 18px; }

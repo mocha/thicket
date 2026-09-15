@@ -118,7 +118,7 @@
   .dayhead::after { content: ''; position: absolute; left: 0; right: 0; bottom: -8px; height: 8px; background: linear-gradient(var(--bg), transparent); pointer-events: none; }
   @media (min-width: 900px) { .dayhead { margin: 0 -24px; padding-left: 24px; padding-right: 24px; } }
   .empty { text-align: center; padding: 50px 20px; color: var(--text-2); }
-  .empty h2 { font-family: var(--font-serif); color: var(--text); font-size: 24px; margin: 0 0 8px; }
+  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: 24px; margin: 0 0 8px; }
   .empty p { margin: 0 auto; max-width: 440px; }
   .ctas { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
   .cta { display: inline-block; background: var(--accent); color: var(--accent-ink); padding: 12px 20px; border-radius: 999px; font-weight: 600; }

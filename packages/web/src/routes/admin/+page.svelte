@@ -260,7 +260,7 @@
 
 <style>
   .top { margin-bottom: 14px; }
-  h1 { font-family: var(--font-serif); font-size: 28px; margin: 0; }
+  h1 { font-family: var(--font-headings); font-size: 28px; margin: 0; }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: 14px; }
   code { font-size: 12px; background: var(--surface-2); padding: 1px 6px; border-radius: 6px; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }

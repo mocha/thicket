@@ -62,7 +62,7 @@
   }
   header { display: flex; align-items: center; gap: 12px; }
   .who { flex: 1; min-width: 0; }
-  h2 { margin: 0; font-size: 19px; font-family: var(--font-serif); line-height: 1.2; overflow-wrap: anywhere; }
+  h2 { margin: 0; font-size: 19px; font-family: var(--font-headings); line-height: 1.2; overflow-wrap: anywhere; }
   .host { font-size: 13px; color: var(--accent); font-weight: 600; }
   .close { width: 32px; height: 32px; border-radius: 50%; font-size: 22px; color: var(--text-3); align-self: flex-start; }
   .desc { margin: 12px 0 0; font-size: 14px; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

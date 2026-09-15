@@ -39,6 +39,6 @@
   }
   header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
   .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
-  h2 { margin: 2px 0 0; font-size: 18px; font-family: var(--font-serif); overflow-wrap: anywhere; }
+  h2 { margin: 2px 0 0; font-size: 18px; font-family: var(--font-headings); overflow-wrap: anywhere; }
   .close { color: var(--accent); font-weight: 600; padding: 6px 4px; }
 </style>

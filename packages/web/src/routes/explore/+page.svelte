@@ -457,7 +457,7 @@
 
 <style>
   .top { margin-bottom: 12px; }
-  h1 { font-family: var(--font-serif); font-size: 26px; margin: 0; }
+  h1 { font-family: var(--font-headings); font-size: 26px; margin: 0; }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: 14px; max-width: 62ch; }
   .pane { margin-bottom: 16px; }
   .head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
@@ -470,7 +470,7 @@
   .scopes button:disabled { opacity: 0.4; }
   .scopes .n { font-weight: 400; color: var(--text-3); font-variant-numeric: tabular-nums; }
   .titles { min-width: 0; margin-bottom: 12px; }
-  h2 { font-family: var(--font-serif); font-size: 21px; margin: 0; display: flex; align-items: baseline; gap: 8px; }
+  h2 { font-family: var(--font-headings); font-size: 21px; margin: 0; display: flex; align-items: baseline; gap: 8px; }
   .count { color: var(--text-3); font-weight: 400; font-size: 15px; font-family: var(--font); font-variant-numeric: tabular-nums; }
   .titles p { margin: 4px 0 0; color: var(--text-2); font-size: 14px; max-width: 68ch; }
   .group { margin-bottom: 22px; }

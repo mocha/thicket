@@ -126,7 +126,7 @@
 
 <style>
   .top { margin-bottom: 12px; }
-  h1 { font-family: var(--font-serif); font-size: 26px; margin: 0; }
+  h1 { font-family: var(--font-headings); font-size: 26px; margin: 0; }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: 14px; }
   .sub a { color: var(--accent); font-weight: 600; }
   .filters { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 12px; align-items: center; }
@@ -139,7 +139,7 @@
   .filters .n { opacity: 0.6; font-size: 12px; margin-left: 2px; }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
   .empty { text-align: center; padding: 40px 20px; color: var(--text-2); }
-  .empty h2 { font-family: var(--font-serif); color: var(--text); font-size: 22px; margin: 0 0 6px; }
+  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: 22px; margin: 0 0 6px; }
   .empty p { margin: 0 auto; max-width: 440px; font-size: 15px; }
   .illo { display: block; margin: 0 auto 16px; max-width: 100%; }
   .ctas { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }

@@ -95,13 +95,13 @@
 
 <style>
   .hero { display: grid; gap: 28px; padding: 20px 0 8px; }
-  h1 { font-family: var(--font-serif); font-size: clamp(34px, 5vw, 52px); line-height: 1.08; margin: 0 0 16px; letter-spacing: -0.015em; }
+  h1 { font-family: var(--font-headings); font-size: clamp(34px, 5vw, 52px); line-height: 1.08; margin: 0 0 16px; letter-spacing: -0.015em; }
   .sub { font-size: clamp(18px, 2.2vw, 22px); color: var(--text); margin: 0 0 14px; line-height: 1.35; }
   .body { color: var(--text-2); margin: 0; font-size: 16px; max-width: 46ch; }
   .auth { align-self: start; }
   hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
-  .longer p { font-family: var(--font-serif); font-size: clamp(19px, 2.4vw, 24px); line-height: 1.45; margin: 0; max-width: 64ch; }
-  h2 { font-family: var(--font-serif); font-size: 26px; margin: 0 0 16px; }
+  .longer p { font-family: var(--font-headings); font-size: clamp(19px, 2.4vw, 24px); line-height: 1.45; margin: 0; max-width: 64ch; }
+  h2 { font-family: var(--font-headings); font-size: 26px; margin: 0 0 16px; }
   .features ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
   .features li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
   .features svg { color: var(--accent); margin-bottom: 10px; }
@@ -109,7 +109,7 @@
   .features p { margin: 0; color: var(--text-2); font-size: 15px; line-height: 1.45; }
   .fine { margin: 18px 0 0; color: var(--text-3); font-size: 14px; }
   .apart ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; }
-  .apart h3 { font-family: var(--font-serif); margin: 0 0 5px; font-size: 18px; }
+  .apart h3 { font-family: var(--font-headings); margin: 0 0 5px; font-size: 18px; }
   .apart p { margin: 0; color: var(--text-2); font-size: 15px; line-height: 1.5; }
   footer { margin: 44px 0 0; padding-top: 20px; border-top: 1px solid var(--line); color: var(--text-3); font-size: 14px; }
   footer p { margin: 0; max-width: 70ch; }

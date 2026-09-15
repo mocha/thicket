@@ -105,7 +105,7 @@
   .who { flex: 1; min-width: 0; }
   /* The title takes what room it needs; the buttons sit to its right and drop underneath when the row runs out. */
   .titlerow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 12px; }
-  h1 { flex: 1 1 14ch; min-width: 0; font-family: var(--font-serif); font-size: 26px; margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
+  h1 { flex: 1 1 14ch; min-width: 0; font-family: var(--font-headings); font-size: 26px; margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
   .actions { display: flex; gap: 8px; align-items: center; flex: none; }
   .host { display: inline-block; margin-top: 2px; font-size: 14px; color: var(--accent); font-weight: 600; }
   .desc { margin: 8px 0 0; font-size: 14px; color: var(--text-2); }
