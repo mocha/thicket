@@ -94,7 +94,7 @@
       <p>{emptyBody}</p>
       <div class="ctas">
         {#if emptyHref}<a class="cta" href={emptyHref}>{emptyCta}</a>{:else if emptyAction}<button type="button" class="cta" onclick={emptyAction}>{emptyCta}</button>{/if}
-        {#if collection === null && feed === null}<a class="cta ghost" href="/feeds">Explore feeds</a>{/if}
+        {#if collection === null && feed === null}<a class="cta ghost" href="/explore">Explore feeds</a>{/if}
       </div>
     </div>
   {/if}

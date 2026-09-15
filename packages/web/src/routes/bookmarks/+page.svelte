@@ -111,7 +111,7 @@
       </svg>
       <h2>Nothing saved yet</h2>
       <p>Every post has a bookmark in its top right corner. Press it and the post is kept here for as long as you like, even after it has scrolled out of All my feeds. Save what you want to read later, come back to, or share from your profile.</p>
-      <div class="ctas"><a class="cta" href="/">Go to All my feeds</a><a class="cta ghost" href="/feeds">Explore feeds</a></div>
+      <div class="ctas"><a class="cta" href="/">Go to All my feeds</a><a class="cta ghost" href="/explore">Explore feeds</a></div>
     {/if}
   </div>
 {:else}

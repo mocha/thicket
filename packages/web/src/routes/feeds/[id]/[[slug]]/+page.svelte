@@ -44,7 +44,7 @@
   });
 </script>
 
-<nav class="crumbs"><a href="/feeds">Feeds</a> <span aria-hidden="true">›</span></nav>
+<nav class="crumbs"><a href="/explore">Explore</a> <span aria-hidden="true">›</span></nav>
 
 {#if feed}
   <header class="profile">

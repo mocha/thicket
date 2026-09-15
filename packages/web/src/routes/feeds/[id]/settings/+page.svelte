@@ -29,7 +29,7 @@
     try {
       feed = await api.feed(id);
     } catch {
-      return void goto('/feeds', { replaceState: true });
+      return void goto('/explore', { replaceState: true });
     }
     ids = feed.myCollectionIds;
     displayName = feed.displayName ?? '';

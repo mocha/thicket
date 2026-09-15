@@ -102,7 +102,7 @@
       <a href="/notes" aria-current={current('/notes') ? 'page' : undefined}>{@render icon(icons.notes)}<span class="long">My Notes</span><span class="shortl">Notes</span></a>
     </li>
     <li>
-      <a href="/feeds" aria-current={current('/feeds') ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
+      <a href="/explore" aria-current={current('/explore') || path.startsWith('/feeds/') ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
     </li>
     {#if me?.isAdmin}
       <li class="admin">
