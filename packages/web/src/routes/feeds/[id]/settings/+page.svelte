@@ -55,15 +55,16 @@
     }
   }
 
-  /* Shorts: two radios, saved on change. Changing what is hidden brings the feed page's notice back. */
-  async function setHideShorts(hide: boolean) {
-    if (!feed || feed.hideShorts === hide) return;
-    feed.hideShorts = hide;
+  /* Shorts: follow my default, or decide for this channel. Saved on change. Changing what is hidden brings the feed page's notice back. */
+  async function setShorts(hide: boolean | null) {
+    if (!feed || feed.hideShortsSetting === hide) return;
+    feed.hideShortsSetting = hide;
     const r = await api.feedSettings(feed.id, { hideShorts: hide });
+    feed.hideShortsSetting = r.hideShortsSetting;
     feed.hideShorts = r.hideShorts;
     resetNotice(feed.id);
     api.event('feed_hide_shorts', { feedId: feed.id, hide });
-    showToast(hide ? 'Shorts hidden from this feed' : 'Shorts are back in this feed');
+    showToast(hide === null ? 'This channel follows your default again' : hide ? 'Shorts hidden from this channel' : 'Shorts shown on this channel');
   }
 
   /* One click out of every collection, which is unfollowing; undo puts it back where it was. */
@@ -97,6 +98,11 @@
       if (!r.ok) {
         refreshNote = { tone: 'info', text: r.reason ?? `This feed was fetched a few minutes ago. Try again in ${Math.ceil(r.cooldown / 60)} min.` };
         return;
+      }
+      // The fetch landed on an address another feed already had, and this one was folded into it (feeds/merge.ts).
+      if (r.feedId !== feed.id) {
+        showToast('This feed turned out to be the same address as another feed, so they are one feed now');
+        return void goto(`/feeds/${r.feedId}/settings`, { replaceState: true });
       }
       const next = await api.feed(feed.id);
       feed = { ...next, displayName: feed.displayName };
@@ -179,15 +185,19 @@
 
     {#if feed.isYouTube}
       <div class="opt">
-        <h3>Hide YouTube Shorts</h3>
-        <div class="radios" role="radiogroup" aria-label="Hide YouTube Shorts">
+        <h3>YouTube Shorts</h3>
+        <div class="radios" role="radiogroup" aria-label="YouTube Shorts">
           <label>
-            <input type="radio" name="shorts" checked={feed.hideShorts} onchange={() => setHideShorts(true)} />
-            <span><strong>Yes</strong><small>Leave Shorts out wherever you read this channel.</small></span>
+            <input type="radio" name="shorts" checked={feed.hideShortsSetting === null} onchange={() => setShorts(null)} />
+            <span><strong>Use my default</strong><small>{session.user?.hideShortsByDefault ? 'Videos only' : 'Videos + Shorts'}, as set in <a href="/settings">Settings</a>.</small></span>
           </label>
           <label>
-            <input type="radio" name="shorts" checked={!feed.hideShorts} onchange={() => setHideShorts(false)} />
-            <span><strong>No</strong><small>Show everything the channel posts.</small></span>
+            <input type="radio" name="shorts" checked={feed.hideShortsSetting === true} onchange={() => setShorts(true)} />
+            <span><strong>Videos</strong><small>Leave Shorts out wherever you read this channel.</small></span>
+          </label>
+          <label>
+            <input type="radio" name="shorts" checked={feed.hideShortsSetting === false} onchange={() => setShorts(false)} />
+            <span><strong>Videos + Shorts</strong><small>Show everything the channel posts.</small></span>
           </label>
         </div>
       </div>

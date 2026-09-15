@@ -4,10 +4,11 @@
  * Blocked feeds are excluded and the count of hidden items is reported, so the
  * UI can say "N posts hidden by your blocks" without saying which.
  * The reader's own feed settings apply here: their name for a feed, and Shorts
- * left out of a YouTube feed they have set to hide them (feed_settings).
+ * left out of a YouTube feed they have set to hide them, or of every YouTube
+ * feed when that is their default (feed_settings, users.hide_shorts_by_default).
  */
 import { Hono } from "hono";
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { noteColumns } from "../lib/notes.js";
@@ -21,10 +22,19 @@ export type RiverItem = {
   imageUrl: string | null; publishedAt: string; hasIcon: boolean; bookmarkId: number | null;
   myNote: { id: number; body: string; createdAt: string; updatedAt: string } | null;
   notes: { id: number; body: string; createdAt: string; updatedAt: string; author: { handle: string; displayName: string | null } }[];
+  /** Earlier posts on the same feed that this one appears to repeat, newest first, at most five (feeds/repeats.ts). */
+  repeatOf: { id: number; publishedAt: string; url: string | null; title: string | null }[];
 };
 
 /** Is this item a Short? False, not null, when the item has no address: a hidden post must be one we are sure of. */
 const isShort = sql`coalesce(i.url ~ ${SHORTS_URL_PATTERN}, false)`;
+
+/** This reader's Shorts default, for feeds they have not set either way. Signed out, there is none. */
+const shortsDefault = (userId: number) => sql`coalesce((select u.hide_shorts_by_default from users u where u.id = ${userId}), false)`;
+
+/** Does this reader leave Shorts out of this feed? Their setting on it, else their default. */
+const hidesShorts = (userId: number, feedId: SQL) =>
+  sql`coalesce((select fs.hide_shorts from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = ${feedId}), ${shortsDefault(userId)})`;
 
 /** The numbers under "All my feeds": what you follow, and what arrived in the last day. */
 river.get("/stats", async (c) => {
@@ -34,7 +44,7 @@ river.get("/stats", async (c) => {
          fresh as (select i.feed_id from items i join followed on followed.feed_id = i.feed_id
                    where i.published_at > now() - interval '24 hours' and i.published_at <= now() + interval '1 hour'
                      and not exists(select 1 from blocks b where b.user_id = ${user.id} and b.feed_id = i.feed_id)
-                     and not (${isShort} and exists(select 1 from feed_settings fs where fs.user_id = ${user.id} and fs.feed_id = i.feed_id and fs.hide_shorts)))
+                     and not (${isShort} and ${hidesShorts(user.id, sql`i.feed_id`)}))
     select (select count(*)::int from followed) as feeds,
            (select count(*)::int from collections where user_id = ${user.id} and parent_id is not null) as collections,
            (select count(*)::int from fresh) as "posts24h",
@@ -95,7 +105,7 @@ river.get("/", async (c) => {
   const perFeed = limit + 1;
   const pageCte = feedId
     ? sql`select i.id, i.published_at from items i where i.feed_id = ${feedId} ${cursorClause}
-             and not (${isShort} and exists(select 1 from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = i.feed_id and fs.hide_shorts))
+             and not (${isShort} and ${hidesShorts(userId, sql`i.feed_id`)})
            order by i.published_at desc, i.id desc limit ${perFeed}`
     : sql`select p.id, p.published_at from followed cross join lateral (
              select i.id, i.published_at from items i
@@ -108,7 +118,7 @@ river.get("/", async (c) => {
   const rows = await db.execute<RiverItem & { blocked: boolean }>(sql`
     ${scope}
     , followed as (
-      select cf.feed_id, bool_or(coalesce(fs.hide_shorts, false)) as hide_shorts
+      select cf.feed_id, bool_or(coalesce(fs.hide_shorts, ${shortsDefault(userId)})) as hide_shorts
       from collection_feeds cf join tree on tree.id = cf.collection_id
       left join feed_settings fs on fs.user_id = ${userId} and fs.feed_id = cf.feed_id
       group by cf.feed_id
@@ -119,6 +129,9 @@ river.get("/", async (c) => {
            exists(select 1 from blocks b where b.user_id = ${userId} and b.feed_id = i.feed_id) as blocked,
            exists(select 1 from feed_icons fi where fi.feed_id = i.feed_id and not fi.generic) as "hasIcon",
            (select bm.id from bookmarks bm where bm.user_id = ${userId} and bm.item_id = i.id limit 1) as "bookmarkId",
+           (select coalesce(json_agg(json_build_object('id', o.id, 'publishedAt', o.published_at, 'url', o.url, 'title', o.title) order by o.published_at desc), '[]'::json)
+              from (select o.id, o.published_at, o.url, o.title from item_repeats r join items o on o.id = r.of_item_id
+                    where r.item_id = i.id order by o.published_at desc limit 5) o) as "repeatOf",
            ${noteColumns(userId)}
     from page
     join items i on i.id = page.id

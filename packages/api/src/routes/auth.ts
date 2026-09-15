@@ -93,6 +93,7 @@ auth.patch("/me", async (c) => {
     profileVisibility: "public" | "private"; trackActivity: boolean | null;
     collectionsVisibility: ShareLevel; bookmarksVisibility: ShareLevel; notesVisibility: ShareLevel;
     notesFrom: "none" | "following" | "everyone";
+    hideShortsByDefault: boolean;
   }>;
   const body = await c.req.json<Patch>().catch(() => ({} as Patch));
   const patch: Partial<typeof schema.users.$inferInsert> = {};
@@ -113,6 +114,7 @@ auth.patch("/me", async (c) => {
   if (isShareLevel(body.notesVisibility)) patch.notesVisibility = body.notesVisibility;
   if (body.notesFrom === "none" || body.notesFrom === "following" || body.notesFrom === "everyone") patch.notesFrom = body.notesFrom;
   if ("trackActivity" in body && (body.trackActivity === null || typeof body.trackActivity === "boolean")) patch.trackActivity = body.trackActivity;
+  if (typeof body.hideShortsByDefault === "boolean") patch.hideShortsByDefault = body.hideShortsByDefault;
   if (Object.keys(patch).length) await db.update(schema.users).set(patch).where(eq(schema.users.id, user.id));
   return c.json(await me(user.id));
 });

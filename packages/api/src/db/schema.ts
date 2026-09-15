@@ -63,6 +63,8 @@ export const users = pgTable("users", {
   claimVerifiedAt: timestamp("claim_verified_at", { withTimezone: true }),
   // Per-user override of instance-level activity tracking. null = inherit.
   trackActivity: boolean("track_activity"),
+  /** "Feed setting defaults": leave Shorts out of every YouTube channel unless that feed's own setting says otherwise. */
+  hideShortsByDefault: boolean("hide_shorts_by_default").notNull().default(false),
   /** The first account on an instance is the admin; admins can promote others later. */
   isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -184,6 +186,21 @@ export const items = pgTable("items", {
   index("items_feed_published_id_idx").on(t.feedId, t.publishedAt.desc(), t.id.desc()),
 ]);
 
+/**
+ * Posts that appear to repeat an earlier post from the same feed (feeds/repeats.ts).
+ * Recorded, never hidden: the post says so and the feed's stats count them.
+ * The match uses items_feed_titlekey_idx, an expression index on
+ * (feed_id, lower(regexp_replace(title, '[^[:alnum:]]+', '', 'g'))), created in
+ * drizzle/0011_item_repeats.sql.
+ */
+export const itemRepeats = pgTable("item_repeats", {
+  itemId: bigint("item_id", { mode: "number" }).notNull().references(() => items.id, { onDelete: "cascade" }),
+  ofItemId: bigint("of_item_id", { mode: "number" }).notNull().references(() => items.id, { onDelete: "cascade" }),
+}, (t) => [
+  primaryKey({ columns: [t.itemId, t.ofItemId] }),
+  index("item_repeats_of_idx").on(t.ofItemId),
+]);
+
 export const collections = pgTable("collections", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -244,8 +261,12 @@ export const feedSettings = pgTable("feed_settings", {
   feedId: bigint("feed_id", { mode: "number" }).notNull().references(() => feeds.id, { onDelete: "cascade" }),
   /** Shown instead of the feed's own title wherever this person reads it. */
   displayName: text("display_name"),
-  /** YouTube only: leave Shorts out of this person's rivers. */
-  hideShorts: boolean("hide_shorts").notNull().default(false),
+  /**
+   * YouTube only: leave Shorts out of this person's rivers. Three-way: true
+   * hides them on this channel, false shows them whatever the default, and
+   * null follows the person's default (users.hide_shorts_by_default).
+   */
+  hideShorts: boolean("hide_shorts"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [

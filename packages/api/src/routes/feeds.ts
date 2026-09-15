@@ -37,8 +37,14 @@ const feedColumns = (userId: number) => sql`
   coalesce((select array_agg(cf.collection_id order by cf.collection_id) from collection_feeds cf join collections col on col.id = cf.collection_id and col.user_id = ${userId} where cf.feed_id = f.id), '{}') as "myCollectionIds",
   exists(select 1 from blocks b where b.user_id = ${userId} and b.feed_id = f.id) as "blocked",
   (select fs.display_name from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = f.id) as "displayName",
-  coalesce((select fs.hide_shorts from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = f.id), false) as "hideShorts",
-  f.url ~* ${YOUTUBE_FEED_PATTERN} as "isYouTube"
+  (select fs.hide_shorts from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = f.id) as "hideShortsSetting",
+  (f.url ~* ${YOUTUBE_FEED_PATTERN} and coalesce(
+    (select fs.hide_shorts from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = f.id),
+    (select u.hide_shorts_by_default from users u where u.id = ${userId}),
+    false)) as "hideShorts",
+  f.url ~* ${YOUTUBE_FEED_PATTERN} as "isYouTube",
+  (select count(*)::int from items i where i.feed_id = f.id and i.published_at > now() - interval '30 days'
+     and exists(select 1 from item_repeats r where r.item_id = i.id)) as "repeatsLast30d"
 `;
 
 function shape(row: any) {
@@ -163,7 +169,8 @@ feeds.put("/:id/settings", async (c) => {
   if (!Number.isFinite(feedId)) return c.json({ error: "not found" }, 404);
   const [feed] = await db.select({ title: schema.feeds.title, url: schema.feeds.url }).from(schema.feeds).where(eq(schema.feeds.id, feedId));
   if (!feed) return c.json({ error: "not found" }, 404);
-  type Body = { displayName?: string | null; hideShorts?: boolean };
+  // hideShorts: true hides them on this channel, false shows them whatever my default, null follows my default.
+  type Body = { displayName?: string | null; hideShorts?: boolean | null };
   const body = await c.req.json<Body>().catch(() => ({} as Body));
   const mine = and(eq(schema.feedSettings.userId, user.id), eq(schema.feedSettings.feedId, feedId));
   const [current] = await db.select().from(schema.feedSettings).where(mine);
@@ -174,16 +181,18 @@ feeds.put("/:id/settings", async (c) => {
     // Naming a feed what it is already called is the same as not renaming it.
     displayName = next && next !== feed.title ? next : null;
   }
-  // Only a YouTube feed has Shorts to hide; elsewhere the setting cannot be switched on.
-  const hideShorts = body.hideShorts !== undefined ? body.hideShorts === true && isYouTubeUrl(feed.url) : (current?.hideShorts ?? false);
+  // Only a YouTube feed has Shorts; elsewhere there is nothing to set either way.
+  const youtube = isYouTubeUrl(feed.url);
+  const hideShorts = !youtube ? null : body.hideShorts !== undefined ? (typeof body.hideShorts === "boolean" ? body.hideShorts : null) : (current?.hideShorts ?? null);
 
-  if (displayName === null && !hideShorts) {
+  if (displayName === null && hideShorts === null) {
     await db.delete(schema.feedSettings).where(mine);
   } else {
     await db.insert(schema.feedSettings).values({ userId: user.id, feedId, displayName, hideShorts })
       .onConflictDoUpdate({ target: [schema.feedSettings.userId, schema.feedSettings.feedId], set: { displayName, hideShorts, updatedAt: new Date() } });
   }
-  return c.json({ feedId, displayName, hideShorts });
+  const [u] = await db.select({ byDefault: schema.users.hideShortsByDefault }).from(schema.users).where(eq(schema.users.id, user.id));
+  return c.json({ feedId, displayName, hideShortsSetting: hideShorts, hideShorts: youtube && (hideShorts ?? u?.byDefault ?? false) });
 });
 
 const REFRESH_COOLDOWN_S = 5 * 60;

@@ -105,10 +105,23 @@ function absolutize(href: string | null | undefined, base: string | null): strin
   }
 }
 
+/**
+ * Media RSS's description: media:description inside media:group, or on the
+ * item itself. YouTube's feeds carry a video's whole description there and
+ * nowhere else, so until 2026-09-15 every YouTube post was stored as a bare
+ * title and search could only ever match video titles. Plain text, not HTML.
+ */
+function mediaDescription(media: any): string | null {
+  const v = media?.groups?.[0]?.description?.value ?? media?.description?.value ?? null;
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
 export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
   const { format, feed } = parseFeed(text);
   const items: ParsedItem[] = [];
 
+  // The media description is a last resort for the body, and is kept out of
+  // dedupeKey on purpose: a key that changed would store every post again.
   if (format === "rss" || format === "rdf") {
     const f = feed as any;
     const siteUrl = f.link ?? null;
@@ -118,6 +131,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       const link = absolutize(it.link ?? permalinkGuid, siteUrl ?? feedUrl);
       const title = it.title ? stripHtml(it.title) : null;
       const body = rich ?? it.description ?? null;
+      const mediaText = mediaDescription(it.media);
       const mediaThumb = it.media?.thumbnails?.[0]?.url ?? it.media?.groups?.[0]?.thumbnails?.[0]?.url ?? it.media?.contents?.find((c: any) => c.medium === "image")?.url;
       const enclosureImg = it.enclosures?.find((e: any) => e.type?.startsWith("image/"))?.url;
       items.push({
@@ -125,8 +139,8 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         url: link,
         title,
         author: cleanAuthor(it.dc?.creators?.[0]) ?? cleanAuthor(it.authors?.[0]),
-        summary: summarize(it.description, rich),
-        content: body,
+        summary: summarize(it.description, rich, mediaText),
+        content: body ?? mediaText,
         imageUrl: mediaThumb ?? enclosureImg ?? firstImg(body) ?? null,
         publishedAt: toDate(it.pubDate) ?? toDate(it.dc?.dates?.[0]) ?? null,
       });
@@ -143,13 +157,14 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       const title = e.title ? stripHtml(e.title) : null;
       const rich: string | null = e.content ?? null;
       const body = rich ?? e.summary ?? null;
+      const mediaText = mediaDescription(e.media);
       items.push({
         dedupeKey: dedupeKey(e.id, link, title, body),
         url: link,
         title,
         author: e.authors?.[0]?.name ?? f.authors?.[0]?.name ?? null,
-        summary: summarize(e.summary, rich),
-        content: body,
+        summary: summarize(e.summary, rich, mediaText),
+        content: body ?? mediaText,
         imageUrl: e.media?.thumbnails?.[0]?.url ?? e.media?.groups?.[0]?.thumbnails?.[0]?.url ?? firstImg(body),
         publishedAt: toDate(e.published) ?? toDate(e.updated) ?? null,
       });

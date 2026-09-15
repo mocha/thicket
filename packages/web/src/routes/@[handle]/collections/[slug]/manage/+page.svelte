@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation';
   import { api, collectionsApi, collectionHref, manageCollectionHref, profileHref, profilesApi, type CollectionDetail, type CollectionFeed } from '$lib/api';
   import { openAddFeed } from '$lib/addfeed.svelte';
-  import { loadCollections } from '$lib/collections.svelte';
+  import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import { feedOrigin, hostOf, relativeTime } from '$lib/time';
   import { feedListName } from '$lib/feedname';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
@@ -149,6 +149,47 @@
     }
   }
 
+  /*
+   * Merge: this collection goes INTO another. That one keeps its name and description and gains these feeds;
+   * sub-collections move with them; this one is deleted. A modal, like delete, that says what will happen first.
+   */
+  let mergeEl = $state<HTMLDialogElement | null>(null);
+  let mergeInto = $state<number | null>(null);
+  let merging = $state(false);
+  /** Every collection of mine this one could go into: not itself, not the root, not one of its own sub-collections. */
+  const mergeTargets = $derived.by(() => {
+    if (!col) return [];
+    const inside = new Set<number>([col.id]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const c of collectionStore.list) if (c.parentId !== null && inside.has(c.parentId) && !inside.has(c.id)) { inside.add(c.id); grew = true; }
+    }
+    return collectionStore.list.filter((c) => c.parentId !== null && !inside.has(c.id)).sort((a, b) => a.name.localeCompare(b.name));
+  });
+  const mergeTarget = $derived(mergeTargets.find((c) => c.id === mergeInto) ?? null);
+  function askMerge() {
+    mergeInto = null;
+    void loadCollections(true);
+    mergeEl?.showModal();
+  }
+  async function mergeCollection() {
+    if (!col || !mergeTarget || merging) return;
+    merging = true;
+    try {
+      const r = await collectionsApi.merge(col.id, mergeTarget.id);
+      api.event('collection_merged', { collectionId: col.id, intoId: r.into.id, added: r.added, movedChildren: r.movedChildren });
+      mergeEl?.close();
+      await loadCollections(true);
+      showToast(`Merged “${col.name}” into “${r.into.name}”`);
+      await goto(manageCollectionHref(handle, r.into.slug));
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    } finally {
+      merging = false;
+    }
+  }
+
   onMount(() => { void loadCollections(); });
   $effect(() => {
     if (!session.loaded) return;
@@ -257,9 +298,35 @@
 
   <hr />
   <div class="final">
+    <button class="btn" onclick={askMerge}>Merge into another collection</button>
     <button class="btn danger" onclick={askDelete}>Delete this collection</button>
     <a class="btn" href={collectionsApi.opmlUrl(col.id)} download="{col.slug}.opml" onclick={() => api.event('opml_exported', { collectionId: col?.id })} title="Save this collection as a file other readers can open">Export collection to file</a>
   </div>
+
+  <dialog bind:this={mergeEl} onclick={(e) => { if (e.target === mergeEl) mergeEl?.close(); }}>
+    <div class="sheet" role="alertdialog" aria-labelledby="merge-title">
+      <h2 id="merge-title">Merging collection “{col.name}”</h2>
+      {#if mergeTargets.length === 0}
+        <p>You don’t have another collection to merge this one into.</p>
+      {:else}
+        <label class="pick">
+          <span>Merge into</span>
+          <select bind:value={mergeInto} disabled={merging}>
+            <option value={null} disabled>Choose a collection…</option>
+            {#each mergeTargets as c (c.id)}<option value={c.id}>{c.name} ({c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'})</option>{/each}
+          </select>
+        </label>
+        {#if mergeTarget}
+          <p>“{mergeTarget.name}” keeps its name, description and visibility, and gains every feed from “{col.name}” it doesn’t already have.{#if col.children.length} {col.children.length === 1 ? 'The sub-collection moves' : `The ${col.children.length} sub-collections move`} into it too.{/if}</p>
+          <p>Then “{col.name}” is deleted, and links to it stop working. Nothing stops being followed.</p>
+        {/if}
+      {/if}
+      <div class="row">
+        <button class="btn primary" onclick={mergeCollection} disabled={merging || !mergeTarget}>{merging ? 'Merging…' : 'Merge'}</button>
+        <button class="btn" onclick={() => mergeEl?.close()} disabled={merging}>Cancel</button>
+      </div>
+    </div>
+  </dialog>
 {:else}
   <p class="status">Loading…</p>
 {/if}
@@ -315,6 +382,9 @@
   .orphans li:first-child { border-top: 0; }
   .oname { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hint { font-size: 13px; color: var(--text-3); }
+  .pick { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 12px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .pick select { font: inherit; font-size: 15px; font-weight: 400; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+  .pick select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .sheet .row { margin-top: 14px; }
   .back { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: var(--accent); padding: 6px 0; margin-bottom: 8px; }
   .top { margin-bottom: 6px; }

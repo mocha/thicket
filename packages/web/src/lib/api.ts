@@ -9,6 +9,8 @@ export type RiverItem = {
   myNote: Note | null;
   /** Other people's notes the viewer is allowed to see, newest first. */
   notes: PublicNote[];
+  /** Earlier posts on the same feed this one appears to repeat, newest first. Absent outside the river. */
+  repeatOf?: { id: number; publishedAt: string; url: string | null; title: string | null }[];
 };
 export type RiverPage = { items: RiverItem[]; nextCursor: string | null; hidden: number };
 
@@ -24,13 +26,19 @@ export type Feed = {
   /** With ?network=, how many people in that network follow it. */
   networkFollowers?: number | null;
   /** The caller's own settings on this feed (feed_settings). Nobody else sees them. */
-  displayName: string | null; hideShorts: boolean;
-  /** A YouTube feed, which is what makes "Hide Shorts" available. */
+  displayName: string | null;
+  /** Whether Shorts are left out for me, all things considered: this feed's setting, else my default. */
+  hideShorts: boolean;
+  /** What I set on this feed itself: true hide, false show, null follow my default. */
+  hideShortsSetting: boolean | null;
+  /** A YouTube feed, which is what makes the Shorts setting available. */
   isYouTube: boolean;
+  /** Posts from the last 30 days that appear to repeat an earlier post from this feed. */
+  repeatsLast30d: number;
   /** Conditional-GET state, shown on the settings page for diagnosing a feed. */
   etag: string | null; lastModified: string | null;
 };
-export type FeedSettings = { feedId: number; displayName: string | null; hideShorts: boolean };
+export type FeedSettings = { feedId: number; displayName: string | null; hideShorts: boolean; hideShortsSetting: boolean | null };
 export type FeedIndexPage = { feeds: Feed[]; total: number; indexTotal: number; nextOffset: number | null };
 
 export type Collection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; feedCount: number; isPublic: boolean };
@@ -93,18 +101,21 @@ export const api = {
   },
   feed: (id: number) => j<Feed>(`/api/feeds/${id}`),
   /** My settings on a feed. Send only what changes. */
-  feedSettings: (id: number, patch: { displayName?: string | null; hideShorts?: boolean }) => j<FeedSettings>(`/api/feeds/${id}/settings`, { method: 'PUT', body: JSON.stringify(patch) }),
+  /** hideShorts: true hides them on this channel, false shows them, null follows my default. */
+  feedSettings: (id: number, patch: { displayName?: string | null; hideShorts?: boolean | null }) => j<FeedSettings>(`/api/feeds/${id}/settings`, { method: 'PUT', body: JSON.stringify(patch) }),
   follow: (id: number, collectionId?: number) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${id}/follow`, { method: 'POST', body: JSON.stringify({ collectionId }) }),
   addFeed: (url: string, collectionIds: number[] = []) => j<SubscribeOutcome>('/api/feeds', { method: 'POST', body: JSON.stringify({ url, collectionIds }) }),
   unfollow: (id: number) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${id}`, { method: 'DELETE' }),
   restore: (id: number, collectionIds: number[]) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${id}/restore`, { method: 'POST', body: JSON.stringify({ collectionIds }) }),
   /** Refresh is rate-limited per feed; a 429 comes back as { cooldown: seconds } instead of throwing. */
   /** `reason` is set when the feed's whole site is paused (it asked thicket to slow down, or seems down), rather than this feed being fetched recently. */
-  refresh: async (id: number): Promise<{ ok: true } | { ok: false; cooldown: number; reason: string | null }> => {
+  /** `feedId` differs from `id` when the fetch showed this feed to be another feed's address and it was folded into that one. */
+  refresh: async (id: number): Promise<{ ok: true; feedId: number } | { ok: false; cooldown: number; reason: string | null }> => {
     const res = await fetch(`/api/feeds/${id}/refresh`, { method: 'POST' });
     if (res.status === 429) { const b = await res.json().catch(() => ({})); return { ok: false, cooldown: Number(b.retryAfterS ?? 300), reason: b.reason ?? null }; }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return { ok: true };
+    const b = await res.json().catch(() => ({}));
+    return { ok: true, feedId: Number(b.feedId ?? id) };
   },
   collections: () => j<{ collections: Collection[]; rootId: number }>('/api/collections'),
   event: (kind: string, payload: Record<string, unknown> = {}) => {
@@ -130,6 +141,8 @@ export const collectionsApi = {
   create: (name: string, parentId?: number) => j<Collection>('/api/collections', { method: 'POST', body: JSON.stringify({ name, parentId }) }),
   update: (id: number, patch: { name?: string; description?: string; parentId?: number; isPublic?: boolean }) => j<Collection>(`/api/collections/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   remove: (id: number) => j<{ deleted: number }>(`/api/collections/${id}`, { method: 'DELETE' }),
+  /** Merge this collection into another of mine: that one keeps its name and gains these feeds and sub-collections; this one is deleted. */
+  merge: (id: number, intoId: number) => j<{ into: { id: number; name: string; slug: string }; added: number; movedChildren: number }>(`/api/collections/${id}/merge`, { method: 'POST', body: JSON.stringify({ intoId }) }),
   removeFeed: (id: number, feedId: number) => j<unknown>(`/api/collections/${id}/feeds/${feedId}`, { method: 'DELETE' }),
   addFeed: (id: number, feedId: number) => j<unknown>(`/api/collections/${id}/feeds/${feedId}`, { method: 'PUT' }),
   setFeedCollections: (feedId: number, collectionIds: number[]) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${feedId}/collections`, { method: 'PUT', body: JSON.stringify({ collectionIds }) }),
@@ -199,6 +212,8 @@ export type Me = {
   notesFrom: 'none' | 'following' | 'everyone';
   /** null = follow the instance setting (instanceTracking). */
   trackActivity: boolean | null; instanceTracking: boolean; hasPassword: boolean; createdAt: string; isAdmin: boolean;
+  /** Feed setting defaults: leave Shorts out of YouTube channels unless a channel's own setting says otherwise. */
+  hideShortsByDefault: boolean;
 };
 export type SignupPolicy = 'open' | 'invite' | 'closed';
 export type InstanceStatus = { name: string; url: string; signups: SignupPolicy };
@@ -210,7 +225,7 @@ export const authApi = {
   signup: (handle: string, password: string, displayName?: string, inviteCode?: string) => j<Me>('/api/auth/signup', { method: 'POST', body: JSON.stringify({ handle, password, displayName, inviteCode }) }),
   login: (handle: string, password: string) => j<Me>('/api/auth/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   logout: () => j<void>('/api/auth/logout', { method: 'POST' }),
-  update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'notesFrom' | 'trackActivity'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
+  update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'notesFrom' | 'trackActivity' | 'hideShortsByDefault'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
   changePassword: (current: string, next: string) => j<void>('/api/auth/me/password', { method: 'POST', body: JSON.stringify({ current, next }) })
 };
 

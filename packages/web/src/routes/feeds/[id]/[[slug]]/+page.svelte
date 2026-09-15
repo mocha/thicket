@@ -67,6 +67,10 @@
     <div><dt>Last 30 days</dt><dd>{feed.postsLast30d}</dd></div>
     <div><dt>All time</dt><dd>{feed.itemCount}</dd></div>
     <div><dt>Followers</dt><dd>{feed.followerCount}</dd></div>
+    <div title="Posts in the last 30 days that appear to repeat an earlier post from this feed">
+      <dt>Repeats, 30 days</dt>
+      <dd>{feed.repeatsLast30d}{#if feed.postsLast30d > 0}<small> · {Math.round((100 * feed.repeatsLast30d) / feed.postsLast30d)}%</small>{/if}</dd>
+    </div>
   </dl>
 
   {#if feed.consecutiveFailures > 0 || (hidden.length > 0 && !dismissed)}
@@ -100,7 +104,7 @@
   .actions { display: flex; gap: 8px; align-items: center; flex: none; }
   .host { display: inline-block; margin-top: 2px; font-size: 14px; color: var(--accent); font-weight: 600; }
   .desc { margin: 8px 0 0; font-size: 14px; color: var(--text-2); }
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 10px 8px; margin: 16px 0 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .stats div { display: flex; flex-direction: column; gap: 2px; }
   dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
   dd { margin: 0; font-weight: 600; font-size: 15px; }

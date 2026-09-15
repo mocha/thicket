@@ -212,6 +212,22 @@
 </section>
 
 <section class="card">
+  <h2>Feed setting defaults</h2>
+  <p class="help">What every feed does unless you change it in that feed’s own settings.</p>
+  <fieldset>
+    <legend>YouTube</legend>
+    <label class="radio">
+      <input type="radio" name="shortsDefault" value="videos" checked={me.hideShortsByDefault} onchange={() => set({ hideShortsByDefault: true }, 'YouTube channels now show videos only')} />
+      <span><strong>Videos</strong><small>Shorts are left out of every channel you read, unless you turn them back on for one.</small></span>
+    </label>
+    <label class="radio">
+      <input type="radio" name="shortsDefault" value="all" checked={!me.hideShortsByDefault} onchange={() => set({ hideShortsByDefault: false }, 'YouTube channels now show videos and Shorts')} />
+      <span><strong>Videos + Shorts</strong><small>Everything a channel posts. You can still hide Shorts on any one channel.</small></span>
+    </label>
+  </fieldset>
+</section>
+
+<section class="card">
   <h2>Privacy</h2>
   <label class="switch">
     <input type="checkbox" checked={tracking} disabled={!me.instanceTracking} onchange={(e) => set({ trackActivity: e.currentTarget.checked }, e.currentTarget.checked ? 'Usage tracking on' : 'Usage tracking off')} />

@@ -99,6 +99,13 @@
     {/if}
   </a>
 
+  {#if item.repeatOf?.length}
+    <div class="repeat">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></svg>
+      <span>This post appears to be a repeat of earlier {item.repeatOf.length === 1 ? 'post' : 'posts'} from {#each item.repeatOf as r, i (r.id)}{i > 0 ? ', ' : ''}<a href={r.url ?? item.siteUrl ?? '#'} target="_blank" rel="noopener" title={r.title ?? ''}>{new Date(r.publishedAt).toLocaleDateString('sv-SE')}</a>{/each}.</span>
+    </div>
+  {/if}
+
   {#if editing}
     <NoteEditor itemId={item.id} note={myNote}
       onsaved={(n) => { myNote = n; editing = false; showToast(item.myNote ? 'Note updated' : 'Note saved'); item.myNote = n; }}
@@ -153,4 +160,11 @@
     display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
   }
   footer { margin-top: 10px; font-size: 13px; color: var(--text-3); }
+  .repeat {
+    display: flex; gap: 8px; align-items: flex-start; margin: -4px 16px 14px; padding: 8px 10px;
+    border-radius: 10px; font-size: 13px; line-height: 1.4; color: var(--text-2);
+    background: color-mix(in srgb, #c7861a 12%, var(--surface));
+  }
+  .repeat svg { flex: none; margin-top: 1px; color: color-mix(in srgb, #c7861a 78%, var(--text)); }
+  .repeat a { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
 </style>

@@ -66,6 +66,40 @@ collections.delete("/:id", async (c) => {
   return c.json({ deleted: id });
 });
 
+/**
+ * Merge this collection INTO another of mine. The other one keeps its name,
+ * description, address and visibility, and gains every feed this one held that
+ * it didn't; this one's sub-collections move under it; then this one is
+ * deleted. Nothing stops being followed, since every feed here lands there.
+ * Other people's copies that recorded this one as their source now record the
+ * collection its feeds went to.
+ */
+collections.post("/:id/merge", async (c) => {
+  const user = currentUser(c);
+  const id = Number(c.req.param("id"));
+  const body = await c.req.json<{ intoId?: number }>().catch(() => ({} as { intoId?: number }));
+  const intoId = Number(body.intoId);
+  if (!Number.isFinite(intoId) || intoId === id) return c.json({ error: "Pick another collection to merge into." }, 400);
+  const mine = await db.select().from(schema.collections).where(and(eq(schema.collections.userId, user.id), sql`${schema.collections.id} in (${id}, ${intoId})`));
+  const from = mine.find((x) => x.id === id);
+  const into = mine.find((x) => x.id === intoId);
+  if (!from || !into) return c.json({ error: "not found" }, 404);
+  if (from.parentId === null || into.parentId === null) return c.json({ error: "Pick one of your collections." }, 400);
+  const tree = await db.execute<{ id: number }>(sql`with recursive t as (select id from collections where id = ${id} union all select c.id from collections c join t on c.parent_id = t.id) select id from t`);
+  if (tree.rows.some((r) => Number(r.id) === intoId)) return c.json({ error: "A collection can’t be merged into one of its own sub-collections." }, 400);
+  const result = await db.transaction(async (tx) => {
+    const added = await tx.execute(sql`
+      insert into collection_feeds (collection_id, feed_id, added_at)
+      select ${intoId}, feed_id, added_at from collection_feeds where collection_id = ${id}
+      on conflict do nothing returning feed_id`);
+    const moved = await tx.update(schema.collections).set({ parentId: intoId }).where(eq(schema.collections.parentId, id)).returning({ id: schema.collections.id });
+    await tx.update(schema.collections).set({ copiedFromId: intoId }).where(eq(schema.collections.copiedFromId, id));
+    await tx.delete(schema.collections).where(eq(schema.collections.id, id));
+    return { added: added.rows.length, movedChildren: moved.length };
+  });
+  return c.json({ into: { id: into.id, name: into.name, slug: into.slug }, ...result });
+});
+
 collections.put("/:id/feeds/:feedId", async (c) => {
   const user = currentUser(c);
   const collectionId = Number(c.req.param("id"));

@@ -6,11 +6,16 @@
  * Every future setting that hides something (keyword filters, say) adds its
  * sentence here, and every place that summarises settings picks it up.
  */
-export type ViewSettings = { hideShorts?: boolean };
+export type ViewSettings = {
+  /** Whether Shorts are left out of this feed for me, all things considered. */
+  hideShorts?: boolean;
+  /** What I set on this feed itself; null means it follows my default. */
+  hideShortsSetting?: boolean | null;
+};
 
 export function hiddenContent(s: ViewSettings): string[] {
   const out: string[] = [];
-  if (s.hideShorts) out.push('Shorts are disabled');
+  if (s.hideShorts) out.push(s.hideShortsSetting == null ? 'Shorts are hidden by your default for YouTube' : 'Shorts are disabled');
   return out;
 }
 
