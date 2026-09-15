@@ -185,16 +185,16 @@ export function loadDisplay() {
   let found: Display | null = null;
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw !== null) found = coerce(JSON.parse(raw));
-    else {
+    if (raw !== null) {
+      found = coerce(JSON.parse(raw));
+      display.configured = true;
+    } else {
+      // Older installs kept two keys. Carry the values over, but let this screen see the walkthrough once;
+      // that is what writes the record and retires the old keys.
       found = fromLegacy();
-      if (found) remember(found);
     }
   } catch { /* defaults stand */ }
-  if (found) {
-    Object.assign(display, found);
-    display.configured = true;
-  }
+  if (found) Object.assign(display, found);
   apply();
 }
 
