@@ -15,12 +15,49 @@
   import ItemActions from './ItemActions.svelte';
   import NoteEditor from './NoteEditor.svelte';
   import NoteBlock from './NoteBlock.svelte';
+  import Pager from './Pager.svelte';
+  import { display } from '$lib/display.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
+  let scroller = $state<HTMLElement | null>(null);
+  let sheet = $state<HTMLElement | null>(null);
+  let head = $state<HTMLElement | null>(null);
+
+  /* ---- Paged reading: the article is laid out in columns one screen wide and shown one column at a time. ---- */
+  const paged = $derived(display.layout === 'paged');
+  let pageW = $state(0);
+  let pageH = $state(0);
+  let headH = $state(0);
+  let pageIndex = $state(0);
+  let pageCount = $state(1);
+  /** Columns per page: one on a phone, a book-like two on a wide screen. Gap 24px = the sheet's side padding, so the stride is exactly the frame width. */
+  const cols = $derived(Math.max(1, Math.round(pageW / 620)));
+  function measurePages() {
+    if (!paged || !scroller || !sheet) return;
+    headH = head?.offsetHeight ?? 0;
+    pageW = scroller.clientWidth;
+    pageH = scroller.clientHeight;
+    // Let the columns lay out at the new size, then count them.
+    requestAnimationFrame(() => { if (sheet && pageW) { pageCount = Math.max(1, Math.ceil((sheet.scrollWidth - 8) / pageW)); if (pageIndex >= pageCount) pageIndex = pageCount - 1; } });
+  }
+  $effect(() => {
+    if (!paged || !item || !scroller) return;
+    measurePages();
+    const ro = new ResizeObserver(measurePages);
+    ro.observe(scroller);
+    if (sheet) ro.observe(sheet);
+    // Pictures arriving later push text into new columns; count again as each one lands.
+    const onload = () => measurePages();
+    sheet?.addEventListener('load', onload, true);
+    const late = setTimeout(measurePages, 1200);
+    return () => { ro.disconnect(); sheet?.removeEventListener('load', onload, true); clearTimeout(late); };
+  });
+  $effect(() => { void content; void editing; if (paged) requestAnimationFrame(measurePages); });
+  function nextPage() { if (pageIndex < pageCount - 1) pageIndex++; }
+  function prevPage() { if (pageIndex > 0) pageIndex--; }
   let content = $state<ItemContent | null>(null);
   let error = $state<string | null>(null);
   let editing = $state(false);
-  let scroller = $state<HTMLElement | null>(null);
 
   const item = $derived(reader.item);
   const source = $derived(item ? item.feedTitle ?? hostOf(item.siteUrl ?? item.url) : '');
@@ -44,7 +81,7 @@
 
   $effect(() => {
     const it = item;
-    content = null; error = null; editing = false;
+    content = null; error = null; editing = reader.note; pageIndex = 0;
     if (!it) return;
     scroller?.scrollTo({ top: 0 });
     api.event('item_opened', { itemId: it.id, feedId: it.feedId, inline: true });
@@ -71,7 +108,7 @@
 <dialog bind:this={dialog} onclose={() => { if (page.state.reader !== undefined) history.back(); else readerClosed(); }} oncancel={cancelled} onclick={(e) => { if (e.target === dialog) close(); }} aria-label={item?.title ?? 'Post'}>
   {#if item}
     <article class="reader">
-      <header>
+      <header bind:this={head}>
         <span class="source"><SourceIcon feedId={item.feedId} hasIcon={item.hasIcon} name={source} /><span class="name">{source}</span></span>
         <time datetime={item.publishedAt}>{relativeTime(item.publishedAt)}</time>
         <span class="spacer"></span>
@@ -81,8 +118,8 @@
         </button>
       </header>
 
-      <div class="scroll" bind:this={scroller}>
-        <div class="page">
+      <div class="scroll" class:paged bind:this={scroller}>
+        <div class="page" bind:this={sheet} style:column-count={paged && pageW ? cols : undefined} style:height={paged && pageH ? `${pageH}px` : undefined} style:transform={paged ? `translateX(${-pageIndex * pageW}px)` : undefined}>
           {#if editing}
             <NoteEditor itemId={item.id} note={item.myNote} onsaved={noteSaved} ondeleted={() => { if (item) item.myNote = null; editing = false; }} oncancel={() => (editing = false)} />
           {/if}
@@ -122,6 +159,10 @@
         </div>
       </div>
     </article>
+    {#if paged}
+      <div class="pagenum" aria-live="polite">{pageIndex + 1} / {pageCount}</div>
+      <Pager canPrev={pageIndex > 0} canNext={pageIndex < pageCount - 1} onprev={prevPage} onnext={nextPage} label="page" top="{headH}px" bottom="0px" inDialog />
+    {/if}
   {/if}
 </dialog>
 
@@ -183,4 +224,14 @@
   .out { display: inline-flex; align-items: center; gap: 6px; padding: 12px 20px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 15px; }
   .out:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   footer + :global(.note) { margin-top: 18px; }
+
+  /* Paged: the sheet is as tall as the frame and flows into columns one frame wide; the transform picks the column. Nothing scrolls. */
+  .scroll.paged { overflow: hidden; margin: 0 var(--pager-w); }
+  .scroll.paged .page { column-gap: 24px; column-fill: auto; max-width: none; padding: 16px 12px; box-sizing: border-box; }
+  .scroll.paged h1, .scroll.paged .byline, .scroll.paged .hero, .scroll.paged footer, .scroll.paged :global(.note) { break-inside: avoid; }
+  .scroll.paged .body :global(img), .scroll.paged .hero { max-height: 55vh; width: auto; max-width: 100%; margin-left: auto; margin-right: auto; break-inside: avoid; }
+  .scroll.paged .body :global(p), .scroll.paged .body :global(li) { orphans: 2; widows: 2; }
+  .scroll.paged .body :global(figure), .scroll.paged .body :global(pre), .scroll.paged .body :global(blockquote), .scroll.paged .body :global(table) { break-inside: avoid; }
+  .pagenum { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; z-index: 31; pointer-events: none; }
+  @media (min-width: 760px) { :global(:root[data-layout='paged']) .reader { inset: 0; transform: none; width: auto; border-radius: 0; box-shadow: none; border: 0; } }
 </style>

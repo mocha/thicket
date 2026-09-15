@@ -6,14 +6,19 @@
    * hardware buttons send (PageUp/PageDown) and the arrows, as long as nothing
    * else on the page wants them.
    */
-  let { canPrev, canNext, onprev, onnext, label = 'page', top = 'var(--pager-top, 0px)', bottom = 'var(--pager-bottom, 0px)' }: {
+  let { canPrev, canNext, onprev, onnext, label = 'page', top = '0px', bottom = '0px', inDialog = false }: {
     canPrev: boolean; canNext: boolean; onprev: () => void; onnext: () => void; label?: string; top?: string; bottom?: string;
+    /** Keys go to the pager in the open dialog when there is one, otherwise to the page behind. */
+    inDialog?: boolean;
   } = $props();
 
   function keys(e: KeyboardEvent) {
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
     const t = e.target as HTMLElement | null;
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    // Space on a focused button or link is that control's own key.
+    if (e.key === ' ' && t && /^(BUTTON|A)$/.test(t.tagName)) return;
+    if (!!document.querySelector('dialog[open]') !== inDialog) return;
     if (e.key === 'PageDown' || e.key === 'ArrowRight' || (e.key === ' ' && !e.shiftKey)) { if (canNext) { e.preventDefault(); onnext(); } }
     else if (e.key === 'PageUp' || e.key === 'ArrowLeft' || (e.key === ' ' && e.shiftKey)) { if (canPrev) { e.preventDefault(); onprev(); } }
   }

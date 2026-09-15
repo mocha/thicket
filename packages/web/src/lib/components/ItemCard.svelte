@@ -11,7 +11,8 @@
   import { openReader, readsInline } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
 
-  let { item, showSource = true }: { item: RiverItem; showSource?: boolean } = $props();
+  /** `compact`: the paged layout's fixed-height card. Thumbnail beside the text, two lines each, notes counted rather than shown. */
+  let { item, showSource = true, compact = false }: { item: RiverItem; showSource?: boolean; compact?: boolean } = $props();
   let imgFailed = $state(false);
   let popover = $state(false);
   let myNote = $state<Note | null>(null);
@@ -30,8 +31,9 @@
     api.event('item_opened', { itemId: item.id, feedId: item.feedId });
   }
 
-  /** The note button: no note yet opens the editor; a note already there opens it for editing. */
+  /** The note button: no note yet opens the editor; a note already there opens it for editing. A compact card has no room, so the reader does it. */
   function noteButton() {
+    if (compact) { openReader(item, { note: true }); return; }
     editing = !editing;
     if (editing) api.event('note_editor_opened', { itemId: item.id, existing: !!myNote });
   }
@@ -48,7 +50,7 @@
   The body is the link out, or opens the reader for those who read here. Notes (mine, then
   the ones I'm allowed to see) hang off the bottom.
 -->
-<article class="card">
+<article class="card" class:compact>
   <header>
     {#if showSource}
       <button class="source" onclick={openSource} title="About {source}">
@@ -76,24 +78,30 @@
     {/if}
   </a>
 
-  {#if item.repeatOf?.length}
+  {#if compact && (myNote || others.length)}
+    <span class="notecount">{(myNote ? 1 : 0) + others.length} {(myNote ? 1 : 0) + others.length === 1 ? 'note' : 'notes'}</span>
+  {/if}
+
+  {#if item.repeatOf?.length && !compact}
     <div class="repeat">
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></svg>
       <span>This post appears to be a repeat of earlier {item.repeatOf.length === 1 ? 'post' : 'posts'} from {#each item.repeatOf as r, i (r.id)}{i > 0 ? ', ' : ''}<a href={r.url ?? item.siteUrl ?? '#'} target="_blank" rel="noopener" title={r.title ?? ''}>{new Date(r.publishedAt).toLocaleDateString('sv-SE')}</a>{/each}.</span>
     </div>
   {/if}
 
-  {#if editing}
-    <NoteEditor itemId={item.id} note={myNote}
+  {#if !compact}
+    {#if editing}
+      <NoteEditor itemId={item.id} note={myNote}
       onsaved={(n) => { myNote = n; editing = false; showToast(item.myNote ? 'Note updated' : 'Note saved'); item.myNote = n; }}
       ondeleted={() => { myNote = null; editing = false; item.myNote = null; }}
       oncancel={() => (editing = false)} />
-  {:else if myNote}
-    <NoteBlock note={myNote} mine onedit={() => (editing = true)} />
+    {:else if myNote}
+      <NoteBlock note={myNote} mine onedit={() => (editing = true)} />
+    {/if}
+    {#each others as n (n.id)}
+      <NoteBlock note={n} />
+    {/each}
   {/if}
-  {#each others as n (n.id)}
-    <NoteBlock note={n} />
-  {/each}
 </article>
 
 {#if popover}
@@ -142,4 +150,15 @@
   }
   .repeat svg { flex: none; margin-top: 1px; color: color-mix(in srgb, #c7861a 78%, var(--text)); }
   .repeat a { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* Compact: a fixed height so a page of cards lines up. The picture sits beside the words. */
+  .card.compact { height: 100%; display: flex; flex-direction: column; position: relative; }
+  .card.compact:active { transform: none; }
+  .card.compact header { padding: 8px 8px 0 14px; }
+  .card.compact .link { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto; column-gap: 12px; padding: 6px 14px 10px; }
+  .card.compact .hero { grid-column: 2; grid-row: 1 / span 3; width: 108px; height: 100%; max-height: 92px; aspect-ratio: auto; margin: 0; border-radius: 8px; align-self: start; }
+  .card.compact h2 { grid-column: 1; font-size: calc(17px * var(--size-headings)); line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card.compact p { grid-column: 1; margin-top: 4px; font-size: calc(13.5px * var(--size-reading)); -webkit-line-clamp: 2; line-clamp: 2; }
+  .card.compact footer { grid-column: 1; margin-top: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .notecount { position: absolute; right: 14px; bottom: 8px; font-size: 11.5px; font-weight: 600; color: var(--accent); }
 </style>

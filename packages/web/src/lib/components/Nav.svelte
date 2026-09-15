@@ -6,6 +6,7 @@
   import { session } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
   import Monogram from './Monogram.svelte';
+  import { display } from '$lib/display.svelte';
 
   /**
    * The sidebar is a list of things to read, under the heading "Read": All
@@ -65,7 +66,8 @@
   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path {d} /></svg>
 {/snippet}
 
-<nav aria-label="Primary">
+<!-- Paged layout keeps the bottom bar at every width: a sidebar is a scrolling thing. -->
+<nav aria-label="Primary" class:paged={display.layout === 'paged'}>
   <a class="brand" href="/"><img src="/icon.svg" alt="" width="28" height="28" /><span>thicket</span></a>
   <ul>
     <!-- Mobile: the first tab is All collections. Desktop: "Read" is a heading over the list below. -->
@@ -144,41 +146,41 @@
 
   /* Desktop: the sidebar. */
   @media (min-width: 900px) {
-    nav {
+    nav:not(.paged) {
       top: 0; bottom: auto; right: auto; width: 240px; height: 100vh; padding: 20px 12px 0; overflow: hidden;
       display: flex; flex-direction: column;
       border-top: 0; border-right: 1px solid var(--line); background: var(--bg); backdrop-filter: none;
     }
-    .brand { display: flex; flex: none; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; padding: 6px 10px 22px; letter-spacing: -0.01em; }
-    .long { display: inline; }
-    .shortl, li.mobile-only { display: none; }
+    nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; padding: 6px 10px 22px; letter-spacing: -0.01em; }
+    nav:not(.paged) .long { display: inline; }
+    nav:not(.paged) .shortl, nav:not(.paged) li.mobile-only { display: none; }
     /* The only scrolling part, so the account block below it never drifts up into the list. */
-    ul { flex-direction: column; height: auto; gap: 2px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-    li { flex: none; }
-    li > a { flex-direction: row; justify-content: flex-start; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 15px; color: var(--text-2); white-space: normal; }
-    li > a:hover { background: var(--surface-2); }
-    li > a[aria-current='page'] { background: var(--surface-2); color: var(--text); font-weight: 600; }
-    li.admin { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+    nav:not(.paged) ul { flex-direction: column; height: auto; gap: 2px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    nav:not(.paged) li { flex: none; }
+    nav:not(.paged) li > a { flex-direction: row; justify-content: flex-start; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 15px; color: var(--text-2); white-space: normal; }
+    nav:not(.paged) li > a:hover { background: var(--surface-2); }
+    nav:not(.paged) li > a[aria-current='page'] { background: var(--surface-2); color: var(--text); font-weight: 600; }
+    nav:not(.paged) li.admin { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 
-    li.collections { display: block; margin: 2px 0 8px; }
-    .heading { display: flex; align-items: center; gap: 12px; padding: 10px 12px 6px; font-size: 15px; font-weight: 600; color: var(--text); }
-    .cols .all > a { font-style: italic; }
-    .cols { display: flex; flex-direction: column; gap: 1px; padding-left: 36px; height: auto; }
-    .cols li > a { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px; font-size: 14px; color: var(--text-2); }
-    .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cols .n { font-size: 12px; color: var(--text-3); }
-    .cols .new button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--accent); text-align: left; }
-    .cols .new button:hover { background: var(--surface-2); }
-    .plus { font-size: 16px; line-height: 1; width: 10px; }
-    .cols .new input { width: 100%; font-size: 14px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--surface); color: var(--text); }
+    nav:not(.paged) li.collections { display: block; margin: 2px 0 8px; }
+    nav:not(.paged) .heading { display: flex; align-items: center; gap: 12px; padding: 10px 12px 6px; font-size: 15px; font-weight: 600; color: var(--text); }
+    nav:not(.paged) .cols .all > a { font-style: italic; }
+    nav:not(.paged) .cols { display: flex; flex-direction: column; gap: 1px; padding-left: 36px; height: auto; }
+    nav:not(.paged) .cols li > a { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px; font-size: 14px; color: var(--text-2); }
+    nav:not(.paged) .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    nav:not(.paged) .cols .n { font-size: 12px; color: var(--text-3); }
+    nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--accent); text-align: left; }
+    nav:not(.paged) .cols .new button:hover { background: var(--surface-2); }
+    nav:not(.paged) .plus { font-size: 16px; line-height: 1; width: 10px; }
+    nav:not(.paged) .cols .new input { width: 100%; font-size: 14px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--surface); color: var(--text); }
 
-    .account { display: flex; flex: none; align-items: center; gap: 4px; padding: 12px 0 16px; border-top: 1px solid var(--line); background: var(--bg); }
-    .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; }
-    .who:hover { background: var(--surface-2); }
-    .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
-    .dn { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .h { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .gear { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--text-3); }
-    .gear:hover { background: var(--surface-2); color: var(--text); }
+    nav:not(.paged) .account { display: flex; flex: none; align-items: center; gap: 4px; padding: 12px 0 16px; border-top: 1px solid var(--line); background: var(--bg); }
+    nav:not(.paged) .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; }
+    nav:not(.paged) .who:hover { background: var(--surface-2); }
+    nav:not(.paged) .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+    nav:not(.paged) .dn { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    nav:not(.paged) .h { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    nav:not(.paged) .gear { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--text-3); }
+    nav:not(.paged) .gear:hover { background: var(--surface-2); color: var(--text); }
   }
 </style>

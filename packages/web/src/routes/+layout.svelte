@@ -7,9 +7,10 @@
   import Toast from '$lib/components/Toast.svelte';
   import AddFeedSheet from '$lib/components/AddFeedSheet.svelte';
   import Reader from '$lib/components/Reader.svelte';
+  import Configurator from '$lib/components/display/Configurator.svelte';
   import { addFeed } from '$lib/addfeed.svelte';
   import { session, loadMe, isPublicPath } from '$lib/session.svelte';
-  import { loadDisplay } from '$lib/display.svelte';
+  import { display, loadDisplay } from '$lib/display.svelte';
   let { children } = $props();
 
   /**
@@ -45,7 +46,7 @@
   </header>
 {/if}
 
-<main class:anon={!signedIn} class:home={!signedIn && path === '/'}>
+<main class:anon={!signedIn} class:home={!signedIn && path === '/'} class:paged={display.layout === 'paged'}>
   {#if show}{@render children()}
   {:else if session.unreachable}
     <div class="unreachable" role="status">
@@ -55,7 +56,7 @@
   {/if}
 </main>
 {#if signedIn && addFeed.open}<AddFeedSheet />{/if}
-{#if signedIn}<Reader />{/if}
+{#if signedIn}<Reader /><Configurator />{/if}
 <Toast />
 
 <style>
@@ -64,6 +65,8 @@
     padding: 12px 12px calc(var(--nav-h) + var(--safe-b) + 24px);
   }
   main.anon { padding-bottom: 40px; }
+  /* Paged: room for the page-turn strips down both sides. */
+  main.paged { padding-left: calc(var(--pager-w) + 8px); padding-right: calc(var(--pager-w) + 8px); }
   .unreachable { text-align: center; padding: 80px 20px; color: var(--text-2); }
   .unreachable h1 { font-family: var(--font-headings); font-size: 24px; margin: 0 0 8px; color: var(--text); }
   .unreachable p { margin: 0; }
@@ -76,7 +79,7 @@
   .auth a { font-size: 14px; font-weight: 600; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--text-2); }
   .auth a.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   @media (min-width: 900px) {
-    main:not(.anon) { margin-left: calc(240px + max(24px, (100vw - 240px - 640px) / 2)); padding: 28px 24px 60px; }
+    main:not(.anon):not(.paged) { margin-left: calc(240px + max(24px, (100vw - 240px - 640px) / 2)); padding: 28px 24px 60px; }
     main.anon, header.anon { max-width: 680px; }
     main.home, header.anon.home { max-width: 1040px; }
     main.anon { padding: 20px 24px 60px; }

@@ -64,6 +64,8 @@
   --size-app: 1;
 
   --nav-h: 56px;
+  /* Width of the page-turn strips in paged layout. */
+  --pager-w: 44px;
   --safe-b: env(safe-area-inset-bottom, 0px);
   color-scheme: light dark;
 }
@@ -182,6 +184,7 @@
 :root[data-font-app='serif'] { --font: var(--font-headings); }
 :root[data-font-app='dyslexic'] { --font: var(--font-dyslexic); }
 
+@media (max-width: 480px) { :root { --pager-w: 36px; } }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
