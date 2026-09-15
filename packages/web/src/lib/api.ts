@@ -283,7 +283,14 @@ export const profilesApi = {
   copyCollection: (handle: string, slug: string) => j<Collection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/copy`, { method: 'POST' }),
   opmlUrl: (handle: string, slug: string) => `/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/opml`,
   bookmarks: (handle: string, before?: string | null) => j<{ owner: PublicUser; isMe: boolean; bookmarks: PublicBookmark[]; nextCursor: string | null }>(`/api/profiles/${encodeURIComponent(handle)}/bookmarks${before ? `?before=${encodeURIComponent(before)}` : ''}`),
-  activity: (handle: string, before?: string | null) => j<{ owner: PublicUser; isMe: boolean; entries: ActivityEntry[]; nextCursor: string | null }>(`/api/profiles/${encodeURIComponent(handle)}/activity${before ? `?before=${encodeURIComponent(before)}` : ''}`)
+  activity: (handle: string, before?: string | null) => j<{ owner: PublicUser; isMe: boolean; entries: ActivityEntry[]; nextCursor: string | null }>(`/api/profiles/${encodeURIComponent(handle)}/activity${before ? `?before=${encodeURIComponent(before)}` : ''}`),
+  /** Their notes, as the posts they noted. 404 when they don't share notes with me. */
+  notes: (handle: string, opts: { before?: string | null; limit?: number } = {}) => {
+    const q = new URLSearchParams();
+    if (opts.before) q.set('before', opts.before);
+    if (opts.limit) q.set('limit', String(opts.limit));
+    return j<NotesPage & { owner: PublicUser; isMe: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/notes?${q}`);
+  }
 };
 
 /**

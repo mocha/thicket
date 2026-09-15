@@ -19,6 +19,7 @@ import { exportCollectionOpml } from "../lib/opml.js";
 import { PUBLIC_URL } from "../lib/config.js";
 import { slugify, uniqueCollectionSlug } from "../lib/slug.js";
 import { activityForViewer } from "../lib/activity.js";
+import { noteColumns } from "../lib/notes.js";
 import { allows, isFriendOf, type Audience } from "../lib/visibility.js";
 
 export const profiles = new Hono();
@@ -262,4 +263,48 @@ profiles.get("/:handle/activity", async (c) => {
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 20)));
   const { entries, nextCursor } = await activityForViewer(u, who, { limit, before: c.req.query("before") });
   return c.json({ owner: publicUser(u), isMe: who.isMe, entries, nextCursor });
+});
+
+/**
+ * A person's notes as a body of work: the posts they noted, newest note first,
+ * in river shape, so the page is the same cards as everywhere else. Readable by
+ * whoever their notes are shared with, signed-out visitors included when that
+ * is Anyone. Their note comes back first in `notes` (or as `myNote`, for them).
+ */
+profiles.get("/:handle/notes", async (c) => {
+  const u = await owner(c.req.param("handle"));
+  if (!u) return c.json({ error: "not found" }, 404);
+  const viewer = c.get("user");
+  const who = await audienceFor(u, viewer?.id);
+  if (!who.isMe && (u.profileVisibility === "private" || !allows(u.notesVisibility, who))) return c.json({ error: "not found" }, 404);
+  const limit = Math.min(100, Math.max(1, Number(c.req.query("limit") ?? 30)));
+  const before = c.req.query("before"); // "<iso>|<noteId>"
+  let cursor = sql``;
+  if (before) {
+    const [ts, id] = before.split("|");
+    cursor = sql`and (theirs.created_at, theirs.id) < (${ts}::timestamptz, ${Number(id)}::bigint)`;
+  }
+  const viewerId = viewer?.id ?? -1;
+  const rows = await db.execute<any>(sql`
+    select i.id, i.feed_id as "feedId", f.title as "feedTitle", f.site_url as "siteUrl",
+           i.url, i.title, i.author, i.summary, i.image_url as "imageUrl", i.published_at as "publishedAt",
+           exists(select 1 from feed_icons fi where fi.feed_id = i.feed_id and not fi.generic) as "hasIcon",
+           (select bm.id from bookmarks bm where bm.user_id = ${viewerId} and bm.item_id = i.id limit 1) as "bookmarkId",
+           theirs.id as "noteId", theirs.created_at as "notedAt",
+           ${noteColumns(viewerId, u.id)}
+    from notes theirs
+    join items i on i.id = theirs.item_id
+    join feeds f on f.id = i.feed_id
+    where theirs.user_id = ${u.id} ${cursor}
+    order by theirs.created_at desc, theirs.id desc
+    limit ${limit + 1}
+  `);
+  const all = rows.rows;
+  const page = all.slice(0, limit);
+  const last = all.length > limit ? page[page.length - 1] : null;
+  return c.json({
+    owner: publicUser(u), isMe: who.isMe,
+    items: page.map(({ noteId, notedAt, ...r }: any) => ({ ...r, publishedAt: new Date(r.publishedAt).toISOString() })),
+    nextCursor: last ? `${new Date(last.notedAt).toISOString()}|${last.noteId}` : null,
+  });
 });

@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/state';
-  import { api, profilesApi, publicCollectionHref, type Profile } from '$lib/api';
+  import { api, profilesApi, publicCollectionHref, type Profile, type RiverItem } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import { hostOf } from '$lib/time';
   import Monogram from '$lib/components/Monogram.svelte';
   import ActivityList from '$lib/components/ActivityList.svelte';
+  import ItemCard from '$lib/components/ItemCard.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
@@ -70,6 +71,19 @@
     profilesApi.get(handle).then((p) => (profile = p)).catch((e) => (error = e instanceof Error ? e.message : String(e)));
   });
   onMount(() => api.event('profile_view', { handle }));
+
+  /** The newest few notes, shown right on the profile; the rest are one link away. */
+  const NOTES_SHOWN = 3;
+  let recentNotes = $state<RiverItem[] | null>(null);
+  let notesFor = $state<string | undefined>(undefined);
+  $effect(() => {
+    if (!profile || profile.private || !profile.notes || notesFor === profile.handle) return;
+    const h = profile.handle;
+    notesFor = h; recentNotes = null;
+    profilesApi.notes(h, { limit: NOTES_SHOWN }).then((r) => { if (notesFor === h) recentNotes = r.items; }).catch(() => (recentNotes = []));
+  });
+  /** On my own profile, a note I delete from its card takes the card with it. */
+  const shownNotes = $derived((recentNotes ?? []).filter((i) => !isMe || i.myNote));
 
   const joined = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
@@ -177,11 +191,30 @@
   {#if profile.notes && (profile.notes.count > 0 || profile.isMe)}
     <section>
       <h2>Notes <span class="n">{profile.notes.count}</span></h2>
-      <p class="status">
-        {#if profile.isMe}Notes you’ve left on posts. <a href="/notes">Read them all</a>. {#if profile.visibility?.notes === 'public'}Anyone sees them on posts they come across, and in your recent activity above.{:else if profile.visibility?.notes === 'friends'}The people you follow see them on posts they come across, and in your recent activity above.{:else}Only you can see them.{/if} <a href="/settings">Change</a>.
-        {:else if profile.people.isFollowing}You see their notes on posts you come across{#if session.user?.notesFrom === 'none'}, once you allow notes in <a href="/settings">Settings</a>{/if}.
-        {:else}Follow them to see their notes on posts you come across.{/if}
-      </p>
+      {#if profile.isMe}
+        <p class="status">
+          {#if profile.visibility?.notes === 'public'}Anyone can read your notes here and under posts on your public collections, signed in or not. People who follow you also see them on posts they come across.{:else if profile.visibility?.notes === 'friends'}The people you follow can read your notes here and on your collections, and see them on posts they come across.{:else}Only you can see your notes.{/if}
+          <a href="/settings">Change</a>.
+        </p>
+      {:else if session.user && profile.people.isFollowing}
+        <p class="status">You also see their notes on posts you come across{#if session.user.notesFrom === 'none'}, once you allow notes in <a href="/settings">Settings</a>{/if}.</p>
+      {:else if session.user?.notesFrom === 'following'}
+        <p class="status">Follow them to also see their notes on posts you come across.</p>
+      {/if}
+      {#if recentNotes === null}
+        <p class="status">Loading…</p>
+      {:else if shownNotes.length === 0}
+        <p class="status">{profile.isMe ? 'Press the note icon on any post to write down what you thought of it.' : 'No notes to show.'}</p>
+      {:else}
+        <div class="notes">
+          {#each shownNotes as item (item.id)}
+            <ItemCard {item} />
+          {/each}
+        </div>
+        {#if profile.notes.count > shownNotes.length}
+          <a class="all" href="/@{profile.handle}/notes">All {profile.notes.count} notes <span aria-hidden="true">›</span></a>
+        {/if}
+      {/if}
     </section>
   {/if}
 
@@ -234,6 +267,9 @@
   .new form button { padding: 0 16px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
   .new form button:disabled { opacity: 0.5; }
   .status { color: var(--text-3); font-size: 14px; padding: 8px 0; margin: 0; }
+  .status a { color: var(--accent); font-weight: 600; }
+  .notes { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+  .all { display: inline-block; margin-top: 12px; color: var(--accent); font-weight: 600; font-size: 14px; }
   .empty { text-align: center; padding: 50px 20px; color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: 10px; }
   .empty p { margin: 0; }
   .join { text-align: center; color: var(--text-3); font-size: 14px; margin-top: 30px; }

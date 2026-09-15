@@ -62,6 +62,10 @@ river.get("/", async (c) => {
   // collection can be read by anyone; bookmark/block columns just come back empty.
   const user = feedId || collectionId ? c.get("user") : currentUser(c);
   const userId = user?.id ?? -1;
+  // A collection is someone's page: its owner's notes show to whoever they share notes with, signed out included (lib/notes.ts).
+  const pageOwnerId = collectionId
+    ? Number((await db.execute<{ userId: string }>(sql`select user_id as "userId" from collections where id = ${collectionId}`)).rows[0]?.userId ?? 0) || null
+    : null;
 
   let cursorClause = sql``;
   if (before) {
@@ -132,7 +136,7 @@ river.get("/", async (c) => {
            (select coalesce(json_agg(json_build_object('id', o.id, 'publishedAt', o.published_at, 'url', o.url, 'title', o.title) order by o.published_at desc), '[]'::json)
               from (select o.id, o.published_at, o.url, o.title from item_repeats r join items o on o.id = r.of_item_id
                     where r.item_id = i.id order by o.published_at desc limit 5) o) as "repeatOf",
-           ${noteColumns(userId)}
+           ${noteColumns(userId, pageOwnerId)}
     from page
     join items i on i.id = page.id
     join feeds f on f.id = i.feed_id
