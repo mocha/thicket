@@ -3,7 +3,7 @@
   import { page } from '$app/state';
   import { api, profileHref, profilesApi, type PublicUser, type RiverItem } from '$lib/api';
   import { session } from '$lib/session.svelte';
-  import ItemCard from '$lib/components/ItemCard.svelte';
+  import NoteCard from '$lib/components/NoteCard.svelte';
   import VisitorMore from '$lib/components/VisitorMore.svelte';
 
   /**
@@ -74,11 +74,11 @@
 {:else if !loading && shown.length === 0}
   <div class="empty"><h2>No notes yet</h2></div>
 {:else}
-  <section class="list">
+  <ul class="list">
     {#each shown as item (item.id)}
-      <ItemCard {item} />
+      <NoteCard {item} />
     {/each}
-  </section>
+  </ul>
   {#if loading}<p class="status">Loading…</p>{/if}
   {#if cappedAt}<VisitorMore cap={cappedAt} />{:else if done && shown.length > 0}<p class="status">That’s all of them.</p>{/if}
   <div bind:this={sentinel} aria-hidden="true"></div>
@@ -91,7 +91,7 @@
   h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; overflow-wrap: anywhere; }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
-  .list { display: flex; flex-direction: column; gap: 14px; }
+  .list { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; }
   .empty { text-align: center; padding: 50px 20px; color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(22px * var(--size-headings)); margin: 0 0 6px; }
   .empty p { margin: 0; }

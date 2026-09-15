@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { api, notesApi, type RiverItem } from '$lib/api';
-  import ItemCard from '$lib/components/ItemCard.svelte';
+  import NoteCard from '$lib/components/NoteCard.svelte';
 
   /**
    * My Notes: every post I have left a note on, newest note first, shown as
@@ -70,11 +70,11 @@
     <div class="ctas"><a class="cta" href="/">Go to All my feeds</a><a class="cta ghost" href="/settings">Note settings</a></div>
   </div>
 {:else}
-  <section class="list">
+  <ul class="list">
     {#each shown as item (item.id)}
-      <ItemCard {item} />
+      <NoteCard {item} />
     {/each}
-  </section>
+  </ul>
   {#if loading}<p class="status">Loading…</p>{/if}
   {#if done && shown.length > 0}<p class="status">That’s all of them.</p>{/if}
   <div bind:this={sentinel} aria-hidden="true"></div>
@@ -84,7 +84,7 @@
   .top { margin-bottom: 14px; }
   h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
-  .list { display: flex; flex-direction: column; gap: 14px; }
+  .list { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; }
   .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 18px 0; margin: 0; }
   .status.error { color: var(--danger); }
   .empty { text-align: center; padding: 40px 20px; color: var(--text-2); }
