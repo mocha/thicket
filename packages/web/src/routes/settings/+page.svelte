@@ -261,37 +261,37 @@
 
 <style>
   .top { margin-bottom: 14px; }
-  h1 { font-family: var(--font-headings); font-size: 28px; margin: 0; }
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: 14px; }
+  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; }
+  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
-  h2 { font-size: 16px; margin: 0 0 4px; }
-  .help { margin: 0 0 14px; font-size: 14px; color: var(--text-3); }
+  h2 { font-size: calc(16px * var(--size-app)); margin: 0 0 4px; }
+  .help { margin: 0 0 14px; font-size: calc(14px * var(--size-app)); color: var(--text-3); }
   form { display: flex; flex-direction: column; gap: 12px; }
-  label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-2); }
-  input[type='text'], input[type='url'], input[type='password'], textarea { padding: 11px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit; resize: vertical; }
+  label { display: flex; flex-direction: column; gap: 6px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  input[type='text'], input[type='url'], input[type='password'], textarea { padding: 11px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); font-family: inherit; resize: vertical; }
   input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .row { display: flex; justify-content: flex-end; }
-  button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: 14px; color: var(--text-2); background: var(--surface); }
+  button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text-2); background: var(--surface); }
   button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   button:disabled { opacity: 0.5; }
   fieldset { border: 0; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 10px; }
-  legend { padding: 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
+  legend { padding: 0; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
   #display fieldset + fieldset { margin-top: 18px; }
   #display fieldset + fieldset legend { width: 100%; padding-top: 14px; border-top: 1px solid var(--line); }
   .radio, .switch { flex-direction: row; align-items: flex-start; gap: 12px; font-weight: 400; color: var(--text); cursor: pointer; }
   .radio input, .switch input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
   .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
-  .radio small, .switch small { font-size: 13px; color: var(--text-3); }
+  .radio small, .switch small { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
   .shares.dim { opacity: 0.55; }
   .shares { display: flex; flex-direction: column; gap: 18px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
   .share { display: flex; flex-direction: column; gap: 7px; }
-  .share small { font-size: 13px; color: var(--text-3); }
+  .share small { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
   .seg { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  .seg button { flex: 1; padding: 9px 6px; font-size: 13px; font-weight: 600; color: var(--text-3); background: var(--surface); border-left: 1px solid var(--line); }
+  .seg button { flex: 1; padding: 9px 6px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-3); background: var(--surface); border-left: 1px solid var(--line); }
   .seg button:first-child { border-left: 0; }
   .seg button.on { background: var(--accent); color: var(--accent-ink); }
-  .bad { color: var(--danger); margin: 0; font-size: 14px; }
+  .bad { color: var(--danger); margin: 0; font-size: calc(14px * var(--size-app)); }
   .admin .help a { color: var(--accent); font-weight: 600; }
   .out { text-align: center; margin: 24px 0 0; }
   .out button { color: var(--danger); }

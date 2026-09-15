@@ -19,7 +19,10 @@ export type Palette = 'default' | 'kingfisher' | 'slate' | 'ember' | 'parchment'
 export type Accent = 'blue' | 'orange' | 'green' | 'purple';
 export type Family = 'sans' | 'serif' | 'dyslexic';
 export type Role = 'headings' | 'reading' | 'app';
-export type Size = -2 | -1 | 0 | 1 | 2;
+/** A size step. Each is 12.5%; the range runs from 50% (-4) to 250% (+12). */
+export type Size = number;
+export const SIZE_MIN = -4;
+export const SIZE_MAX = 12;
 export type ReadingMode = 'tabs' | 'inline';
 export type Layout = 'scroll' | 'paged';
 
@@ -93,8 +96,6 @@ export const LAYOUTS: { id: Layout; label: string; note: string }[] = [
   { id: 'paged', label: 'Pages', note: 'As many posts as fit the screen, then a page turn. For e-ink, and for anyone who prefers a still page.' }
 ];
 
-/** Each step is 12.5%: 75%, 87.5%, 100%, 112.5%, 125%. */
-export const SIZES: Size[] = [-2, -1, 0, 1, 2];
 export const sizeScale = (s: Size) => 1 + s * 0.125;
 export const sizeLabel = (s: Size) => `${Math.round(sizeScale(s) * 100)}%`;
 
@@ -102,7 +103,7 @@ export const display = $state<Display & { configured: boolean }>({ ...structured
 
 const oneOf = <T extends string>(list: readonly { id: T }[], v: unknown, fallback: T): T =>
   list.some((x) => x.id === v) ? (v as T) : fallback;
-const isSize = (v: unknown): v is Size => typeof v === 'number' && SIZES.includes(v as Size);
+const isSize = (v: unknown): v is Size => Number.isInteger(v) && (v as number) >= SIZE_MIN && (v as number) <= SIZE_MAX;
 
 /** Accept whatever is in storage, field by field, so a stale or partial record still yields a full one. */
 function coerce(raw: unknown): Display {
@@ -213,7 +214,7 @@ export function setFont(role: Role, patch: Partial<{ family: Family; size: Size 
 }
 
 export function stepSize(role: Role, delta: 1 | -1) {
-  const next = Math.max(-2, Math.min(2, display.fonts[role].size + delta)) as Size;
+  const next = Math.max(SIZE_MIN, Math.min(SIZE_MAX, display.fonts[role].size + delta));
   if (next !== display.fonts[role].size) setFont(role, { size: next });
 }
 

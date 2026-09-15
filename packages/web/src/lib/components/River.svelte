@@ -96,9 +96,12 @@
   const CARD_H = 148;
   const GAP = 12;
   const PAGEHEAD_H = 34;
+  /** Cards go side by side when the frame is wide enough for more than one of at least this width. */
+  const CARD_MIN_W = 340;
   let frame = $state<HTMLElement | null>(null);
   let frameTop = $state(0);
   let frameH = $state(0);
+  let cols = $state(1);
   let perPage = $state(3);
   let pageIndex = $state(0);
 
@@ -110,7 +113,8 @@
     // main keeps its usual bottom padding (nav + 24px); take it off so the page itself has nothing to scroll.
     const h = Math.max(CARD_H + PAGEHEAD_H, window.innerHeight - top - navH - 26);
     frameTop = top; frameH = h;
-    perPage = Math.max(1, Math.floor((h - PAGEHEAD_H) / (CARD_H + GAP)));
+    cols = Math.max(1, Math.floor((frame.clientWidth + GAP) / (CARD_MIN_W + GAP)));
+    perPage = cols * Math.max(1, Math.floor((h - PAGEHEAD_H) / (CARD_H + GAP)));
   }
   $effect(() => {
     if (!paged || !frame) return;
@@ -155,7 +159,7 @@
   <section class="river paged" aria-live="polite" bind:this={frame} style:height="{frameH}px">
     {#if pageItems.length}
       <div class="pagehead"><span class="when">{pageLabel}</span><span class="n">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
-      <div class="grid" style:grid-auto-rows="{CARD_H}px" style:gap="{GAP}px">
+      <div class="grid" style:grid-template-columns="repeat({cols}, minmax(0, 1fr))" style:grid-auto-rows="{CARD_H}px" style:gap="{GAP}px">
         {#each pageItems as item (item.id)}
           <ItemCard {item} {showSource} compact />
         {/each}
@@ -207,23 +211,23 @@
   .river { display: flex; flex-direction: column; gap: 14px; }
   .day { display: flex; flex-direction: column; gap: 14px; }
   /* Sticky within its own day, so the next day's heading pushes it away instead of piling on. Bleeds into main's side padding so card shadows don't peek past it. */
-  .dayhead { position: sticky; top: 0; z-index: 5; margin: 0 -12px; padding: 10px 12px 6px; font-size: 15px; font-weight: 600; color: var(--text-2); background: var(--bg); }
+  .dayhead { position: sticky; top: 0; z-index: 5; margin: 0 -12px; padding: 10px 12px 6px; font-size: calc(15px * var(--size-app)); font-weight: 600; color: var(--text-2); background: var(--bg); }
   .dayhead::after { content: ''; position: absolute; left: 0; right: 0; bottom: -8px; height: 8px; background: linear-gradient(var(--bg), transparent); pointer-events: none; }
   @media (min-width: 900px) { .dayhead { margin: 0 -24px; padding-left: 24px; padding-right: 24px; } }
   .empty { text-align: center; padding: 50px 20px; color: var(--text-2); }
-  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: 24px; margin: 0 0 8px; }
+  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(24px * var(--size-headings)); margin: 0 0 8px; }
   .empty p { margin: 0 auto; max-width: 440px; }
   .ctas { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
   .cta { display: inline-block; background: var(--accent); color: var(--accent-ink); padding: 12px 20px; border-radius: 999px; font-weight: 600; }
   .cta.ghost { background: var(--surface); color: var(--text-2); border: 1px solid var(--line); }
-  .status { text-align: center; color: var(--text-3); font-size: 14px; padding: 18px 0; margin: 0; }
+  .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 18px 0; margin: 0; }
   .status.error { color: var(--danger); }
   .sentinel { height: 1px; }
 
   /* Paged: a fixed frame, nothing scrolls, nothing moves. */
   .river.paged { gap: 0; overflow: hidden; }
-  .pagehead { display: flex; align-items: baseline; justify-content: space-between; height: 34px; padding: 6px 2px 0; font-size: 14px; color: var(--text-2); }
+  .pagehead { display: flex; align-items: baseline; justify-content: space-between; height: 34px; padding: 6px 2px 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
   .pagehead .when { font-weight: 600; }
-  .pagehead .n { font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
-  .grid { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; }
+  .pagehead .n { font-size: calc(13px * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .grid { display: grid; align-content: start; }
 </style>

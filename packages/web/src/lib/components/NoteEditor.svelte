@@ -68,18 +68,18 @@
 
 <style>
   .editor { border-top: 1px solid var(--line); padding: 10px 16px 12px; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
-  .head { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 6px; }
-  textarea { width: 100%; font: inherit; font-size: 14px; line-height: 1.5; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); resize: vertical; }
+  .head { font-weight: 700; font-size: calc(12px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 6px; }
+  textarea { width: 100%; font: inherit; font-size: calc(14px * var(--size-app)); line-height: 1.5; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); resize: vertical; }
   textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .btn { padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .btn { padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .btn.danger { color: var(--danger); margin-left: auto; }
   .btn:disabled { opacity: 0.5; }
-  .counter { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .counter { font-size: calc(12px * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
   .btn.danger + .counter { margin-left: 0; }
   .row:not(:has(.danger)) .counter { margin-left: auto; }
   .counter.near { color: var(--text-2); }
   .counter.over { color: var(--danger); font-weight: 700; }
-  .bad { margin: 6px 0 0; font-size: 13px; color: var(--danger); }
+  .bad { margin: 6px 0 0; font-size: calc(13px * var(--size-app)); color: var(--danger); }
 </style>

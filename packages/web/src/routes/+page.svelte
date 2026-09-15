@@ -47,12 +47,12 @@
 <style>
   .top { margin-bottom: 14px; }
   .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  h1 { font-family: var(--font-headings); font-size: 28px; margin: 0; min-width: 0; }
-  .btn { flex: none; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; min-width: 0; }
+  .btn { flex: none; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
   .btn:hover { background: var(--surface-2); color: var(--text); }
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: 14px; max-width: 62ch; }
+  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); max-width: 62ch; }
   .start { display: flex; flex-direction: column; gap: 22px; margin-top: 22px; }
-  .own { margin: 0; padding-top: 18px; border-top: 1px solid var(--line); color: var(--text-2); font-size: 15px; max-width: 62ch; line-height: 1.5; }
+  .own { margin: 0; padding-top: 18px; border-top: 1px solid var(--line); color: var(--text-2); font-size: calc(15px * var(--size-app)); max-width: 62ch; line-height: 1.5; }
   .own button { color: var(--accent); font-weight: 600; font: inherit; font-weight: 600; }
   .own button:hover { text-decoration: underline; }
 </style>

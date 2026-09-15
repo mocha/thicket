@@ -62,15 +62,15 @@
   }
   header { display: flex; align-items: center; gap: 12px; }
   .who { flex: 1; min-width: 0; }
-  h2 { margin: 0; font-size: 19px; font-family: var(--font-headings); line-height: 1.2; overflow-wrap: anywhere; }
-  .host { font-size: 13px; color: var(--accent); font-weight: 600; }
-  .close { width: 32px; height: 32px; border-radius: 50%; font-size: 22px; color: var(--text-3); align-self: flex-start; }
-  .desc { margin: 12px 0 0; font-size: 14px; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  h2 { margin: 0; font-size: calc(19px * var(--size-headings)); font-family: var(--font-headings); line-height: 1.2; overflow-wrap: anywhere; }
+  .host { font-size: calc(13px * var(--size-app)); color: var(--accent); font-weight: 600; }
+  .close { width: 32px; height: 32px; border-radius: 50%; font-size: calc(22px * var(--size-app)); color: var(--text-3); align-self: flex-start; }
+  .desc { margin: 12px 0 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .stats div { display: flex; flex-direction: column; gap: 2px; }
-  dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
-  dd { margin: 0; font-weight: 600; font-size: 14px; }
+  dt { font-size: calc(11px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+  dd { margin: 0; font-weight: 600; font-size: calc(14px * var(--size-app)); }
   footer { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center; }
-  .btn { flex: 1; text-align: center; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: 14px; color: var(--text); }
+  .btn { flex: 1; text-align: center; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text); }
   .loading { text-align: center; color: var(--text-3); padding: 30px 0; }
 </style>

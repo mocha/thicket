@@ -118,10 +118,10 @@
   .split.neutral { border-color: var(--line); color: var(--text-2); }
   .split.neutral .more { border-left-color: var(--line); }
   /* A collection name can be long; the button gives it room, then ellipsis. */
-  .main { padding: 8px 12px 8px 14px; font-size: 14px; font-weight: 600; color: inherit; white-space: nowrap; max-width: 20ch; overflow: hidden; text-overflow: ellipsis; }
+  .main { padding: 8px 12px 8px 14px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: inherit; white-space: nowrap; max-width: 20ch; overflow: hidden; text-overflow: ellipsis; }
   .more { padding: 0 8px 0 6px; border-left: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); display: grid; place-items: center; color: inherit; }
   .main:hover, .more:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-  .compact .main { padding: 6px 10px 6px 12px; font-size: 13px; }
+  .compact .main { padding: 6px 10px 6px 12px; font-size: calc(13px * var(--size-app)); }
   .compact .more { padding: 0 6px 0 4px; }
   .panel {
     position: fixed; z-index: 60; width: min(320px, calc(100vw - 16px));
@@ -134,7 +134,7 @@
   .panel.inline { position: static; width: 100%; flex-basis: 100%; order: 10; box-shadow: none; border: 1px solid var(--line); padding: 10px 12px; }
   /* Inside a sheet the list scrolls on its own so Unfollow stays in reach. */
   .panel.inline :global(.checks) { max-height: 34vh; overflow-y: auto; }
-  .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 4px; }
-  .unfollow { width: 100%; margin-top: 10px; padding: 9px; border-radius: 10px; color: var(--danger); font-weight: 600; font-size: 14px; border: 1px solid var(--line); }
+  .eyebrow { font-size: calc(11px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 4px; }
+  .unfollow { width: 100%; margin-top: 10px; padding: 9px; border-radius: 10px; color: var(--danger); font-weight: 600; font-size: calc(14px * var(--size-app)); border: 1px solid var(--line); }
   .unfollow:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
 </style>

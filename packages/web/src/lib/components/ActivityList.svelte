@@ -142,8 +142,8 @@
 
 <style>
   section { margin-bottom: 22px; }
-  h2 { font-size: 16px; margin: 0 0 8px; }
-  .status { color: var(--text-3); font-size: 14px; padding: 8px 0; margin: 0; }
+  h2 { font-size: calc(16px * var(--size-app)); margin: 0 0 8px; }
+  .status { color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 8px 0; margin: 0; }
   .acts { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   li { padding: 12px 16px; border-top: 1px solid var(--line); }
   li:first-child { border-top: 0; }
@@ -151,18 +151,18 @@
   .icons { display: flex; flex: none; }
   /* Overlapped, so a burst of feeds reads as one object rather than a row of them. */
   .icons > :global(*:not(:first-child)) { margin-left: -7px; }
-  .glyph { flex: none; width: 20px; text-align: center; color: var(--text-3); font-size: 15px; }
-  .what { flex: 1; min-width: 0; margin: 0; font-size: 14px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .glyph { flex: none; width: 20px; text-align: center; color: var(--text-3); font-size: calc(15px * var(--size-app)); }
+  .what { flex: 1; min-width: 0; margin: 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .what a { color: var(--text); font-weight: 600; }
-  .src { color: var(--text-3); font-size: 13px; }
+  .src { color: var(--text-3); font-size: calc(13px * var(--size-app)); }
   .src::before { content: ' · '; }
-  .when { flex: none; font-size: 12px; color: var(--text-3); }
-  .names { display: flex; gap: 5px; margin: 4px 0 0 30px; font-size: 13px; color: var(--text-3); }
+  .when { flex: none; font-size: calc(12px * var(--size-app)); color: var(--text-3); }
+  .names { display: flex; gap: 5px; margin: 4px 0 0 30px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
   .trunc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rest { flex: none; }
   .rest::before { content: '· '; }
-  blockquote { margin: 6px 0 0 30px; padding-left: 10px; border-left: 2px solid var(--line); font-size: 14px; color: var(--text-2); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-  .tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
-  .more { display: block; width: 100%; margin-top: 10px; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: 14px; font-weight: 600; }
+  blockquote { margin: 6px 0 0 30px; padding-left: 10px; border-left: 2px solid var(--line); font-size: calc(14px * var(--size-app)); color: var(--text-2); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
+  .more { display: block; width: 100%; margin-top: 10px; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: calc(14px * var(--size-app)); font-weight: 600; }
   .more:disabled { opacity: 0.6; }
 </style>

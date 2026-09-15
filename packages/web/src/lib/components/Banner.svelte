@@ -48,7 +48,7 @@
     padding: 11px 12px 11px 14px; border-radius: var(--radius-sm);
     border: 1px solid color-mix(in srgb, var(--tone) 35%, transparent);
     background: color-mix(in srgb, var(--tone) 9%, var(--surface));
-    color: var(--text); font-size: 14px; line-height: 1.45;
+    color: var(--text); font-size: calc(14px * var(--size-app)); line-height: 1.45;
   }
   .error { --tone: var(--danger); }
   /* Amber has no theme token yet; mixing it with the text colour darkens it on light grounds and lightens it on dark ones. */

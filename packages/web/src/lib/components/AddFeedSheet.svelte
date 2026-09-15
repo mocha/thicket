@@ -166,33 +166,33 @@
     .scroll { max-height: 300px; }
   }
   header { display: flex; align-items: center; justify-content: space-between; }
-  h2 { margin: 0; font-size: 22px; font-family: var(--font-headings); }
-  .close { width: 32px; height: 32px; border-radius: 50%; font-size: 22px; color: var(--text-3); }
-  .lede { color: var(--text-2); margin: -6px 0 0; font-size: 14px; }
-  input[type='url'] { padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 16px; width: 100%; }
+  h2 { margin: 0; font-size: calc(22px * var(--size-headings)); font-family: var(--font-headings); }
+  .close { width: 32px; height: 32px; border-radius: 50%; font-size: calc(22px * var(--size-app)); color: var(--text-3); }
+  .lede { color: var(--text-2); margin: -6px 0 0; font-size: calc(14px * var(--size-app)); }
+  input[type='url'] { padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); width: 100%; }
   input[type='url']:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .result { margin: 0; color: var(--text-2); font-size: 14px; }
+  .result { margin: 0; color: var(--text-2); font-size: calc(14px * var(--size-app)); }
   .result p { margin: 0 0 6px; }
   .bad { color: var(--danger); }
   .candidates { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
   .candidates button { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); }
-  .candidates span { font-size: 12px; color: var(--text-3); overflow-wrap: anywhere; }
-  .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 4px; }
+  .candidates span { font-size: calc(12px * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
+  .eyebrow { font-size: calc(11px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 4px; }
   .scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: 38vh; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; }
   .checks { list-style: none; margin: 0; padding: 0; }
   .checks label { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-top: 1px solid var(--line); cursor: pointer; }
   .checks li:first-child label { border-top: 0; }
   .checks input { width: 20px; height: 20px; accent-color: var(--accent); }
   .name { flex: 1; font-weight: 500; }
-  .count { font-size: 13px; color: var(--text-3); }
-  .hint { margin: -4px 0 0; font-size: 12px; color: var(--text-3); }
+  .count { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .hint { margin: -4px 0 0; font-size: calc(12px * var(--size-app)); color: var(--text-3); }
   .new { display: flex; align-items: center; gap: 8px; }
-  .plus { width: 20px; text-align: center; color: var(--accent); font-size: 20px; line-height: 1; font-weight: 600; }
-  .new input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--accent); background: var(--surface); color: var(--text); font-size: 15px; }
+  .plus { width: 20px; text-align: center; color: var(--accent); font-size: calc(20px * var(--size-app)); line-height: 1; font-weight: 600; }
+  .new input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--accent); background: var(--surface); color: var(--text); font-size: calc(15px * var(--size-app)); }
   .new input::placeholder { color: var(--accent); opacity: 0.85; }
   .new input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-style: solid; }
   .new button { padding: 10px 14px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
   .new button:disabled { opacity: 0.35; }
-  .follow { margin-top: 6px; padding: 14px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 16px; }
+  .follow { margin-top: 6px; padding: 14px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(16px * var(--size-app)); }
   .follow:disabled { opacity: 0.5; }
 </style>

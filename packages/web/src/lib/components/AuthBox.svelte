@@ -91,22 +91,22 @@
 <style>
   .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
   .tabs { display: flex; gap: 4px; background: var(--surface-2); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
-  .tabs button { flex: 1; padding: 9px; border-radius: 9px; font-weight: 600; font-size: 14px; color: var(--text-2); }
+  .tabs button { flex: 1; padding: 9px; border-radius: 9px; font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
   .tabs button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
   .tabs button:disabled { opacity: 0.4; }
   form { display: flex; flex-direction: column; gap: 12px; }
-  label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+  label { display: flex; flex-direction: column; gap: 5px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
   small { font-weight: 400; color: var(--text-3); }
-  input { padding: 11px 13px; border-radius: 11px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 16px; width: 100%; }
+  input { padding: 11px 13px; border-radius: 11px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); width: 100%; }
   input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .at { display: flex; align-items: center; border-radius: 11px; border: 1px solid var(--line); background: var(--bg); padding-left: 12px; color: var(--text-3); font-size: 16px; }
+  .at { display: flex; align-items: center; border-radius: 11px; border: 1px solid var(--line); background: var(--bg); padding-left: 12px; color: var(--text-3); font-size: calc(16px * var(--size-app)); }
   .at input { border: 0; padding-left: 2px; background: transparent; }
   .at:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
   .at input:focus { outline: none; }
   .err input, .err .at { border-color: var(--danger); }
-  .go { margin-top: 2px; padding: 13px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 16px; }
+  .go { margin-top: 2px; padding: 13px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(16px * var(--size-app)); }
   .go:disabled { opacity: 0.5; }
-  .bad { color: var(--danger); margin: 0; font-size: 14px; }
-  .note { margin: 12px 0 0; font-size: 13px; color: var(--text-3); line-height: 1.4; }
+  .bad { color: var(--danger); margin: 0; font-size: calc(14px * var(--size-app)); }
+  .note { margin: 12px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-3); line-height: 1.4; }
   .note strong { color: var(--text-2); }
 </style>

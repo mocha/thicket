@@ -77,12 +77,12 @@
   .t { display: block; height: 3px; border-radius: 2px; background: var(--sw-text); opacity: 0.85; }
   .t.short { width: 60%; opacity: 0.45; }
   .a { display: block; width: 34%; height: 5px; border-radius: 3px; background: var(--sw-accent); margin-top: 2px; }
-  .label { font-size: 12.5px; font-weight: 600; padding: 0 2px; }
+  .label { font-size: calc(12.5px * var(--size-app)); font-weight: 600; padding: 0 2px; }
   .on .label { color: var(--accent); }
 
   .accents { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
-  .lead { font-size: 13px; font-weight: 600; color: var(--text-2); margin-right: 4px; }
-  .accents button { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px 6px 7px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .lead { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); margin-right: 4px; }
+  .accents button { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px 6px 7px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .accents button.on { border-color: var(--accent); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent); }
   .accents i { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(128,128,128,0.25); }
 </style>

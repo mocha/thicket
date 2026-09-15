@@ -140,7 +140,7 @@
   li { flex: 1; min-width: 0; }
   li > a {
     display: flex; width: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    height: 100%; font-size: 10.5px; color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
+    height: 100%; font-size: calc(10.5px * var(--size-app)); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
   }
   li > a[aria-current='page'] { color: var(--accent); }
 
@@ -151,35 +151,35 @@
       display: flex; flex-direction: column;
       border-top: 0; border-right: 1px solid var(--line); background: var(--bg); backdrop-filter: none;
     }
-    nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; padding: 6px 10px 22px; letter-spacing: -0.01em; }
+    nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: 10px; font-weight: 700; font-size: calc(20px * var(--size-app)); padding: 6px 10px 22px; letter-spacing: -0.01em; }
     nav:not(.paged) .long { display: inline; }
     nav:not(.paged) .shortl, nav:not(.paged) li.mobile-only { display: none; }
     /* The only scrolling part, so the account block below it never drifts up into the list. */
     nav:not(.paged) ul { flex-direction: column; height: auto; gap: 2px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     nav:not(.paged) li { flex: none; }
-    nav:not(.paged) li > a { flex-direction: row; justify-content: flex-start; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 15px; color: var(--text-2); white-space: normal; }
+    nav:not(.paged) li > a { flex-direction: row; justify-content: flex-start; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: calc(15px * var(--size-app)); color: var(--text-2); white-space: normal; }
     nav:not(.paged) li > a:hover { background: var(--surface-2); }
     nav:not(.paged) li > a[aria-current='page'] { background: var(--surface-2); color: var(--text); font-weight: 600; }
     nav:not(.paged) li.admin { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 
     nav:not(.paged) li.collections { display: block; margin: 2px 0 8px; }
-    nav:not(.paged) .heading { display: flex; align-items: center; gap: 12px; padding: 10px 12px 6px; font-size: 15px; font-weight: 600; color: var(--text); }
+    nav:not(.paged) .heading { display: flex; align-items: center; gap: 12px; padding: 10px 12px 6px; font-size: calc(15px * var(--size-app)); font-weight: 600; color: var(--text); }
     nav:not(.paged) .cols .all > a { font-style: italic; }
     nav:not(.paged) .cols { display: flex; flex-direction: column; gap: 1px; padding-left: 36px; height: auto; }
-    nav:not(.paged) .cols li > a { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px; font-size: 14px; color: var(--text-2); }
+    nav:not(.paged) .cols li > a { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
     nav:not(.paged) .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    nav:not(.paged) .cols .n { font-size: 12px; color: var(--text-3); }
-    nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--accent); text-align: left; }
+    nav:not(.paged) .cols .n { font-size: calc(12px * var(--size-app)); color: var(--text-3); }
+    nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 12px; border-radius: 8px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     nav:not(.paged) .cols .new button:hover { background: var(--surface-2); }
-    nav:not(.paged) .plus { font-size: 16px; line-height: 1; width: 10px; }
-    nav:not(.paged) .cols .new input { width: 100%; font-size: 14px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--surface); color: var(--text); }
+    nav:not(.paged) .plus { font-size: calc(16px * var(--size-app)); line-height: 1; width: 10px; }
+    nav:not(.paged) .cols .new input { width: 100%; font-size: calc(14px * var(--size-app)); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--surface); color: var(--text); }
 
     nav:not(.paged) .account { display: flex; flex: none; align-items: center; gap: 4px; padding: 12px 0 16px; border-top: 1px solid var(--line); background: var(--bg); }
     nav:not(.paged) .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; }
     nav:not(.paged) .who:hover { background: var(--surface-2); }
     nav:not(.paged) .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
-    nav:not(.paged) .dn { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    nav:not(.paged) .h { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    nav:not(.paged) .dn { font-weight: 600; font-size: calc(14px * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    nav:not(.paged) .h { font-size: calc(12px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     nav:not(.paged) .gear { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--text-3); }
     nav:not(.paged) .gear:hover { background: var(--surface-2); color: var(--text); }
   }

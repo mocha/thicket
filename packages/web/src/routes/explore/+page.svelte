@@ -457,33 +457,33 @@
 
 <style>
   .top { margin-bottom: 12px; }
-  h1 { font-family: var(--font-headings); font-size: 26px; margin: 0; }
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: 14px; max-width: 62ch; }
+  h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; }
+  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); max-width: 62ch; }
   .pane { margin-bottom: 16px; }
   .head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .search { flex: 1; min-width: 0; padding: 12px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: 16px; }
-  .add { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 14px; font-weight: 600; white-space: nowrap; }
-  .add span { font-size: 18px; line-height: 1; }
+  .search { flex: 1; min-width: 0; padding: 12px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: calc(16px * var(--size-app)); }
+  .add { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: calc(14px * var(--size-app)); font-weight: 600; white-space: nowrap; }
+  .add span { font-size: calc(18px * var(--size-app)); line-height: 1; }
   .scopes { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-2); margin-bottom: 14px; overflow-x: auto; }
-  .scopes button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+  .scopes button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; border-radius: 999px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
   .scopes button[aria-selected='true'] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
   .scopes button:disabled { opacity: 0.4; }
   .scopes .n { font-weight: 400; color: var(--text-3); font-variant-numeric: tabular-nums; }
   .titles { min-width: 0; margin-bottom: 12px; }
-  h2 { font-family: var(--font-headings); font-size: 21px; margin: 0; display: flex; align-items: baseline; gap: 8px; }
-  .count { color: var(--text-3); font-weight: 400; font-size: 15px; font-family: var(--font); font-variant-numeric: tabular-nums; }
-  .titles p { margin: 4px 0 0; color: var(--text-2); font-size: 14px; max-width: 68ch; }
+  h2 { font-family: var(--font-headings); font-size: calc(21px * var(--size-headings)); margin: 0; display: flex; align-items: baseline; gap: 8px; }
+  .count { color: var(--text-3); font-weight: 400; font-size: calc(15px * var(--size-app)); font-family: var(--font); font-variant-numeric: tabular-nums; }
+  .titles p { margin: 4px 0 0; color: var(--text-2); font-size: calc(14px * var(--size-app)); max-width: 68ch; }
   .group { margin-bottom: 22px; }
   .group h2 { margin-bottom: 8px; }
-  .all { margin-left: auto; font-size: 14px; }
+  .all { margin-left: auto; font-size: calc(14px * var(--size-app)); }
   .filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
-  .filter { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-3); }
+  .filter { display: inline-flex; align-items: center; gap: 8px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
   .label { white-space: nowrap; }
   .check { flex-direction: row; align-items: center; gap: 8px; cursor: pointer; }
   .check input { width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
   .check input:disabled { opacity: 0.45; }
   .check:has(input:disabled) { cursor: default; opacity: 0.55; }
-  .filter select { padding: 6px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: 13px; }
+  .filter select { padding: 6px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: calc(13px * var(--size-app)); }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   li { display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 12px; border-top: 1px solid var(--line); flex-wrap: wrap; }
   /* On a phone the Follow control would squeeze the description into a column
@@ -496,13 +496,13 @@
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .handle { font-weight: 400; color: var(--text-3); font-size: 13px; margin-left: 4px; }
+  .handle { font-weight: 400; color: var(--text-3); font-size: calc(13px * var(--size-app)); margin-left: 4px; }
   /* Wraps rather than truncates: every part of it is a fact someone is deciding on. */
-  .sub2 { font-size: 13px; color: var(--text-3); }
-  .desc { font-size: 13px; color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .sub2 { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .desc { font-size: calc(13px * var(--size-app)); color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .desc mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
   /* Why this row is here: the same numbers the ranking is made of, in words. */
-  .why { font-size: 13px; color: var(--accent); margin: 2px 0 1px; }
+  .why { font-size: calc(13px * var(--size-app)); color: var(--accent); margin: 2px 0 1px; }
   .why strong { font-weight: 700; }
   .why.muted { color: var(--text-3); }
   .who { color: var(--text-2); font-weight: 600; }
@@ -513,13 +513,13 @@
   .stack :global(> :nth-child(1)) { left: 0; z-index: 3; }
   .stack :global(> :nth-child(2)) { left: 9px; z-index: 2; }
   .stack :global(> :nth-child(3)) { left: 18px; z-index: 1; }
-  .chev { color: var(--text-3); font-size: 20px; }
-  .follow, .save { flex: none; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: 13px; font-weight: 600; }
+  .chev { color: var(--text-3); font-size: calc(20px * var(--size-app)); }
+  .follow, .save { flex: none; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: calc(13px * var(--size-app)); font-weight: 600; }
   .follow.on, .save.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
   .follow:disabled, .save:disabled { opacity: 0.6; }
-  .status { text-align: center; color: var(--text-3); font-size: 14px; padding: 18px 0; margin: 0; }
+  .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 18px 0; margin: 0; }
   .status.error { color: var(--danger); }
-  .empty { text-align: center; color: var(--text-2); padding: 34px 16px; font-size: 15px; }
+  .empty { text-align: center; color: var(--text-2); padding: 34px 16px; font-size: calc(15px * var(--size-app)); }
   .empty p { margin: 0 auto; max-width: 480px; }
   .link { color: var(--accent); font-weight: 600; font-size: inherit; }
 </style>

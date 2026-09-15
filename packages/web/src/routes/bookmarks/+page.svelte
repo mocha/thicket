@@ -126,24 +126,24 @@
 
 <style>
   .top { margin-bottom: 12px; }
-  h1 { font-family: var(--font-headings); font-size: 26px; margin: 0; }
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: 14px; }
+  h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; }
+  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
   .filters { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 12px; align-items: center; }
   .filters::-webkit-scrollbar { display: none; }
   .filters button, .filters select {
     flex: none; padding: 7px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line);
-    font-size: 14px; color: var(--text-2); white-space: nowrap;
+    font-size: calc(14px * var(--size-app)); color: var(--text-2); white-space: nowrap;
   }
   .filters button[aria-selected='true'] { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
-  .filters .n { opacity: 0.6; font-size: 12px; margin-left: 2px; }
+  .filters .n { opacity: 0.6; font-size: calc(12px * var(--size-app)); margin-left: 2px; }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
   .empty { text-align: center; padding: 40px 20px; color: var(--text-2); }
-  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: 22px; margin: 0 0 6px; }
-  .empty p { margin: 0 auto; max-width: 440px; font-size: 15px; }
+  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(22px * var(--size-headings)); margin: 0 0 6px; }
+  .empty p { margin: 0 auto; max-width: 440px; font-size: calc(15px * var(--size-app)); }
   .illo { display: block; margin: 0 auto 16px; max-width: 100%; }
   .ctas { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
-  .cta { display: inline-block; background: var(--accent); color: var(--accent-ink); padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: 14px; }
+  .cta { display: inline-block; background: var(--accent); color: var(--accent-ink); padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: calc(14px * var(--size-app)); }
   .cta.ghost { background: var(--surface); color: var(--text-2); border: 1px solid var(--line); }
-  .status { text-align: center; color: var(--text-3); font-size: 14px; padding: 16px 0; }
+  .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 16px 0; }
 </style>

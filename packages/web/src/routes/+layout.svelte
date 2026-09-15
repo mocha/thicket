@@ -66,17 +66,17 @@
   }
   main.anon { padding-bottom: 40px; }
   /* Paged: room for the page-turn strips down both sides. */
-  main.paged { padding-left: calc(var(--pager-w) + 8px); padding-right: calc(var(--pager-w) + 8px); }
+  main.paged { max-width: none; padding-left: calc(var(--pager-w) + 8px); padding-right: calc(var(--pager-w) + 8px); }
   .unreachable { text-align: center; padding: 80px 20px; color: var(--text-2); }
-  .unreachable h1 { font-family: var(--font-headings); font-size: 24px; margin: 0 0 8px; color: var(--text); }
+  .unreachable h1 { font-family: var(--font-headings); font-size: calc(24px * var(--size-headings)); margin: 0 0 8px; color: var(--text); }
   .unreachable p { margin: 0; }
   header.anon {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     max-width: 640px; margin: 0 auto; padding: 14px 12px 4px;
   }
-  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: calc(18px * var(--size-app)); letter-spacing: -0.01em; }
   .auth { display: flex; gap: 8px; align-items: center; }
-  .auth a { font-size: 14px; font-weight: 600; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--text-2); }
+  .auth a { font-size: calc(14px * var(--size-app)); font-weight: 600; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--text-2); }
   .auth a.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   @media (min-width: 900px) {
     main:not(.anon):not(.paged) { margin-left: calc(240px + max(24px, (100vw - 240px - 640px) / 2)); padding: 28px 24px 60px; }

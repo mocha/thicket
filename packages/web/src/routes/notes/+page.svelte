@@ -82,16 +82,16 @@
 
 <style>
   .top { margin-bottom: 14px; }
-  h1 { font-family: var(--font-headings); font-size: 26px; margin: 0; }
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: 14px; }
+  h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; }
+  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
   .list { display: flex; flex-direction: column; gap: 14px; }
-  .status { text-align: center; color: var(--text-3); font-size: 14px; padding: 18px 0; margin: 0; }
+  .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 18px 0; margin: 0; }
   .status.error { color: var(--danger); }
   .empty { text-align: center; padding: 40px 20px; color: var(--text-2); }
-  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: 22px; margin: 0 0 6px; }
-  .empty p { margin: 0 auto; max-width: 460px; font-size: 15px; }
+  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(22px * var(--size-headings)); margin: 0 0 6px; }
+  .empty p { margin: 0 auto; max-width: 460px; font-size: calc(15px * var(--size-app)); }
   .illo { display: block; margin: 0 auto 16px; max-width: 100%; }
   .ctas { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
-  .cta { display: inline-block; background: var(--accent); color: var(--accent-ink); padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: 14px; }
+  .cta { display: inline-block; background: var(--accent); color: var(--accent-ink); padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: calc(14px * var(--size-app)); }
   .cta.ghost { background: var(--surface); color: var(--text-2); border: 1px solid var(--line); }
 </style>

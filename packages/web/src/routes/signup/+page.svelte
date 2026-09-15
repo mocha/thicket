@@ -93,27 +93,27 @@
 
 <style>
   .auth { max-width: 380px; margin: 40px auto 0; }
-  h1 { font-family: var(--font-headings); font-size: 30px; margin: 0 0 6px; }
+  h1 { font-family: var(--font-headings); font-size: calc(30px * var(--size-headings)); margin: 0 0 6px; }
   .lede { color: var(--text-2); margin: 0 0 20px; }
   form { display: flex; flex-direction: column; gap: 16px; }
-  label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+  label { display: flex; flex-direction: column; gap: 6px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
   label em { font-weight: 400; color: var(--text-3); font-style: normal; margin-left: 4px; }
   small { font-weight: 400; color: var(--text-3); }
   small strong { color: var(--text-2); }
-  input { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: 16px; width: 100%; }
+  input { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: calc(16px * var(--size-app)); width: 100%; }
   input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .at { display: flex; align-items: center; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); padding-left: 12px; color: var(--text-3); font-size: 16px; }
+  .at { display: flex; align-items: center; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); padding-left: 12px; color: var(--text-3); font-size: calc(16px * var(--size-app)); }
   .at input { border: 0; padding-left: 2px; }
   .at:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
   .at input:focus { outline: none; }
   .err input, .err .at { border-color: var(--danger); }
-  button { margin-top: 4px; padding: 13px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 16px; }
+  button { margin-top: 4px; padding: 13px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(16px * var(--size-app)); }
   button:disabled { opacity: 0.5; }
-  .bad { color: var(--danger); margin: 0; font-size: 14px; }
+  .bad { color: var(--danger); margin: 0; font-size: calc(14px * var(--size-app)); }
   .alt { margin: 22px 0 0; color: var(--text-2); }
   .what { margin: 28px 0 0; padding-top: 18px; border-top: 1px solid var(--line); }
-  .what h2 { font-family: var(--font-headings); font-size: 17px; margin: 0 0 7px; }
-  .what p { margin: 0 0 9px; color: var(--text-2); font-size: 14px; line-height: 1.5; }
+  .what h2 { font-family: var(--font-headings); font-size: calc(17px * var(--size-headings)); margin: 0 0 7px; }
+  .what p { margin: 0 0 9px; color: var(--text-2); font-size: calc(14px * var(--size-app)); line-height: 1.5; }
   .what p:last-child { margin-bottom: 0; }
   .alt a { color: var(--accent); font-weight: 600; }
 </style>

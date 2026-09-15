@@ -85,13 +85,13 @@
     .box { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(720px, calc(100vw - 48px)); border-radius: 20px; max-height: calc(100vh - 48px); }
   }
   header { padding: 20px 20px 0; }
-  .eyebrow { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); font-weight: 600; }
-  h2 { margin: 0; font-family: var(--font-headings); font-size: 24px; line-height: 1.2; }
-  .lead { margin: 6px 0 0; color: var(--text-2); font-size: 14.5px; max-width: 56ch; }
+  .eyebrow { margin: 0 0 6px; font-size: calc(12px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); font-weight: 600; }
+  h2 { margin: 0; font-family: var(--font-headings); font-size: calc(24px * var(--size-headings)); line-height: 1.2; }
+  .lead { margin: 6px 0 0; color: var(--text-2); font-size: calc(14.5px * var(--size-app)); max-width: 56ch; }
   .body { padding: 16px 20px 4px; overflow-y: auto; min-height: 0; }
   footer { display: flex; align-items: center; gap: 8px; padding: 14px 20px calc(16px + var(--safe-b)); border-top: 1px solid var(--line); margin-top: 12px; }
   .spacer { flex: 1; }
-  footer button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: 14px; color: var(--text-2); background: var(--surface); }
+  footer button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text-2); background: var(--surface); }
   footer button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   footer button.link { border: 0; padding: 10px 4px; color: var(--accent); }
   footer button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

@@ -152,18 +152,18 @@
 {/if}
 
 <style>
-  .crumbs { font-size: 13px; color: var(--text-3); margin-bottom: 4px; }
+  .crumbs { font-size: calc(13px * var(--size-app)); color: var(--text-3); margin-bottom: 4px; }
   .crumbs a { color: var(--accent); font-weight: 600; }
   .top { margin-bottom: 16px; }
   .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  h1 { font-family: var(--font-headings); font-size: 28px; margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1; }
-  .sub { margin: 4px 0 0; color: var(--text-3); font-size: 14px; }
+  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1; }
+  .sub { margin: 4px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
   .reveal { display: inline-flex; align-items: center; gap: 3px; font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
   .reveal svg { transition: transform 150ms ease; }
-  .tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
+  .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
   .actions { flex: none; display: flex; gap: 8px; align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
-  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
   .btn:hover { background: var(--surface-2); color: var(--text); }
   .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .btn:disabled { opacity: 0.6; }
@@ -171,13 +171,13 @@
   dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: 20px 20px 0 0; padding: 20px 18px calc(18px + var(--safe-b)); box-shadow: 0 -10px 40px rgba(0,0,0,0.25); }
   @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 560px; border-radius: 20px; } }
-  .sheet h2 { font-family: var(--font-headings); font-size: 22px; margin: 0 0 14px; }
+  .sheet h2 { font-family: var(--font-headings); font-size: calc(22px * var(--size-headings)); margin: 0 0 14px; }
   .ways { display: grid; gap: 12px; }
   @media (min-width: 700px) { .ways { grid-template-columns: 1fr 1fr; } }
   .ways section { background: var(--bg); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-  .ways h3 { margin: 0; font-size: 15px; }
-  .ways p { margin: 0 0 4px; font-size: 14px; color: var(--text-2); }
-  .close { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; font-size: 22px; color: var(--text-3); }
+  .ways h3 { margin: 0; font-size: calc(15px * var(--size-app)); }
+  .ways p { margin: 0 0 4px; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
+  .close { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; font-size: calc(22px * var(--size-app)); color: var(--text-3); }
   .feeds { margin-bottom: 18px; }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .list li { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--line); }
@@ -187,10 +187,10 @@
   .children .name { flex: 1; font-weight: 600; }
   .meta { flex: 1; min-width: 0; }
   .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sub2 { font-size: 13px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .count, .chev { color: var(--text-3); font-size: 13px; }
-  .chev { font-size: 20px; }
+  .sub2 { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .count, .chev { color: var(--text-3); font-size: calc(13px * var(--size-app)); }
+  .chev { font-size: calc(20px * var(--size-app)); }
   .status { text-align: center; color: var(--text-3); padding: 30px 0; }
   .empty { text-align: center; padding: 50px 20px; color: var(--text-2); }
-  .empty h1 { font-size: 24px; margin-bottom: 6px; }
+  .empty h1 { font-size: calc(24px * var(--size-app)); margin-bottom: 6px; }
 </style>
