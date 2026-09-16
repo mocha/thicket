@@ -5,6 +5,7 @@
  */
 import { createHash } from "node:crypto";
 import { parseFeed } from "feedsmith";
+import { choosePreview } from "./images.js";
 
 export type ParsedItem = {
   dedupeKey: string;
@@ -62,12 +63,6 @@ function summarize(...candidates: Array<string | undefined | null>): string | nu
     return text.length > SUMMARY_LEN ? text.slice(0, SUMMARY_LEN - 1).trimEnd() + "…" : text;
   }
   return null;
-}
-
-function firstImg(html: string | undefined | null): string | null {
-  if (!html) return null;
-  const m = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
-  return m?.[1] ?? null;
 }
 
 function toDate(v: unknown): Date | null {
@@ -134,7 +129,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       const title = it.title ? stripHtml(it.title) : null;
       const body = rich ?? it.description ?? null;
       const mediaText = mediaDescription(it.media);
-      const mediaThumb = it.media?.thumbnails?.[0]?.url ?? it.media?.groups?.[0]?.thumbnails?.[0]?.url ?? it.media?.contents?.find((c: any) => c.medium === "image")?.url;
+      const mediaThumb = it.media?.thumbnails?.[0] ?? it.media?.groups?.[0]?.thumbnails?.[0] ?? it.media?.contents?.find((c: any) => c.medium === "image");
       const enclosureImg = it.enclosures?.find((e: any) => e.type?.startsWith("image/"))?.url;
       items.push({
         dedupeKey: dedupeKey(it.guid?.value, link, title, body),
@@ -143,7 +138,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         author: cleanAuthor(it.dc?.creators?.[0]) ?? cleanAuthor(it.authors?.[0]),
         summary: summarize(it.description, rich, mediaText),
         content: body ?? mediaText,
-        imageUrl: mediaThumb ?? enclosureImg ?? firstImg(body) ?? null,
+        imageUrl: choosePreview(mediaThumb ?? enclosureImg, body),
         publishedAt: toDate(it.pubDate) ?? toDate(it.dc?.dates?.[0]) ?? null,
       });
     }
@@ -168,7 +163,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         author: e.authors?.[0]?.name ?? f.authors?.[0]?.name ?? null,
         summary: summarize(e.summary, rich, mediaText),
         content: body ?? mediaText,
-        imageUrl: e.media?.thumbnails?.[0]?.url ?? e.media?.groups?.[0]?.thumbnails?.[0]?.url ?? firstImg(body),
+        imageUrl: choosePreview(e.media?.thumbnails?.[0] ?? e.media?.groups?.[0]?.thumbnails?.[0], body),
         publishedAt: toDate(e.published) ?? toDate(e.updated) ?? null,
       });
     }
@@ -191,7 +186,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       author: it.authors?.[0]?.name ?? f.authors?.[0]?.name ?? null,
       summary: summarize(it.summary, it.content_text, it.content_html),
       content: body,
-      imageUrl: it.image ?? it.banner_image ?? firstImg(it.content_html),
+      imageUrl: choosePreview(it.image ?? it.banner_image, it.content_html),
       publishedAt: toDate(it.date_published) ?? toDate(it.date_modified) ?? null,
     });
   }
