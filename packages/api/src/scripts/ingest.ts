@@ -49,9 +49,11 @@ const urls: string[] = [];
 const seen = new Set<string>();
 for (const raw of readFileSync(file, "utf8").split("\n")) {
   const line = raw.trim();
+  // A "#" starts a comment, at the start of a line or after the URL: Kagi's lists put the channel name after each address.
   if (!line || line.startsWith("#")) continue;
+  const bare = line.replace(/\s+#.*$/, "");
   let url: string;
-  try { url = normalizeFeedUrl(line); } catch { continue; }
+  try { url = normalizeFeedUrl(bare); } catch { continue; }
   if (!/^https?:\/\//i.test(url) || seen.has(url)) continue;
   seen.add(url);
   urls.push(url);
