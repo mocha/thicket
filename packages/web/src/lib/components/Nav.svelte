@@ -96,7 +96,7 @@
       <ul class="cols" aria-label="Things to read">
         <li class="all"><a href="/" aria-current={path === '/' ? 'page' : undefined}><span class="name">All collections</span>{#if fresh && badge(rootMark)}<span class="fresh">{badge(rootMark)}</span>{/if}</a></li>
         {#each namedCollections() as c (c.id)}
-          <li><a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined}><span class="name">{c.name}</span>{#if fresh && badge(marks.byId[c.id])}<span class="fresh">{badge(marks.byId[c.id])}</span>{:else}<span class="n">{c.feedCount}</span>{/if}</a></li>
+          <li><a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined}><span class="name">{c.name}</span>{#if fresh && badge(marks.byId[c.id])}<span class="fresh">{badge(marks.byId[c.id])}</span>{/if}</a></li>
         {/each}
         <li class="new">
           {#if creating}
@@ -194,7 +194,7 @@
     nav:not(.paged) .cols { display: flex; flex-direction: column; gap: 1px; padding-left: 36px; height: auto; }
     nav:not(.paged) .cols li > a { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
     nav:not(.paged) .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    nav:not(.paged) .cols .n { font-size: calc(12px * var(--size-app)); color: var(--text-3); }
+
     nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 12px; border-radius: 8px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     nav:not(.paged) .cols .new button:hover { background: var(--surface-2); }
     nav:not(.paged) .plus { font-size: calc(16px * var(--size-app)); line-height: 1; width: 10px; }
