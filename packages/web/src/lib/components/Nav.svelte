@@ -26,6 +26,14 @@
   const onCollection = (slug: string) => path === colHref(slug) || path.startsWith(colHref(slug) + '/');
   const onAnyCollection = $derived(!!me && path.startsWith(meHref + '/collections/'));
   const current = (href: string) => path === href || (href !== '/' && path.startsWith(href + '/'));
+  /**
+   * An open post's address is under /feeds/, but reading one is not the same as
+   * browsing feeds: the reader sits over whatever list you opened it from, and
+   * that list is where closing returns you. So nothing claims to be the current
+   * tab while a post is open — least of all Explore, which you may never have
+   * been in.
+   */
+  const inFeeds = $derived(path.startsWith('/feeds/') && page.state.reader === undefined);
 
   $effect(() => { void loadCollections(); });
 
@@ -104,7 +112,7 @@
       <a href="/notes" aria-current={current('/notes') ? 'page' : undefined}>{@render icon(icons.notes)}<span class="long">My Notes</span><span class="shortl">Notes</span></a>
     </li>
     <li>
-      <a href="/explore" aria-current={current('/explore') || path.startsWith('/feeds/') ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
+      <a href="/explore" aria-current={current('/explore') || inFeeds ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
     </li>
     <!-- Mobile: you. The profile is where Settings lives when there is no sidebar. -->
     {#if me}

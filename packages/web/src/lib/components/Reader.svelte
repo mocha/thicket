@@ -9,7 +9,7 @@
   import { page } from '$app/state';
   import { api, itemsApi, type ItemContent, type Note } from '$lib/api';
   import { hostOf, relativeTime } from '$lib/time';
-  import { reader, readerClosed } from '$lib/reader.svelte';
+  import { closeReader, reader, readerClosed } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
   import SourceIcon from './SourceIcon.svelte';
   import ItemActions from './ItemActions.svelte';
@@ -80,6 +80,19 @@
     }
   });
 
+  /**
+   * The open post names the tab, so bookmarking it in the browser, or picking
+   * it out of a row of tabs, gets the post rather than "thicket". Set by hand
+   * rather than with <svelte:head>: the layout has a title too, and the browser
+   * reads the first <title> in the document, not the last one written.
+   */
+  $effect(() => {
+    if (!item) return;
+    const was = document.title;
+    document.title = item.title ? `${item.title} · thicket` : was;
+    return () => { document.title = was; };
+  });
+
   $effect(() => {
     const it = item;
     content = null; error = null; editing = reader.note; pageIndex = 0;
@@ -89,10 +102,12 @@
     itemsApi.content(it.id).then((c) => { if (reader.item?.id === it.id) content = c; }, (e) => { if (reader.item?.id === it.id) error = e instanceof Error ? e.message : String(e); });
   });
 
-  /** Close = go back to where the reader was opened; the effect above does the rest. */
+  /**
+   * Close = leave the post's address behind. The store decides where that is;
+   * losing the history entry is what shuts the dialog, in the effect above.
+   */
   function close() {
-    if (page.state.reader !== undefined) history.back();
-    else { dialog?.close(); readerClosed(); }
+    closeReader();
   }
   /** Escape closes the dialog natively when modal; keep history in step. Non-modal (paged) gets no cancel event, so listen for the key. */
   function cancelled(e: Event) { e.preventDefault(); close(); }
@@ -109,7 +124,7 @@
 
 <svelte:window onkeydown={keys} />
 
-<dialog bind:this={dialog} class:paged onclose={() => { if (page.state.reader !== undefined) history.back(); else readerClosed(); }} oncancel={cancelled} onclick={(e) => { if (e.target === dialog) close(); }} aria-label={item?.title ?? 'Post'}>
+<dialog bind:this={dialog} class:paged onclose={() => closeReader()} oncancel={cancelled} onclick={(e) => { if (e.target === dialog) close(); }} aria-label={item?.title ?? 'Post'}>
   {#if item}
     <article class="reader">
       <header bind:this={head}>

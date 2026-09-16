@@ -4,6 +4,8 @@ export type Note = { id: number; body: string; createdAt: string; updatedAt: str
 export type PublicNote = Note & { author: { handle: string; displayName: string | null } };
 export type RiverItem = {
   id: number; feedId: number; feedTitle: string | null; siteUrl: string | null;
+  /** The feed's slug, so a card can write the post's address without another fetch. */
+  feedSlug: string;
   url: string | null; title: string | null; author: string | null; summary: string | null;
   imageUrl: string | null; publishedAt: string; hasIcon: boolean; bookmarkId: number | null;
   myNote: Note | null;
@@ -18,6 +20,13 @@ export type RiverItem = {
  * page. The number is that limit. No next page comes after it.
  */
 export type RiverPage = { items: RiverItem[]; nextCursor: string | null; hidden: number; cappedAt?: number | null };
+
+/**
+ * A post fetched on its own, by its address rather than out of a list. Same
+ * shape as a river item minus the list-only extras, and readable signed out —
+ * the body is a separate, members-only fetch.
+ */
+export type ItemRef = RiverItem;
 
 /** A post's body for the in-app reader, sanitized on the server (api/src/lib/sanitize.ts). */
 export type ItemContent = {
@@ -195,6 +204,9 @@ export const notesApi = {
 export type BookmarkSources = { feeds: { feedId: number; title: string | null; count: number }[]; collections: { id: number; name: string; count: number }[] };
 
 export const itemsApi = {
+  /** What the post is: readable by anyone, so a link you send works for whoever opens it. */
+  get: (id: number) => j<ItemRef>(`/api/items/${id}`),
+  /** The post's text, members only. */
   content: (id: number) => j<ItemContent>(`/api/items/${id}/content`)
 };
 
@@ -219,6 +231,28 @@ export const iconUrl = (feedId: number) => `/api/feeds/${feedId}/icon`;
 
 /** Canonical feed page URL: id is the identity, slug is for humans and search engines. */
 export const feedHref = (f: { id: number; slug?: string | null }) => (f.slug ? `/feeds/${f.id}/${f.slug}` : `/feeds/${f.id}`);
+
+/**
+ * The readable tail of a post's address. Cosmetic and never stored: both ids in
+ * the path are the identity, so a retitled post keeps its old links working and
+ * the address bar simply corrects itself the next time it is opened.
+ */
+export function itemSlug(title: string | null | undefined): string {
+  const s = (title ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (!s) return '';
+  if (s.length <= 60) return s;
+  const cut = s.slice(0, 60);
+  return cut.slice(0, Math.max(cut.lastIndexOf('-'), 20)).replace(/-$/, '');
+}
+
+/**
+ * A post lives inside its feed: /feeds/:feedId/:feedSlug/:itemId/:itemSlug.
+ * Everything after the feed id is for people to read; the ids do the resolving.
+ */
+export function itemHref(i: { id: number; feedId: number; feedSlug?: string | null; title?: string | null }): string {
+  const slug = itemSlug(i.title);
+  return `/feeds/${i.feedId}/${i.feedSlug || 'feed'}/${i.id}${slug ? `/${slug}` : ''}`;
+}
 
 // ---- accounts and profiles -------------------------------------------------
 

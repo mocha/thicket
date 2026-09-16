@@ -14,6 +14,19 @@ export function slugify(s: string): string {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "untitled";
 }
 
+/**
+ * A feed's slug, the readable half of /feeds/:id/:slug and of a post's address
+ * under it. Derived, never stored: from the title, falling back to the host, so
+ * a feed that retitles itself simply gets a new readable half and its id — the
+ * identity — keeps every old link working. Assumes the feeds table is aliased
+ * `f`, which every query that selects a feed does.
+ */
+export const feedSlugSql = sql`coalesce(
+    nullif(left(trim(both '-' from regexp_replace(lower(f.title), '[^a-z0-9]+', '-', 'g')), 60), ''),
+    nullif(trim(both '-' from regexp_replace(lower(split_part(coalesce(f.site_url, f.url), '/', 3)), '[^a-z0-9]+', '-', 'g')), ''),
+    'feed'
+  )`;
+
 /** Everything slugify can produce, so callers can ask "would this collide?". */
 export async function slugTaken(userId: number, slug: string, excludeId?: number): Promise<boolean> {
   const rows = await db.execute(sql`

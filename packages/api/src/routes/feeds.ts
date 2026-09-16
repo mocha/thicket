@@ -13,6 +13,7 @@ import { refreshFeed } from "../feeds/refresh.js";
 import { isHttpUrl, normalizeFeedUrl } from "../feeds/normalize.js";
 import { refreshIcon } from "../feeds/icons.js";
 import { isYouTubeUrl, YOUTUBE_FEED_PATTERN } from "../feeds/youtube.js";
+import { feedSlugSql } from "../lib/slug.js";
 
 export const feeds = new Hono();
 
@@ -21,11 +22,7 @@ const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
 /** Columns every feed listing shares: identity, health, stats, and the caller's relationship to it. */
 const feedColumns = (userId: number) => sql`
   f.id, f.url, f.site_url as "siteUrl", f.title, f.description, f.kind,
-  coalesce(
-    nullif(left(trim(both '-' from regexp_replace(lower(f.title), '[^a-z0-9]+', '-', 'g')), 60), ''),
-    nullif(trim(both '-' from regexp_replace(lower(split_part(coalesce(f.site_url, f.url), '/', 3)), '[^a-z0-9]+', '-', 'g')), ''),
-    'feed'
-  ) as slug,
+  ${feedSlugSql} as slug,
   f.last_fetched_at as "lastFetchedAt", f.next_fetch_at as "nextFetchAt", f.fetch_interval_s as "fetchIntervalS",
   f.consecutive_failures as "consecutiveFailures", f.last_status as "lastStatus", f.last_error as "lastError",
   f.last_item_at as "lastItemAt", f.created_at as "createdAt", f.etag, f.last_modified as "lastModified",

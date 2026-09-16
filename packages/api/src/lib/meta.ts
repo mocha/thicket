@@ -11,6 +11,7 @@ import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { PUBLIC_URL } from "./config.js";
 import { publicStatus } from "./instance.js";
+import { feedSlugSql } from "./slug.js";
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
 const meta = (p: string, v: string) => `<meta property="${p}" content="${esc(v)}" />`;
@@ -85,11 +86,47 @@ async function feedHead(id: number): Promise<Head | null> {
   return { title: f.title ?? host, description: `${about}A feed from ${host} on thicket, ${plural(f.posts, "post")} in the last 30 days.`, url: `${PUBLIC_URL}/feeds/${id}` };
 }
 
+/**
+ * A post's page. What a post is — its title, its opening line, who published
+ * it — is the publisher's own shopfront copy, so an unfurl of a link someone
+ * shared says what the post is. The body is not here; that is members-only and
+ * lives behind /api/items/:id/content.
+ */
+async function itemHead(id: number): Promise<Head | null> {
+  const rows = await db.execute<{ title: string | null; summary: string | null; author: string | null; imageUrl: string | null; publishedAt: string; feedId: number; feedSlug: string; feedTitle: string | null; siteUrl: string | null; url: string }>(sql`
+    select i.title, i.summary, i.author, i.image_url as "imageUrl", i.published_at as "publishedAt",
+           f.id as "feedId", ${feedSlugSql} as "feedSlug", f.title as "feedTitle", f.site_url as "siteUrl", f.url
+    from items i join feeds f on f.id = i.feed_id where i.id = ${id}
+  `);
+  const it = rows.rows[0];
+  if (!it) return null;
+  const host = new URL(it.siteUrl ?? it.url).hostname.replace(/^www\./, "");
+  const source = it.feedTitle ?? host;
+  const gist = it.summary?.trim().replace(/\s+/g, " ").slice(0, 240);
+  const by = it.author ? `${it.author}, ` : "";
+  return {
+    title: it.title ?? source,
+    description: gist ? `${gist.replace(/([^.!?])$/, "$1.")} — ${by}${source}, on thicket.` : `A post by ${by}${source}, on thicket.`,
+    url: `${PUBLIC_URL}/feeds/${it.feedId}/${it.feedSlug}/${id}`,
+    type: "article",
+    extra: it.imageUrl ? [meta("og:image", it.imageUrl)] : [],
+  };
+}
+
 /** The head fragment for a path. Always returns something; public pages get specifics, everything else the instance's generic head. */
 export async function headForPath(path: string): Promise<string> {
   const status = await publicStatus();
   const site = status.name;
   const generic: Head = { title: site, description: "Read the web on your own terms. Follow the sites you like and get every new post in one calm stream, newest first. No ranking, no ads, nothing about you for sale.", url: `${PUBLIC_URL}${path === "/" ? "" : path}` };
+  // A post inside its feed: /feeds/:id/:slug/:item, with an optional readable tail.
+  const post = /^\/feeds\/\d+\/[^/]+\/(\d+)(?:\/[^/]*)?\/?$/.exec(path);
+  if (post) {
+    try {
+      return render((await itemHead(Number(post[1]))) ?? generic, site);
+    } catch {
+      return render(generic, site);
+    }
+  }
   const feed = /^\/feeds\/(\d+)(?:\/([^/]+))?\/?$/.exec(path);
   if (feed && feed[2] !== "settings") {
     try {

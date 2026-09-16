@@ -14,11 +14,12 @@ import { currentUser } from "../lib/user.js";
 import { noteColumns } from "../lib/notes.js";
 import { visitorCap } from "../lib/instance.js";
 import { SHORTS_URL_PATTERN } from "../feeds/youtube.js";
+import { feedSlugSql } from "../lib/slug.js";
 
 export const river = new Hono();
 
 export type RiverItem = {
-  id: number; feedId: number; feedTitle: string | null; siteUrl: string | null;
+  id: number; feedId: number; feedTitle: string | null; feedSlug: string; siteUrl: string | null;
   url: string | null; title: string | null; author: string | null; summary: string | null;
   imageUrl: string | null; publishedAt: string; hasIcon: boolean; bookmarkId: number | null;
   myNote: { id: number; body: string; createdAt: string; updatedAt: string } | null;
@@ -133,6 +134,7 @@ river.get("/", async (c) => {
     )
     , page as (${pageCte})
     select i.id, i.feed_id as "feedId", coalesce(fs.display_name, f.title) as "feedTitle", f.site_url as "siteUrl",
+           ${feedSlugSql} as "feedSlug",
            i.url, i.title, i.author, i.summary, i.image_url as "imageUrl", i.published_at as "publishedAt",
            exists(select 1 from blocks b where b.user_id = ${userId} and b.feed_id = i.feed_id) as blocked,
            exists(select 1 from feed_icons fi where fi.feed_id = i.feed_id and not fi.generic) as "hasIcon",

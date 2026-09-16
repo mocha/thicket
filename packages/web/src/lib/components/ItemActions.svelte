@@ -8,7 +8,7 @@
   import { api, bookmarksApi } from '$lib/api';
   import { showToast } from '$lib/toast.svelte';
 
-  let { item, noteOpen = false, onnote, via }: { item: RiverItem; noteOpen?: boolean; onnote: () => void; via: 'card' | 'reader' } = $props();
+  let { item, noteOpen = false, onnote, via }: { item: RiverItem; noteOpen?: boolean; onnote: () => void; via: 'card' | 'reader' | 'post' } = $props();
   let saving = $state(false);
 
   /** Save this post. Post-level, private, one set. Tap again to remove. */
