@@ -387,3 +387,17 @@ export const fetchLog = pgTable("fetch_log", {
   itemsNew: integer("items_new"),
   error: text("error"),
 }, (t) => [index("fetch_log_feed_at_idx").on(t.feedId, t.at)]);
+
+/**
+ * "What's new": when a person last opened a collection, one row per person per
+ * collection. Posts newer than it are what the sidebar counts for people who
+ * turned the option on. Not per post and not per feed, on purpose: the table
+ * can never grow past users × collections, and thicket still keeps no record
+ * of which posts anyone read. A collection with no row counts from its own
+ * creation.
+ */
+export const collectionMarks = pgTable("collection_marks", {
+  userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  collectionId: bigint("collection_id", { mode: "number" }).notNull().references(() => collections.id, { onDelete: "cascade" }),
+  seenAt: timestamp("seen_at", { withTimezone: true }).notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.collectionId] })]);

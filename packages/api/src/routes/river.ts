@@ -29,10 +29,10 @@ export type RiverItem = {
 };
 
 /** Is this item a Short? False, not null, when the item has no address: a hidden post must be one we are sure of. */
-const isShort = sql`coalesce(i.url ~ ${SHORTS_URL_PATTERN}, false)`;
+export const isShort = sql`coalesce(i.url ~ ${SHORTS_URL_PATTERN}, false)`;
 
 /** This reader's Shorts default, for feeds they have not set either way. Signed out, there is none. */
-const shortsDefault = (userId: number) => sql`coalesce((select u.hide_shorts_by_default from users u where u.id = ${userId}), false)`;
+export const shortsDefault = (userId: number) => sql`coalesce((select u.hide_shorts_by_default from users u where u.id = ${userId}), false)`;
 
 /** Does this reader leave Shorts out of this feed? Their setting on it, else their default. */
 const hidesShorts = (userId: number, feedId: SQL) =>

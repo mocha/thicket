@@ -19,6 +19,8 @@ export type RiverItem = {
  * instance holds visitors to its newest items, and there were more than this
  * page. The number is that limit. No next page comes after it.
  */
+/** One collection's "what's new": posts newer than `since`, counted up to 100 (`more` past that). */
+export type Mark = { collectionId: number; since: string; count: number; more: boolean };
 export type RiverPage = { items: RiverItem[]; nextCursor: string | null; hidden: number; cappedAt?: number | null };
 
 /**
@@ -113,6 +115,10 @@ export const api = {
   },
   /** What you follow and what arrived today, for the top of All my feeds. */
   riverStats: () => j<{ feeds: number; collections: number; posts24h: number; feeds24h: number }>('/api/river/stats'),
+  /** What's new: posts since I last opened each of my collections. Only asked for from a device with the option on. */
+  marks: () => j<{ marks: Mark[] }>('/api/marks'),
+  /** I have just looked at this collection, and the newest post on screen was from seenAt. */
+  markSeen: (collectionId: number, seenAt: string) => j<{ collectionId: number; since: string }>(`/api/marks/${collectionId}`, { method: 'PUT', body: JSON.stringify({ seenAt }) }),
   feeds: (opts: { q?: string; following?: '1' | '0' | null; network?: '1' | '2' | null; since?: string | null; sort?: string; limit?: number; offset?: number } = {}) => {
     const q = new URLSearchParams();
     if (opts.q) q.set('q', opts.q);

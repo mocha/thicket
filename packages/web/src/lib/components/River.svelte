@@ -17,6 +17,8 @@
   import { dayKey, dayLabel } from '$lib/time';
   import { session } from '$lib/session.svelte';
   import { display } from '$lib/display.svelte';
+  import { marks, loadMarks, markSeen } from '$lib/marks.svelte';
+  import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import VisitorMore from './VisitorMore.svelte';
 
   let { collection = null, feed = null, showSource = true, emptyTitle = 'Nothing here yet', emptyBody = 'thicket shows the posts of sites you follow, newest first, with nothing in between. Add a site by its address and its posts start arriving here, or look through Explore to see what other people here read.', emptyHref = null, emptyCta = 'Add a feed', emptyAction = () => openAddFeed({ via: 'empty_river' }) }: {
@@ -36,6 +38,8 @@
   let cappedAt = $state<number | null>(null);
   let sentinel = $state<HTMLElement | null>(null);
   let loadedKey = $state<string | undefined>(undefined);
+  /** "What's new": where this collection's count started from when this list opened. Posts after it are marked. null = not marking. */
+  let sinceAtOpen = $state<string | null>(null);
 
   type Group = { key: string; label: string; items: RiverItem[] };
   const groups = $derived.by<Group[]>(() => {
@@ -71,9 +75,28 @@
   }
 
   export function reload() {
-    items = []; cursor = null; done = false; hidden = 0; cappedAt = null; pageIndex = 0;
-    return loadMore(true);
+    items = []; cursor = null; done = false; hidden = 0; cappedAt = null; pageIndex = 0; sinceAtOpen = null;
+    return loadMore(true).then(noteSeen);
   }
+
+  /**
+   * The first page is on screen: remember where "new" started so those posts
+   * can be marked, then move this collection's mark up to the newest post
+   * shown. Only on a device with the option on, only for my own collections
+   * (Everything is the root collection's mark). A single feed has no mark.
+   */
+  async function noteSeen() {
+    if (!display.fresh || !session.user || feed !== null) return;
+    await Promise.all([loadMarks(), loadCollections()]);
+    const id = collection ?? collectionStore.rootId;
+    const m = id ? marks.byId[id] : undefined;
+    if (!id || !m) return;
+    sinceAtOpen = m.since;
+    const newest = items[0]?.publishedAt;
+    const at = newest && new Date(newest).getTime() < Date.now() ? newest : new Date().toISOString();
+    void markSeen(id, at);
+  }
+  const isFresh = (item: RiverItem) => sinceAtOpen !== null && new Date(item.publishedAt) > new Date(sinceAtOpen);
 
   $effect(() => {
     const key = `${collection}|${feed}`;
@@ -161,7 +184,7 @@
       <div class="pagehead"><span class="when">{pageLabel}</span><span class="n">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
       <div class="grid" style:grid-template-columns="repeat({cols}, minmax(0, 1fr))" style:grid-auto-rows="{CARD_H}px" style:gap="{GAP}px">
         {#each pageItems as item (item.id)}
-          <ItemCard {item} {showSource} compact />
+          <ItemCard {item} {showSource} compact fresh={isFresh(item)} />
         {/each}
       </div>
     {:else if !loading && items.length === 0 && !error}
@@ -185,7 +208,7 @@
       <section class="day">
         <h2 class="dayhead">{g.label}</h2>
         {#each g.items as item (item.id)}
-          <ItemCard {item} {showSource} />
+          <ItemCard {item} {showSource} fresh={isFresh(item)} />
         {/each}
       </section>
     {/each}

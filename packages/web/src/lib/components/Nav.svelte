@@ -7,6 +7,7 @@
   import { showToast } from '$lib/toast.svelte';
   import Monogram from './Monogram.svelte';
   import { display } from '$lib/display.svelte';
+  import { marks, badge, anyNew } from '$lib/marks.svelte';
 
   /**
    * The sidebar is a list of things to read, under the heading "Read": All
@@ -36,6 +37,11 @@
   const inFeeds = $derived(path.startsWith('/feeds/') && page.state.reader === undefined);
 
   $effect(() => { void loadCollections(); });
+
+  /** "What's new" counts, when this device shows them. Everything's count is the root collection's. */
+  const fresh = $derived(display.fresh);
+  const rootMark = $derived(collectionStore.rootId ? marks.byId[collectionStore.rootId] : undefined);
+  const anyColNew = $derived(fresh && anyNew(namedCollections().map((c) => c.id)));
 
   // "+ New collection" turns into an input in place; Enter makes it and opens it.
   let creating = $state(false);
@@ -80,17 +86,17 @@
   <ul>
     <!-- Mobile: the first tab is All collections. Desktop: "Read" is a heading over the list below. -->
     <li class="mobile-only">
-      <a href="/" aria-current={path === '/' ? 'page' : undefined}>{@render icon(icons.everything)}<span class="shortl">Read</span></a>
+      <a href="/" aria-current={path === '/' ? 'page' : undefined}><span class="ic">{@render icon(icons.everything)}{#if fresh && rootMark?.count}<span class="dot-new" aria-label="New posts"></span>{/if}</span><span class="shortl">Read</span></a>
     </li>
     <li class="mobile-only">
-      <a href={meHref} aria-current={onAnyCollection ? 'page' : undefined}>{@render icon(icons.collections)}<span class="shortl">Collections</span></a>
+      <a href={meHref} aria-current={onAnyCollection ? 'page' : undefined}><span class="ic">{@render icon(icons.collections)}{#if anyColNew}<span class="dot-new" aria-label="New posts"></span>{/if}</span><span class="shortl">Collections</span></a>
     </li>
     <li class="collections">
       <div class="heading">{@render icon(icons.everything)}<span>Read</span></div>
       <ul class="cols" aria-label="Things to read">
-        <li class="all"><a href="/" aria-current={path === '/' ? 'page' : undefined}><span class="name">All collections</span></a></li>
+        <li class="all"><a href="/" aria-current={path === '/' ? 'page' : undefined}><span class="name">All collections</span>{#if fresh && badge(rootMark)}<span class="fresh">{badge(rootMark)}</span>{/if}</a></li>
         {#each namedCollections() as c (c.id)}
-          <li><a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined}><span class="name">{c.name}</span><span class="n">{c.feedCount}</span></a></li>
+          <li><a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined}><span class="name">{c.name}</span>{#if fresh && badge(marks.byId[c.id])}<span class="fresh">{badge(marks.byId[c.id])}</span>{:else}<span class="n">{c.feedCount}</span>{/if}</a></li>
         {/each}
         <li class="new">
           {#if creating}
@@ -158,6 +164,10 @@
   }
   li > a[aria-current='page'] { color: var(--accent); }
   .mono { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; }
+  /* "What's new": a dot on a tab, a count in the sidebar. */
+  .ic { position: relative; display: grid; place-items: center; }
+  .dot-new { position: absolute; top: -1px; right: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
+  .fresh { flex: none; font-size: calc(11.5px * var(--size-app)); font-weight: 700; line-height: 1.5; padding: 0 7px; border-radius: 999px; color: var(--accent-ink); background: var(--accent); font-variant-numeric: tabular-nums; }
   li.you > a[aria-current='page'] .mono { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   /* Desktop: the sidebar. */

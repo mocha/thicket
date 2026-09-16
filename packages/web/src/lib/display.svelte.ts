@@ -34,6 +34,14 @@ export type Display = {
   fonts: Record<Role, { family: Family; size: Size }>;
   reading: ReadingMode;
   layout: Layout;
+  /**
+   * "What's new": count posts since I last opened each collection, and mark
+   * the new ones. Off by default. The mark itself is kept on the account (one
+   * timestamp per collection, nothing per post), but only written from a
+   * device where this is on, so turning it off here means this device records
+   * nothing.
+   */
+  fresh: boolean;
 };
 
 export const KEY = 'thicket:display';
@@ -46,7 +54,8 @@ export const DEFAULTS: Display = {
   accent: 'blue',
   fonts: { headings: { family: 'serif', size: 0 }, reading: { family: 'sans', size: 0 }, app: { family: 'sans', size: 0 } },
   reading: 'tabs',
-  layout: 'scroll'
+  layout: 'scroll',
+  fresh: false
 };
 
 export const APPEARANCES: { id: Appearance; label: string; note: string }[] = [
@@ -119,7 +128,8 @@ function coerce(raw: unknown): Display {
     accent: oneOf(ACCENTS, r.accent, DEFAULTS.accent),
     fonts: { headings: role('headings'), reading: role('reading'), app: role('app') },
     reading: oneOf(READING_MODES, r.reading, DEFAULTS.reading),
-    layout: oneOf(LAYOUTS, r.layout, DEFAULTS.layout)
+    layout: oneOf(LAYOUTS, r.layout, DEFAULTS.layout),
+    fresh: r.fresh === true
   };
 }
 
@@ -233,3 +243,8 @@ function snapshot(): Display {
   const { configured: _c, ...rest } = display;
   return structuredClone($state.snapshot(rest)) as Display;
 }
+
+export const FRESH_OPTIONS: { id: 'on' | 'off'; label: string; note: string }[] = [
+  { id: 'off', label: 'Off', note: 'The list is the list. Nothing is counted or marked.' },
+  { id: 'on', label: 'On', note: 'Each collection shows how many posts arrived since you last opened it, and those posts are marked in the list.' }
+];

@@ -11,6 +11,8 @@
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
   import { loadCollections } from '$lib/collections.svelte';
+  import { marks, badge } from '$lib/marks.svelte';
+  import { display } from '$lib/display.svelte';
 
   /** On your own profile the Collections section is also where you make one. */
   let creating = $state(false);
@@ -161,6 +163,7 @@
                   <span class="name">{c.name}{#if profile.isMe && !c.isPublic} <span class="tag">Private</span>{/if}</span>
                   {#if c.description}<span class="desc">{c.description}</span>{/if}
                 </div>
+                {#if profile.isMe && display.fresh && badge(marks.byId[c.id])}<span class="fresh">{badge(marks.byId[c.id])} new</span>{/if}
                 <span class="count">{c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'}</span>
                 <span class="chev" aria-hidden="true">›</span>
               </a>
@@ -258,6 +261,7 @@
   .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; vertical-align: middle; margin-left: 4px; }
   .desc { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .count { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; }
+  .fresh { flex: none; font-size: calc(11.5px * var(--size-app)); font-weight: 700; line-height: 1.5; padding: 0 7px; border-radius: 999px; color: var(--accent-ink); background: var(--accent); white-space: nowrap; }
   .chev { color: var(--text-3); font-size: calc(20px * var(--size-app)); }
   .add { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(15px * var(--size-app)); text-align: left; }
   li:first-child .add { border-top: 0; }

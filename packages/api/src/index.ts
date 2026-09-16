@@ -23,6 +23,7 @@ import { explore } from "./routes/explore.js";
 import { notes } from "./routes/notes.js";
 import { search } from "./routes/search.js";
 import { items } from "./routes/items.js";
+import { marks } from "./routes/marks.js";
 import { startScheduler } from "./feeds/scheduler.js";
 import { attachUser, pruneSessions } from "./lib/auth.js";
 import { startRetention } from "./lib/retention.js";
@@ -53,6 +54,7 @@ app.route("/api/events", events);
 app.route("/api/bookmarks", bookmarks);
 app.route("/api/notes", notes);
 app.route("/api/items", items);
+app.route("/api/marks", marks);
 
 const scheduler = SCHEDULER
   ? startScheduler({ tickMs: SCHEDULER_TICK_MS, concurrency: FETCH_CONCURRENCY, log: (m) => console.log(`[fetch] ${m}`) })

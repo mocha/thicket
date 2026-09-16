@@ -11,8 +11,11 @@
   import { openReader, readsInline } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
 
-  /** `compact`: the paged layout's fixed-height card. Thumbnail beside the text, two lines each, notes counted rather than shown. */
-  let { item, showSource = true, compact = false }: { item: RiverItem; showSource?: boolean; compact?: boolean } = $props();
+  /**
+   * `compact`: the paged layout's fixed-height card. Thumbnail beside the text, two lines each, notes counted rather than shown.
+   * `fresh`: arrived since the reader last opened this list ("What's new", on for this device). A small mark by the time.
+   */
+  let { item, showSource = true, compact = false, fresh = false }: { item: RiverItem; showSource?: boolean; compact?: boolean; fresh?: boolean } = $props();
   let imgFailed = $state(false);
   let popover = $state(false);
   let myNote = $state<Note | null>(null);
@@ -60,6 +63,7 @@
       <span class="dot">·</span>
     {/if}
     <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{relativeTime(item.publishedAt)}</time>
+    {#if fresh}<span class="fresh" title="Arrived since you last opened this list">New</span>{/if}
     <span class="spacer"></span>
     {#if session.user}
       <ItemActions {item} noteOpen={editing} onnote={noteButton} via="card" />
@@ -127,6 +131,7 @@
   .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dot { color: var(--text-3); }
   time { color: var(--text-3); white-space: nowrap; }
+  .fresh { font-size: calc(10.5px * var(--size-app)); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
   .spacer { flex: 1; }
   .link { display: block; padding: 8px 16px 16px; -webkit-tap-highlight-color: transparent; }
   @media (hover: hover) { .link:hover h2 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }

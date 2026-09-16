@@ -11,6 +11,7 @@
   import { addFeed } from '$lib/addfeed.svelte';
   import { session, loadMe, isPublicPath } from '$lib/session.svelte';
   import { display, loadDisplay } from '$lib/display.svelte';
+  import { watchMarks } from '$lib/marks.svelte';
   let { children } = $props();
 
   /**
@@ -31,6 +32,9 @@
     else if (signedIn && (path === '/login' || path === '/signup')) void goto(page.url.searchParams.get('next') || '/', { replaceState: true });
   });
   const show = $derived(session.loaded && (signedIn || isPublic));
+
+  // "What's new" counts, only while this device has the option on and someone is signed in.
+  $effect(() => { if (signedIn && display.fresh) return watchMarks(); });
 </script>
 
 <svelte:head><title>thicket</title></svelte:head>

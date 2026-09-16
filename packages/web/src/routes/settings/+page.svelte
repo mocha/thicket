@@ -2,11 +2,11 @@
   import { goto } from '$app/navigation';
   import { api, authApi, profileHref, ApiError, type ShareLevel } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
-  import { display, setDisplay, APPEARANCES, READING_MODES, LAYOUTS, type Display } from '$lib/display.svelte';
+  import { display, setDisplay, APPEARANCES, READING_MODES, LAYOUTS, FRESH_OPTIONS, type Display } from '$lib/display.svelte';
   import Tiles from '$lib/components/display/Tiles.svelte';
   import ThemePicker from '$lib/components/display/ThemePicker.svelte';
   import FontTable from '$lib/components/display/FontTable.svelte';
-  import { APPEARANCE_ART, READING_ART, LAYOUT_ART } from '$lib/components/display/art';
+  import { APPEARANCE_ART, READING_ART, LAYOUT_ART, FRESH_ART } from '$lib/components/display/art';
   import { showToast } from '$lib/toast.svelte';
 
   /**
@@ -160,6 +160,11 @@
     <Tiles name="Opening a post" options={READING_MODES} value={display.reading} art={READING_ART} notes onchange={(v) => choose({ reading: v }, 'reading')} />
   </fieldset>
   <fieldset>
+    <legend>What’s new</legend>
+    <Tiles name="What’s new" options={FRESH_OPTIONS} value={display.fresh ? 'on' : 'off'} art={FRESH_ART} notes onchange={(v) => choose({ fresh: v === 'on' }, 'fresh')} />
+    <p class="fine">To count what’s new, thicket keeps one timestamp per collection: when you last opened it from a device with this on. That is the whole record. It never notes which posts you read or open, and nothing is kept per feed or per post. Turn this off and this device stops recording; the timestamps already kept simply stop moving.</p>
+  </fieldset>
+  <fieldset>
     <legend>Moving through the list</legend>
     <Tiles name="Moving through the list" options={LAYOUTS} value={display.layout} art={LAYOUT_ART} notes onchange={(v) => choose({ layout: v }, 'layout')} />
   </fieldset>
@@ -267,6 +272,7 @@
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
   h2 { font-size: calc(16px * var(--size-app)); margin: 0 0 4px; }
   .help { margin: 0 0 14px; font-size: calc(14px * var(--size-app)); color: var(--text-3); }
+  .fine { margin: 12px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
   form { display: flex; flex-direction: column; gap: 12px; }
   label { display: flex; flex-direction: column; gap: 6px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
   input[type='text'], input[type='url'], input[type='password'], textarea { padding: 11px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); font-family: inherit; resize: vertical; }

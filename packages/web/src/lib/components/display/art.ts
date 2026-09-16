@@ -47,3 +47,12 @@ export const LAYOUT_ART = {
     `<path d="M43 12l3 3-3 3" stroke="var(--accent)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
   )
 };
+
+/** What's new: the sidebar list, plain, or with a count beside two of its rows. */
+export const FRESH_ART = {
+  off: frame(`${lines(6, 7, 26, 'var(--text-3)', 4, 5.5)}`),
+  on: frame(
+    `${lines(6, 7, 26, 'var(--text-3)', 4, 5.5)}` +
+    `<rect x="36" y="5.2" width="9" height="4.6" rx="2.3" fill="var(--accent)"/><rect x="36" y="16.2" width="9" height="4.6" rx="2.3" fill="var(--accent)"/>`
+  )
+};
