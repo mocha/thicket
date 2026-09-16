@@ -246,5 +246,5 @@ function snapshot(): Display {
 
 export const FRESH_OPTIONS: { id: 'on' | 'off'; label: string; note: string }[] = [
   { id: 'off', label: 'Off', note: 'The list is the list. Nothing is counted or marked.' },
-  { id: 'on', label: 'On', note: 'Each collection shows how many posts arrived since you last opened it, and those posts are marked in the list.' }
+  { id: 'on', label: 'On', note: 'Each collection shows how much has arrived since you last read it, and the list marks where the new posts end.' }
 ];

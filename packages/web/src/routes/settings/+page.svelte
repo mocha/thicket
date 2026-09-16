@@ -162,7 +162,7 @@
   <fieldset>
     <legend>What’s new</legend>
     <Tiles name="What’s new" options={FRESH_OPTIONS} value={display.fresh ? 'on' : 'off'} art={FRESH_ART} notes onchange={(v) => choose({ fresh: v === 'on' }, 'fresh')} />
-    <p class="fine">To count what’s new, thicket keeps one timestamp per collection: when you last opened it from a device with this on. That is the whole record. It never notes which posts you read or open, and nothing is kept per feed or per post. Turn this off and this device stops recording; the timestamps already kept simply stop moving.</p>
+    <p class="fine">Kept on this device, like everything else here. Your browser remembers, for each collection, the newest post you have scrolled past, and asks the server only how many posts are newer than that. The server stores nothing: not the point, not which posts you read or open. Another device of yours keeps its own points.</p>
   </fieldset>
   <fieldset>
     <legend>Moving through the list</legend>

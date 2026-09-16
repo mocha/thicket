@@ -11,7 +11,7 @@
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
   import { loadCollections } from '$lib/collections.svelte';
-  import { marks, badge } from '$lib/marks.svelte';
+  import { marks, countText } from '$lib/marks.svelte';
   import { display } from '$lib/display.svelte';
 
   /** On your own profile the Collections section is also where you make one. */
@@ -163,7 +163,7 @@
                   <span class="name">{c.name}{#if profile.isMe && !c.isPublic} <span class="tag">Private</span>{/if}</span>
                   {#if c.description}<span class="desc">{c.description}</span>{/if}
                 </div>
-                {#if profile.isMe && display.fresh && badge(marks.byId[c.id])}<span class="fresh">{badge(marks.byId[c.id])} new</span>{/if}
+                {#if profile.isMe && display.fresh && countText(marks.byId[c.id])}<span class="fresh">{countText(marks.byId[c.id])} new</span>{/if}
                 <span class="count">{c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'}</span>
                 <span class="chev" aria-hidden="true">›</span>
               </a>

@@ -19,7 +19,7 @@ export const session = $state<{ user: Me | null; loaded: boolean; unreachable: s
 function applyUser(me: Me | null) {
   if (me?.id !== session.user?.id) {
     resetCollections();
-    resetMarks();
+    resetMarks(me?.id ?? null);
     closeAddFeed();
   }
   session.user = me;

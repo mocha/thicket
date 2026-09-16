@@ -13,9 +13,18 @@
 
   /**
    * `compact`: the paged layout's fixed-height card. Thumbnail beside the text, two lines each, notes counted rather than shown.
-   * `fresh`: arrived since the reader last opened this list ("What's new", on for this device). A small mark by the time.
+   * `fresh`: newer than the point where this reader last stopped in this list ("What's new", on for this device). A small mark by the time.
+   * `onpassed`: called once the card has scrolled out above the viewport, which is how the list learns what has been read past.
    */
-  let { item, showSource = true, compact = false, fresh = false }: { item: RiverItem; showSource?: boolean; compact?: boolean; fresh?: boolean } = $props();
+  let { item, showSource = true, compact = false, fresh = false, onpassed }: { item: RiverItem; showSource?: boolean; compact?: boolean; fresh?: boolean; onpassed?: () => void } = $props();
+  let el = $state<HTMLElement | null>(null);
+  $effect(() => {
+    if (!onpassed || !el) return;
+    // Fires only when visibility changes, so scrolling costs nothing extra. Above the top means read past; below the bottom means not yet.
+    const io = new IntersectionObserver((es) => { for (const e of es) if (!e.isIntersecting && e.boundingClientRect.bottom <= 0) onpassed?.(); });
+    io.observe(el);
+    return () => io.disconnect();
+  });
   let imgFailed = $state(false);
   let popover = $state(false);
   let myNote = $state<Note | null>(null);
@@ -53,7 +62,7 @@
   The body is the link out, or opens the reader for those who read here. Notes (mine, then
   the ones I'm allowed to see) hang off the bottom.
 -->
-<article class="card" class:compact>
+<article class="card" class:compact bind:this={el}>
   <header>
     {#if showSource}
       <button class="source" onclick={openSource} title="About {source}">
@@ -63,7 +72,7 @@
       <span class="dot">·</span>
     {/if}
     <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{relativeTime(item.publishedAt)}</time>
-    {#if fresh}<span class="fresh" title="Arrived since you last opened this list">New</span>{/if}
+    {#if fresh}<span class="fresh" title="Newer than where you last stopped in this list">New</span>{/if}
     <span class="spacer"></span>
     {#if session.user}
       <ItemActions {item} noteOpen={editing} onnote={noteButton} via="card" />

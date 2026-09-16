@@ -1,14 +1,19 @@
 /**
- * What's new: how many posts have arrived in each of my collections since I
- * last opened it. One mark per person per collection (collection_marks); a
- * collection with no mark counts from its own creation. Counts are capped at
- * 100, so a mark nobody has moved for a month costs a bounded scan, and they
- * use the per-feed index the river does, so the cost follows the feeds I
- * follow rather than the size of the instance (measured 2026-09-15: 1.2 ms
- * for 650 feeds across 14 collections).
+ * What's new: for each of my collections, how many posts are newer than a
+ * point this device remembers, and how busy the collection is.
  *
- * The client only calls either endpoint from a device where the option is on.
- * Nothing is kept per post or per feed.
+ * The device keeps the point (lib/marks.svelte.ts in the web app): the newest
+ * post the reader has actually scrolled or paged past in that collection. It
+ * sends those points here and gets counts back. Nothing is stored: the server
+ * learns "this browser has seen up to Tuesday 14:02 in News" for the length of
+ * one request, and never which posts anyone read. That is the whole record.
+ *
+ * Counts stop at 101 so a point nobody has moved for a month costs a bounded
+ * scan, and use the per-feed index the river uses, so the cost follows the
+ * feeds I follow rather than the size of the instance (measured 2026-09-15:
+ * 1.2 ms for 650 feeds across 14 collections). `weekly` is the collection's
+ * posts in the last seven days, which is what lets the sidebar show a quiet
+ * collection's exact number and a firehose's mere dot.
  */
 import { Hono } from "hono";
 import { sql } from "drizzle-orm";
@@ -18,23 +23,32 @@ import { isShort, shortsDefault } from "./river.js";
 
 export const marks = new Hono();
 
-export type Mark = { collectionId: number; since: string; count: number; more: boolean };
+export type Mark = { collectionId: number; count: number; more: boolean; weekly: number };
 
-/** The cap: past this the sidebar says "100+" and the scan stops. */
+/** Past this the sidebar says "100+" and the scan stops. */
 const CAP = 100;
 
-marks.get("/", async (c) => {
+marks.post("/counts", async (c) => {
   const user = currentUser(c);
-  const rows = await db.execute<{ collectionId: number; since: string; count: number; more: boolean }>(sql`
+  const body = await c.req.json<{ anchors?: Record<string, string> }>().catch(() => ({} as { anchors?: Record<string, string> }));
+  const pairs: { id: number; at: string }[] = [];
+  for (const [k, v] of Object.entries(body.anchors ?? {})) {
+    const id = Number(k);
+    const at = new Date(v);
+    if (!Number.isFinite(id) || Number.isNaN(at.getTime())) continue;
+    pairs.push({ id, at: at.toISOString() });
+  }
+  // One JSON parameter rather than two arrays: the sql tag would spell an array out as a row.
+  const anchorsJson = JSON.stringify(pairs);
+  const rows = await db.execute<{ collectionId: number; count: number; more: boolean; weekly: number }>(sql`
     with recursive cols as (
-      select id, parent_id, created_at from collections where user_id = ${user.id}
+      select id, parent_id from collections where user_id = ${user.id}
     ), tree as (
       select id as root, id as node from cols
       union all
       select t.root, c.id from tree t join cols c on c.parent_id = t.node
-    ), since as (
-      select c.id, coalesce(m.seen_at, c.created_at) as since
-      from cols c left join collection_marks m on m.user_id = ${user.id} and m.collection_id = c.id
+    ), anchors as (
+      select (e->>'id')::bigint as id, (e->>'at')::timestamptz as at from jsonb_array_elements(${anchorsJson}::jsonb) e
     ), followed as (
       select t.root, cf.feed_id, bool_or(coalesce(fs.hide_shorts, ${shortsDefault(user.id)})) as hide_shorts
       from tree t
@@ -43,39 +57,22 @@ marks.get("/", async (c) => {
       where not exists (select 1 from blocks b where b.user_id = ${user.id} and b.feed_id = cf.feed_id)
       group by t.root, cf.feed_id
     )
-    select s.id as "collectionId", s.since, n.count, n.count > ${CAP} as more
-    from since s cross join lateral (
+    select c.id as "collectionId", coalesce(n.count, 0) as count, coalesce(n.count, 0) > ${CAP} as more, w.weekly
+    from cols c
+    left join anchors a on a.id = c.id
+    cross join lateral (
+      select count(*)::int as weekly from followed f join items i on i.feed_id = f.feed_id
+      where f.root = c.id and i.published_at > now() - interval '7 days' and not (f.hide_shorts and ${isShort})
+    ) w
+    left join lateral (
       select count(*)::int as count from (
         select 1 from followed f join items i on i.feed_id = f.feed_id
-        where f.root = s.id and i.published_at > s.since and not (f.hide_shorts and ${isShort})
+        where f.root = c.id and i.published_at > a.at and not (f.hide_shorts and ${isShort})
         limit ${CAP + 1}
       ) x
-    ) n
+    ) n on a.id is not null
   `);
   return c.json({
-    marks: rows.rows.map((r) => ({ collectionId: Number(r.collectionId), since: new Date(r.since).toISOString(), count: Math.min(r.count, CAP), more: r.more })),
+    marks: rows.rows.map((r) => ({ collectionId: Number(r.collectionId), count: Math.min(r.count, CAP), more: r.more, weekly: r.weekly })),
   });
-});
-
-/**
- * "I have just looked at this collection." The mark moves to the newest post
- * that was on screen, never backwards, and never into the future; the next
- * count starts from there. Only my own collections have marks.
- */
-marks.put("/:id", async (c) => {
-  const user = currentUser(c);
-  const id = Number(c.req.param("id"));
-  const body = await c.req.json<{ seenAt?: string }>().catch(() => ({} as { seenAt?: string }));
-  const at = body.seenAt ? new Date(body.seenAt) : new Date();
-  if (!Number.isFinite(id) || Number.isNaN(at.getTime())) return c.json({ error: "bad request" }, 400);
-  const seenAt = at.getTime() > Date.now() ? new Date() : at;
-  const rows = await db.execute<{ since: string }>(sql`
-    insert into collection_marks (user_id, collection_id, seen_at)
-    select ${user.id}, id, ${seenAt.toISOString()}::timestamptz from collections where id = ${id} and user_id = ${user.id}
-    on conflict (user_id, collection_id) do update set seen_at = greatest(collection_marks.seen_at, excluded.seen_at)
-    returning seen_at as since
-  `);
-  const row = rows.rows[0];
-  if (!row) return c.json({ error: "not found" }, 404);
-  return c.json({ collectionId: id, since: new Date(row.since).toISOString() });
 });

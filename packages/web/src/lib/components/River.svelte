@@ -17,7 +17,7 @@
   import { dayKey, dayLabel } from '$lib/time';
   import { session } from '$lib/session.svelte';
   import { display } from '$lib/display.svelte';
-  import { marks, loadMarks, markSeen } from '$lib/marks.svelte';
+  import { marks, loadMarks, anchorFor, advance, begin, recount, countText } from '$lib/marks.svelte';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import VisitorMore from './VisitorMore.svelte';
 
@@ -38,8 +38,17 @@
   let cappedAt = $state<number | null>(null);
   let sentinel = $state<HTMLElement | null>(null);
   let loadedKey = $state<string | undefined>(undefined);
-  /** "What's new": where this collection's count started from when this list opened. Posts after it are marked. null = not marking. */
-  let sinceAtOpen = $state<string | null>(null);
+  /**
+   * "What's new", as this list opened: the point where the reader last stopped
+   * in this collection, and the count above it. Posts newer than the point are
+   * marked, and a line sits where they end, for the whole visit, even as
+   * reading moves the point on. null = not marking (option off, a single feed,
+   * someone else's collection, or the first time here).
+   */
+  let anchorAtOpen = $state<string | null>(null);
+  let newAtOpen = $state('');
+  /** The collection whose point this list moves: the one shown, or the root for Everything. */
+  const markId = $derived(feed !== null ? null : (collection ?? collectionStore.rootId));
 
   type Group = { key: string; label: string; items: RiverItem[] };
   const groups = $derived.by<Group[]>(() => {
@@ -75,28 +84,46 @@
   }
 
   export function reload() {
-    items = []; cursor = null; done = false; hidden = 0; cappedAt = null; pageIndex = 0; sinceAtOpen = null;
-    return loadMore(true).then(noteSeen);
+    items = []; cursor = null; done = false; hidden = 0; cappedAt = null; pageIndex = 0; anchorAtOpen = null; newAtOpen = '';
+    return loadMore(true).then(noteOpened);
   }
 
   /**
-   * The first page is on screen: remember where "new" started so those posts
-   * can be marked, then move this collection's mark up to the newest post
-   * shown. Only on a device with the option on, only for my own collections
-   * (Everything is the root collection's mark). A single feed has no mark.
+   * The first page is on screen. Opening moves nothing: the point where the
+   * reader last stopped is read, kept for the visit, and used to mark what is
+   * newer. Reading past posts is what moves it (passed, below). The first time
+   * this device shows a collection there is no point yet; the newest post on
+   * screen becomes it, so the next visit has something to measure from.
    */
-  async function noteSeen() {
-    if (!display.fresh || !session.user || feed !== null) return;
+  async function noteOpened() {
+    if (!display.fresh || !session.user || markId === null) return;
     await Promise.all([loadMarks(), loadCollections()]);
-    const id = collection ?? collectionStore.rootId;
-    const m = id ? marks.byId[id] : undefined;
-    if (!id || !m) return;
-    sinceAtOpen = m.since;
-    const newest = items[0]?.publishedAt;
-    const at = newest && new Date(newest).getTime() < Date.now() ? newest : new Date().toISOString();
-    void markSeen(id, at);
+    const id = markId;
+    if (!id || !marks.byId[id]) return; // not one of mine
+    const a = anchorFor(id);
+    if (!a) { if (items[0]) begin(id, clampNow(items[0].publishedAt)); return; }
+    anchorAtOpen = a;
+    newAtOpen = countText(marks.byId[id]);
   }
-  const isFresh = (item: RiverItem) => sinceAtOpen !== null && new Date(item.publishedAt) > new Date(sinceAtOpen);
+  /** A post dated in the future would put the point ahead of posts still to arrive. */
+  const clampNow = (iso: string) => (new Date(iso).getTime() > Date.now() ? new Date().toISOString() : iso);
+  const isFresh = (item: RiverItem) => anchorAtOpen !== null && new Date(item.publishedAt) > new Date(anchorAtOpen);
+  /** This post has scrolled out above, or its page has been turned past: the reader has read to here. */
+  function passed(item: RiverItem) {
+    if (!display.fresh || markId === null || !marks.byId[markId]) return;
+    advance(markId, clampNow(item.publishedAt));
+    const a = anchorFor(markId);
+    if (!a) return;
+    // The list knows the remaining count only once it has reached a post that is not new, or the end.
+    const seenLoaded = done || items.some((i) => new Date(i.publishedAt) <= new Date(a));
+    if (seenLoaded) recount(markId, items.filter((i) => new Date(i.publishedAt) > new Date(a)).length);
+  }
+  /** Where the line goes: before the first post that is not new, if anything new sits above it. At the end if everything loaded is new and that is all there is. */
+  const boundaryId = $derived.by(() => {
+    if (anchorAtOpen === null || !items.length || !isFresh(items[0])) return null;
+    return items.find((i) => !isFresh(i))?.id ?? null;
+  });
+  const boundaryAtEnd = $derived(anchorAtOpen !== null && done && items.length > 0 && isFresh(items[0]) && boundaryId === null);
 
   $effect(() => {
     const key = `${collection}|${feed}`;
@@ -168,6 +195,8 @@
       await loadMore();
       if ((pageIndex + 1) * perPage >= items.length) return;
     }
+    // Turning past a page is reading it: the newest post on it is where the reader has got to.
+    if (pageItems[0]) passed(pageItems[0]);
     pageIndex++;
     api.event('page_turned', { direction: 'next', page: pageIndex });
     prefetch();
@@ -181,7 +210,7 @@
 {#if paged}
   <section class="river paged" aria-live="polite" bind:this={frame} style:height="{frameH}px">
     {#if pageItems.length}
-      <div class="pagehead"><span class="when">{pageLabel}</span><span class="n">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
+      <div class="pagehead"><span class="when">{pageLabel}</span>{#if newAtOpen}<span class="newn">{newAtOpen} new</span>{/if}<span class="n">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
       <div class="grid" style:grid-template-columns="repeat({cols}, minmax(0, 1fr))" style:grid-auto-rows="{CARD_H}px" style:gap="{GAP}px">
         {#each pageItems as item (item.id)}
           <ItemCard {item} {showSource} compact fresh={isFresh(item)} />
@@ -208,10 +237,16 @@
       <section class="day">
         <h2 class="dayhead">{g.label}</h2>
         {#each g.items as item (item.id)}
-          <ItemCard {item} {showSource} fresh={isFresh(item)} />
+          {#if item.id === boundaryId}
+            <div class="divider" role="separator" aria-label="End of what is new since your last visit"><span>That’s everything new since your last visit</span></div>
+          {/if}
+          <ItemCard {item} {showSource} fresh={isFresh(item)} onpassed={display.fresh && markId !== null ? () => passed(item) : undefined} />
         {/each}
       </section>
     {/each}
+    {#if boundaryAtEnd}
+      <div class="divider" role="separator" aria-label="End of what is new since your last visit"><span>That’s everything new since your last visit</span></div>
+    {/if}
 
     {#if !loading && items.length === 0 && !error}
       <div class="empty">
@@ -249,6 +284,11 @@
 
   /* Paged: a fixed frame, nothing scrolls, nothing moves. */
   .river.paged { gap: 0; overflow: hidden; }
+  /* "What's new": the line where the new posts end. Two colours only and no motion, so it reads on e-ink. */
+  .divider { display: flex; align-items: center; gap: 12px; margin: 2px 0; color: var(--text-2); font-size: calc(13px * var(--size-app)); font-weight: 600; }
+  .divider::before, .divider::after { content: ''; flex: 1; border-top: 2px solid var(--accent); }
+  .divider span { flex: none; }
+  .newn { color: var(--accent); font-weight: 700; margin-left: 10px; }
   .pagehead { display: flex; align-items: baseline; justify-content: space-between; height: 34px; padding: 6px 2px 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
   .pagehead .when { font-weight: 600; }
   .pagehead .n { font-size: calc(13px * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }

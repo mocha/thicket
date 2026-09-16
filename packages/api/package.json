@@ -15,7 +15,9 @@
     "passwd": "tsx --env-file=../../.env src/scripts/passwd.ts",
     "typecheck": "tsc --noEmit",
     "ingest": "tsx --env-file=../../.env src/scripts/ingest.ts",
-    "recover-bodies": "tsx --env-file=../../.env src/scripts/recover-bodies.ts"
+    "recover-bodies": "tsx --env-file=../../.env src/scripts/recover-bodies.ts",
+    "survey": "tsx --env-file=../../.env --no-warnings=ExperimentalWarning src/scripts/survey.ts",
+    "survey:stats": "tsx --env-file=../../.env --no-warnings=ExperimentalWarning src/scripts/survey-stats.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",

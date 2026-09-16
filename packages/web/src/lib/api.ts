@@ -19,8 +19,8 @@ export type RiverItem = {
  * instance holds visitors to its newest items, and there were more than this
  * page. The number is that limit. No next page comes after it.
  */
-/** One collection's "what's new": posts newer than `since`, counted up to 100 (`more` past that). */
-export type Mark = { collectionId: number; since: string; count: number; more: boolean };
+/** One collection's "what's new": posts newer than the point this device sent, counted up to 100 (`more` past that), and its posts in the last week. */
+export type Mark = { collectionId: number; count: number; more: boolean; weekly: number };
 export type RiverPage = { items: RiverItem[]; nextCursor: string | null; hidden: number; cappedAt?: number | null };
 
 /**
@@ -115,10 +115,8 @@ export const api = {
   },
   /** What you follow and what arrived today, for the top of All my feeds. */
   riverStats: () => j<{ feeds: number; collections: number; posts24h: number; feeds24h: number }>('/api/river/stats'),
-  /** What's new: posts since I last opened each of my collections. Only asked for from a device with the option on. */
-  marks: () => j<{ marks: Mark[] }>('/api/marks'),
-  /** I have just looked at this collection, and the newest post on screen was from seenAt. */
-  markSeen: (collectionId: number, seenAt: string) => j<{ collectionId: number; since: string }>(`/api/marks/${collectionId}`, { method: 'PUT', body: JSON.stringify({ seenAt }) }),
+  /** What's new: how many posts are newer than each point this device remembers. The server keeps nothing. */
+  marksCounts: (anchors: Record<string, string>) => j<{ marks: Mark[] }>('/api/marks/counts', { method: 'POST', body: JSON.stringify({ anchors }) }),
   feeds: (opts: { q?: string; following?: '1' | '0' | null; network?: '1' | '2' | null; since?: string | null; sort?: string; limit?: number; offset?: number } = {}) => {
     const q = new URLSearchParams();
     if (opts.q) q.set('q', opts.q);

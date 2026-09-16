@@ -7,7 +7,7 @@
   import { showToast } from '$lib/toast.svelte';
   import Monogram from './Monogram.svelte';
   import { display } from '$lib/display.svelte';
-  import { marks, badge, anyNew } from '$lib/marks.svelte';
+  import { marks, badge, anyNew, countText } from '$lib/marks.svelte';
 
   /**
    * The sidebar is a list of things to read, under the heading "Read": All
@@ -94,9 +94,10 @@
     <li class="collections">
       <div class="heading">{@render icon(icons.everything)}<span>Read</span></div>
       <ul class="cols" aria-label="Things to read">
-        <li class="all"><a href="/" aria-current={path === '/' ? 'page' : undefined}><span class="name">All collections</span>{#if fresh && badge(rootMark)}<span class="fresh">{badge(rootMark)}</span>{/if}</a></li>
+        <li class="all"><a href="/" aria-current={path === '/' ? 'page' : undefined} class:new={fresh && !!rootMark?.count}><span class="name">All collections</span>{#if fresh && rootMark?.count}<span class="dot-new inrow" title="{countText(rootMark)} new"></span>{/if}</a></li>
         {#each namedCollections() as c (c.id)}
-          <li><a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined}><span class="name">{c.name}</span>{#if fresh && badge(marks.byId[c.id])}<span class="fresh">{badge(marks.byId[c.id])}</span>{/if}</a></li>
+          {@const b = fresh ? badge(marks.byId[c.id]) : { kind: 'none' as const }}
+          <li><a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined} class:new={b.kind !== 'none'}><span class="name">{c.name}</span>{#if b.kind === 'count'}<span class="fresh">{b.text}</span>{:else if b.kind === 'dot'}<span class="dot-new inrow" title={b.title}></span>{/if}</a></li>
         {/each}
         <li class="new">
           {#if creating}
@@ -168,6 +169,7 @@
   .ic { position: relative; display: grid; place-items: center; }
   .dot-new { position: absolute; top: -1px; right: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
   .fresh { flex: none; font-size: calc(11.5px * var(--size-app)); font-weight: 700; line-height: 1.5; padding: 0 7px; border-radius: 999px; color: var(--accent-ink); background: var(--accent); font-variant-numeric: tabular-nums; }
+  .dot-new.inrow { position: static; flex: none; box-shadow: none; margin-right: 4px; }
   li.you > a[aria-current='page'] .mono { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   /* Desktop: the sidebar. */
@@ -194,6 +196,8 @@
     nav:not(.paged) .cols { display: flex; flex-direction: column; gap: 1px; padding-left: 36px; height: auto; }
     nav:not(.paged) .cols li > a { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
     nav:not(.paged) .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Something new: the name goes bold, the count or dot sits beside it. Bold reads in greyscale where a colour would not. */
+    nav:not(.paged) .cols a.new .name { font-weight: 600; color: var(--text); }
 
     nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 12px; border-radius: 8px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     nav:not(.paged) .cols .new button:hover { background: var(--surface-2); }
