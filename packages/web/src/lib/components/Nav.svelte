@@ -2,7 +2,7 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { api, collectionsApi, collectionHref, profileHref } from '$lib/api';
-  import { collectionStore, loadCollections, namedCollections } from '$lib/collections.svelte';
+  import { collectionStore, loadCollections, namedCollections, topLevelCollections, childrenOf, navOpen, loadNavOpen, toggleNavOpen } from '$lib/collections.svelte';
   import { session } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
   import Monogram from './Monogram.svelte';
@@ -37,6 +37,9 @@
   const inFeeds = $derived(path.startsWith('/feeds/') && page.state.reader === undefined);
 
   $effect(() => { void loadCollections(); });
+  $effect(() => { loadNavOpen(); });
+  /** A parent shows its children when it was opened on this device, or when one of them is the page you are on. */
+  const isOpen = (c: { id: number }) => navOpen.ids.includes(c.id) || childrenOf(c.id).some((k) => onCollection(k.slug));
 
   /** "What's new" counts, when this device shows them. Everything's count is the root collection's. */
   const fresh = $derived(display.fresh);
@@ -76,6 +79,11 @@
   };
 </script>
 
+{#snippet row(c: { id: number; name: string; slug: string })}
+  {@const b = fresh ? badge(marks.byId[c.id]) : { kind: 'none' as const }}
+  <a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined} class:new={b.kind !== 'none'}><span class="name">{c.name}</span>{#if b.kind === 'count'}<span class="fresh">{b.text}</span>{:else if b.kind === 'dot'}<span class="dot-new inrow" title={b.title}></span>{/if}</a>
+{/snippet}
+
 {#snippet icon(d: string)}
   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path {d} /></svg>
 {/snippet}
@@ -95,9 +103,21 @@
       <div class="heading">{@render icon(icons.everything)}<span>Read</span></div>
       <ul class="cols" aria-label="Things to read">
         <li class="all"><a href="/" aria-current={path === '/' ? 'page' : undefined} class:new={fresh && !!rootMark?.count}><span class="name">All collections</span>{#if fresh && rootMark?.count}<span class="dot-new inrow" title="{countText(rootMark)} new"></span>{/if}</a></li>
-        {#each namedCollections() as c (c.id)}
-          {@const b = fresh ? badge(marks.byId[c.id]) : { kind: 'none' as const }}
-          <li><a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined} class:new={b.kind !== 'none'}><span class="name">{c.name}</span>{#if b.kind === 'count'}<span class="fresh">{b.text}</span>{:else if b.kind === 'dot'}<span class="dot-new inrow" title={b.title}></span>{/if}</a></li>
+        {#each topLevelCollections() as c (c.id)}
+          {@const kids = childrenOf(c.id)}
+          <li class:parent={kids.length > 0}>
+            {@render row(c)}
+            {#if kids.length}
+              <button type="button" class="caret" class:open={isOpen(c)} aria-expanded={isOpen(c)} aria-label="{isOpen(c) ? 'Hide' : 'Show'} the collections inside {c.name}" onclick={() => toggleNavOpen(c.id)}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+              </button>
+            {/if}
+          </li>
+          {#if kids.length && isOpen(c)}
+            {#each kids as k (k.id)}
+              <li class="child">{@render row(k)}</li>
+            {/each}
+          {/if}
         {/each}
         <li class="new">
           {#if creating}
@@ -195,6 +215,14 @@
     nav:not(.paged) .cols .all > a { font-style: italic; }
     nav:not(.paged) .cols { display: flex; flex-direction: column; gap: 1px; padding-left: 36px; height: auto; }
     nav:not(.paged) .cols li > a { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
+    /* A parent: the name is the link, the caret beside it opens the group. Children sit indented under it. */
+    nav:not(.paged) .cols li.parent { display: flex; align-items: center; gap: 2px; }
+    nav:not(.paged) .cols li.parent > a { flex: 1; min-width: 0; }
+    nav:not(.paged) .cols .caret { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; color: var(--text-3); }
+    nav:not(.paged) .cols .caret:hover { background: var(--surface-2); color: var(--text); }
+    nav:not(.paged) .cols .caret svg { transition: transform 120ms ease; }
+    nav:not(.paged) .cols .caret.open svg { transform: rotate(90deg); }
+    nav:not(.paged) .cols li.child > a { padding-left: 24px; }
     nav:not(.paged) .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* Something new: the name goes bold, the count or dot sits beside it. Bold reads in greyscale where a colour would not. */
     nav:not(.paged) .cols a.new .name { font-weight: 600; color: var(--text); }

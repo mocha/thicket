@@ -273,7 +273,7 @@
           <li>
             <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={36} />
             <div class="meta">
-              <a class="title" href={f.siteUrl ?? f.url} target="_blank" rel="noopener">{feedListName(f)}</a>
+              <a class="title" href="/feeds/{f.id}">{feedListName(f)}</a>
               <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · last post {relativeTime(f.lastItemAt)}{/if}{#if f.consecutiveFailures > 0} · <span class="bad">failing</span>{/if}</div>
             </div>
             {#if memberships[f.id]}

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { and, eq, sql } from "drizzle-orm";
+import { subtreeFeedCount } from "../lib/subtree.js";
 import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { slugify, slugTaken, uniqueCollectionSlug } from "../lib/slug.js";
@@ -10,7 +11,7 @@ collections.get("/", async (c) => {
   const user = currentUser(c);
   const rows = await db.execute(sql`
     select col.id, col.parent_id as "parentId", col.name, col.slug, col.description, col.is_public as "isPublic",
-           (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount"
+           ${subtreeFeedCount(sql`col.id`)} as "feedCount"
     from collections col where col.user_id = ${user.id} order by col.parent_id nulls first, lower(col.name)
   `);
   return c.json({ collections: rows.rows, rootId: user.rootCollectionId });
@@ -168,7 +169,7 @@ collections.get("/:id", async (c) => {
     where cf.collection_id = ${id} order by lower(coalesce(cf.title_override, f.title, f.url))
   `);
   const children = await db.execute(sql`
-    select col.id, col.name, col.slug, col.description, (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount"
+    select col.id, col.name, col.slug, col.description, ${subtreeFeedCount(sql`col.id`)} as "feedCount"
     from collections col where col.parent_id = ${id} order by lower(col.name)
   `);
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);

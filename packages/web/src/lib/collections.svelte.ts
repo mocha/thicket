@@ -32,3 +32,28 @@ export function namedCollections(): Collection[] {
 export function defaultCollection(): Collection | null {
   return namedCollections().reduce<Collection | null>((best, c) => (!best || c.id < best.id ? c : best), null);
 }
+
+/** The collections that sit directly under the root: what the sidebar lists first. */
+export function topLevelCollections(): Collection[] {
+  return collectionStore.list.filter((c) => c.parentId !== null && c.parentId === collectionStore.rootId);
+}
+
+/** A collection's own sub-collections, in the list's order. */
+export function childrenOf(id: number): Collection[] {
+  return collectionStore.list.filter((c) => c.parentId === id);
+}
+
+/**
+ * Which parents the sidebar shows open. Kept on this device, like the display
+ * settings: a reader who folds a group away wants it to stay folded here.
+ * Closed by default.
+ */
+const OPEN_KEY = 'thicket:nav-open';
+export const navOpen = $state<{ ids: number[] }>({ ids: [] });
+export function loadNavOpen() {
+  try { const v = JSON.parse(localStorage.getItem(OPEN_KEY) ?? '[]'); if (Array.isArray(v)) navOpen.ids = v.filter((x) => Number.isInteger(x)); } catch { /* closed, then */ }
+}
+export function toggleNavOpen(id: number) {
+  navOpen.ids = navOpen.ids.includes(id) ? navOpen.ids.filter((x) => x !== id) : [...navOpen.ids, id];
+  try { localStorage.setItem(OPEN_KEY, JSON.stringify(navOpen.ids)); } catch { /* stays for the session */ }
+}

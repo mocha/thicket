@@ -13,6 +13,7 @@
  */
 import { Hono, type Context } from "hono";
 import { and, eq, sql } from "drizzle-orm";
+import { subtreeFeedCount } from "../lib/subtree.js";
 import { db, schema } from "../db/client.js";
 import { currentUser, normalizeHandle } from "../lib/auth.js";
 import { exportCollectionOpml } from "../lib/opml.js";
@@ -47,7 +48,7 @@ const publicUser = (u: Owner) => ({ handle: u.handle, displayName: u.displayName
 function collectionRows(u: Owner, isMe: boolean) {
   return db.execute<{ id: number; parentId: number; name: string; slug: string; description: string | null; isPublic: boolean; feedCount: number; copiedFromId: number | null }>(sql`
     select col.id, col.parent_id as "parentId", col.name, col.slug, col.description, col.is_public as "isPublic", col.copied_from_id as "copiedFromId",
-           (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount"
+           ${subtreeFeedCount(sql`col.id`)} as "feedCount"
     from collections col
     where col.user_id = ${u.id} and col.parent_id is not null ${isMe ? sql`` : sql`and col.is_public`}
     order by lower(col.name)
@@ -156,7 +157,7 @@ profiles.get("/:handle/collections/:slug", async (c) => {
     where cf.collection_id = ${r.col.id} order by lower(coalesce(cf.title_override, f.title, f.url))
   `);
   const children = await db.execute(sql`
-    select col.id, col.name, col.slug, col.description, (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount"
+    select col.id, col.name, col.slug, col.description, ${subtreeFeedCount(sql`col.id`)} as "feedCount"
     from collections col where col.parent_id = ${r.col.id} ${r.isMe ? sql`` : sql`and col.is_public`} order by lower(col.name)
   `);
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
