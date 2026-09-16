@@ -109,6 +109,41 @@ admin.delete("/users/:id", async (c) => {
   return rows.length ? c.body(null, 204) : c.json({ error: "not found" }, 404);
 });
 
+/**
+ * Moderation: what removing a feed from the instance would take with it. Feeds
+ * are shared, so this is everyone's loss, not one person's; the numbers are
+ * shown before the button is pressed.
+ */
+admin.get("/feeds/:id/impact", async (c) => {
+  await requireAdmin(c);
+  const id = Number(c.req.param("id"));
+  const [row] = (await db.execute<{ title: string | null; url: string; posts: number; followers: number; collections: number; notes: number; bookmarks: number }>(sql`
+    select f.title, f.url,
+           (select count(*)::int from items i where i.feed_id = f.id) as posts,
+           (select count(distinct col.user_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where cf.feed_id = f.id) as followers,
+           (select count(*)::int from collection_feeds cf where cf.feed_id = f.id) as collections,
+           (select count(*)::int from notes n join items i on i.id = n.item_id where i.feed_id = f.id) as notes,
+           (select count(*)::int from bookmarks b where b.feed_id = f.id) as bookmarks
+    from feeds f where f.id = ${id}`)).rows;
+  return row ? c.json(row) : c.json({ error: "not found" }, 404);
+});
+
+/**
+ * Remove a feed from the instance. Cascades: its posts, the notes on them,
+ * its place in every collection, everyone's settings and blocks on it, its
+ * icon and fetch log. Bookmarks keep their address and lose the link to the
+ * post (the column is nullable for exactly this). Logged, because it is the
+ * one admin action that deletes other people's things.
+ */
+admin.delete("/feeds/:id", async (c) => {
+  const me = await requireAdmin(c);
+  const id = Number(c.req.param("id"));
+  const rows = await db.delete(schema.feeds).where(eq(schema.feeds.id, id)).returning({ id: schema.feeds.id, url: schema.feeds.url });
+  if (!rows.length) return c.json({ error: "not found" }, 404);
+  console.log(`[admin] @${me.handle} removed feed ${id} ${rows[0].url}`);
+  return c.body(null, 204);
+});
+
 admin.delete("/invites/:code", async (c) => {
   await requireAdmin(c);
   const ok = await revokeInvite(c.req.param("code"));

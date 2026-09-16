@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { api, feedHref, type Feed } from '$lib/api';
+  import { api, adminApi, feedHref, type Feed } from '$lib/api';
   import { hostOf, relativeTime } from '$lib/time';
   import { feedName } from '$lib/feedname';
   import { resetNotice } from '$lib/feedsettings';
@@ -24,6 +24,34 @@
   let loadedId = $state<number | undefined>(undefined);
 
   const original = $derived(feed ? (feed.title ?? hostOf(feed.url)) : '');
+
+  /** Admin only: removing the feed from the instance, for everyone. The numbers come first, then the button. */
+  let removeDialog = $state<HTMLDialogElement | null>(null);
+  let impact = $state<Awaited<ReturnType<typeof adminApi.feedImpact>> | null>(null);
+  let removing = $state(false);
+  async function askRemove() {
+    if (!feed) return;
+    impact = null;
+    removeDialog?.showModal();
+    try { impact = await adminApi.feedImpact(feed.id); } catch (e) { showToast(e instanceof Error ? e.message : String(e)); removeDialog?.close(); }
+  }
+  async function confirmRemove() {
+    if (!feed || removing) return;
+    removing = true;
+    try {
+      await adminApi.deleteFeed(feed.id);
+      api.event('admin_feed_removed', { feedId: feed.id });
+      removeDialog?.close();
+      showToast(`Removed ${feedName(feed)} from thicket`);
+      await loadCollections(true);
+      await goto('/explore', { replaceState: true });
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    } finally {
+      removing = false;
+    }
+  }
+  const n = (v: number, one: string, many: string) => `${v} ${v === 1 ? one : many}`;
 
   async function load() {
     try {
@@ -238,6 +266,28 @@
       </ul>
     </details>
   </section>
+
+  {#if session.user?.isAdmin}
+    <hr />
+    <section class="admin">
+      <h2>Admin</h2>
+      <p class="hint">Feeds are shared. Removing this one takes it away from everyone on this instance: its posts, the notes on them, and its place in every collection. Bookmarks keep their address. Use it for spam, abuse, or a feed that should never have been indexed.</p>
+      <button class="btn danger" onclick={askRemove}>Remove this feed from thicket</button>
+    </section>
+
+    <dialog bind:this={removeDialog} class="remove" onclick={(e) => { if (e.target === removeDialog) removeDialog?.close(); }} aria-labelledby="remove-title">
+      <h2 id="remove-title">Remove {feedName(feed)} from thicket?</h2>
+      {#if impact}
+        <p>This deletes, for everyone: <strong>{n(impact.posts, 'post', 'posts')}</strong>, <strong>{n(impact.notes, 'note', 'notes')}</strong> written on them, and its place in <strong>{n(impact.collections, 'collection', 'collections')}</strong> belonging to <strong>{n(impact.followers, 'person', 'people')}</strong>. {impact.bookmarks ? `${n(impact.bookmarks, 'bookmark keeps', 'bookmarks keep')} the address but ${impact.bookmarks === 1 ? 'loses' : 'lose'} the link to the post.` : ''} It cannot be undone; the feed can be added again later, but the notes cannot.</p>
+      {:else}
+        <p class="hint">Counting what this would take with it…</p>
+      {/if}
+      <div class="actions">
+        <button class="btn" onclick={() => removeDialog?.close()}>Keep it</button>
+        <button class="btn danger solid" onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</button>
+      </div>
+    </dialog>
+  {/if}
 {:else}
   <p class="status">Loading…</p>
 {/if}
@@ -268,6 +318,14 @@
   .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
   .btn:disabled { opacity: 0.5; }
+  .btn.danger.solid { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .admin { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+  .admin > h2 { margin: 0; }
+  dialog.remove { max-width: 440px; padding: 22px 22px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); }
+  dialog.remove::backdrop { background: rgba(0, 0, 0, 0.45); }
+  dialog.remove h2 { margin: 0 0 10px; font-size: calc(18px * var(--size-headings)); font-family: var(--font-headings); }
+  dialog.remove p { margin: 0 0 16px; line-height: 1.5; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
+  dialog.remove .actions { display: flex; justify-content: flex-end; gap: 8px; }
   .diag { display: flex; flex-direction: column; gap: 12px; }
   .diag > h2 { margin: 0; }
   .diag .row { margin-top: 0; }
