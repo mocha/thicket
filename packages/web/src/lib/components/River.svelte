@@ -84,14 +84,14 @@
   }
 
   export function reload() {
-    items = []; cursor = null; done = false; hidden = 0; cappedAt = null; pageIndex = 0; anchorAtOpen = null; newAtOpen = '';
+    items = []; cursor = null; done = false; hidden = 0; cappedAt = null; pageIndex = 0; anchorAtOpen = null; newAtOpen = ''; caught = false;
     return loadMore(true).then(noteOpened);
   }
 
   /**
    * The first page is on screen. Opening moves nothing: the point where the
    * reader last stopped is read, kept for the visit, and used to mark what is
-   * newer. Reading past posts is what moves it (passed, below). The first time
+   * newer. Reading down to the line is what moves it (caughtUp, below). The first time
    * this device shows a collection there is no point yet; the newest post on
    * screen becomes it, so the next visit has something to measure from.
    */
@@ -108,16 +108,34 @@
   /** A post dated in the future would put the point ahead of posts still to arrive. */
   const clampNow = (iso: string) => (new Date(iso).getTime() > Date.now() ? new Date().toISOString() : iso);
   const isFresh = (item: RiverItem) => anchorAtOpen !== null && new Date(item.publishedAt) > new Date(anchorAtOpen);
-  /** This post has scrolled out above, or its page has been turned past: the reader has read to here. */
-  function passed(item: RiverItem) {
-    if (!display.fresh || markId === null || !marks.byId[markId]) return;
-    advance(markId, clampNow(item.publishedAt));
-    const a = anchorFor(markId);
-    if (!a) return;
-    // The list knows the remaining count only once it has reached a post that is not new, or the end.
-    const seenLoaded = done || items.some((i) => new Date(i.publishedAt) <= new Date(a));
-    if (seenLoaded) recount(markId, items.filter((i) => new Date(i.publishedAt) > new Date(a)).length);
+  /**
+   * Caught up: the reader has read down to the line, or said so. The point
+   * moves to the newest post this visit started with, so the count drops and
+   * the next visit's line lands here. The list is newest-first, so scrolling
+   * past the top post proves nothing; reaching the line does. Leaving before
+   * the line moves nothing, and next time the line is still where it was, with
+   * the new arrivals above it.
+   */
+  let caught = $state(false);
+  function caughtUp() {
+    if (caught || !display.fresh || markId === null || !marks.byId[markId] || !items[0]) return;
+    caught = true;
+    advance(markId, clampNow(items[0].publishedAt));
+    recount(markId, 0);
   }
+  // Scrolling: the line coming into view is reaching it.
+  let dividerEl = $state<HTMLElement | null>(null);
+  $effect(() => {
+    if (!dividerEl || caught) return;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) caughtUp(); });
+    io.observe(dividerEl);
+    return () => io.disconnect();
+  });
+  // Pages: showing the page the line falls on, or the last page when everything is new, is reaching it.
+  $effect(() => {
+    if (!paged || anchorAtOpen === null || caught) return;
+    if (pageItems.some((i) => i.id === boundaryId) || (boundaryAtEnd && (pageIndex + 1) * perPage >= items.length)) caughtUp();
+  });
   /** Where the line goes: before the first post that is not new, if anything new sits above it. At the end if everything loaded is new and that is all there is. */
   const boundaryId = $derived.by(() => {
     if (anchorAtOpen === null || !items.length || !isFresh(items[0])) return null;
@@ -195,8 +213,6 @@
       await loadMore();
       if ((pageIndex + 1) * perPage >= items.length) return;
     }
-    // Turning past a page is reading it: the newest post on it is where the reader has got to.
-    if (pageItems[0]) passed(pageItems[0]);
     pageIndex++;
     api.event('page_turned', { direction: 'next', page: pageIndex });
     prefetch();
@@ -210,7 +226,7 @@
 {#if paged}
   <section class="river paged" aria-live="polite" bind:this={frame} style:height="{frameH}px">
     {#if pageItems.length}
-      <div class="pagehead"><span class="when">{pageLabel}</span>{#if newAtOpen}<span class="newn">{newAtOpen} new</span>{/if}<span class="n">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
+      <div class="pagehead"><span class="when">{pageLabel}</span>{#if newAtOpen}<span class="newn">{newAtOpen} new{#if !caught} · <button type="button" onclick={caughtUp}>I’m caught up</button>{/if}</span>{/if}<span class="n">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
       <div class="grid" style:grid-template-columns="repeat({cols}, minmax(0, 1fr))" style:grid-auto-rows="{CARD_H}px" style:gap="{GAP}px">
         {#each pageItems as item (item.id)}
           <ItemCard {item} {showSource} compact fresh={isFresh(item)} />
@@ -233,19 +249,22 @@
   <Pager {canPrev} {canNext} onprev={prevPage} onnext={nextPage} label="page of posts" top="{frameTop}px" bottom="calc(var(--nav-h) + var(--safe-b))" />
 {:else}
   <section class="river" aria-live="polite">
+    {#if newAtOpen}
+      <div class="newtop"><span>{newAtOpen} new since your last visit</span>{#if !caught}<button type="button" onclick={caughtUp}>I’m caught up</button>{/if}</div>
+    {/if}
     {#each groups as g (g.key)}
       <section class="day">
         <h2 class="dayhead">{g.label}</h2>
         {#each g.items as item (item.id)}
           {#if item.id === boundaryId}
-            <div class="divider" role="separator" aria-label="End of what is new since your last visit"><span>That’s everything new since your last visit</span></div>
+            <div class="divider" role="separator" aria-label="End of what is new since your last visit" bind:this={dividerEl}><span>That’s everything new since your last visit</span></div>
           {/if}
-          <ItemCard {item} {showSource} fresh={isFresh(item)} onpassed={display.fresh && markId !== null ? () => passed(item) : undefined} />
+          <ItemCard {item} {showSource} fresh={isFresh(item)} />
         {/each}
       </section>
     {/each}
     {#if boundaryAtEnd}
-      <div class="divider" role="separator" aria-label="End of what is new since your last visit"><span>That’s everything new since your last visit</span></div>
+      <div class="divider" role="separator" aria-label="End of what is new since your last visit" bind:this={dividerEl}><span>That’s everything new since your last visit</span></div>
     {/if}
 
     {#if !loading && items.length === 0 && !error}
@@ -289,6 +308,8 @@
   .divider::before, .divider::after { content: ''; flex: 1; border-top: 2px solid var(--accent); }
   .divider span { flex: none; }
   .newn { color: var(--accent); font-weight: 700; margin-left: 10px; }
+  .newn button, .newtop button { font: inherit; font-weight: 600; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .newtop { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -4px 0 -2px; font-size: calc(13px * var(--size-app)); color: var(--text-2); font-weight: 600; }
   .pagehead { display: flex; align-items: baseline; justify-content: space-between; height: 34px; padding: 6px 2px 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
   .pagehead .when { font-weight: 600; }
   .pagehead .n { font-size: calc(13px * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
