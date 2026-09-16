@@ -35,7 +35,6 @@ heading("outcome");
 table([
   ["parsed ok", parsed],
   ["http 200, unparseable", one("select count(*) from feeds where error = 'parse'")],
-  ["http 3xx (not followed)", one("select count(*) from feeds where error = 'http' and status between 300 and 399")],
   ["http 401/403", one("select count(*) from feeds where error = 'http' and status in (401, 403)")],
   ["http 404/410", one("select count(*) from feeds where error = 'http' and status in (404, 410)")],
   ["http 429", one("select count(*) from feeds where error = 'http' and status = 429")],
@@ -96,7 +95,7 @@ heading("format");
 table(q("select format, count(*) n from feeds where format is not null group by format order by n desc").map((r) => [String(r.format), Number(r.n)]), parsed);
 
 heading("top hosts");
-const hosts = q("select host, count(*) n, sum(error is null) ok from feeds group by host order by n desc limit 15");
+const hosts = q("select host, count(*) n, sum(error is null) ok from feeds group by host order by n desc limit 12");
 for (const r of hosts) console.log(`  ${String(r.host).padEnd(28)} ${String(r.n).padStart(5)}  (${r.ok} parsed)`);
 
 heading("attractive candidates");
