@@ -162,7 +162,7 @@
   <fieldset>
     <legend>What’s new</legend>
     <Tiles name="What’s new" options={FRESH_OPTIONS} value={display.fresh ? 'on' : 'off'} art={FRESH_ART} notes onchange={(v) => choose({ fresh: v === 'on' }, 'fresh')} />
-    <p class="fine">Kept on this device, like everything else here. Your browser remembers, for each collection, the newest post you have scrolled past, and asks the server only how many posts are newer than that. The server stores nothing: not the point, not which posts you read or open. Another device of yours keeps its own points.</p>
+    <p class="fine">Kept on this device, like everything else here. Your browser remembers, for each collection, the newest post you have scrolled past, and asks the server only how many posts are newer than that. A collection you have not read here yet counts from a day ago, so it starts with today’s arrivals rather than a backlog. The server stores nothing: not the point, not which posts you read or open. Another device of yours keeps its own points.</p>
   </fieldset>
   <fieldset>
     <legend>Moving through the list</legend>

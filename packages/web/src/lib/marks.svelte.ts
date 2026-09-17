@@ -3,16 +3,20 @@
  *
  * For each collection this browser remembers one point: the newest post the
  * reader has actually scrolled or paged past there. Opening a collection does
- * not move it; reading does. The point lives in this browser's storage under
- * the signed-in person's id and never goes to the account. To get counts, the
- * points are sent to the server, which answers "how many posts are newer" and
- * "how busy is this collection" and keeps nothing (api/src/routes/marks.ts).
+ * not move it; reading does. A collection this browser has never counted
+ * starts a day back (seedMissing), so every collection has a point from the
+ * first load and none sits silent waiting to be visited. The point lives in
+ * this browser's storage under the signed-in person's id and never goes to
+ * the account. To get counts, the points are sent to the server, which answers
+ * "how many posts are newer" and "how busy is this collection" and keeps
+ * nothing (api/src/routes/marks.ts).
  *
  * The count is a glance, not a debt: exact for a quiet collection, capped for
  * a medium one, a mere dot for a firehose, where no number would mean anything.
  * The list itself shows where the new part ends (River.svelte).
  */
 import { api, type Mark } from './api';
+import { loadCollections } from './collections.svelte';
 
 export const marks = $state<{ byId: Record<number, Mark>; loaded: boolean; at: number }>({ byId: {}, loaded: false, at: 0 });
 
@@ -65,6 +69,28 @@ export function begin(collectionId: number, at: string) {
   if (!anchors[collectionId]) { anchors[collectionId] = at; saveAnchors(); }
 }
 
+/** How far back a collection this device has never counted starts: its first number is what arrived today. */
+const SEED_BACK_MS = 24 * 60 * 60_000;
+
+/**
+ * Give every collection a point, before the first count rather than on the
+ * visit that would have set one.
+ *
+ * Opening a collection is what used to start it counting, so a browser that
+ * had never opened News was told News had nothing new — the same answer as
+ * being caught up, and one that never resolved itself, because only a visit
+ * could fix it. Every collection gets a point here instead, a day back rather
+ * than at the newest post, so the first glance says what arrived today instead
+ * of nothing. The point is written down like any other, so from here on the
+ * collection counts from where the reader actually stopped.
+ */
+function seedMissing(ids: number[]) {
+  const at = new Date(Date.now() - SEED_BACK_MS).toISOString();
+  let added = false;
+  for (const id of ids) if (!anchors[id]) { anchors[id] = at; added = true; }
+  if (added) saveAnchors();
+}
+
 /** The list knows exactly how many new posts remain above the point; say so without waiting for the next fetch. */
 export function recount(collectionId: number, remaining: number) {
   const m = marks.byId[collectionId];
@@ -76,9 +102,14 @@ let inflight: Promise<void> | null = null;
 export function loadMarks(force = false): Promise<void> {
   if (marks.loaded && !force) return Promise.resolve();
   if (inflight) return inflight;
-  const sent: Record<string, string> = {};
-  for (const [k, v] of Object.entries(anchors)) sent[k] = v;
-  inflight = api.marksCounts(sent)
+  inflight = loadCollections()
+    .then((cs) => seedMissing(cs.list.map((c) => c.id)))
+    .catch(() => { /* no list this time; the points already here still count */ })
+    .then(() => {
+      const sent: Record<string, string> = {};
+      for (const [k, v] of Object.entries(anchors)) sent[k] = v;
+      return api.marksCounts(sent);
+    })
     .then((r) => {
       const byId: Record<number, Mark> = {};
       for (const m of r.marks) byId[m.collectionId] = m;

@@ -3,13 +3,21 @@ import { api, type Collection } from './api';
 
 export const collectionStore = $state<{ list: Collection[]; rootId: number | null; loaded: boolean }>({ list: [], rootId: null, loaded: false });
 
+/** Two things wanting the list at once (the river and its counts do) is one request, not two. */
+let inflight: Promise<typeof collectionStore> | null = null;
+
 export async function loadCollections(force = false) {
   if (collectionStore.loaded && !force) return collectionStore;
-  const res = await api.collections();
-  collectionStore.list = res.collections;
-  collectionStore.rootId = res.rootId;
-  collectionStore.loaded = true;
-  return collectionStore;
+  if (inflight) return inflight;
+  inflight = api.collections()
+    .then((res) => {
+      collectionStore.list = res.collections;
+      collectionStore.rootId = res.rootId;
+      collectionStore.loaded = true;
+      return collectionStore;
+    })
+    .finally(() => { inflight = null; });
+  return inflight;
 }
 
 /** Forget everything. Called when the signed-in user changes, so one person's list never shows under another's name. */
