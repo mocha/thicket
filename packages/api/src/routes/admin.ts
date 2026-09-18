@@ -163,7 +163,7 @@ admin.get("/starter", async (c) => {
            count(distinct col.id)::int as "collectionCount",
            count(distinct cf.feed_id)::int as "feedCount"
     from users u
-    join collections col on col.user_id = u.id and col.parent_id is not null and col.is_public
+    join collections col on col.user_id = u.id and col.parent_id is not null and col.visibility = 'public'
     join collection_feeds cf on cf.collection_id = col.id
     where u.profile_visibility = 'public' and u.collections_visibility = 'public'
     group by u.handle, u.display_name

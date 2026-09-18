@@ -38,7 +38,7 @@ export const shareLevel = pgEnum("share_level", ["private", "friends", "public"]
  * handle, and the instance is small enough that recovery is "ask the admin".
  * Everything on the profile is optional. Visibility is layered: the profile as
  * a whole, then notes / bookmarks / collections as sections with their own
- * audience, then each collection (collections.is_public), which can only ever
+ * audience, then each collection (collections.visibility), which can only ever
  * narrow its section. A private profile still counts toward follower numbers;
  * it is opaque, not absent.
  */
@@ -210,12 +210,12 @@ export const collections = pgTable("collections", {
   slug: text("slug").notNull(),
   description: text("description"),
   /**
-   * The one individual override in thicket: a collection can always be made
-   * private, whatever the account's collections_visibility says. It only ever
+   * The one individual override in thicket: a collection carries its own
+   * audience on the same scale as the account (share_level). It only ever
    * narrows — a private collection inside a public account is private; a public
    * collection inside a friends-only account is still friends-only.
    */
-  isPublic: boolean("is_public").notNull().default(true),
+  visibility: shareLevel("visibility").notNull().default("public"),
   /** Provenance when copied from another user's collection. Informational; the copy is independent. */
   copiedFromId: bigint("copied_from_id", { mode: "number" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

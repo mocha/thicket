@@ -10,6 +10,7 @@
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
+  import { audienceTag } from '$lib/visibility';
   import { loadCollections } from '$lib/collections.svelte';
   import { marks, countText } from '$lib/marks.svelte';
   import { display } from '$lib/display.svelte';
@@ -160,7 +161,7 @@
             <li>
               <a href={publicCollectionHref(profile.handle, c.slug)}>
                 <div class="meta2">
-                  <span class="name">{c.name}{#if profile.isMe && !c.isPublic} <span class="tag">Private</span>{/if}</span>
+                  <span class="name">{c.name}{#if profile.isMe && audienceTag(c.visibility)} <span class="tag">{audienceTag(c.visibility)}</span>{/if}</span>
                   {#if c.description}<span class="desc">{c.description}</span>{/if}
                 </div>
                 {#if profile.isMe && display.fresh && countText(marks.byId[c.id])}<span class="fresh">{countText(marks.byId[c.id])} new</span>{/if}

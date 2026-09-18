@@ -5,14 +5,14 @@
  *   profile private → only the handle and "this profile is private"
  *   section not shared with this viewer → section absent. Each section has an
  *     audience: private, the people the owner follows, or anyone.
- *   collection private (is_public = false) → not listed, 404 if addressed.
- *     A collection can only narrow its section, never widen it.
+ *   collection narrower than its section (collections.visibility) → not
+ *     listed, 404 if addressed. A collection can only narrow, never widen.
  * The owner always sees everything on their own profile, with a flag saying
  * what others would see. Follower counts include private profiles: opaque,
  * not absent.
  */
 import { Hono, type Context } from "hono";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { subtreeFeedCount } from "../lib/subtree.js";
 import { db, schema } from "../db/client.js";
 import { currentUser, normalizeHandle } from "../lib/auth.js";
@@ -21,7 +21,7 @@ import { PUBLIC_URL } from "../lib/config.js";
 import { feedSlugSql, slugify, uniqueCollectionSlug } from "../lib/slug.js";
 import { activityForViewer } from "../lib/activity.js";
 import { noteColumns } from "../lib/notes.js";
-import { allows, isFriendOf, type Audience } from "../lib/visibility.js";
+import { allowedLevels, allowedLevelsSql, allows, isFriendOf, type Audience, type ShareLevel } from "../lib/visibility.js";
 import { visitorCap } from "../lib/instance.js";
 
 export const profiles = new Hono();
@@ -44,13 +44,13 @@ async function audienceFor(u: Owner, viewerId: number | undefined): Promise<Audi
 
 const publicUser = (u: Owner) => ({ handle: u.handle, displayName: u.displayName, bio: u.bio, homepageUrl: u.homepageUrl, createdAt: u.createdAt.toISOString() });
 
-/** Visible, named collections of an owner: non-root, public (or all, for the owner). */
-function collectionRows(u: Owner, isMe: boolean) {
-  return db.execute<{ id: number; parentId: number; name: string; slug: string; description: string | null; isPublic: boolean; feedCount: number; copiedFromId: number | null }>(sql`
-    select col.id, col.parent_id as "parentId", col.name, col.slug, col.description, col.is_public as "isPublic", col.copied_from_id as "copiedFromId",
+/** Visible, named collections of an owner: non-root, and shared with this viewer (all of them, for the owner). */
+function collectionRows(u: Owner, who: Audience) {
+  return db.execute<{ id: number; parentId: number; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null }>(sql`
+    select col.id, col.parent_id as "parentId", col.name, col.slug, col.description, col.visibility, col.copied_from_id as "copiedFromId",
            ${subtreeFeedCount(sql`col.id`)} as "feedCount"
     from collections col
-    where col.user_id = ${u.id} and col.parent_id is not null ${isMe ? sql`` : sql`and col.is_public`}
+    where col.user_id = ${u.id} and col.parent_id is not null and ${allowedLevelsSql("col.visibility", who)}
     order by lower(col.name)
   `);
 }
@@ -73,7 +73,7 @@ profiles.get("/:handle", async (c) => {
            exists(select 1 from user_follows where follower_id = ${viewer?.id ?? -1} and followee_id = ${u.id}) as "isFollowing"
   `)).rows;
   const [{ noteCount }] = (await db.execute<{ noteCount: number }>(sql`select count(*)::int as "noteCount" from notes where user_id = ${u.id}`)).rows;
-  const collections = allows(u.collectionsVisibility, who) ? (await collectionRows(u, isMe)).rows : null;
+  const collections = allows(u.collectionsVisibility, who) ? (await collectionRows(u, who)).rows : null;
 
   return c.json({
     ...publicUser(u), private: false, isMe, following,
@@ -110,7 +110,7 @@ profiles.delete("/:handle/follow", async (c) => {
   return c.json({ handle: u.handle, isFollowing: false });
 });
 
-type ColRow = { id: number; name: string; slug: string; description: string | null; isPublic: boolean; createdAt: string; depth: number };
+type ColRow = { id: number; name: string; slug: string; description: string | null; visibility: ShareLevel; createdAt: string; depth: number };
 
 /**
  * Resolve a collection by handle + slug, with visibility applied. Slugs are
@@ -128,15 +128,15 @@ async function visibleCollection(c: Context, handleRaw: string, slug: string) {
   if (!isMe && (u.profileVisibility === "private" || !allows(u.collectionsVisibility, who))) return { error: "not found" as const, status: 404 as const };
   const rows = await db.execute<ColRow>(sql`
     with recursive t as (
-      select col.id, col.parent_id, col.name, col.slug, col.description, col.is_public, col.created_at, 0 as depth from collections col where col.user_id = ${u.id} and col.parent_id is null
-      union all select col.id, col.parent_id, col.name, col.slug, col.description, col.is_public, col.created_at, t.depth + 1 from collections col join t on col.parent_id = t.id
+      select col.id, col.parent_id, col.name, col.slug, col.description, col.visibility, col.created_at, 0 as depth from collections col where col.user_id = ${u.id} and col.parent_id is null
+      union all select col.id, col.parent_id, col.name, col.slug, col.description, col.visibility, col.created_at, t.depth + 1 from collections col join t on col.parent_id = t.id
     )
-    select id, name, slug, description, is_public as "isPublic", created_at as "createdAt", depth
-    from t where slug = ${slug} and depth > 0 ${isMe ? sql`` : sql`and is_public`} limit 1
+    select id, name, slug, description, visibility, created_at as "createdAt", depth
+    from t where slug = ${slug} and depth > 0 and ${allowedLevelsSql("visibility", who)} limit 1
   `);
   const col = rows.rows[0];
   if (!col) return { error: "not found" as const, status: 404 as const };
-  return { u, col: { ...col, id: Number(col.id) }, isMe, viewer };
+  return { u, col: { ...col, id: Number(col.id) }, isMe, who, viewer };
 }
 
 /** A public collection: its feeds (with the viewer's relationship, if signed in) and children. */
@@ -158,11 +158,11 @@ profiles.get("/:handle/collections/:slug", async (c) => {
   `);
   const children = await db.execute(sql`
     select col.id, col.name, col.slug, col.description, ${subtreeFeedCount(sql`col.id`)} as "feedCount"
-    from collections col where col.parent_id = ${r.col.id} ${r.isMe ? sql`` : sql`and col.is_public`} order by lower(col.name)
+    from collections col where col.parent_id = ${r.col.id} and ${allowedLevelsSql("col.visibility", r.who)} order by lower(col.name)
   `);
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
   return c.json({
-    id: r.col.id, name: r.col.name, slug: r.col.slug, description: r.col.description, isPublic: r.col.isPublic, createdAt: iso(r.col.createdAt),
+    id: r.col.id, name: r.col.name, slug: r.col.slug, description: r.col.description, visibility: r.col.visibility, createdAt: iso(r.col.createdAt),
     owner: publicUser(r.u), isMe: r.isMe,
     feeds: feeds.rows.map((f: any) => ({ ...f, lastItemAt: iso(f.lastItemAt) })),
     children: children.rows,
@@ -176,7 +176,8 @@ profiles.get("/:handle/collections/:slug", async (c) => {
 profiles.get("/:handle/collections/:slug/opml", async (c) => {
   const r = await visibleCollection(c, c.req.param("handle"), c.req.param("slug"));
   if ("error" in r) return c.json({ error: r.error }, r.status);
-  const xml = await exportCollectionOpml(r.col, r.u.displayName ?? `@${r.u.handle}`, `${PUBLIC_URL}/@${r.u.handle}`);
+  // A sub-collection this reader may not see stays out of the file, the same as it stays off the page.
+  const xml = await exportCollectionOpml(r.col, r.u.displayName ?? `@${r.u.handle}`, `${PUBLIC_URL}/@${r.u.handle}`, allowedLevels(r.who));
   c.header("content-type", "text/x-opml; charset=utf-8");
   c.header("content-disposition", `inline; filename="${r.u.handle}-${r.col.slug}.opml"`);
   c.header("cache-control", "public, max-age=300");
@@ -194,6 +195,8 @@ profiles.post("/:handle/collections/:slug/copy", async (c) => {
   if ("error" in r) return c.json({ error: r.error }, r.status);
   if (r.isMe) return c.json({ error: "That’s already yours." }, 400);
   const raw = r.col;
+  // Sub-collections I am allowed to see come along; the rest stay behind.
+  const mineToTake = allowedLevels(r.who);
 
   const created = await db.transaction(async (tx) => {
     // Name dedupe: "News", then "News (from @handle)", then "News (from @handle) 2"...
@@ -210,8 +213,9 @@ profiles.post("/:handle/collections/:slug/copy", async (c) => {
       const slug = await uniqueCollectionSlug(me.id, nm, { tx });
       const [col] = await tx.insert(schema.collections).values({ userId: me.id, parentId, name: nm, slug, description, copiedFromId: srcId }).returning();
       await tx.execute(sql`insert into collection_feeds (collection_id, feed_id, title_override) select ${col.id}, feed_id, title_override from collection_feeds where collection_id = ${srcId} on conflict do nothing`);
-      // Private sub-collections stay behind; the owner chose not to show them.
-      const kids = await tx.select().from(schema.collections).where(and(eq(schema.collections.parentId, srcId), eq(schema.collections.isPublic, true)));
+      // Sub-collections the owner doesn't share with me stay behind; I copy
+      // what I can see, which is what the page showed me.
+      const kids = await tx.select().from(schema.collections).where(and(eq(schema.collections.parentId, srcId), inArray(schema.collections.visibility, mineToTake)));
       for (const k of kids) await copyTree(k.id, col.id, k.name, k.description);
       return col;
     }

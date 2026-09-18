@@ -4,13 +4,14 @@ import { subtreeFeedCount } from "../lib/subtree.js";
 import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { slugify, slugTaken, uniqueCollectionSlug } from "../lib/slug.js";
+import { isShareLevel } from "../lib/visibility.js";
 
 export const collections = new Hono();
 /** Flat list with parent pointers and feed counts; the client builds the tree. */
 collections.get("/", async (c) => {
   const user = currentUser(c);
   const rows = await db.execute(sql`
-    select col.id, col.parent_id as "parentId", col.name, col.slug, col.description, col.is_public as "isPublic",
+    select col.id, col.parent_id as "parentId", col.name, col.slug, col.description, col.visibility,
            ${subtreeFeedCount(sql`col.id`)} as "feedCount"
     from collections col where col.user_id = ${user.id} order by col.parent_id nulls first, lower(col.name)
   `);
@@ -35,7 +36,7 @@ collections.post("/", async (c) => {
 collections.patch("/:id", async (c) => {
   const user = currentUser(c);
   const id = Number(c.req.param("id"));
-  const body = await c.req.json<{ name?: string; description?: string; parentId?: number; isPublic?: boolean }>();
+  const body = await c.req.json<{ name?: string; description?: string; parentId?: number; visibility?: string }>();
   if (body.parentId !== undefined) {
     if (body.parentId === id) return c.json({ error: "a collection cannot contain itself" }, 400);
     // Cycle check: the new parent must not be a descendant of this collection.
@@ -50,7 +51,10 @@ collections.patch("/:id", async (c) => {
   }
   if (body.description !== undefined) patch.description = body.description;
   if (body.parentId !== undefined) patch.parentId = body.parentId;
-  if (typeof body.isPublic === "boolean") patch.isPublic = body.isPublic;
+  // The audience is the account's scale (share_level); a collection can only narrow it, never widen it (lib/visibility.ts).
+  if (isShareLevel(body.visibility)) patch.visibility = body.visibility;
+  // Nothing recognised in the body: say so, rather than asking the database to set no columns.
+  if (Object.keys(patch).length === 0) return c.json({ error: "nothing to update" }, 400);
   const [row] = await db.update(schema.collections).set(patch).where(and(eq(schema.collections.id, id), eq(schema.collections.userId, user.id))).returning();
   return row ? c.json(row) : c.json({ error: "not found" }, 404);
 });

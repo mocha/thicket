@@ -11,8 +11,8 @@
  * rather than one that accumulated, which is the safer default for a set of
  * people who can read my notes.
  *
- * A collection can narrow further (collections.is_public), and that is the only
- * individual override in the product for now. It can never widen: a public
+ * A collection can narrow further (collections.visibility), and that is the
+ * only individual override in the product for now. It can never widen: a public
  * collection in a friends-only account is still friends-only.
  *
  * A feed document has no reader and so can carry only 'public' — see
@@ -48,4 +48,22 @@ export function allowsSql(level: string, owner: string, viewerId: number | null)
   const own = sql.raw(owner);
   if (!viewerId) return sql`${lvl} = 'public'`;
   return sql`(${lvl} = 'public' or (${lvl} = 'friends' and exists(select 1 from user_follows sh where sh.follower_id = ${own} and sh.followee_id = ${viewerId})))`;
+}
+
+/**
+ * The same test where every row belongs to one owner whose audience is already
+ * known — a profile's own collections, say. No per-row follow lookup: the one
+ * `audienceFor` did answers the whole listing.
+ */
+/** The same answer as a list, for a `visibility in (...)` on one owner's rows. */
+export function allowedLevels(who: Audience): ShareLevel[] {
+  if (who.isMe) return ["private", "friends", "public"];
+  return who.isFriend ? ["friends", "public"] : ["public"];
+}
+
+export function allowedLevelsSql(level: string, who: Audience): SQL {
+  const lvl = sql.raw(level);
+  if (who.isMe) return sql`true`;
+  if (who.isFriend) return sql`${lvl} in ('public', 'friends')`;
+  return sql`${lvl} = 'public'`;
 }

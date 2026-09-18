@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { api, collectionsApi, collectionHref, manageCollectionHref, profileHref, profilesApi, type CollectionDetail, type CollectionFeed } from '$lib/api';
+  import { api, collectionsApi, collectionHref, manageCollectionHref, profileHref, profilesApi, type CollectionDetail, type CollectionFeed, type ShareLevel } from '$lib/api';
   import { openAddFeed } from '$lib/addfeed.svelte';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import { feedOrigin, hostOf, relativeTime } from '$lib/time';
@@ -73,14 +73,25 @@
     }
   }
 
-  /* Visibility: two radios. Nothing to choose when the profile hides everything anyway. */
-  async function setPublic(isPublic: boolean) {
-    if (!col || col.isPublic === isPublic) return;
-    col.isPublic = isPublic;
-    await collectionsApi.update(col.id, { isPublic });
-    api.event('collection_visibility', { collectionId: col.id, isPublic });
+  /**
+   * Visibility: the account's own three audiences, one collection at a time.
+   * A collection only ever narrows what the account shares — picking Public
+   * here inside a friends-only account still means those friends, which the
+   * note above the radios says out loud. Nothing to choose at all when the
+   * profile hides everything anyway.
+   */
+  const VISIBILITIES: { value: ShareLevel; label: string; help: string; toast: string }[] = [
+    { value: 'public', label: 'Public', help: 'This collection is visible to anyone on the web.', toast: 'This collection is now public' },
+    { value: 'friends', label: 'People I follow', help: 'This collection is shared with people I follow.', toast: 'This collection is now shared with the people you follow' },
+    { value: 'private', label: 'Private', help: 'Only I can see this collection.', toast: 'This collection is now private' },
+  ];
+  async function setVisibility(next: ShareLevel) {
+    if (!col || col.visibility === next) return;
+    col.visibility = next;
+    await collectionsApi.update(col.id, { visibility: next });
+    api.event('collection_visibility', { collectionId: col.id, visibility: next });
     void loadCollections(true);
-    showToast(isPublic ? 'This collection is now public' : 'This collection is now private');
+    showToast(VISIBILITIES.find((v) => v.value === next)?.toast ?? 'Saved');
   }
 
   /* Description: a two-line box whose Save wakes up only once something changed. */
@@ -228,35 +239,38 @@
 
   <hr />
   <section class="opt">
-    <h2>Collection visibility</h2>
-      {#if profilePrivate}
-        <p class="info">Your profile is set to private, so your collections aren’t displayed anywhere. <a href="/settings">Change that in Settings.</a></p>
-      {:else if collectionsHidden}
-        <p class="info">Your profile doesn’t show collections to anyone right now, so this setting has no effect until it does. <a href="/settings">Change that in Settings.</a></p>
-      {:else}
-        {#if collectionsFriendsOnly}<p class="info">Your collections are shown only to the people you follow. Public here means public to them. <a href="/settings">Change that in Settings.</a></p>{/if}
-        <div class="radios" role="radiogroup" aria-label="Collection visibility">
-          <label>
-            <input type="radio" name="vis" checked={col.isPublic} onchange={() => setPublic(true)} />
-            <span><strong>Public</strong><small>This collection will be displayed on your profile and visible to anyone.</small></span>
-          </label>
-          <label>
-            <input type="radio" name="vis" checked={!col.isPublic} onchange={() => setPublic(false)} />
-            <span><strong>Private</strong><small>This collection will not be displayed on your profile.</small></span>
-          </label>
-        </div>
-      {/if}
-    </section>
-
-  <section class="opt">
     <h2><label for="desc">Description</label></h2>
     <form onsubmit={(e) => { e.preventDefault(); void saveDescription(); }}>
-      <textarea id="desc" rows="2" bind:value={description} maxlength="300" placeholder="What’s in here, in a line or two." disabled={savingDesc}></textarea>
+      <div class="descbox">
+        <textarea id="desc" rows="2" bind:value={description} maxlength="300" placeholder="What’s in here, in a line or two." disabled={savingDesc}></textarea>
+        <button type="submit" class="save" disabled={!descDirty || savingDesc} title={savingDesc ? 'Saving…' : 'Save description'} aria-label={savingDesc ? 'Saving description' : 'Save description'}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" /></svg>
+        </button>
+      </div>
       <div class="row">
-        <button type="submit" class="btn primary" disabled={!descDirty || savingDesc}>{savingDesc ? 'Saving…' : 'Save'}</button>
         <span class="counter" class:near={description.length > 260}>{description.length}/300</span>
       </div>
     </form>
+  </section>
+
+  <section class="opt">
+    <h2>Collection visibility</h2>
+    <p class="subtle">Who should be able to see this collection?</p>
+    {#if profilePrivate}
+      <p class="info">Your profile is set to private, so your collections aren’t displayed anywhere. <a href="/settings">Change that in Settings.</a></p>
+    {:else if collectionsHidden}
+      <p class="info">Your profile doesn’t show collections to anyone right now, so this setting has no effect until it does. <a href="/settings">Change that in Settings.</a></p>
+    {:else}
+      {#if collectionsFriendsOnly}<p class="info">Your collections are shown only to the people you follow. Public here means public to them. <a href="/settings">Change that in Settings.</a></p>{/if}
+      <div class="radios vis" role="radiogroup" aria-label="Collection visibility">
+        {#each VISIBILITIES as v (v.value)}
+          <label>
+            <input type="radio" name="vis" value={v.value} checked={col.visibility === v.value} onchange={() => setVisibility(v.value)} />
+            <span><strong>{v.label}</strong><small>{v.help}</small></span>
+          </label>
+        {/each}
+      </div>
+    {/if}
   </section>
 
   <hr />
@@ -399,8 +413,16 @@
   h3 { font-size: calc(13px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin: 16px 0 6px; }
   .info { margin: 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; }
   .info a { color: var(--accent); font-weight: 600; }
+  .subtle { margin: -4px 0 10px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
   .radios { display: flex; flex-direction: column; gap: 8px; }
+  /* Side by side once there is room for three; stacked on a phone, where they would be three slivers. */
+  @media (min-width: 620px) { .vis { display: grid; grid-template-columns: repeat(3, 1fr); align-items: stretch; } }
+  .descbox { position: relative; }
+  .descbox textarea { padding-right: 46px; }
+  .save { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); }
+  .save:disabled { opacity: 0.4; color: var(--text-3); }
   .radios label { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
+  .vis label { gap: 8px; }
   .radios label:has(input:checked) { border-color: var(--accent); }
   .radios input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(14px * var(--size-app)); }

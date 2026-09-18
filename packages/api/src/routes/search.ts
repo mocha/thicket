@@ -212,7 +212,7 @@ async function searchCollections(q: string, viewerId: number | null, limit: numb
     (case when col.name ilike ${like} then 0.85 else 0 end)::real,
     (case when col.description ilike ${like} then 0.35 else 0 end)::real)`;
   const readable = sql`col.parent_id is not null and (col.user_id = ${me} or (
-    u.profile_visibility = 'public' and col.is_public and ${allowsSql("u.collections_visibility", "u.id", viewerId)}))`;
+    u.profile_visibility = 'public' and ${allowsSql("col.visibility", "col.user_id", viewerId)} and ${allowsSql("u.collections_visibility", "u.id", viewerId)}))`;
   const base = sql`
     with ${feedEvidence(q)}
     , cand as (
@@ -324,7 +324,7 @@ async function searchPeople(q: string, viewerId: number | null, limit: number, o
     select c.handle, c."displayName", c.bio, c.name_match as "nameMatch",
            c.notes_match as "notesMatch", c.marks_match as "marksMatch",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = c.id) as feeds,
-           (select count(*)::int from collections col where col.user_id = c.id and col.parent_id is not null and col.is_public) as collections,
+           (select count(*)::int from collections col where col.user_id = c.id and col.parent_id is not null and col.visibility = 'public') as collections,
            exists(select 1 from user_follows uf where uf.follower_id = ${viewerId} and uf.followee_id = c.id) as "isFollowing"
     from cand c
     order by c.name_score + 0.4 * ln(1 + c.notes_match + c.marks_match) desc,

@@ -19,7 +19,7 @@ explore.get("/collections", async (c) => {
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 6)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
   // Never my own, and never one I already copied: both are already on my shelf.
-  const where = [sql`col.parent_id is not null and col.is_public and u.profile_visibility = 'public' and u.collections_visibility = 'public'
+  const where = [sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public' and u.collections_visibility = 'public'
       and exists(select 1 from collection_feeds cf where cf.collection_id = col.id) and col.user_id <> ${viewerId}
       and not exists(select 1 from collections mine where mine.user_id = ${viewerId} and mine.copied_from_id = col.id)`];
   if (q) {
@@ -70,7 +70,7 @@ explore.get("/featured", async (c) => {
   const viewer = c.get("user");
   const viewerId = viewer?.id ?? -1;
   const handle = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
-  const visible = sql`col.parent_id is not null and col.is_public and u.profile_visibility = 'public'
+  const visible = sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public'
     and u.collections_visibility = 'public' and exists(select 1 from collection_feeds cf where cf.collection_id = col.id)`;
   const curated = handle
     ? (await db.execute<{ id: number }>(sql`select id from users where handle = ${handle} and profile_visibility = 'public' and collections_visibility = 'public'`)).rows[0]
@@ -123,7 +123,7 @@ explore.get("/users", async (c) => {
   const rows = await db.execute(sql`
     select u.handle, u.display_name as "displayName", u.bio, u.created_at as "createdAt",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = u.id) as feeds,
-           (select count(*)::int from collections col where col.user_id = u.id and col.parent_id is not null and col.is_public and u.collections_visibility = 'public') as collections,
+           (select count(*)::int from collections col where col.user_id = u.id and col.parent_id is not null and col.visibility = 'public' and u.collections_visibility = 'public') as collections,
            case when u.notes_visibility = 'public' then (select count(*)::int from notes n where n.user_id = u.id) else null end as notes,
            exists(select 1 from user_follows uf where uf.follower_id = ${viewer.id} and uf.followee_id = u.id) as "isFollowing"
     from users u where ${sql.join(where, sql` and `)}
