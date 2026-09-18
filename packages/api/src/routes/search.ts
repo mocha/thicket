@@ -63,6 +63,34 @@ const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
 const likeFor = (q: string) => `%${q.replace(/[%_\\]/g, (m) => `\\${m}`)}%`;
 
 /**
+ * "People I follow", applied to a search. It is the same rule the browse lists
+ * use: a feed is in your network when someone you follow keeps it in a
+ * collection, and a collection is in your network when its owner is someone you
+ * follow. The follow set is resolved once (direct follows only — the toggle
+ * offers one level) and then reused by each scope as a plain predicate.
+ *
+ * `net` is null when the filter is off, and an id list when it is on — an empty
+ * list means "on, but you follow no one", which is no results, exactly like
+ * browse.
+ */
+async function followSet(viewerId: number | null): Promise<number[]> {
+  if (!viewerId) return [];
+  const rows = await db.execute<{ id: number }>(
+    sql`select followee_id as id from user_follows where follower_id = ${viewerId} and followee_id <> ${viewerId}`,
+  );
+  return rows.rows.map((r) => Number(r.id));
+}
+const idList = (ids: number[]) => sql.join(ids.map((id) => sql`${id}`), sql`, `);
+/** A feed is in the network when someone you follow files it in a collection. */
+const feedInNetwork = (feedIdCol: string, ids: number[]) =>
+  ids.length
+    ? sql`exists(select 1 from collection_feeds cf join collections col on col.id = cf.collection_id
+        where cf.feed_id = ${sql.raw(feedIdCol)} and col.user_id in (${idList(ids)}))`
+    : sql`false`;
+/** A collection is in the network when its owner is someone you follow. */
+const ownerInNetwork = (ids: number[]) => (ids.length ? sql`col.user_id in (${idList(ids)})` : sql`false`);
+
+/**
  * The bounded sample of matching posts that every aggregation is built on, each
  * tagged with *where* in the post the match landed: 1 = title, 2 = summary,
  * 3 = body only. ts_filter reads the weights already stored in the tsvector, so
@@ -142,7 +170,7 @@ const feedEvidence = (q: string) => sql`
  * own, which is what lets a feed with a matching name and no matching posts
  * place among the results instead of below all of them.
  */
-async function searchFeeds(q: string, userId: number, limit: number, offset: number) {
+async function searchFeeds(q: string, userId: number, limit: number, offset: number, net: number[] | null = null) {
   const like = likeFor(q);
   const named = sql`coalesce((f.title ilike ${like} or f.description ilike ${like} or f.url ilike ${like} or f.site_url ilike ${like} or ${q} <% coalesce(f.title, '')), false)`;
   /** 0 to 1. The title is worth most; a description or URL hit is weaker evidence. */
@@ -159,7 +187,7 @@ async function searchFeeds(q: string, userId: number, limit: number, offset: num
              ${named} as name_match,
              ${strength} as name_score
       from feeds f left join feedw a on a.feed_id = f.id
-      where a.feed_id is not null or ${named}
+      where (a.feed_id is not null or ${named})${net ? sql` and ${feedInNetwork("f.id", net)}` : sql``}
     )
     , scored as (
       select *,
@@ -203,7 +231,7 @@ async function searchFeeds(q: string, userId: number, limit: number, offset: num
  * so a friends-only collection shows to a friend. Only a *feed document*, which
  * has no reader, is restricted to what is public to everyone.
  */
-async function searchCollections(q: string, viewerId: number | null, limit: number, offset: number) {
+async function searchCollections(q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null = null) {
   const like = likeFor(q);
   const me = viewerId ?? -1;
   const named = sql`coalesce((col.name ilike ${like} or col.description ilike ${like} or ${q} <% col.name), false)`;
@@ -227,7 +255,7 @@ async function searchCollections(q: string, viewerId: number | null, limit: numb
              ${strength} as name_score
       from collections col join users u on u.id = col.user_id
       where ${readable} and (${named} or exists(
-        select 1 from collection_feeds cf join feedw a on a.feed_id = cf.feed_id where cf.collection_id = col.id))
+        select 1 from collection_feeds cf join feedw a on a.feed_id = cf.feed_id where cf.collection_id = col.id))${net ? sql` and ${ownerInNetwork(net)}` : sql``}
     )
     , scored as (
       select *,
@@ -260,7 +288,7 @@ async function searchCollections(q: string, viewerId: number | null, limit: numb
  * Antonio" purely by date hands you whoever used the phrase most recently — a
  * wire story that named the city once this morning outranking a decade of KSAT.
  */
-async function searchPosts(q: string, viewerId: number | null, limit: number, offset: number) {
+async function searchPosts(q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null = null) {
   const me = viewerId ?? -1;
   const base = sql`
     with ${hits(q)}
@@ -269,6 +297,7 @@ async function searchPosts(q: string, viewerId: number | null, limit: number, of
              ts_rank(i.search, websearch_to_tsquery('english', ${q}))
                * (1 + 1.0 / (1 + extract(epoch from (now() - h.published_at)) / 2592000)) as score
       from hits h join items i on i.id = h.id
+      ${net ? sql`where ${feedInNetwork("h.feed_id", net)}` : sql``}
     )`;
   const [{ total }] = (await db.execute<{ total: number }>(sql`${base} select count(*)::int as total from ranked`)).rows;
   const rows = await db.execute(sql`
@@ -346,6 +375,9 @@ search.get("/", async (c) => {
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
   if (!q) return c.json({ q, scope, feeds: EMPTY, collections: EMPTY, posts: EMPTY, people: EMPTY });
 
+  // "People I follow": null = filter off; a (possibly empty) id list = filter on.
+  const net = c.req.query("network") === "1" ? await followSet(viewerId) : null;
+
   /**
    * Every scope reports every total, so the scope chips can say how much sits
    * behind each of them without a second round trip. A kind the caller did not
@@ -356,9 +388,9 @@ search.get("/", async (c) => {
   const take = (kind: keyof typeof PREVIEW) => (!want(kind) ? 1 : scope === "all" ? PREVIEW[kind] : limit);
   const from = (kind: Scope) => (want(kind) && scope !== "all" ? offset : 0);
   const [feeds, collections, posts, people] = await Promise.all([
-    searchFeeds(q, viewerId ?? -1, take("feeds"), from("feeds")),
-    searchCollections(q, viewerId, take("collections"), from("collections")),
-    searchPosts(q, viewerId, take("posts"), from("posts")),
+    searchFeeds(q, viewerId ?? -1, take("feeds"), from("feeds"), net),
+    searchCollections(q, viewerId, take("collections"), from("collections"), net),
+    searchPosts(q, viewerId, take("posts"), from("posts"), net),
     searchPeople(q, viewerId, take("people"), from("people")),
   ]);
   const trim = (r: { rows: any[]; total: number; nextOffset: number | null }, kind: Scope) =>

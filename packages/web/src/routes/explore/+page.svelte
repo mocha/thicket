@@ -90,7 +90,7 @@
     if (loading || (!reset && scope !== 'all' && moreNext === null)) return;
     loading = true; error = null;
     try {
-      const r = await searchApi.run({ q, scope, limit: 25, offset: reset ? 0 : moreNext ?? 0 });
+      const r = await searchApi.run({ q, scope, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork });
       res = r;
       if (scope === 'all') { more = []; moreNext = null; }
       else { more = reset ? r[scope].rows : [...more, ...r[scope].rows]; moreNext = r[scope].nextOffset; }
@@ -103,8 +103,8 @@
   let feedsAll = $state(0);
   let feedsNext = $state<number | null>(null);
   const sorts = [
-    { id: 'recent', label: 'Recently posted' },
-    { id: 'followers', label: 'Most followed' },
+    { id: 'recent', label: 'Recent posts' },
+    { id: 'followers', label: 'Followers' },
     { id: 'posts', label: 'Most active' },
     { id: 'title', label: 'A–Z' },
     { id: 'added', label: 'Newest here' }
@@ -226,7 +226,7 @@
 
 <header class="top">
   <h1>Explore</h1>
-  <p class="sub">One search across the feeds this instance knows about, the collections people have shared, everything those feeds have published, and the people here.</p>
+  <p class="sub">Find feeds, collections, posts, and people, all in one search.</p>
 </header>
 
 <section class="pane">
@@ -240,6 +240,17 @@
     {/if}
   </div>
 
+  {#if !searching && browseAs !== 'feeds'}
+    <div class="titles">
+      {#if browseAs === 'collections'}
+        <h2>Collections people have shared <span class="count">{browseCount}</span></h2>
+        <p>Browse collections of feeds curated by other people and copy them to your profile.</p>
+      {:else}
+        <h2>People here <span class="count">{browseCount}</span></h2>
+        <p>Public profiles you can browse and follow, to see their notes and what they read.</p>
+      {/if}
+    </div>
+  {/if}
   <div class="scopes" role="tablist" aria-label="What to search">
     {#each SCOPES as s (s.id)}
       {#if searching || s.id !== 'posts'}
@@ -251,46 +262,42 @@
     {/each}
   </div>
 
-  {#if !searching}
-    <div class="titles">
-      {#if browseAs === 'feeds'}
-        <h2>Every feed here <span class="count">{browseCount}</span></h2>
-        <p>The ones people on this instance read, and a few thousand more it was seeded with. Search above to look inside what they publish, not just at their names.</p>
-      {:else if browseAs === 'collections'}
-        <h2>Collections people have shared <span class="count">{browseCount}</span></h2>
-        <p>Browse collections of feeds curated by other people and copy them to your profile.</p>
-      {:else}
-        <h2>People here <span class="count">{browseCount}</span></h2>
-        <p>Public profiles you can browse and follow, to see their notes and what they read.</p>
-      {/if}
-    </div>
-    <div class="filters">
-      <label class="filter check" title={followsAnyone === false ? 'Follow someone first' : ''}>
-        <input type="checkbox" checked={narrowToNetwork} disabled={followsAnyone === false || browseAs === 'users'}
-               onchange={(e) => setParams({ by: e.currentTarget.checked ? 'following' : null })} />
-        <span class="label">{browseAs === 'collections' ? 'Only from people I follow' : 'Only what people I follow read'}</span>
-      </label>
-      {#if browseAs === 'feeds'}
-        <label class="filter">
-          <span class="label">Added in the last</span>
-          <select value={since ?? ''} onchange={(e) => setParams({ since: e.currentTarget.value || null })}>
-            <option value="">any time</option>
-            <option value="24h">24 hours</option>
-            <option value="week">week</option>
-            <option value="month">month</option>
-            <option value="year">year</option>
-          </select>
-        </label>
-        <label class="filter">
-          <span class="label">Sort</span>
-          <select value={sort} onchange={(e) => setParams({ sort: e.currentTarget.value === 'recent' ? null : e.currentTarget.value })}>
-            {#each sorts as s (s.id)}<option value={s.id}>{s.label}</option>{/each}
-          </select>
-        </label>
-      {/if}
-    </div>
-  {/if}
 </section>
+
+<!-- The filters that act on a browse list. Rendered as the list card's header
+     when browsing (attached to what they control), and as a plain bar above the
+     stacked result cards when searching. -->
+{#snippet filterBar()}
+  <div class="filters">
+    <label class="filter" title={followsAnyone === false ? 'Follow someone first' : ''}>
+      <span class="label">Show</span>
+      <select value={narrowToNetwork ? 'following' : ''}
+              disabled={browseAs === 'users'}
+              onchange={(e) => setParams({ by: e.currentTarget.value === 'following' ? 'following' : null })}>
+        <option value="">Everyone</option>
+        <option value="following" disabled={followsAnyone === false}>People I follow</option>
+      </select>
+    </label>
+    {#if !searching && browseAs === 'feeds'}
+      <label class="filter">
+        <span class="label">Added</span>
+        <select value={since ?? ''} onchange={(e) => setParams({ since: e.currentTarget.value || null })}>
+          <option value="">any time</option>
+          <option value="24h">24 hours</option>
+          <option value="week">week</option>
+          <option value="month">month</option>
+          <option value="year">year</option>
+        </select>
+      </label>
+      <label class="filter">
+        <span class="label">Sort</span>
+        <select value={sort} onchange={(e) => setParams({ sort: e.currentTarget.value === 'recent' ? null : e.currentTarget.value })}>
+          {#each sorts as s (s.id)}<option value={s.id}>{s.label}</option>{/each}
+        </select>
+      </label>
+    {/if}
+  </div>
+{/snippet}
 
 <!-- Rows. Each kind knows how to show its own evidence; see lib/words.ts. -->
 {#snippet feedRow(f: SearchFeed | Feed, ev: SearchFeed | null)}
@@ -391,6 +398,7 @@
 {#if error}
   <p class="status error">Couldn’t load: {error}</p>
 {:else if nothing}
+  {@render filterBar()}
   <div class="empty">
     {#if searching && scope !== 'all' && found > 0}
       <p>No {scopeLabel.toLowerCase()} match “{q}”, but {plural(found, 'other result')} {found === 1 ? 'does' : 'do'}. <button class="link" onclick={() => setScope('all')}>Show everything</button>.</p>
@@ -408,6 +416,7 @@
     {/if}
   </div>
 {:else if searching && res}
+  {@render filterBar()}
   {#if scope === 'all'}
     {#if res.feeds.rows.length}
       <section class="group">
@@ -445,11 +454,11 @@
     </section>
   {/if}
 {:else if browseAs === 'feeds'}
-  <ul class="list">{#each feeds as f (f.id)}{@render feedRow(f, null)}{/each}</ul>
+  <div class="browse">{@render filterBar()}<ul class="list">{#each feeds as f (f.id)}{@render feedRow(f, null)}{/each}</ul></div>
 {:else if browseAs === 'collections'}
-  <ul class="list">{#each cols as c (c.id)}{@render colRow(c, null)}{/each}</ul>
+  <div class="browse">{@render filterBar()}<ul class="list">{#each cols as c (c.id)}{@render colRow(c, null)}{/each}</ul></div>
 {:else}
-  <ul class="list">{#each users as u (u.handle)}{@render personRow(u, null)}{/each}</ul>
+  <div class="browse">{@render filterBar()}<ul class="list">{#each users as u (u.handle)}{@render personRow(u, null)}{/each}</ul></div>
 {/if}
 
 {#if loading}<p class="status">Loading…</p>{/if}
@@ -459,12 +468,12 @@
   .top { margin-bottom: 12px; }
   h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); max-width: 62ch; }
-  .pane { margin-bottom: 16px; }
-  .head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .pane { margin-bottom: 0; }
+  .head { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
   .search { flex: 1; min-width: 0; padding: 12px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: calc(16px * var(--size-app)); }
   .add { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: calc(14px * var(--size-app)); font-weight: 600; white-space: nowrap; }
   .add span { font-size: calc(18px * var(--size-app)); line-height: 1; }
-  .scopes { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-2); margin-bottom: 14px; overflow-x: auto; }
+  .scopes { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-2); margin-bottom: 4px; overflow-x: auto; }
   .scopes button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; border-radius: 999px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
   .scopes button[aria-selected='true'] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
   .scopes button:disabled { opacity: 0.4; }
@@ -476,15 +485,23 @@
   .group { margin-bottom: 22px; }
   .group h2 { margin-bottom: 8px; }
   .all { margin-left: auto; font-size: calc(14px * var(--size-app)); }
-  .filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
-  .filter { display: inline-flex; align-items: center; gap: 8px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 4px; }
+  .filter { display: inline-flex; align-items: center; gap: 4px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
   .label { white-space: nowrap; }
-  .check { flex-direction: row; align-items: center; gap: 8px; cursor: pointer; }
-  .check input { width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
-  .check input:disabled { opacity: 0.45; }
-  .check:has(input:disabled) { cursor: default; opacity: 0.55; }
-  .filter select { padding: 6px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: calc(13px * var(--size-app)); }
+  /* Narrow screens: the filters stack full-width into a tidy little form
+     instead of wrapping into an orphaned control. */
+  @media (max-width: 600px) {
+    .filters { flex-direction: column; align-items: stretch; }
+    .filter { gap: 8px; }
+    .filter .label { min-width: 44px; }
+    .filter select { flex: 1; }
+  }
+  .filter select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: calc(13px * var(--size-app)); }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  /* Browse: the filters are the list card's header, so the two read as one unit. */
+  .browse { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .browse .filters { margin: 0; padding: 12px; }
+  .browse .list { background: none; box-shadow: none; border-radius: 0; }
   li { display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 12px; border-top: 1px solid var(--line); flex-wrap: wrap; }
   /* On a phone the Follow control would squeeze the description into a column
      four words wide, so it drops to its own line and the text gets the row. */
