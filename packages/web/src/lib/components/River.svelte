@@ -63,6 +63,8 @@
     }
     return out;
   });
+  /** Today's group needs no heading — the top of the feed is obviously the latest. Older days keep their date dividers. */
+  const todayKey = $derived(dayKey(new Date()));
 
   async function loadMore(reset = false) {
     if (loading || (done && !reset)) return;
@@ -254,7 +256,7 @@
     {/if}
     {#each groups as g (g.key)}
       <section class="day">
-        <h2 class="dayhead">{g.label}</h2>
+        {#if g.key !== todayKey}<h2 class="dayhead">{g.label}</h2>{/if}
         {#each g.items as item (item.id)}
           {#if item.id === boundaryId}
             <div class="divider" role="separator" aria-label="End of what is new since your last visit" bind:this={dividerEl}><span>That’s everything new since your last visit</span></div>

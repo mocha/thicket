@@ -1,5 +1,5 @@
 <script lang="ts">
-  /** Signed in: All collections, your whole stream. Signed out: the front door. */
+  /** Signed in: Everything, your whole stream. Signed out: the front door. */
   import { onMount } from 'svelte';
   import { api } from '$lib/api';
   import River from '$lib/components/River.svelte';
@@ -28,12 +28,11 @@
   {:else}
     <header class="top">
       <div class="titlerow">
-        <h1>All collections</h1>
+        <h1>Everything</h1>
         <button class="btn" onclick={() => openAddFeed({ via: 'all_collections' })}><span aria-hidden="true">+</span> Add new feed</button>
       </div>
       {#if stats}
-        <p class="sub">Posts from all {n(stats.feeds, 'feed', 'feeds')} you follow across all {n(stats.collections, 'collection', 'collections')} of yours.<br />
-          {#if stats.posts24h}{n(stats.posts24h, 'new post', 'new posts')} in the last 24 hours from {n(stats.feeds24h, 'feed', 'feeds')}.{:else}No new posts in the last 24 hours.{/if}</p>
+        <p class="sub">{n(stats.feeds, 'feed', 'feeds')} · {n(stats.collections, 'collection', 'collections')} · {#if stats.posts24h}{n(stats.posts24h, 'new post', 'new posts')} in the last 24 hours{:else}No new posts in the last 24 hours{/if}</p>
       {:else}
         <p class="sub">Posts from every feed you follow, newest first.</p>
       {/if}
@@ -45,11 +44,12 @@
 {/if}
 
 <style>
-  .top { margin-bottom: 14px; }
+  .top { margin-bottom: 28px; }
   .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; min-width: 0; }
-  .btn { flex: none; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
-  .btn:hover { background: var(--surface-2); color: var(--text); }
+  /* The primary call to action: the solid green pill Explore's "add" button uses. */
+  .btn { flex: none; padding: 9px 14px; border-radius: 999px; border: 1px solid transparent; background: var(--accent); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--accent-ink); white-space: nowrap; }
+  .btn:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); max-width: 62ch; }
   .start { display: flex; flex-direction: column; gap: 22px; margin-top: 22px; }
   .own { margin: 0; padding-top: 18px; border-top: 1px solid var(--line); color: var(--text-2); font-size: calc(15px * var(--size-app)); max-width: 62ch; line-height: 1.5; }
