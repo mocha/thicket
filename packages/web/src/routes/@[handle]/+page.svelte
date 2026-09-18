@@ -1,15 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/state';
-  import { api, profilesApi, publicCollectionHref, type Profile, type RiverItem } from '$lib/api';
+  import { api, profilesApi, publicCollectionHref, type Profile, type ProfileCollection, type RiverItem } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import { hostOf } from '$lib/time';
   import Monogram from '$lib/components/Monogram.svelte';
   import ActivityList from '$lib/components/ActivityList.svelte';
-  import ItemCard from '$lib/components/ItemCard.svelte';
+  import NoteCard from '$lib/components/NoteCard.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
+  import { audienceTag } from '$lib/visibility';
   import { loadCollections } from '$lib/collections.svelte';
   import { marks, countText } from '$lib/marks.svelte';
   import { display } from '$lib/display.svelte';
@@ -87,7 +88,17 @@
   /** On my own profile, a note I delete from its card takes the card with it. */
   const shownNotes = $derived((recentNotes ?? []).filter((i) => !isMe || i.myNote));
 
-  const joined = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  /**
+   * Collections arrive flat with parent pointers, and are shown as the tree
+   * they are — the same shape the sidebar shows. Top level is anything whose
+   * parent isn't in the list: the root, which is nobody's page, and also a
+   * collection whose parent this reader may not see, which keeps that child
+   * reachable instead of hiding it under something absent.
+   */
+  const cols = $derived(profile && !profile.private ? profile.collections ?? [] : []);
+  const colIds = $derived(new Set(cols.map((c) => c.id)));
+  const topCols = $derived(cols.filter((c) => c.parentId === null || !colIds.has(c.parentId)));
+  const childCols = (id: number) => cols.filter((c) => c.parentId === id);
 
   /**
    * What the owner is told about their own page: one sentence per section that
@@ -126,11 +137,9 @@
       <h1>{profile.displayName ?? profile.handle}</h1>
       <p class="handle">@{profile.handle}</p>
       {#if profile.bio}<p class="bio">{profile.bio}</p>{/if}
-      <p class="meta">
-        {#if profile.homepageUrl}<a href={profile.homepageUrl} target="_blank" rel="noopener me">{hostOf(profile.homepageUrl)} ↗</a> · {/if}
-        Follows {profile.following} {profile.following === 1 ? 'feed' : 'feeds'}{#if profile.people.follows} and {profile.people.follows} {profile.people.follows === 1 ? 'person' : 'people'}{/if}
-        · Joined {joined(profile.createdAt)}
-      </p>
+      {#if profile.homepageUrl}
+        <p class="meta"><a href={profile.homepageUrl} target="_blank" rel="noopener me">{hostOf(profile.homepageUrl)} ↗</a></p>
+      {/if}
     </div>
     {#if profile.isMe}
       <a class="btn" href="/settings">Edit profile</a>
@@ -155,19 +164,25 @@
       {#if profile.collections.length === 0 && !profile.isMe}
         <p class="status">No collections to show.</p>
       {:else}
+        {#snippet colRow(c: ProfileCollection, depth: number)}
+          <li class:nested={depth > 0}>
+            <a href={publicCollectionHref(handle, c.slug)} style:--indent="{depth * 18}px">
+              <div class="meta2">
+                <span class="name">{c.name}{#if isMe && audienceTag(c.visibility)} <span class="tag">{audienceTag(c.visibility)}</span>{/if}</span>
+                {#if c.description}<span class="desc">{c.description}</span>{/if}
+              </div>
+              {#if isMe && display.fresh && countText(marks.byId[c.id])}<span class="fresh">{countText(marks.byId[c.id])} new</span>{/if}
+              <span class="count">{c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'}</span>
+              <span class="chev" aria-hidden="true">›</span>
+            </a>
+          </li>
+          {#each childCols(c.id) as k (k.id)}
+            {@render colRow(k, depth + 1)}
+          {/each}
+        {/snippet}
         <ul class="list">
-          {#each profile.collections as c (c.id)}
-            <li>
-              <a href={publicCollectionHref(profile.handle, c.slug)}>
-                <div class="meta2">
-                  <span class="name">{c.name}{#if profile.isMe && !c.isPublic} <span class="tag">Private</span>{/if}</span>
-                  {#if c.description}<span class="desc">{c.description}</span>{/if}
-                </div>
-                {#if profile.isMe && display.fresh && countText(marks.byId[c.id])}<span class="fresh">{countText(marks.byId[c.id])} new</span>{/if}
-                <span class="count">{c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'}</span>
-                <span class="chev" aria-hidden="true">›</span>
-              </a>
-            </li>
+          {#each topCols as c (c.id)}
+            {@render colRow(c, 0)}
           {/each}
           {#if profile.isMe}
             <li class="new">
@@ -209,11 +224,11 @@
       {:else if shownNotes.length === 0}
         <p class="status">{profile.isMe ? 'Press the note icon on any post to write down what you thought of it.' : 'No notes to show.'}</p>
       {:else}
-        <div class="notes">
+        <ul class="notes">
           {#each shownNotes as item (item.id)}
-            <ItemCard {item} />
+            <NoteCard {item} />
           {/each}
-        </div>
+        </ul>
         {#if profile.notes.count > shownNotes.length}
           <a class="all" href="/@{profile.handle}/notes">All {profile.notes.count} notes <span aria-hidden="true">›</span></a>
         {/if}
@@ -254,7 +269,9 @@
   h2 { font-size: calc(16px * var(--size-app)); margin: 0 0 8px; display: flex; align-items: baseline; gap: 8px; }
   .n { font-size: calc(13px * var(--size-app)); color: var(--text-3); font-weight: 400; }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  li a { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-top: 1px solid var(--line); }
+  li a { display: flex; align-items: center; gap: 12px; padding: 14px 16px 14px calc(16px + var(--indent, 0px)); border-top: 1px solid var(--line); }
+  /* A sub-collection is indented and its name sits quieter than its parent's, so the tree reads at a glance. */
+  .nested .name { font-weight: 500; color: var(--text-2); }
   li:first-child a { border-top: 0; }
   .meta2 { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .name { font-weight: 600; }
@@ -272,7 +289,7 @@
   .new form button:disabled { opacity: 0.5; }
   .status { color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 8px 0; margin: 0; }
   .status a { color: var(--accent); font-weight: 600; }
-  .notes { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+  .notes { display: flex; flex-direction: column; gap: 14px; margin: 4px 0 0; padding: 0; list-style: none; }
   .all { display: inline-block; margin-top: 12px; color: var(--accent); font-weight: 600; font-size: calc(14px * var(--size-app)); }
   .empty { text-align: center; padding: 50px 20px; color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: 10px; }
   .empty p { margin: 0; }

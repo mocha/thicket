@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit",
     "ingest": "tsx --env-file=../../.env src/scripts/ingest.ts",
     "fix-previews": "tsx --env-file=../../.env src/scripts/fix-previews.ts",
+    "fix-entities": "tsx --env-file=../../.env src/scripts/fix-entities.ts",
     "recover-bodies": "tsx --env-file=../../.env src/scripts/recover-bodies.ts",
     "survey": "tsx --env-file=../../.env --no-warnings=ExperimentalWarning src/scripts/survey.ts",
     "survey:stats": "tsx --env-file=../../.env --no-warnings=ExperimentalWarning src/scripts/survey-stats.ts"
@@ -23,6 +24,7 @@
   "dependencies": {
     "@hono/node-server": "^2.1.1",
     "drizzle-orm": "^0.45.2",
+    "entities": "^8.1.0",
     "feedsmith": "^2.9.6",
     "hono": "^4.13.7",
     "pg": "^8.23.0",

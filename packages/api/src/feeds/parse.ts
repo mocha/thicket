@@ -5,6 +5,7 @@
  */
 import { createHash } from "node:crypto";
 import { parseFeed } from "feedsmith";
+import { decodeHTML } from "entities";
 import { choosePreview } from "./images.js";
 
 export type ParsedItem = {
@@ -43,14 +44,28 @@ export type ParsedFeed = {
 
 const SUMMARY_LEN = 280;
 
+/**
+ * HTML to the plain text that titles, summaries and author names are made of.
+ *
+ * The entities are decoded by a full HTML5 table rather than the handful this
+ * once knew (&amp;, &lt;, &gt;, &quot;, &#39;, decimal numerics). Publishers
+ * write &rsquo;, &ldquo;, &mdash; and &#x2019; constantly, and a feed that
+ * escapes its own escapes — &amp;rsquo; in the document — arrives here as
+ * &rsquo; once the XML parser has had its turn. Anything this did not know
+ * was stored verbatim and shown to the reader as "&rsquo;", in the card, the
+ * title and the address bar.
+ *
+ * Order matters: tags go first, so no entity can be decoded into one, and
+ * whitespace is collapsed last, so a decoded &nbsp; folds into the space
+ * beside it. Decoding is one pass — "&amp;rsquo;" becomes "&rsquo;" and stops
+ * there, which is what the publisher wrote.
+ */
 export function stripHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+  return decodeHTML(
+    html
+      .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " "),
+  )
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -191,5 +206,5 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
     });
   }
   const image = absolutize(f.icon ?? f.authors?.[0]?.avatar ?? f.author?.avatar ?? f.favicon ?? null, feedUrl);
-  return { kind: "json", title: f.title ?? null, description: f.description ?? null, siteUrl, image, items };
+  return { kind: "json", title: f.title ? stripHtml(f.title) : null, description: f.description ? stripHtml(f.description) : null, siteUrl, image, items };
 }

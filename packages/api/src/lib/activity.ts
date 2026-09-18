@@ -23,7 +23,7 @@
  */
 import { sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
-import { allows, type Audience } from "./visibility.js";
+import { allowedLevelsSql, allows, type Audience } from "./visibility.js";
 
 type Owner = typeof schema.users.$inferSelect;
 
@@ -46,7 +46,6 @@ export async function activityForViewer(
   who: Audience,
   opts: { limit: number; before?: string | null },
 ): Promise<{ entries: ActivityEntry[]; nextCursor: string | null }> {
-  const isMe = who.isMe;
   // Each source is admitted or excluded whole, by whether this viewer is in
   // that section's audience. The shape of the query stays the same either way;
   // Postgres prunes the branch.
@@ -54,9 +53,10 @@ export async function activityForViewer(
   const showCollections = on(u.collectionsVisibility);
   const showBookmarks = on(u.bookmarksVisibility);
   const showNotes = on(u.notesVisibility);
-  // A private collection is the owner's business: visible to them, absent for
-  // everyone else, the same rule the Collections section already applies.
-  const colVisible = isMe ? sql`` : sql`and col.is_public`;
+  // A collection narrower than the section is the owner's business: visible
+  // to them, and to whoever it is shared with, the same rule the Collections
+  // section already applies.
+  const colVisible = sql`and ${allowedLevelsSql("col.visibility", who)}`;
 
   let cursor = sql``;
   if (opts.before) {
@@ -82,7 +82,7 @@ export async function activityForViewer(
     ), entries as (
       select 'feeds'::text as kind, max(r.added_at) as at, r.collection_id as id,
              jsonb_build_object(
-               'collection', jsonb_build_object('name', col.name, 'slug', col.slug, 'isPublic', col.is_public),
+               'collection', jsonb_build_object('name', col.name, 'slug', col.slug, 'visibility', col.visibility),
                'count', count(*)::int,
                'feeds', coalesce(jsonb_agg(jsonb_build_object('id', f.id, 'title', coalesce(f.title, f.url), 'hasIcon', ${ICON("f.id")})
                                            order by r.added_at, r.feed_id) filter (where r.rn <= ${NAMED}), '[]'::jsonb)
@@ -90,16 +90,16 @@ export async function activityForViewer(
       from ranked r
       join collections col on col.id = r.collection_id
       join feeds f on f.id = r.feed_id
-      group by r.collection_id, r.grp, col.name, col.slug, col.is_public
+      group by r.collection_id, r.grp, col.name, col.slug, col.visibility
 
       union all
       -- Copied collections say so, and name the source: the copy graph is the
       -- one discovery signal thicket already has.
       select 'collection'::text, col.created_at, col.id,
-             jsonb_build_object('name', col.name, 'slug', col.slug, 'isPublic', col.is_public,
+             jsonb_build_object('name', col.name, 'slug', col.slug, 'visibility', col.visibility,
                'copiedFrom', (select jsonb_build_object('handle', su.handle, 'name', src.name, 'slug', src.slug)
                               from collections src join users su on su.id = src.user_id
-                              where src.id = col.copied_from_id and su.profile_visibility = 'public' and src.is_public))
+                              where src.id = col.copied_from_id and su.profile_visibility = 'public' and src.visibility = 'public'))
       from collections col
       where col.user_id = ${u.id} and col.parent_id is not null and ${showCollections} ${colVisible}
 

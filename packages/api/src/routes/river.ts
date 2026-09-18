@@ -15,6 +15,7 @@ import { noteColumns } from "../lib/notes.js";
 import { visitorCap } from "../lib/instance.js";
 import { SHORTS_URL_PATTERN } from "../feeds/youtube.js";
 import { feedSlugSql } from "../lib/slug.js";
+import { allowsSql } from "../lib/visibility.js";
 
 export const river = new Hono();
 
@@ -77,14 +78,18 @@ river.get("/", async (c) => {
     const [ts, id] = before.split("|");
     cursorClause = sql`and (i.published_at, i.id) < (${ts}::timestamptz, ${Number(id)}::bigint)`;
   }
-  // A collection is readable if it is mine, or if its owner shows it: public profile, collections shown, collection public.
+  // A collection is readable if it is mine, or if its owner shows it to this
+  // reader: public profile, collections shared with them, collection shared
+  // with them. Signed out, `viewerId` is null and only 'public' matches.
+  const viewerId = user?.id ?? null;
   const readable = sql`(col.user_id = ${userId} or exists(
-    select 1 from users u where u.id = col.user_id and u.profile_visibility = 'public' and u.collections_visibility = 'public' and col.is_public and col.parent_id is not null))`;
+    select 1 from users u where u.id = col.user_id and u.profile_visibility = 'public' and col.parent_id is not null
+      and ${allowsSql("u.collections_visibility", "u.id", viewerId)} and ${allowsSql("col.visibility", "col.user_id", viewerId)}))`;
   // A single feed's river ignores collections entirely: you can read a feed you don't follow.
   const scope = feedId
     ? sql`with tree as (select null::bigint as id where false)`
     : collectionId
-    ? sql`with recursive tree as (select col.id from collections col where col.id = ${collectionId} and ${readable} union all select c.id from collections c join tree t on c.parent_id = t.id join collections p on p.id = t.id where p.parent_id is not null and (c.is_public or c.user_id = ${userId}))`
+    ? sql`with recursive tree as (select col.id from collections col where col.id = ${collectionId} and ${readable} union all select c.id from collections c join tree t on c.parent_id = t.id join collections p on p.id = t.id where p.parent_id is not null and (c.user_id = ${userId} or ${allowsSql("c.visibility", "c.user_id", viewerId)}))`
     : sql`with tree as (select id from collections where user_id = ${userId})`;
 
   /**

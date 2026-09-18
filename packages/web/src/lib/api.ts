@@ -68,7 +68,7 @@ export type Feed = {
 export type FeedSettings = { feedId: number; displayName: string | null; hideShorts: boolean; hideShortsSetting: boolean | null };
 export type FeedIndexPage = { feeds: Feed[]; total: number; indexTotal: number; nextOffset: number | null };
 
-export type Collection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; feedCount: number; isPublic: boolean };
+export type Collection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; feedCount: number; visibility: ShareLevel };
 
 export type SubscribeOutcome =
   | { status: 'subscribed'; feed: Feed; alreadyFollowed: boolean }
@@ -168,7 +168,7 @@ export const collectionsApi = {
   /** Feeds that would stop being followed if this collection were deleted. */
   orphans: (id: number) => j<{ feeds: { id: number; title: string | null; url: string; siteUrl: string | null; slug: string; hasIcon: boolean }[] }>(`/api/collections/${id}/orphans`),
   create: (name: string, parentId?: number) => j<Collection>('/api/collections', { method: 'POST', body: JSON.stringify({ name, parentId }) }),
-  update: (id: number, patch: { name?: string; description?: string; parentId?: number; isPublic?: boolean }) => j<Collection>(`/api/collections/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  update: (id: number, patch: { name?: string; description?: string; parentId?: number; visibility?: ShareLevel }) => j<Collection>(`/api/collections/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   remove: (id: number) => j<{ deleted: number }>(`/api/collections/${id}`, { method: 'DELETE' }),
   /** Merge this collection into another of mine: that one keeps its name and gains these feeds and sub-collections; this one is deleted. */
   merge: (id: number, intoId: number) => j<{ into: { id: number; name: string; slug: string }; added: number; movedChildren: number }>(`/api/collections/${id}/merge`, { method: 'POST', body: JSON.stringify({ intoId }) }),
@@ -313,7 +313,7 @@ export const adminApi = {
 export type StarterCandidate = { handle: string; displayName: string | null; collectionCount: number; feedCount: number };
 
 export type PublicUser = { handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: string };
-export type ProfileCollection = { id: number; name: string; slug: string; description: string | null; isPublic: boolean; feedCount: number; copiedFromId: number | null };
+export type ProfileCollection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null };
 export type Profile =
   | { handle: string; private: true }
   | (PublicUser & {
@@ -332,7 +332,7 @@ export type PublicCollectionFeed = {
   displayName: string | null;
 };
 export type PublicCollection = {
-  id: number; name: string; slug: string; description: string | null; isPublic: boolean; createdAt: string | null;
+  id: number; name: string; slug: string; description: string | null; visibility: ShareLevel; createdAt: string | null;
   owner: PublicUser; isMe: boolean; feeds: PublicCollectionFeed[]; children: { id: number; name: string; slug: string; description: string | null; feedCount: number }[];
 };
 export type PublicBookmark = Omit<Bookmark, 'note'> & { myBookmarkId: number | null };
@@ -371,8 +371,8 @@ export const profilesApi = {
  * entry per feed.
  */
 export type ActivityEntry =
-  | { kind: 'feeds'; at: string; id: number; payload: { collection: { name: string; slug: string; isPublic: boolean }; count: number; feeds: { id: number; title: string; hasIcon: boolean }[] } }
-  | { kind: 'collection'; at: string; id: number; payload: { name: string; slug: string; isPublic: boolean; copiedFrom: { handle: string; name: string; slug: string } | null } }
+  | { kind: 'feeds'; at: string; id: number; payload: { collection: { name: string; slug: string; visibility: ShareLevel }; count: number; feeds: { id: number; title: string; hasIcon: boolean }[] } }
+  | { kind: 'collection'; at: string; id: number; payload: { name: string; slug: string; visibility: ShareLevel; copiedFrom: { handle: string; name: string; slug: string } | null } }
   | { kind: 'bookmark'; at: string; id: number; payload: { url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean } }
   | { kind: 'note'; at: string; id: number; payload: { body: string; itemId: number; url: string; title: string | null; siteTitle: string | null; feedId: number; hasIcon: boolean } };
 

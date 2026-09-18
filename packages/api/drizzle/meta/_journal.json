@@ -92,6 +92,13 @@
       "when": 1789490000000,
       "tag": "0012_account_icons",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789500000000,
+      "tag": "0013_collection_share_levels",
+      "breakpoints": true
     }
   ]
 }

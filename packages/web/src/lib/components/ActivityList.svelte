@@ -11,6 +11,7 @@
   import { api } from '$lib/api';
   import SourceIcon from './SourceIcon.svelte';
   import { relativeTime, hostOf } from '$lib/time';
+  import { audienceTag } from '$lib/visibility';
   import { session } from '$lib/session.svelte';
   import VisitorMore from './VisitorMore.svelte';
 
@@ -87,7 +88,7 @@
               <p class="what">
                 Added {plural(e.payload.count, 'feed')} to
                 <a href={publicCollectionHref(handle, e.payload.collection.slug)}>{e.payload.collection.name}</a>
-                {#if isMe && !e.payload.collection.isPublic}<span class="tag">Private</span>{/if}
+                {#if isMe && audienceTag(e.payload.collection.visibility)}<span class="tag">{audienceTag(e.payload.collection.visibility)}</span>{/if}
               </p>
               <span class="when">{relativeTime(e.at)}</span>
             </div>
@@ -105,7 +106,7 @@
                 {:else}
                   Made a collection, <a href={publicCollectionHref(handle, e.payload.slug)}>{e.payload.name}</a>
                 {/if}
-                {#if isMe && !e.payload.isPublic}<span class="tag">Private</span>{/if}
+                {#if isMe && audienceTag(e.payload.visibility)}<span class="tag">{audienceTag(e.payload.visibility)}</span>{/if}
               </p>
               <span class="when">{relativeTime(e.at)}</span>
             </div>

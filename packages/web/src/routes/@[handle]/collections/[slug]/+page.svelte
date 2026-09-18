@@ -8,6 +8,7 @@
   import { loadCollections } from '$lib/collections.svelte';
   import { feedOrigin, hostOf, relativeTime } from '$lib/time';
   import { feedListName } from '$lib/feedname';
+  import { audienceTag } from '$lib/visibility';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import River from '$lib/components/River.svelte';
@@ -93,7 +94,7 @@
     <p class="sub">
       {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> · {/if}<button class="reveal" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style:transform={showFeeds ? 'rotate(180deg)' : 'none'}><path d="M6 9l6 6 6-6" /></svg></button>
       {#if col.description} · {col.description}{/if}
-      {#if col.isMe && !col.isPublic} · <span class="tag">Private</span>{/if}
+      {#if col.isMe && audienceTag(col.visibility)} · <span class="tag">{audienceTag(col.visibility)}</span>{/if}
     </p>
   </header>
 
