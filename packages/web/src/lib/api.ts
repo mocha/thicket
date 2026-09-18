@@ -313,7 +313,7 @@ export const adminApi = {
 export type StarterCandidate = { handle: string; displayName: string | null; collectionCount: number; feedCount: number };
 
 export type PublicUser = { handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: string };
-export type ProfileCollection = { id: number; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null };
+export type ProfileCollection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null };
 export type Profile =
   | { handle: string; private: true }
   | (PublicUser & {
