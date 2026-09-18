@@ -148,10 +148,10 @@
   const when = (v: string | null) => (v ? new Date(v).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : null);
   const every = (s: number) => (s < 3600 ? `${Math.round(s / 60)} minutes` : s < 86400 ? `${+(s / 3600).toFixed(1)} hours` : `${+(s / 86400).toFixed(1)} days`);
   const facts = $derived<[string, string | null][]>(feed ? [
-    ['Address being read', feed.url],
+    ['Feed URL', feed.url],
     ['Website', feed.siteUrl],
-    ['Title, as the feed gives it', feed.title],
-    ['Description, as the feed gives it', feed.description],
+    ['Feed title', feed.title],
+    ['Feed description', feed.description],
     ['Format', feed.kind],
     ['Feed number', String(feed.id)],
     ['Added to thicket', when(feed.createdAt)],
@@ -165,7 +165,7 @@
     ['Posts stored', String(feed.itemCount)],
     ['Followers', String(feed.followerCount)],
     ['ETag', feed.etag],
-    ['Last-Modified', feed.lastModified],
+    ['Last modified', feed.lastModified],
   ] : []);
 
   $effect(() => {
