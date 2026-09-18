@@ -444,11 +444,12 @@ export type SearchResults = {
 };
 
 export const searchApi = {
-  run: (opts: { q: string; scope?: SearchScope; limit?: number; offset?: number }) => {
+  run: (opts: { q: string; scope?: SearchScope; limit?: number; offset?: number; network?: string | null }) => {
     const p = new URLSearchParams({ q: opts.q });
     if (opts.scope && opts.scope !== 'all') p.set('scope', opts.scope);
     if (opts.limit) p.set('limit', String(opts.limit));
     if (opts.offset) p.set('offset', String(opts.offset));
+    if (opts.network) p.set('network', opts.network);
     return j<SearchResults>(`/api/search?${p}`);
   }
 };
