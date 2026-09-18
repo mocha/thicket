@@ -65,3 +65,18 @@ export function toggleNavOpen(id: number) {
   navOpen.ids = navOpen.ids.includes(id) ? navOpen.ids.filter((x) => x !== id) : [...navOpen.ids, id];
   try { localStorage.setItem(OPEN_KEY, JSON.stringify(navOpen.ids)); } catch { /* stays for the session */ }
 }
+
+/**
+ * Whether the sidebar's "My collections" group is unfolded. Kept on this
+ * device like the per-group state above. Open by default: the collections are
+ * the point of the list, so we show them until you fold them away.
+ */
+const COLS_OPEN_KEY = 'thicket:nav-collections-open';
+export const collectionsOpen = $state<{ open: boolean }>({ open: true });
+export function loadCollectionsOpen() {
+  try { const v = localStorage.getItem(COLS_OPEN_KEY); if (v !== null) collectionsOpen.open = v === '1'; } catch { /* open, then */ }
+}
+export function toggleCollectionsOpen() {
+  collectionsOpen.open = !collectionsOpen.open;
+  try { localStorage.setItem(COLS_OPEN_KEY, collectionsOpen.open ? '1' : '0'); } catch { /* stays for the session */ }
+}
