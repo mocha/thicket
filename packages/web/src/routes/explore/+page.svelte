@@ -514,9 +514,11 @@
   /* The per-view explainer: the caption above the filters, saying what this
      view is before its controls. A small accent-tinted icon sets it apart from
      the plain text below; the icon's left edge lines up with the filter labels. */
-  .blurb { display: flex; align-items: flex-start; justify-content: center; gap: 8px; margin: 8px 0 16px; color: var(--accent); font-size: calc(14px * var(--size-app)); }
-  .blurb span { text-wrap: pretty; font-weight: 600; text-align: center; }
-  .blurb-i { flex: none; margin-top: 2px; color: var(--accent); }
+  /* Icon flows inline with the text so it always rides beside the first word —
+     centered together, and never pinned to the edge when the text fills the line. */
+  .blurb { margin: 8px 0 16px; color: var(--accent); font-size: calc(14px * var(--size-app)); text-align: center; text-wrap: pretty; }
+  .blurb span { font-weight: 600; }
+  .blurb-i { display: inline-block; vertical-align: -3px; margin-right: 6px; color: var(--accent); }
   /* Browsing, the filters and list are one card; the caption leads it, inset to
      match the card's 12px padding. */
   .browse .blurb { margin: 0; padding: 20px 12px 8px; }
