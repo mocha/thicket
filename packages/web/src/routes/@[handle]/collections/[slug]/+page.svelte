@@ -11,6 +11,7 @@
   import { audienceTag } from '$lib/visibility';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
+  import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import River from '$lib/components/River.svelte';
   import { showToast } from '$lib/toast.svelte';
 
@@ -82,7 +83,7 @@
       <h1>{col.name}</h1>
       <div class="actions">
         {#if col.isMe}
-          <button class="btn" onclick={() => openAddFeed({ collectionIds: [col!.id], via: 'collection_page' })}><span aria-hidden="true">+</span> Add new feed</button>
+          <AddFeedButton collectionIds={[col!.id]} via="collection_page" />
           <a class="btn" href={manageCollectionHref(handle, slug)}>Settings</a>
         {:else if session.user}
           <button class="btn primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</button>
