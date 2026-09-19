@@ -51,6 +51,11 @@
     posts: 'Individual posts from across every feed on thicket.',
     people: 'Public profiles you can browse and follow.'
   };
+  /**
+   * Bind the last two words with a non-breaking space so the caption can never
+   * wrap to a single orphaned word on its final line, at any width.
+   */
+  const noOrphan = (s: string) => s.replace(/ (\S+)$/, ' $1');
   const q = $derived((page.url.searchParams.get('q') ?? '').trim());
   const scope = $derived(((page.url.searchParams.get('scope') as SearchScope | null) ?? 'all') as SearchScope);
   const searching = $derived(q.length > 0);
@@ -288,7 +293,7 @@
 {/snippet}
 
 {#snippet filterBar()}
-  <p class="blurb">{@render scopeIcon(scope)}<span>{SCOPE_BLURB[scope]}</span></p>
+  <p class="blurb">{@render scopeIcon(scope)}<span>{noOrphan(SCOPE_BLURB[scope])}</span></p>
   <div class="filters">
     <label class="filter" title={followsAnyone === false ? 'Follow someone first' : ''}>
       <span class="label">Show</span>
