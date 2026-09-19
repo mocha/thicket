@@ -66,7 +66,7 @@
 <style>
   main {
     max-width: 640px; margin: 0 auto;
-    padding: 12px 12px calc(var(--nav-h) + var(--safe-b) + 24px);
+    padding: calc(env(safe-area-inset-top, 0px) + 20px) 12px calc(var(--nav-h) + var(--safe-b) + 24px);
   }
   main.anon { padding-bottom: 40px; }
   /* Paged: room for the page-turn strips down both sides. */

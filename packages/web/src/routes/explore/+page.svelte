@@ -11,7 +11,7 @@
   import { highlight, plural, shareOfOutput } from '$lib/words';
   import { feedListName } from '$lib/feedname';
   import { session } from '$lib/session.svelte';
-  import { openAddFeed } from '$lib/addfeed.svelte';
+  import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import Monogram from '$lib/components/Monogram.svelte';
@@ -40,6 +40,17 @@
     { id: 'posts', label: 'Posts' },
     { id: 'people', label: 'People' }
   ];
+  /**
+   * One line under the tabs saying what the selected tab shows. Fixed spot, one
+   * per scope, on every view — the tabs pick the view, this says what it is.
+   */
+  const SCOPE_BLURB: Record<SearchScope, string> = {
+    all: 'Feeds, collections, posts, and people, together in one search.',
+    feeds: 'Sites that publish a feed. Follow one and its posts arrive in your stream.',
+    collections: 'Topical sets of feeds people share, so you can follow along.',
+    posts: 'Individual posts from across every feed on thicket.',
+    people: 'Public profiles you can browse and follow.'
+  };
   const q = $derived((page.url.searchParams.get('q') ?? '').trim());
   const scope = $derived(((page.url.searchParams.get('scope') as SearchScope | null) ?? 'all') as SearchScope);
   const searching = $derived(q.length > 0);
@@ -67,11 +78,18 @@
   }
 
   let draft = $state('');
+  let searchInput = $state<HTMLInputElement | null>(null);
   let timer: ReturnType<typeof setTimeout>;
   function onSearch(v: string) {
     draft = v;
     clearTimeout(timer);
     timer = setTimeout(() => setParams({ q: v.trim() || null }), 250);
+  }
+  function clearSearch() {
+    draft = '';
+    clearTimeout(timer);
+    setParams({ q: null });
+    searchInput?.focus();
   }
 
   /* ---- search ---- */
@@ -207,12 +225,6 @@
     return () => io.disconnect();
   });
 
-  const browseTotal = $derived(browseAs === 'feeds' ? feedsTotal : browseAs === 'collections' ? colsTotal : usersTotal);
-  const browseCount = $derived(
-    browseAs !== 'feeds' || feedsTotal === feedsAll || !feedsAll
-      ? browseTotal.toLocaleString()
-      : `${feedsTotal.toLocaleString()} of ${feedsAll.toLocaleString()}`
-  );
   /** Empty is per scope, not per query: "no people match" while 300 posts do. */
   const nothing = $derived(
     !loading && (searching
@@ -225,32 +237,30 @@
 <svelte:head><title>{searching ? `${q} · Explore` : 'Explore'} · thicket</title></svelte:head>
 
 <header class="top">
-  <h1>Explore</h1>
-  <p class="sub">Find feeds, collections, posts, and people, all in one search.</p>
+  <div class="titlerow">
+    <h1>Explore</h1>
+    <AddFeedButton via="explore" />
+  </div>
+  <p class="sub">Find feeds, collections, posts, and people<span class="tail">, all in one search.</span></p>
 </header>
 
 <section class="pane">
   <div class="head">
-    <input
-      class="search" type="search" value={draft} oninput={(e) => onSearch(e.currentTarget.value)}
-      placeholder="Search for anything — a topic, a site, a person" aria-label="Search"
-    />
-    {#if !searching && browseAs === 'feeds'}
-      <button class="add" onclick={() => openAddFeed({ via: 'explore' })}><span aria-hidden="true">+</span> Add a new feed</button>
-    {/if}
-  </div>
-
-  {#if !searching && browseAs !== 'feeds'}
-    <div class="titles">
-      {#if browseAs === 'collections'}
-        <h2>Collections people have shared <span class="count">{browseCount}</span></h2>
-        <p>Browse collections of feeds curated by other people and copy them to your profile.</p>
-      {:else}
-        <h2>People here <span class="count">{browseCount}</span></h2>
-        <p>Public profiles you can browse and follow, to see their notes and what they read.</p>
+    <div class="field">
+      <svg class="glass" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+      <input
+        bind:this={searchInput}
+        class="search" class:clearable={draft} type="search" value={draft} oninput={(e) => onSearch(e.currentTarget.value)}
+        placeholder="Search for anything" aria-label="Search"
+      />
+      {#if draft}
+        <button class="clear" type="button" onclick={clearSearch} aria-label="Clear search">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
       {/if}
     </div>
-  {/if}
+  </div>
+
   <div class="scopes" role="tablist" aria-label="What to search">
     {#each SCOPES as s (s.id)}
       {#if searching || s.id !== 'posts'}
@@ -261,13 +271,24 @@
       {/if}
     {/each}
   </div>
-
 </section>
 
 <!-- The filters that act on a browse list. Rendered as the list card's header
      when browsing (attached to what they control), and as a plain bar above the
      stacked result cards when searching. -->
+{#snippet scopeIcon(s: SearchScope)}
+  <svg class="blurb-i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    {#if s === 'feeds'}<path d="M4 11a9 9 0 0 1 9 9" /><path d="M4 4a16 16 0 0 1 16 16" /><circle cx="5" cy="19" r="1" />
+    {:else if s === 'collections'}<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.57 3.9a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" /><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" /><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
+    {:else if s === 'posts'}<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" />
+    {:else if s === 'people'}<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    {:else}<rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
+    {/if}
+  </svg>
+{/snippet}
+
 {#snippet filterBar()}
+  <p class="blurb">{@render scopeIcon(scope)}<span>{SCOPE_BLURB[scope]}</span></p>
   <div class="filters">
     <label class="filter" title={followsAnyone === false ? 'Follow someone first' : ''}>
       <span class="label">Show</span>
@@ -466,22 +487,39 @@
 
 <style>
   .top { margin-bottom: 12px; }
-  h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; }
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); max-width: 62ch; }
-  .pane { margin-bottom: 0; }
-  .head { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
-  .search { flex: 1; min-width: 0; padding: 12px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: calc(16px * var(--size-app)); }
-  .add { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: calc(14px * var(--size-app)); font-weight: 600; white-space: nowrap; }
-  .add span { font-size: calc(18px * var(--size-app)); line-height: 1; }
+  .titlerow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; min-width: 0; }
+  /* text-wrap: pretty keeps a lone last word from stranding on its own line. */
+  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); max-width: 62ch; text-wrap: pretty; }
+  /* On a phone the subtitle drops its "all in one search" tail to stay one tidy line. */
+  @media (max-width: 560px) { .sub .tail { display: none; } }
+  .pane { margin-bottom: 8px; }
+  .head { margin-bottom: 20px; }
+  .field { position: relative; display: flex; align-items: center; }
+  .search { width: 100%; min-width: 0; padding: 12px 16px 12px 44px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: calc(16px * var(--size-app)); text-overflow: ellipsis; }
+  /* Extra room on the right so long text doesn't run under the clear button. */
+  .search.clearable { padding-right: 44px; }
+  /* Hide the browser's own clear widget so there aren't two. */
+  .search::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+  .glass { position: absolute; left: 16px; color: var(--text-3); pointer-events: none; }
+  .clear { position: absolute; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 999px; color: var(--text-3); }
+  .clear:hover { color: var(--text); background: var(--surface-2); }
   .scopes { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-2); margin-bottom: 4px; overflow-x: auto; }
   .scopes button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; border-radius: 999px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
   .scopes button[aria-selected='true'] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
   .scopes button:disabled { opacity: 0.4; }
   .scopes .n { font-weight: 400; color: var(--text-3); font-variant-numeric: tabular-nums; }
-  .titles { min-width: 0; margin-bottom: 12px; }
   h2 { font-family: var(--font-headings); font-size: calc(21px * var(--size-headings)); margin: 0; display: flex; align-items: baseline; gap: 8px; }
   .count { color: var(--text-3); font-weight: 400; font-size: calc(15px * var(--size-app)); font-family: var(--font); font-variant-numeric: tabular-nums; }
-  .titles p { margin: 4px 0 0; color: var(--text-2); font-size: calc(14px * var(--size-app)); max-width: 68ch; }
+  /* The per-view explainer: the caption above the filters, saying what this
+     view is before its controls. A small accent-tinted icon sets it apart from
+     the plain text below; the icon's left edge lines up with the filter labels. */
+  .blurb { display: flex; align-items: flex-start; justify-content: center; gap: 8px; margin: 8px 0 16px; color: var(--accent); font-size: calc(14px * var(--size-app)); }
+  .blurb span { text-wrap: pretty; font-weight: 600; text-align: center; }
+  .blurb-i { flex: none; margin-top: 2px; color: var(--accent); }
+  /* Browsing, the filters and list are one card; the caption leads it, inset to
+     match the card's 12px padding. */
+  .browse .blurb { margin: 0; padding: 20px 12px 8px; }
   .group { margin-bottom: 22px; }
   .group h2 { margin-bottom: 8px; }
   .all { margin-left: auto; font-size: calc(14px * var(--size-app)); }
@@ -500,7 +538,7 @@
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   /* Browse: the filters are the list card's header, so the two read as one unit. */
   .browse { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .browse .filters { margin: 0; padding: 12px; }
+  .browse .filters { margin: 0; padding: 12px 12px 4px; }
   .browse .list { background: none; box-shadow: none; border-radius: 0; }
   li { display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 12px; border-top: 1px solid var(--line); flex-wrap: wrap; }
   /* On a phone the Follow control would squeeze the description into a column
