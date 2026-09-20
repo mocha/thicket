@@ -22,6 +22,7 @@
   let url = $state('');
   let ids = $state<number[]>([]);
   let newName = $state('');
+  let filter = $state('');
   let creating = $state(false);
   let busy = $state(false);
   let outcome = $state<SubscribeOutcome | null>(null);
@@ -34,7 +35,7 @@
     const o = addFeed.opts;
     url = o.url ?? '';
     ids = [...(o.collectionIds ?? [])];
-    newName = ''; outcome = null; busy = false; landing = false;
+    newName = ''; filter = ''; outcome = null; busy = false; landing = false;
     // Opened from a collection, that one starts ticked. Opened from Everything,
     // nothing is ticked — leave it and Follow drops the feed in your default
     // collection, which the hint below spells out.
@@ -55,6 +56,15 @@
   }
 
   const nameOf = (id: number) => namedCollections().find((c) => c.id === id)?.name ?? 'a collection';
+
+  // With a lot of collections the list becomes a scroll, so offer a filter —
+  // but only once there are enough to bother, so short lists stay clean. It
+  // narrows to names that contain what you type, ignoring case.
+  const showFilter = $derived(namedCollections().length > 6);
+  const visibleCollections = $derived.by(() => {
+    const q = filter.trim().toLowerCase();
+    return q ? namedCollections().filter((c) => c.name.toLowerCase().includes(q)) : namedCollections();
+  });
 
   async function createCollection() {
     const name = newName.trim();
@@ -128,9 +138,13 @@
     {/if}
 
     <div class="eyebrow">Put it in a collection</div>
+    {#if showFilter}
+      <input class="filter" type="text" bind:value={filter} placeholder="Filter collections…" aria-label="Filter collections" disabled={busy}
+        onkeydown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} />
+    {/if}
     <div class="scroll" bind:this={list}>
     <ul class="checks">
-      {#each namedCollections() as c (c.id)}
+      {#each visibleCollections as c (c.id)}
         <li>
           <label>
             <input type="checkbox" checked={ids.includes(c.id)} onchange={() => toggle(c.id)} disabled={busy} />
@@ -140,6 +154,9 @@
         </li>
       {/each}
     </ul>
+    {#if filter.trim() && !visibleCollections.length}
+      <p class="nomatch">No collections match “{filter.trim()}”. Start one below.</p>
+    {/if}
     </div>
     <p class="hint">{#if !namedCollections().length}No collections yet — one will be made for this feed.{:else if ids.length === 1}It goes in {nameOf(ids[0])}. Tick more if it belongs in several.{:else if ids.length}It goes in {ids.length} of your collections.{:else}Pick one, or it goes in {defaultCollection()?.name ?? 'your first collection'}.{/if}</p>
     {#if collectionStore.loaded}
@@ -178,6 +195,9 @@
   .candidates button { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); }
   .candidates span { font-size: calc(12px * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
   .eyebrow { font-size: calc(11px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 4px; }
+  .filter { padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(14px * var(--size-app)); width: 100%; }
+  .filter:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .nomatch { margin: 0; padding: 12px 8px; color: var(--text-3); font-size: calc(13px * var(--size-app)); }
   .scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: 38vh; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; }
   /* Desktop cap. Must come after the base .scroll rule above: same specificity,
      so source order decides, and the list should top out at ~7 rows and scroll,
