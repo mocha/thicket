@@ -42,9 +42,12 @@
     void loadCollections().then(async (s) => {
       ids = ids.filter((id) => id !== s.rootId);
       // The list scrolls and is alphabetical, so a ticked one is often below
-      // the fold. Bring it up: where this is going should never be off screen.
+      // the fold. Opened from a collection, center that ticked row so where the
+      // feed is going is plainly in view, not clipped to an edge. (Opened from
+      // Everything nothing is ticked, so this is a no-op and the list starts at
+      // the top.)
       await tick();
-      list?.querySelector('input:checked')?.closest('li')?.scrollIntoView({ block: 'nearest' });
+      list?.querySelector('input:checked')?.closest('li')?.scrollIntoView({ block: 'center' });
     });
     dialog?.showModal();
     if (o.autoSubmit && url) void submit(url);
