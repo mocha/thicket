@@ -31,6 +31,9 @@ importers:
       sanitize-html:
         specifier: ^2.17.7
         version: 2.17.7
+      stripe:
+        specifier: ^22.6.2
+        version: 22.6.2(@types/node@22.20.2)
       undici:
         specifier: ^8.10.2
         version: 8.10.2
@@ -1317,6 +1320,15 @@ packages:
     resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
     engines: {node: '>= 10.x'}
 
+  stripe@22.6.2:
+    resolution: {integrity: sha512-PwRE2scocvXqDKPiskMa5vRJEAEkq46W69XyUYmAwrNSLr675lQnfqLwnsndAWizwgihOWw/irLmoFRo3ez7ew==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/node': '>=18'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+
   strnum@2.4.2:
     resolution: {integrity: sha512-rDG3Ah4TV0k1hWvLSzkZtMmLN9+eS+h3knq4MP6A42Y3Yh5qGNnOUs1jJkoSr8FG5dsL28c7KgkIBzSEykqtuw==}
 
@@ -2269,6 +2281,10 @@ snapshots:
   source-map@0.6.1: {}
 
   split2@4.2.0: {}
+
+  stripe@22.6.2(@types/node@22.20.2):
+    optionalDependencies:
+      '@types/node': 22.20.2
 
   strnum@2.4.2:
     dependencies:

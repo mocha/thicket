@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { api, authApi, ApiError, PLAN_NAMES } from '$lib/api';
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
+  import { api, authApi, billingApi, priceLabel, ApiError, PLAN_NAMES, type BillingStatus } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { display, setDisplay, APPEARANCES, READING_MODES, LAYOUTS, FRESH_OPTIONS, type Display } from '$lib/display.svelte';
   import Tiles from '$lib/components/display/Tiles.svelte';
@@ -50,6 +53,47 @@
 
   const tracking = $derived(me.trackActivity ?? me.instanceTracking);
 
+  /**
+   * Billing, on the instances that sell a plan. The trial starts in Stripe
+   * Checkout and the rest is Stripe's portal; this page only opens those doors
+   * and, on the way back from Checkout, applies the result at once rather than
+   * waiting for the webhook.
+   */
+  let billing = $state<BillingStatus | null>(null);
+  let billingBusy = $state(false);
+  onMount(async () => {
+    const checkout = page.url.searchParams.get('checkout');
+    const sessionId = page.url.searchParams.get('session_id');
+    if (checkout === 'success' && sessionId) {
+      try {
+        await billingApi.complete(sessionId);
+        setMe(await authApi.me());
+        api.event('billing_checkout_completed');
+        showToast('Welcome to Basic. Your trial has started.');
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : 'Could not confirm the checkout');
+      }
+      void goto('/settings#plan', { replaceState: true });
+    } else if (checkout === 'cancelled') {
+      void goto('/settings#plan', { replaceState: true });
+    }
+    billing = await billingApi.status().catch(() => null);
+  });
+  const canSubscribe = $derived(!!billing?.enabled && me.plan === 'free' && me.planSource === 'instance');
+  const subscribed = $derived(!!billing?.enabled && me.planSource === 'stripe');
+  async function openBilling(kind: 'checkout' | 'portal') {
+    billingBusy = true;
+    try {
+      const { url } = kind === 'checkout' ? await billingApi.checkout('/settings') : await billingApi.portal('/settings');
+      api.event(kind === 'checkout' ? 'billing_checkout_started' : 'billing_portal_opened');
+      window.location.href = url;
+    } catch (e) {
+      billingBusy = false;
+      showToast(e instanceof Error ? e.message : 'Could not open billing');
+    }
+  }
+  const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : '');
+
   function choose(patch: Partial<Omit<Display, 'fonts'>>, key: string) { setDisplay(patch); api.event('display_changed', { key, value: Object.values(patch)[0] }); }
 
 </script>
@@ -71,6 +115,22 @@
     <li><span>Sub-collections</span><b>{me.limits.nested ? 'yes' : 'not on this plan'}</b></li>
     <li><span>Posts shown</span><b>{#if me.limits.collectionView.perFeed !== null}the newest {me.limits.collectionView.perFeed} of each feed{:else if me.limits.collectionView.days !== null}the last {Math.round(me.limits.collectionView.days / 365)} year{:else}everything{/if}</b></li>
   </ul>
+  {#if billing?.enabled && billing.price}
+    <div class="billing">
+      {#if subscribed && billing.subscription}
+        <p class="help">
+          {#if billing.subscription.status === 'trialing'}Your trial ends {day(billing.subscription.trialEnd)}{#if !billing.subscription.cancelAtPeriodEnd}, then {priceLabel(billing.price)}{/if}.
+          {:else if billing.subscription.cancelAtPeriodEnd}Cancelled: Basic until {day(billing.subscription.currentPeriodEnd)}, then Free. Everything you saved stays.
+          {:else if billing.subscription.status === 'past_due'}Your last payment didn't go through. Update your card to keep Basic.
+          {:else}Renews {day(billing.subscription.currentPeriodEnd)} at {priceLabel(billing.price)}.{/if}
+        </p>
+        <button onclick={() => openBilling('portal')} disabled={billingBusy}>Manage billing</button>
+      {:else if canSubscribe}
+        <p class="help">Basic is {priceLabel(billing.price)} after a {billing.trialDays}-day trial: up to 500 feeds and 100 collections, notes, and a year of posts. The card is taken now; nothing is charged for {billing.trialDays} days. <a href="/pricing">Compare plans.</a></p>
+        <button class="primary" onclick={() => openBilling('checkout')} disabled={billingBusy}>{billingBusy ? 'One moment…' : `Start your ${billing.trialDays}-day trial`}</button>
+      {/if}
+    </div>
+  {/if}
 </section>
 
 <section class="card">
@@ -178,6 +238,11 @@
   .usage { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px 16px; }
   .usage li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: calc(14px * var(--size-app)); }
   .usage li span { color: var(--text-2); }
+  .billing { margin-top: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+  .billing .help { margin: 0; flex: 1 1 320px; }
+  .billing button { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+  .billing button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .billing button:disabled { opacity: 0.6; }
   h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
   /* When a description follows the header, pull it up tight; the 12px gap then sits under the description. */
   h2 + .help { margin-top: -8px; }

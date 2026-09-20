@@ -292,7 +292,8 @@ export type ViewWindow = { perFeed: number | null; total: number | null; days: n
 export type PlanLimits = { feeds: number | null; collections: number | null; bookmarks: number | null; notes: boolean; nested: boolean; addFeedPerHour: number; feedView: ViewWindow; collectionView: ViewWindow };
 export type SignupPolicy = 'open' | 'invite' | 'closed';
 /** `visitorLimit`: visitors without an account see only the newest items of anything a page lists. */
-export type InstanceStatus = { name: string; url: string; signups: SignupPolicy; visitorLimit: boolean };
+/** `billing`: this instance sells a plan (the hosted product); a self-hosted instance says false. */
+export type InstanceStatus = { name: string; url: string; signups: SignupPolicy; visitorLimit: boolean; billing: boolean };
 export type Invite = { code: string; url: string; note: string | null; createdAt: string; expiresAt: string | null; usedAt: string | null; usedByHandle: string | null; createdByHandle: string };
 
 export const authApi = {
@@ -482,3 +483,26 @@ export const profileHref = (handle: string) => `/@${handle}`;
 export const collectionHref = (handle: string, slug: string) => `/@${handle}/collections/${slug}`;
 export const publicCollectionHref = collectionHref;
 export const manageCollectionHref = (handle: string, slug: string) => `${collectionHref(handle, slug)}/manage`;
+
+// ---- billing (api routes/billing.ts) ------------------------------------------
+
+export type PriceInfo = { id: string; lookupKey: string; amount: number; currency: string; interval: string };
+export type SubscriptionSummary = { status: string | null; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean; trialEnd: string | null };
+/** What the pricing page and Settings need: whether a plan is sold here, what it costs, what each plan allows, and my own subscription if any. */
+export type BillingStatus = { enabled: boolean; price: PriceInfo | null; trialDays: number; plans: { free: PlanLimits; basic: PlanLimits }; subscription: SubscriptionSummary | null };
+
+export const billingApi = {
+  status: () => j<BillingStatus>('/api/billing'),
+  /** Stripe Checkout for Basic; the answer is a URL to send the browser to. */
+  checkout: (returnTo = '/settings') => j<{ url: string }>('/api/billing/checkout', { method: 'POST', body: JSON.stringify({ returnTo }) }),
+  /** Stripe's portal: card, invoices, cancelling. */
+  portal: (returnTo = '/settings') => j<{ url: string }>('/api/billing/portal', { method: 'POST', body: JSON.stringify({ returnTo }) }),
+  /** Back from Checkout: apply the result now rather than wait for the webhook. */
+  complete: (sessionId: string) => j<{ plan: Plan | null; until: string | null; subscription: SubscriptionSummary | null }>('/api/billing/checkout/complete', { method: 'POST', body: JSON.stringify({ sessionId }) })
+};
+
+/** "$30 a year" from a price's minor units. */
+export function priceLabel(p: PriceInfo): string {
+  const amount = new Intl.NumberFormat(undefined, { style: 'currency', currency: p.currency.toUpperCase(), maximumFractionDigits: p.amount % 100 === 0 ? 0 : 2 }).format(p.amount / 100);
+  return `${amount} a ${p.interval}`;
+}

@@ -25,6 +25,7 @@ import { notes } from "./routes/notes.js";
 import { search } from "./routes/search.js";
 import { items } from "./routes/items.js";
 import { marks } from "./routes/marks.js";
+import { billing } from "./routes/billing.js";
 import { startScheduler } from "./feeds/scheduler.js";
 import { attachUser, pruneSessions } from "./lib/auth.js";
 import { PlanLimitError } from "./lib/plans.js";
@@ -64,6 +65,7 @@ app.route("/api/bookmarks", bookmarks);
 app.route("/api/notes", notes);
 app.route("/api/items", items);
 app.route("/api/marks", marks);
+app.route("/api/billing", billing);
 
 const scheduler = SCHEDULER
   ? startScheduler({ tickMs: SCHEDULER_TICK_MS, concurrency: FETCH_CONCURRENCY, log: (m) => console.log(`[fetch] ${m}`) })

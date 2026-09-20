@@ -10,7 +10,7 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
-import { INSTANCE_NAME, PUBLIC_URL, SIGNUPS_DEFAULT } from "./config.js";
+import { BILLING_ENABLED, INSTANCE_NAME, PUBLIC_URL, SIGNUPS_DEFAULT } from "./config.js";
 
 export type SignupPolicy = "open" | "invite" | "closed";
 
@@ -53,7 +53,7 @@ export async function visitorCap(user: unknown): Promise<number | null> {
 
 /** What the sign-up page needs to render itself. Public. */
 export async function publicStatus() {
-  return { name: (await getSetting<string>("name")) ?? INSTANCE_NAME, url: PUBLIC_URL, signups: await signupPolicy(), visitorLimit: await visitorsLimited() };
+  return { name: (await getSetting<string>("name")) ?? INSTANCE_NAME, url: PUBLIC_URL, signups: await signupPolicy(), visitorLimit: await visitorsLimited(), billing: BILLING_ENABLED };
 }
 
 /** Self-healing: if nobody is admin, the oldest account is. Runs at boot and after the first sign-up. */

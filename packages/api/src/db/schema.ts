@@ -412,3 +412,33 @@ export const fetchLog = pgTable("fetch_log", {
   itemsNew: integer("items_new"),
   error: text("error"),
 }, (t) => [index("fetch_log_feed_at_idx").on(t.feedId, t.at)]);
+
+/**
+ * Billing (lib/billing.ts). One row per account that has ever reached
+ * Checkout: the Stripe customer is made first, so a row can exist with no
+ * subscription yet. Stripe is the source of truth for money; this is the
+ * cache of what the product needs. The plan in force is still users.plan
+ * and friends, which lib/billing.ts keeps current.
+ */
+export const subscriptions = pgTable("subscriptions", {
+  userId: bigint("user_id", { mode: "number" }).primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  stripeCustomerId: text("stripe_customer_id").notNull().unique(),
+  stripeSubscriptionId: text("stripe_subscription_id").unique(),
+  /** Stripe's word: trialing, active, past_due, canceled, unpaid, incomplete, incomplete_expired, paused. */
+  status: text("status"),
+  priceLookupKey: text("price_lookup_key"),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  trialEnd: timestamp("trial_end", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Every webhook event id seen, so a redelivery is a no-op. `error` keeps why handling failed; Stripe retries. */
+export const billingEvents = pgTable("billing_events", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+  processedAt: timestamp("processed_at", { withTimezone: true }),
+  error: text("error"),
+});

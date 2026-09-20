@@ -42,3 +42,13 @@ export const RETAIN_EVENTS_DAYS = Number(env("RETAIN_EVENTS_DAYS") ?? 90);
  * instance setting; the admin page changes it at runtime.
  */
 export const DEFAULT_PLAN = ((v) => (v === "free" || v === "basic" || v === "advanced" ? v : "advanced"))(env("DEFAULT_PLAN"));
+
+/**
+ * Billing (lib/billing.ts). Both present = the hosted product with a paid
+ * plan; either absent = no billing at all, which is every self-hosted
+ * instance. The price is found by lookup key, so nothing changes between the
+ * sandbox and the live account except these two secrets.
+ */
+export const STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY");
+export const STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET");
+export const BILLING_ENABLED = !!STRIPE_SECRET_KEY;
