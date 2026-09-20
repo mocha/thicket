@@ -152,7 +152,7 @@
 
 <style>
   .top { margin-bottom: 16px; }
-  .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
   h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1; }
   .desc { margin: 6px 0 0; color: var(--text-2); font-size: calc(14px * var(--size-app)); overflow-wrap: anywhere; }
   .sub { margin: 4px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
@@ -163,7 +163,7 @@
   .actions { flex: none; display: flex; gap: 8px; align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
   .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
   .btn:hover { background: var(--surface-2); color: var(--text); }
-  .btn.icon { display: inline-flex; align-items: center; justify-content: center; padding: 9px; }
+  .btn.icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; }
   .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .btn:disabled { opacity: 0.6; }
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
