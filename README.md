@@ -35,6 +35,16 @@ docker compose up -d
 
 The first account to sign up is the admin; sign-ups are invite-only after that.
 
+### Selling a plan
+
+An instance can charge for accounts. Every account has a plan (`free`, `basic`,
+`advanced`; see `packages/api/src/lib/plans.ts` for what each allows) and an
+admin sets the default and grants plans by hand. With `STRIPE_SECRET_KEY` and
+`STRIPE_WEBHOOK_SECRET` set, Basic is also sold through Stripe Checkout with a
+14-day trial, and `pnpm --filter @thicket/api stripe:setup` prepares a Stripe
+account for it. Leave both unset and none of this exists: every account gets
+the instance default, which is `advanced` (no limits) unless you change it.
+
 ## Develop
 
 Requires Node 22, pnpm, and a Postgres client. `nix-shell` at the repo root
@@ -180,3 +190,6 @@ a patch.
 point: if you run a modified thicket as a service, the people using it are
 entitled to your changes. An instance you can leave is only meaningful if the
 instance you leave for can exist.
+
+The name, the domain and the logo are reserved; see [TRADEMARK.md](TRADEMARK.md).
+Run the software under any name you like, including as a paid service.

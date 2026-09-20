@@ -76,7 +76,7 @@
       {/if}
     </section>
   </div>
-  <p class="fine">Cancel any time from Settings; your account returns to Free with everything you saved still there. Launch subscribers keep this price for as long as they stay subscribed. Export is never gated.</p>
+  <p class="fine">Cancel any time from Settings; your account returns to Free with everything you saved still there. Launch subscribers keep this price for as long as they stay subscribed. Export is never gated. <a href="/refunds">Refunds</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></p>
 {/if}
 
 <style>

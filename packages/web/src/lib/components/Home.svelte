@@ -91,6 +91,7 @@
 
 <footer>
   <p>thicket is free software under the <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener">AGPL</a> — the <a href="https://github.com/mocha/thicket" rel="noopener">source is here</a>. Run your own, or join a friend’s: collections can be copied from any instance to any other, so you are never stuck.</p>
+  <p class="links"><a href="/pricing">Pricing</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></p>
 </footer>
 
 <style>
@@ -107,6 +108,8 @@
   .features svg { color: var(--accent); margin-bottom: 10px; }
   .features h3 { margin: 0 0 6px; font-size: calc(17px * var(--size-app)); }
   .features p { margin: 0; color: var(--text-2); font-size: calc(15px * var(--size-app)); line-height: 1.45; }
+  footer .links { margin-top: 8px; font-size: calc(14px * var(--size-app)); }
+  footer .links a { color: var(--text-2); }
   .fine { margin: 18px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
   .apart ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; }
   .apart h3 { font-family: var(--font-headings); margin: 0 0 5px; font-size: calc(18px * var(--size-headings)); }
