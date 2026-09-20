@@ -92,6 +92,7 @@ auth.patch("/me", async (c) => {
     displayName: string | null; bio: string | null; homepageUrl: string | null;
     profileVisibility: "public" | "private"; trackActivity: boolean | null;
     collectionsVisibility: ShareLevel; bookmarksVisibility: ShareLevel; notesVisibility: ShareLevel;
+    activityVisibility: ShareLevel;
     notesFrom: "none" | "following" | "everyone";
     hideShortsByDefault: boolean;
   }>;
@@ -112,6 +113,7 @@ auth.patch("/me", async (c) => {
   if (isShareLevel(body.collectionsVisibility)) patch.collectionsVisibility = body.collectionsVisibility;
   if (isShareLevel(body.bookmarksVisibility)) patch.bookmarksVisibility = body.bookmarksVisibility;
   if (isShareLevel(body.notesVisibility)) patch.notesVisibility = body.notesVisibility;
+  if (isShareLevel(body.activityVisibility)) patch.activityVisibility = body.activityVisibility;
   if (body.notesFrom === "none" || body.notesFrom === "following" || body.notesFrom === "everyone") patch.notesFrom = body.notesFrom;
   if ("trackActivity" in body && (body.trackActivity === null || typeof body.trackActivity === "boolean")) patch.trackActivity = body.trackActivity;
   if (typeof body.hideShortsByDefault === "boolean") patch.hideShortsByDefault = body.hideShortsByDefault;

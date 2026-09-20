@@ -46,9 +46,13 @@ export async function activityForViewer(
   who: Audience,
   opts: { limit: number; before?: string | null },
 ): Promise<{ entries: ActivityEntry[]; nextCursor: string | null }> {
-  // Each source is admitted or excluded whole, by whether this viewer is in
-  // that section's audience. The shape of the query stays the same either way;
-  // Postgres prunes the branch.
+  // The activity list has its own audience, and it caps everything below: if
+  // this viewer isn't in it, there is no list at all, whatever the sections
+  // underneath would otherwise allow.
+  if (!allows(u.activityVisibility, who)) return { entries: [], nextCursor: null };
+  // Each source is then admitted or excluded whole, by whether this viewer is
+  // in that section's audience. The shape of the query stays the same either
+  // way; Postgres prunes the branch.
   const on = (level: typeof u.notesVisibility) => (allows(level, who) ? sql`true` : sql`false`);
   const showCollections = on(u.collectionsVisibility);
   const showBookmarks = on(u.bookmarksVisibility);
