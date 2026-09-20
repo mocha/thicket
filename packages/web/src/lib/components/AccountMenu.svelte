@@ -14,7 +14,7 @@
   import { authApi, profileHref } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
-  import Monogram from './Monogram.svelte';
+  import Avatar from './Avatar.svelte';
 
   let { anchor, onclose }: { anchor: HTMLElement | null; onclose: () => void } = $props();
 
@@ -80,7 +80,7 @@
   >
     {#if sheet}
       <div class="who">
-        <Monogram name={me.displayName ?? me.handle} size={40} />
+        <Avatar handle={me.handle} name={me.displayName ?? me.handle} size={40} v={me.avatarUpdatedAt} />
         <span class="names"><span class="dn">{me.displayName ?? me.handle}</span><span class="h">@{me.handle}</span></span>
       </div>
     {/if}

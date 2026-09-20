@@ -42,7 +42,13 @@ async function audienceFor(u: Owner, viewerId: number | undefined): Promise<Audi
   return { isMe, isFriend: isMe ? false : await isFriendOf(u.id, viewerId ?? null) };
 }
 
-const publicUser = (u: Owner) => ({ handle: u.handle, displayName: u.displayName, bio: u.bio, homepageUrl: u.homepageUrl, createdAt: u.createdAt.toISOString() });
+const publicUser = (u: Owner, avatarUpdatedAt: string | null = null) => ({ handle: u.handle, displayName: u.displayName, bio: u.bio, homepageUrl: u.homepageUrl, createdAt: u.createdAt.toISOString(), avatarUpdatedAt });
+
+/** When was this user's avatar last set, if ever? Null means they have none (render a monogram). */
+async function avatarTime(userId: number): Promise<string | null> {
+  const [a] = await db.select({ updatedAt: schema.userAvatars.updatedAt }).from(schema.userAvatars).where(eq(schema.userAvatars.userId, userId));
+  return a?.updatedAt.toISOString() ?? null;
+}
 
 /** Visible, named collections of an owner: non-root, and shared with this viewer (all of them, for the owner). */
 function collectionRows(u: Owner, who: Audience) {
@@ -76,7 +82,7 @@ profiles.get("/:handle", async (c) => {
   const collections = allows(u.collectionsVisibility, who) ? (await collectionRows(u, who)).rows : null;
 
   return c.json({
-    ...publicUser(u), private: false, isMe, following,
+    ...publicUser(u, await avatarTime(u.id)), private: false, isMe, following,
     /** People: how many this person follows, how many follow them, and whether the viewer does. */
     people: { follows: people.follows, followers: people.followers, isFollowing: people.isFollowing },
     /** Notes they have left, if they share them with this viewer (always for the owner). */
@@ -100,13 +106,14 @@ profiles.get("/:handle/following", async (c) => {
   if (!u) return c.json({ error: "not found" }, 404);
   const who = await audienceFor(u, c.get("user")?.id);
   if (u.profileVisibility === "private" && !who.isMe) return c.json({ error: "not found" }, 404);
-  const rows = (await db.execute<{ handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: Date }>(sql`
-    select tu.handle, tu.display_name as "displayName", tu.bio, tu.homepage_url as "homepageUrl", tu.created_at as "createdAt"
+  const rows = (await db.execute<{ handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: Date; avatarUpdatedAt: Date | null }>(sql`
+    select tu.handle, tu.display_name as "displayName", tu.bio, tu.homepage_url as "homepageUrl", tu.created_at as "createdAt", ua.updated_at as "avatarUpdatedAt"
     from user_follows uf join users tu on tu.id = uf.followee_id
+    left join user_avatars ua on ua.user_id = tu.id
     where uf.follower_id = ${u.id} and tu.profile_visibility = 'public'
     order by lower(coalesce(tu.display_name, tu.handle))
   `)).rows;
-  const users = rows.map((r) => ({ handle: r.handle, displayName: r.displayName, bio: r.bio, homepageUrl: r.homepageUrl, createdAt: new Date(r.createdAt).toISOString() }));
+  const users = rows.map((r) => ({ handle: r.handle, displayName: r.displayName, bio: r.bio, homepageUrl: r.homepageUrl, createdAt: new Date(r.createdAt).toISOString(), avatarUpdatedAt: r.avatarUpdatedAt ? new Date(r.avatarUpdatedAt).toISOString() : null }));
   return c.json({ owner: publicUser(u), isMe: who.isMe, users });
 });
 

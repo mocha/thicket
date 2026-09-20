@@ -352,6 +352,7 @@ async function searchPeople(q: string, viewerId: number | null, limit: number, o
     ${base}
     select c.handle, c."displayName", c.bio, c.name_match as "nameMatch",
            c.notes_match as "notesMatch", c.marks_match as "marksMatch",
+           (select ua.updated_at from user_avatars ua where ua.user_id = c.id) as "avatarUpdatedAt",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = c.id) as feeds,
            (select count(*)::int from collections col where col.user_id = c.id and col.parent_id is not null and col.visibility = 'public') as collections,
            exists(select 1 from user_follows uf where uf.follower_id = ${viewerId} and uf.followee_id = c.id) as "isFollowing"

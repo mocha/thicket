@@ -5,7 +5,7 @@
   import { collectionStore, loadCollections, namedCollections, topLevelCollections, childrenOf, navOpen, loadNavOpen, toggleNavOpen, collectionsOpen, loadCollectionsOpen, toggleCollectionsOpen } from '$lib/collections.svelte';
   import { session } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
-  import Monogram from './Monogram.svelte';
+  import Avatar from './Avatar.svelte';
   import AccountMenu from './AccountMenu.svelte';
   import { display } from '$lib/display.svelte';
   import { marks, badge, anyNew, countText } from '$lib/marks.svelte';
@@ -195,7 +195,7 @@
     <!-- Mobile: you. Opens the account menu — your profile, settings, and log out. -->
     {#if me}
       <li class="mobile-only you">
-        <button type="button" class="tab" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}><span class="mono"><Monogram name={me.displayName ?? me.handle} size={24} /></span><span class="shortl">You</span></button>
+        <button type="button" class="tab" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}><span class="mono"><Avatar handle={me.handle} name={me.displayName ?? me.handle} size={24} v={me.avatarUpdatedAt} /></span><span class="shortl">You</span></button>
       </li>
     {/if}
     {#if me?.isAdmin}
@@ -208,7 +208,7 @@
   {#if me}
     <div class="account">
       <button type="button" class="who" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}>
-        <Monogram name={me.displayName ?? me.handle} size={34} />
+        <Avatar handle={me.handle} name={me.displayName ?? me.handle} size={34} v={me.avatarUpdatedAt} />
         <span class="names"><span class="dn">{me.displayName ?? me.handle}</span><span class="h">@{me.handle}</span></span>
         <svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10l4 4 4-4" /></svg>
       </button>

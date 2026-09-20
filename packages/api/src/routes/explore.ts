@@ -122,6 +122,7 @@ explore.get("/users", async (c) => {
   const [{ indexTotal }] = (await db.execute<{ indexTotal: number }>(sql`select count(*)::int as "indexTotal" from users u where ${where[0]}`)).rows;
   const rows = await db.execute(sql`
     select u.handle, u.display_name as "displayName", u.bio, u.created_at as "createdAt",
+           (select ua.updated_at from user_avatars ua where ua.user_id = u.id) as "avatarUpdatedAt",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = u.id) as feeds,
            (select count(*)::int from collections col where col.user_id = u.id and col.parent_id is not null and col.visibility = 'public' and u.collections_visibility = 'public') as collections,
            case when u.notes_visibility = 'public' then (select count(*)::int from notes n where n.user_id = u.id) else null end as notes,
