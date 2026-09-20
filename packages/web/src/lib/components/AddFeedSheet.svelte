@@ -164,7 +164,6 @@
   }
   @media (min-width: 700px) {
     .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 460px; border-radius: 20px; max-height: 86vh; }
-    .scroll { max-height: 300px; }
   }
   header { display: flex; align-items: center; justify-content: space-between; }
   h2 { margin: 0; font-size: calc(22px * var(--size-headings)); font-family: var(--font-headings); }
@@ -180,6 +179,10 @@
   .candidates span { font-size: calc(12px * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
   .eyebrow { font-size: calc(11px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 4px; }
   .scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: 38vh; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; }
+  /* Desktop cap. Must come after the base .scroll rule above: same specificity,
+     so source order decides, and the list should top out at ~7 rows and scroll,
+     not grow to a third of a tall screen. */
+  @media (min-width: 700px) { .scroll { max-height: 300px; } }
   .checks { list-style: none; margin: 0; padding: 0; }
   .checks label { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-top: 1px solid var(--line); cursor: pointer; }
   .checks li:first-child label { border-top: 0; }
