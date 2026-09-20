@@ -142,8 +142,13 @@
 
     <div class="eyebrow">Put it in a collection</div>
     {#if showFilter}
-      <input class="filter" type="text" bind:value={filter} placeholder="Filter collections…" aria-label="Filter collections" disabled={busy}
-        onkeydown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} />
+      <div class="filter">
+        <input type="text" bind:value={filter} placeholder="Filter collections…" aria-label="Filter collections" disabled={busy}
+          onkeydown={(e) => { if (e.key === 'Enter') e.preventDefault(); else if (e.key === 'Escape') filter = ''; }} />
+        {#if filter}
+          <button type="button" class="clear" aria-label="Clear filter" onclick={() => (filter = '')} disabled={busy}>×</button>
+        {/if}
+      </div>
     {/if}
     <div class="scroll" bind:this={list}>
     <ul class="checks">
@@ -198,8 +203,12 @@
   .candidates button { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); }
   .candidates span { font-size: calc(12px * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
   .eyebrow { font-size: calc(11px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 4px; }
-  .filter { padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(14px * var(--size-app)); width: 100%; }
-  .filter:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .filter { display: flex; align-items: center; gap: 6px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
+  .filter:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  .filter input { flex: 1; min-width: 0; border: 0; padding: 0; background: transparent; color: var(--text); font-size: calc(14px * var(--size-app)); }
+  .filter input:focus { outline: none; }
+  .filter .clear { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: var(--text-3); font-size: calc(16px * var(--size-app)); line-height: 1; }
+  .filter .clear:hover { background: var(--surface-2); color: var(--text); }
   .nomatch { margin: 0; padding: 12px 8px; color: var(--text-3); font-size: calc(13px * var(--size-app)); }
   .scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: 38vh; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; }
   /* Desktop cap. Must come after the base .scroll rule above: same specificity,
