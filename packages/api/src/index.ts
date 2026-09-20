@@ -17,6 +17,7 @@ import { collections } from "./routes/collections.js";
 import { events } from "./routes/events.js";
 import { bookmarks } from "./routes/bookmarks.js";
 import { auth } from "./routes/auth.js";
+import { users } from "./routes/users.js";
 import { profiles } from "./routes/profiles.js";
 import { admin } from "./routes/admin.js";
 import { explore } from "./routes/explore.js";
@@ -43,6 +44,7 @@ app.use("/api/*", cors({ origin: (o) => o, credentials: true }));
 app.use("/api/*", attachUser);
 
 app.route("/api/auth", auth);
+app.route("/api/users", users);
 app.route("/api/admin", admin);
 app.route("/api/explore", explore);
 app.route("/api/search", search);

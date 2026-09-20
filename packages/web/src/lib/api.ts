@@ -274,6 +274,8 @@ export type Me = {
   trackActivity: boolean | null; instanceTracking: boolean; hasPassword: boolean; createdAt: string; isAdmin: boolean;
   /** Feed setting defaults: leave Shorts out of YouTube channels unless a channel's own setting says otherwise. */
   hideShortsByDefault: boolean;
+  /** When my profile picture was last set, or null for none. The UI hangs a ?v= off it so a change shows at once. */
+  avatarUpdatedAt: string | null;
 };
 export type SignupPolicy = 'open' | 'invite' | 'closed';
 /** `visitorLimit`: visitors without an account see only the newest items of anything a page lists. */
@@ -287,12 +289,19 @@ export const authApi = {
   login: (handle: string, password: string) => j<Me>('/api/auth/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   logout: () => j<void>('/api/auth/logout', { method: 'POST' }),
   update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'activityVisibility' | 'notesFrom' | 'trackActivity' | 'hideShortsByDefault'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
-  changePassword: (current: string, next: string) => j<void>('/api/auth/me/password', { method: 'POST', body: JSON.stringify({ current, next }) })
+  changePassword: (current: string, next: string) => j<void>('/api/auth/me/password', { method: 'POST', body: JSON.stringify({ current, next }) }),
+  /** Upload a new profile picture. The blob is the already-cropped square; the server re-encodes it. */
+  uploadAvatar: (blob: Blob) => { const fd = new FormData(); fd.append('avatar', blob, 'avatar.webp'); return j<{ hasAvatar: boolean; avatarUpdatedAt: string }>('/api/users/me/avatar', { method: 'POST', body: fd, headers: {} }); },
+  removeAvatar: () => j<void>('/api/users/me/avatar', { method: 'DELETE' })
 };
+
+/** The address of a person's profile picture. `v` (their avatarUpdatedAt) busts the cache when they change it. */
+export const avatarUrl = (handle: string, v?: string | null) => `/api/users/${encodeURIComponent(handle)}/avatar${v ? `?v=${encodeURIComponent(v)}` : ''}`;
 
 export type AdminUser = {
   id: number; handle: string; displayName: string | null; isAdmin: boolean; profileVisibility: 'public' | 'private';
   createdAt: string; lastSeenAt: string | null; following: number; collections: number; bookmarks: number; invitedBy: string | null;
+  avatarUpdatedAt: string | null;
 };
 
 export const adminApi = {
@@ -314,7 +323,7 @@ export const adminApi = {
 };
 export type StarterCandidate = { handle: string; displayName: string | null; collectionCount: number; feedCount: number };
 
-export type PublicUser = { handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: string };
+export type PublicUser = { handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: string; avatarUpdatedAt: string | null };
 export type ProfileCollection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null };
 export type Profile =
   | { handle: string; private: true }
@@ -386,7 +395,7 @@ export type ExploreCollection = {
 };
 export type ExploreUser = {
   handle: string; displayName: string | null; bio: string | null; createdAt: string;
-  feeds: number; collections: number; notes: number | null; isFollowing: boolean;
+  feeds: number; collections: number; notes: number | null; isFollowing: boolean; avatarUpdatedAt: string | null;
 };
 export const exploreApi = {
   /** Public collections by other people. No options = the homepage's handful. */
@@ -438,7 +447,7 @@ export type SearchPost = {
 export type SearchPerson = {
   handle: string; displayName: string | null; bio: string | null;
   nameMatch: boolean; notesMatch: number; marksMatch: number;
-  feeds: number; collections: number; isFollowing: boolean;
+  feeds: number; collections: number; isFollowing: boolean; avatarUpdatedAt: string | null;
 };
 export type SearchGroup<T> = { rows: T[]; total: number; nextOffset: number | null };
 export type SearchResults = {

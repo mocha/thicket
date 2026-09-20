@@ -5,6 +5,8 @@
   import { session, setMe } from '$lib/session.svelte';
   import { hostOf } from '$lib/time';
   import Monogram from '$lib/components/Monogram.svelte';
+  import Avatar from '$lib/components/Avatar.svelte';
+  import AvatarCropDialog from '$lib/components/AvatarCropDialog.svelte';
   import ActivityList from '$lib/components/ActivityList.svelte';
   import SectionAudience from '$lib/components/SectionAudience.svelte';
   import NoteCard from '$lib/components/NoteCard.svelte';
@@ -167,6 +169,42 @@
     }
   }
 
+  // Profile picture: pick a file, frame it in the cropper, upload. On success
+  // both the signed-in user and this page's copy learn the new timestamp, so
+  // the new picture shows everywhere at once.
+  let fileInput = $state<HTMLInputElement | null>(null);
+  let pendingFile = $state<File | null>(null);
+  let removingAvatar = $state(false);
+  function pickPhoto() { fileInput?.click(); }
+  function onFilePicked(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const f = input.files?.[0] ?? null;
+    input.value = ''; // let the same file be picked again after a cancel
+    if (f) pendingFile = f;
+  }
+  function onAvatarSaved(avatarUpdatedAt: string) {
+    if (session.user) setMe({ ...session.user, avatarUpdatedAt });
+    if (profile && !profile.private) profile.avatarUpdatedAt = avatarUpdatedAt;
+    pendingFile = null;
+    api.event('avatar_changed', { action: 'set' });
+    showToast('Profile picture updated');
+  }
+  async function removePhoto() {
+    if (removingAvatar) return;
+    removingAvatar = true;
+    try {
+      await authApi.removeAvatar();
+      if (session.user) setMe({ ...session.user, avatarUpdatedAt: null });
+      if (profile && !profile.private) profile.avatarUpdatedAt = null;
+      api.event('avatar_changed', { action: 'remove' });
+      showToast('Profile picture removed');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    } finally {
+      removingAvatar = false;
+    }
+  }
+
   // The public/private switch and each section's "who sees this": every one
   // saves the moment it's picked, the way the old settings toggles did.
   async function save(patch: Parameters<typeof authApi.update>[0], label: string) {
@@ -197,7 +235,17 @@
     <p class="ownerbar">This is your <strong>public profile</strong>. Depending on your settings, it's what everyone else sees.</p>
   {/if}
   <header class="who">
-    <Monogram name={profile.displayName ?? profile.handle} size={56} />
+    {#if profile.isMe}
+      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" bind:this={fileInput} onchange={onFilePicked} hidden />
+      <button type="button" class="photobtn" onclick={pickPhoto} aria-label="Change your profile picture" title="Change your profile picture">
+        <Avatar handle={profile.handle} name={profile.displayName ?? profile.handle} size={56} v={profile.avatarUpdatedAt} />
+        <span class="camera" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+        </span>
+      </button>
+    {:else}
+      <Avatar handle={profile.handle} name={profile.displayName ?? profile.handle} size={56} v={profile.avatarUpdatedAt} />
+    {/if}
     <div class="names">
       {#if editing}
         <div class="edit">
@@ -217,9 +265,14 @@
     </div>
     {#if profile.isMe}
       {#if !editing}
-        <button type="button" class="iconbtn" onclick={startEdit} aria-label="Edit profile" title="Edit profile">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>
-        </button>
+        <div class="ownerctrls">
+          {#if profile.avatarUpdatedAt}
+            <button type="button" class="removephoto" onclick={removePhoto} disabled={removingAvatar}>{removingAvatar ? 'Removing…' : 'Remove photo'}</button>
+          {/if}
+          <button type="button" class="iconbtn" onclick={startEdit} aria-label="Edit profile" title="Edit profile">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>
+          </button>
+        </div>
       {/if}
     {:else if session.user}
       <button class="btn" class:following={profile.people.isFollowing} onclick={toggleFollow} disabled={followBusy} aria-pressed={profile.people.isFollowing}>{profile.people.isFollowing ? 'Following' : 'Follow'}</button>
@@ -227,6 +280,10 @@
       <a class="btn" href="/login?next={encodeURIComponent(page.url.pathname)}">Follow</a>
     {/if}
   </header>
+
+  {#if profile.isMe && pendingFile}
+    <AvatarCropDialog file={pendingFile} onclose={() => (pendingFile = null)} onsaved={onAvatarSaved} />
+  {/if}
 
   {#if profile.isMe && su}
     <section>
@@ -382,7 +439,7 @@
           <ul class="list">
             {#each following as p (p.handle)}
               <li><a href="/@{p.handle}">
-                <Monogram name={p.displayName ?? p.handle} size={34} />
+                <Avatar handle={p.handle} name={p.displayName ?? p.handle} size={34} v={p.avatarUpdatedAt} />
                 <div class="meta2"><span class="name">{p.displayName ?? p.handle}</span><span class="desc">@{p.handle}</span></div>
                 <span class="chev" aria-hidden="true">›</span>
               </a></li>
@@ -407,6 +464,15 @@
   .site { color: var(--accent); font-weight: 600; }
   .bio { margin: 10px 0 0; color: var(--text); font-size: calc(15px * var(--size-app)); white-space: pre-line; }
   .btn { flex: none; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  /* The avatar as a button: a camera badge in the corner says it's changeable. */
+  .photobtn { flex: none; position: relative; padding: 0; border-radius: 30%; line-height: 0; }
+  .photobtn .camera { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--accent); color: #fff; box-shadow: 0 0 0 2px var(--surface); }
+  .photobtn:hover { opacity: 0.92; }
+  .photobtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ownerctrls { flex: none; display: flex; align-items: center; gap: 8px; }
+  .removephoto { padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-3); }
+  .removephoto:hover:not(:disabled) { color: var(--danger); }
+  .removephoto:disabled { opacity: 0.5; }
   /* Edit: a quiet pencil, the same at every width. */
   .iconbtn { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--text-3); }
   .iconbtn:hover { background: var(--surface-2); color: var(--text); }

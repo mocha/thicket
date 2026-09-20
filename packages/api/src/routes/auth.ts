@@ -21,8 +21,9 @@ const MIN_PASSWORD = 8;
 async function me(userId: number) {
   const [u] = await db.select().from(schema.users).where(eq(schema.users.id, userId));
   if (!u) return null;
+  const [avatar] = await db.select({ updatedAt: schema.userAvatars.updatedAt }).from(schema.userAvatars).where(eq(schema.userAvatars.userId, userId));
   const { passwordHash, ...rest } = u;
-  return { ...rest, hasPassword: !!passwordHash, createdAt: u.createdAt.toISOString(), claimVerifiedAt: u.claimVerifiedAt?.toISOString() ?? null, instanceTracking: trackingEnabled() };
+  return { ...rest, hasPassword: !!passwordHash, createdAt: u.createdAt.toISOString(), claimVerifiedAt: u.claimVerifiedAt?.toISOString() ?? null, avatarUpdatedAt: avatar?.updatedAt.toISOString() ?? null, instanceTracking: trackingEnabled() };
 }
 
 /** Instance name, public URL, and sign-up policy. Public; the sign-up page renders from it. */

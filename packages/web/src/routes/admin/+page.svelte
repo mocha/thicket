@@ -11,7 +11,7 @@
   import type { StarterCandidate } from '$lib/api';
   import { relativeTime } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
-  import Monogram from '$lib/components/Monogram.svelte';
+  import Avatar from '$lib/components/Avatar.svelte';
 
   const me = $derived(session.user);
   let instance = $state<(InstanceStatus & { signupsStored: SignupPolicy | null }) | null>(null);
@@ -230,7 +230,7 @@
     <ul class="users">
       {#each users as u (u.id)}
         <li class:busy={busyId === u.id}>
-          <Monogram name={u.displayName ?? u.handle} size={36} />
+          <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={36} v={u.avatarUpdatedAt} />
           <div class="who">
             <a class="handle" href={profileHref(u.handle)}>{u.displayName ?? u.handle}<span class="h"> @{u.handle}</span></a>
             <div class="facts">

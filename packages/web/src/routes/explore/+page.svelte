@@ -14,7 +14,7 @@
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
-  import Monogram from '$lib/components/Monogram.svelte';
+  import Avatar from '$lib/components/Avatar.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   /**
@@ -402,7 +402,7 @@
 {#snippet personRow(u: ExploreUser | SearchPerson, ev: SearchPerson | null)}
   <li>
     <a class="row" href={profileHref(u.handle)}>
-      <Monogram name={u.displayName ?? u.handle} size={40} />
+      <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={40} v={u.avatarUpdatedAt} />
       <div class="meta">
         <span class="title">{u.displayName ?? u.handle} <span class="handle">@{u.handle}</span></span>
         {#if ev && ev.notesMatch + ev.marksMatch > 0}
