@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { api, collectionsApi, collectionHref, manageCollectionHref, profileHref, profilesApi, type CollectionDetail, type CollectionFeed, type ShareLevel } from '$lib/api';
-  import { openAddFeed } from '$lib/addfeed.svelte';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import { feedOrigin, hostOf, relativeTime } from '$lib/time';
   import { feedListName } from '$lib/feedname';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
+  import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
@@ -94,22 +94,35 @@
     showToast(VISIBILITIES.find((v) => v.value === next)?.toast ?? 'Saved');
   }
 
-  /* Description: a two-line box whose Save wakes up only once something changed. */
+  /* Description: a two-line box that saves itself a beat after you stop typing, and the moment you click away. */
   let description = $state('');
   let savingDesc = $state(false);
+  let descSaved = $state(false);
+  let descTimer: ReturnType<typeof setTimeout> | undefined;
   const descDirty = $derived(!!col && description.trim().slice(0, 300) !== (col.description ?? ''));
   async function saveDescription() {
     if (!col || !descDirty || savingDesc) return;
     const next = description.trim().slice(0, 300);
     savingDesc = true;
+    descSaved = false;
     try {
       await collectionsApi.update(col.id, { description: next });
       api.event('collection_described', { collectionId: col.id, empty: !next });
       await Promise.all([load(), loadCollections(true)]);
-      showToast(next ? 'Description saved' : 'Description removed');
+      descSaved = true;
     } finally {
       savingDesc = false;
     }
+  }
+  /* Wait until typing pauses, then save. Clicking away saves right then. Editing again hides the "Saved" note. */
+  function descChanged() {
+    descSaved = false;
+    clearTimeout(descTimer);
+    descTimer = setTimeout(() => void saveDescription(), 800);
+  }
+  function descBlur() {
+    clearTimeout(descTimer);
+    void saveDescription();
   }
 
   /** Remove from this collection only. If this was its only collection, that's an unfollow; say so and offer undo. */
@@ -201,6 +214,19 @@
     }
   }
 
+  /* The rare-actions menu that hangs off the ⋮ button: export, merge, delete. Closes on click-away or Escape. */
+  let menuOpen = $state(false);
+  let menuAnchor = $state<HTMLElement | null>(null);
+  let menuPanel = $state<HTMLElement | null>(null);
+  $effect(() => {
+    if (!menuOpen) return;
+    const onDoc = (e: MouseEvent) => { if (!menuPanel?.contains(e.target as Node) && !menuAnchor?.contains(e.target as Node)) menuOpen = false; };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') menuOpen = false; };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  });
+
   onMount(() => { void loadCollections(); });
   $effect(() => {
     if (!session.loaded) return;
@@ -208,8 +234,12 @@
     if (loadedKey === key) return;
     loadedKey = key;
     col = null; renaming = false;
+    // Leaving this collection for another: drop any lingering "Saved" flag.
+    clearTimeout(descTimer); descSaved = false;
     void resolve();
   });
+  // Leaving the page entirely clears it too.
+  onDestroy(() => { clearTimeout(descTimer); descSaved = false; });
 </script>
 
 <svelte:head><title>{col ? `Managing ${col.name}` : 'Manage'} · thicket</title></svelte:head>
@@ -217,24 +247,41 @@
 {#if col}
   <a class="back" href={collectionHref(handle, slug)}>
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
-    Back to collection
+    Back to {col.name} collection
   </a>
 
   <header class="top">
-    <p class="pre">Managing collection:</p>
-    {#if renaming}
-      <form class="rename" onsubmit={(e) => { e.preventDefault(); void rename(); }}>
-        <!-- svelte-ignore a11y_autofocus -->
-        <input type="text" bind:value={name} autofocus maxlength="60" aria-label="Collection name" disabled={savingName} onkeydown={(e) => { if (e.key === 'Escape') { renaming = false; name = col?.name ?? ''; } }} />
-        <div class="row">
-          <button type="submit" class="btn primary" disabled={savingName || !name.trim()}>{savingName ? 'Saving…' : 'Save'}</button>
-          <button type="button" class="btn" onclick={() => { renaming = false; name = col?.name ?? ''; }} disabled={savingName}>Cancel</button>
+    <div class="titlebar">
+      {#if renaming}
+        <form class="rename" onsubmit={(e) => { e.preventDefault(); void rename(); }}>
+          <!-- svelte-ignore a11y_autofocus -->
+          <input type="text" bind:value={name} autofocus maxlength="60" aria-label="Collection name" disabled={savingName} onkeydown={(e) => { if (e.key === 'Escape') { renaming = false; name = col?.name ?? ''; } }} />
+          <div class="row">
+            <button type="submit" class="btn primary" disabled={savingName || !name.trim()}>{savingName ? 'Saving…' : 'Save'}</button>
+            <button type="button" class="btn" onclick={() => { renaming = false; name = col?.name ?? ''; }} disabled={savingName}>Cancel</button>
+          </div>
+        </form>
+      {:else}
+        <div class="titlerow">
+          <h1>{col.name}</h1>
+          <button class="edit" onclick={() => (renaming = true)} aria-label="Rename this collection" title="Rename this collection">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z" /></svg>
+          </button>
         </div>
-      </form>
-    {:else}
-      <h1>{col.name}</h1>
-      <button class="link" onclick={() => (renaming = true)}>Rename this collection</button>
-    {/if}
+      {/if}
+      <div class="menu" bind:this={menuAnchor}>
+        <button class="kebab" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="More collection actions" onclick={() => (menuOpen = !menuOpen)}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" /></svg>
+        </button>
+        {#if menuOpen}
+          <div class="menupanel" role="menu" bind:this={menuPanel}>
+            <a class="mi" role="menuitem" href={collectionsApi.opmlUrl(col.id)} download="{col.slug}.opml" onclick={() => { api.event('opml_exported', { collectionId: col?.id }); menuOpen = false; }} title="Save this collection as a file other readers can open">Export collection to file</a>
+            <button class="mi" role="menuitem" onclick={() => { menuOpen = false; askMerge(); }}>Merge into another collection</button>
+            <button class="mi danger" role="menuitem" onclick={() => { menuOpen = false; askDelete(); }}>Delete this collection</button>
+          </div>
+        {/if}
+      </div>
+    </div>
   </header>
 
   <hr />
@@ -242,10 +289,8 @@
     <h2><label for="desc">Description</label></h2>
     <form onsubmit={(e) => { e.preventDefault(); void saveDescription(); }}>
       <div class="descbox">
-        <textarea id="desc" rows="2" bind:value={description} maxlength="300" placeholder="What’s in here, in a line or two." disabled={savingDesc}></textarea>
-        <button type="submit" class="save" disabled={!descDirty || savingDesc} title={savingDesc ? 'Saving…' : 'Save description'} aria-label={savingDesc ? 'Saving description' : 'Save description'}>
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" /></svg>
-        </button>
+        <textarea id="desc" rows="5" bind:value={description} maxlength="300" placeholder="What’s in here, in a line or two." oninput={descChanged} onblur={descBlur}></textarea>
+        {#if descSaved}<span class="saved" aria-live="polite">Saved</span>{/if}
       </div>
       <div class="row">
         <span class="counter" class:near={description.length > 260}>{description.length}/300</span>
@@ -277,7 +322,7 @@
   <section class="feeds">
     <div class="feedhead">
       <h2>Feeds ({col.feeds.length})</h2>
-      <button class="btn" onclick={() => openAddFeed({ collectionIds: [col!.id], via: 'manage' })}>Add a feed</button>
+      <AddFeedButton collectionIds={[col!.id]} via="manage" />
     </div>
     {#if col.feeds.length === 0}
       <p class="status">Nothing in here yet. Add a feed above, or file one from any feed’s Follow menu.</p>
@@ -309,13 +354,6 @@
       </ul>
     {/if}
   </section>
-
-  <hr />
-  <div class="final">
-    <button class="btn" onclick={askMerge}>Merge into another collection</button>
-    <button class="btn danger" onclick={askDelete}>Delete this collection</button>
-    <a class="btn" href={collectionsApi.opmlUrl(col.id)} download="{col.slug}.opml" onclick={() => api.event('opml_exported', { collectionId: col?.id })} title="Save this collection as a file other readers can open">Export collection to file</a>
-  </div>
 
   <dialog bind:this={mergeEl} onclick={(e) => { if (e.target === mergeEl) mergeEl?.close(); }}>
     <div class="sheet" role="alertdialog" aria-labelledby="merge-title">
@@ -402,14 +440,17 @@
   .sheet .row { margin-top: 14px; }
   .back { display: inline-flex; align-items: center; gap: 4px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--accent); padding: 6px 0; margin-bottom: 8px; }
   .top { margin-bottom: 6px; }
-  .pre { margin: 0; font-size: calc(12px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
   h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 2px 0 0; overflow-wrap: anywhere; }
-  .link { font-size: calc(13px * var(--size-app)); color: var(--accent); font-weight: 600; margin-top: 4px; }
+  .titlebar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .titlerow { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+  .rename { flex: 1; }
+  .edit { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
+  .edit:hover { background: var(--surface-2); color: var(--text); }
   .rename { margin-top: 4px; }
   .rename input { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); font-weight: 600; width: 100%; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
   hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
   .opt { margin-bottom: 18px; }
-  h2 { font-size: calc(15px * var(--size-app)); margin: 0 0 8px; }
+  h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
   h3 { font-size: calc(13px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin: 16px 0 6px; }
   .info { margin: 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; }
   .info a { color: var(--accent); font-weight: 600; }
@@ -418,9 +459,9 @@
   /* Side by side once there is room for three; stacked on a phone, where they would be three slivers. */
   @media (min-width: 620px) { .vis { display: grid; grid-template-columns: repeat(3, 1fr); align-items: stretch; } }
   .descbox { position: relative; }
-  .descbox textarea { padding-right: 46px; }
-  .save { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); }
-  .save:disabled { opacity: 0.4; color: var(--text-3); }
+  /* A fixed box tall enough for the full 300 characters; a reserved strip at the bottom keeps typed text clear of the "Saved" note. */
+  .descbox textarea { padding-bottom: 30px; resize: none; }
+  .saved { position: absolute; right: 12px; bottom: 9px; font-size: calc(12px * var(--size-app)); font-weight: 600; color: var(--accent); background: var(--surface); padding: 1px 6px; border-radius: 6px; pointer-events: none; }
   .radios label { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
   .vis label { gap: 8px; }
   .radios label:has(input:checked) { border-color: var(--accent); }
@@ -451,6 +492,13 @@
   .chip { flex: none; font-size: calc(13px * var(--size-app)); color: var(--text-2); padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line); }
   .count, .chev { color: var(--text-3); font-size: calc(13px * var(--size-app)); }
   .chev { font-size: calc(20px * var(--size-app)); }
-  .final { display: flex; gap: 8px; flex-wrap: wrap; }
+  .menu { position: relative; flex: none; }
+  .kebab { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
+  .kebab:hover { background: var(--surface-2); color: var(--text); }
+  /* Hangs below the button, right-aligned, from its spot in the header. */
+  .menupanel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 60; min-width: 244px; background: var(--surface); border-radius: 14px; padding: 6px; box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 0 1px var(--line); display: flex; flex-direction: column; }
+  .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text); }
+  .mi:hover { background: var(--surface-2); }
+  .mi.danger { color: var(--danger); }
   .status { text-align: center; color: var(--text-3); padding: 24px 0; margin: 0; font-size: calc(14px * var(--size-app)); }
 </style>

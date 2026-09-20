@@ -47,16 +47,16 @@ async function main() {
   };
 
   const seedCollections: Array<{ name: string; slug: string; description?: string; feeds: string[] }> = [
-    { name: "News", slug: "news", description: "World headlines", feeds: ["https://feeds.bbci.co.uk/news/world/rss.xml", "https://feeds.npr.org/1001/rss.xml"] },
-    { name: "Technology", slug: "technology", description: "What's shipping and what's breaking", feeds: ["https://www.theverge.com/rss/index.xml", "https://hnrss.org/frontpage"] },
-    { name: "Business", slug: "business", feeds: ["https://feeds.bbci.co.uk/news/business/rss.xml"] },
-    { name: "Science", slug: "science", feeds: ["https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", "https://www.sciencedaily.com/rss/all.xml"] },
-    { name: "Film", slug: "film", feeds: ["https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml"] },
-    { name: "Music", slug: "music", feeds: ["https://www.stereogum.com/feed/"] },
-    { name: "Gaming", slug: "gaming", feeds: ["https://www.polygon.com/rss/index.xml"] },
-    { name: "Design", slug: "design", feeds: ["https://www.smashingmagazine.com/feed/"] },
-    { name: "Sports", slug: "sports", feeds: ["https://feeds.bbci.co.uk/sport/rss.xml", "https://www.espn.com/espn/rss/news"] },
-    { name: "Longreads", slug: "longreads", description: "Save the big ones for later", feeds: ["https://longreads.com/feed/"] },
+    { name: "News", slug: "news", description: "World headlines", feeds: ["https://feeds.bbci.co.uk/news/world/rss.xml", "https://feeds.npr.org/1001/rss.xml", "https://www.theguardian.com/world/rss"] },
+    { name: "Technology", slug: "technology", description: "What's shipping and what's breaking", feeds: ["https://www.theverge.com/rss/index.xml", "https://hnrss.org/frontpage", "https://techcrunch.com/feed/"] },
+    { name: "Business", slug: "business", feeds: ["https://feeds.bbci.co.uk/news/business/rss.xml", "https://www.theguardian.com/uk/business/rss", "https://feeds.npr.org/1006/rss.xml"] },
+    { name: "Science", slug: "science", feeds: ["https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", "https://www.sciencedaily.com/rss/all.xml", "https://api.quantamagazine.org/feed/"] },
+    { name: "Film", slug: "film", feeds: ["https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml", "https://variety.com/feed/", "https://www.theguardian.com/film/rss"] },
+    { name: "Music", slug: "music", feeds: ["https://www.stereogum.com/feed/", "https://pitchfork.com/feed/pitchfork/rss", "https://www.theguardian.com/music/rss"] },
+    { name: "Gaming", slug: "gaming", feeds: ["https://www.polygon.com/rss/index.xml", "https://www.eurogamer.net/feed", "https://www.pcgamer.com/rss/"] },
+    { name: "Design", slug: "design", feeds: ["https://www.smashingmagazine.com/feed/", "https://www.itsnicethat.com/rss", "https://www.core77.com/feed"] },
+    { name: "Sports", slug: "sports", feeds: ["https://feeds.bbci.co.uk/sport/rss.xml", "https://www.espn.com/espn/rss/news", "https://www.theguardian.com/sport/rss"] },
+    { name: "Longreads", slug: "longreads", description: "Save the big ones for later", feeds: ["https://longreads.com/feed/", "https://aeon.co/feed.rss", "https://www.theatlantic.com/feed/all/"] },
   ];
 
   for (const spec of seedCollections) {
