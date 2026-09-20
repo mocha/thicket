@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/state';
-  import { api, profilesApi, publicCollectionHref, type Profile, type ProfileCollection, type RiverItem } from '$lib/api';
-  import { session } from '$lib/session.svelte';
+  import { api, authApi, profilesApi, publicCollectionHref, type Profile, type ProfileCollection, type PublicBookmark, type PublicUser, type RiverItem, type ShareLevel } from '$lib/api';
+  import { session, setMe } from '$lib/session.svelte';
   import { hostOf } from '$lib/time';
   import Monogram from '$lib/components/Monogram.svelte';
   import ActivityList from '$lib/components/ActivityList.svelte';
+  import SectionAudience from '$lib/components/SectionAudience.svelte';
   import NoteCard from '$lib/components/NoteCard.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
@@ -88,6 +89,27 @@
   /** On my own profile, a note I delete from its card takes the card with it. */
   const shownNotes = $derived((recentNotes ?? []).filter((i) => !isMe || i.myNote));
 
+  /** A few recent bookmarks, shown right on the profile; the rest are one link away. */
+  const BOOKMARKS_SHOWN = 3;
+  let recentBookmarks = $state<PublicBookmark[] | null>(null);
+  let bookmarksFor = $state<string | undefined>(undefined);
+  $effect(() => {
+    if (!profile || profile.private || !profile.bookmarks || profile.bookmarks.count === 0 || bookmarksFor === profile.handle) return;
+    const h = profile.handle;
+    bookmarksFor = h; recentBookmarks = null;
+    profilesApi.bookmarks(h, null, BOOKMARKS_SHOWN).then((r) => { if (bookmarksFor === h) recentBookmarks = r.bookmarks; }).catch(() => (recentBookmarks = []));
+  });
+
+  /** The people this person follows — their own section. */
+  let following = $state<PublicUser[] | null>(null);
+  let followingFor = $state<string | undefined>(undefined);
+  $effect(() => {
+    if (!profile || profile.private || followingFor === profile.handle) return;
+    const h = profile.handle;
+    followingFor = h; following = null;
+    profilesApi.following(h).then((r) => { if (followingFor === h) following = r.users; }).catch(() => (following = []));
+  });
+
   /**
    * Collections arrive flat with parent pointers, and are shown as the tree
    * they are — the same shape the sidebar shows. Top level is anything whose
@@ -101,21 +123,61 @@
   const childCols = (id: number) => cols.filter((c) => c.parentId === id);
 
   /**
-   * What the owner is told about their own page: one sentence per section that
-   * isn't shown to everyone, so "who can actually see this" never needs a trip
-   * to Settings to answer.
+   * The owner edits their public page on the page itself. Everything here only
+   * appears when you're looking at your own profile; a visitor sees the plain
+   * page. The values come from the signed-in user, so a change shows at once.
    */
-  const NAMES = { collections: 'collections', bookmarks: 'bookmarks', notes: 'notes' } as const;
-  const narrowed = $derived.by(() => {
-    const v = profile && !profile.private ? profile.visibility : undefined;
-    if (!v) return [];
-    const out: string[] = [];
-    for (const k of ['collections', 'bookmarks', 'notes'] as const) {
-      if (v[k] === 'private') out.push(`Nobody else sees your ${NAMES[k]}.`);
-      else if (v[k] === 'friends') out.push(`Only the people you follow see your ${NAMES[k]}.`);
+  const su = $derived(session.user);
+  const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
+
+  // The name/bio/homepage block: one "Edit profile" button turns it into a
+  // small form that saves all three together, then settles back into text.
+  let editing = $state(false);
+  let dname = $state('');
+  let dbio = $state('');
+  let dhome = $state('');
+  let savingProfile = $state(false);
+  function startEdit() {
+    const u = session.user;
+    if (!u) return;
+    dname = u.displayName ?? '';
+    dbio = u.bio ?? '';
+    dhome = u.homepageUrl ?? '';
+    editing = true;
+  }
+  async function saveEdit() {
+    if (savingProfile) return;
+    savingProfile = true;
+    try {
+      const updated = await authApi.update({ displayName: dname || null, bio: dbio || null, homepageUrl: dhome || null });
+      setMe(updated);
+      if (profile && !profile.private) {
+        profile.displayName = updated.displayName;
+        profile.bio = updated.bio;
+        profile.homepageUrl = updated.homepageUrl;
+      }
+      dhome = updated.homepageUrl ?? '';
+      api.event('profile_updated');
+      editing = false;
+      showToast('Profile saved');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    } finally {
+      savingProfile = false;
     }
-    return out;
-  });
+  }
+
+  // The public/private switch and each section's "who sees this": every one
+  // saves the moment it's picked, the way the old settings toggles did.
+  async function save(patch: Parameters<typeof authApi.update>[0], label: string) {
+    try {
+      setMe(await authApi.update(patch));
+      api.event('settings_changed', { keys: Object.keys(patch) });
+      showToast(label);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    }
+  }
 </script>
 
 <svelte:head><title>@{handle} · thicket</title></svelte:head>
@@ -131,18 +193,34 @@
     <p>This profile is private.</p>
   </div>
 {:else}
+  {#if profile.isMe}
+    <p class="ownerbar">This is your <strong>public profile</strong>. Depending on your settings, it's what everyone else sees.</p>
+  {/if}
   <header class="who">
-    <Monogram name={profile.displayName ?? profile.handle} size={72} />
+    <Monogram name={profile.displayName ?? profile.handle} size={56} />
     <div class="names">
-      <h1>{profile.displayName ?? profile.handle}</h1>
-      <p class="handle">@{profile.handle}</p>
-      {#if profile.bio}<p class="bio">{profile.bio}</p>{/if}
-      {#if profile.homepageUrl}
-        <p class="meta"><a href={profile.homepageUrl} target="_blank" rel="noopener me">{hostOf(profile.homepageUrl)} ↗</a></p>
+      {#if editing}
+        <div class="edit">
+          <label><span>Display name</span><input type="text" bind:value={dname} maxlength="60" placeholder={profile.handle} /></label>
+          <label><span>About you</span><textarea bind:value={dbio} rows="3" maxlength="500" placeholder="A line or two. What you read, what you make."></textarea></label>
+          <label><span>Homepage</span><input type="url" inputmode="url" bind:value={dhome} placeholder="https://" /></label>
+          <div class="editrow">
+            <button type="button" class="ghost" onclick={() => (editing = false)} disabled={savingProfile}>Cancel</button>
+            <button type="button" class="save" onclick={saveEdit} disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save'}</button>
+          </div>
+        </div>
+      {:else}
+        <h1 title={profile.displayName ?? profile.handle}>{profile.displayName ?? profile.handle}</h1>
+        <p class="handle">@{profile.handle}{#if profile.homepageUrl}{' · '}<a class="site" href={profile.homepageUrl} target="_blank" rel="noopener me">{hostOf(profile.homepageUrl)} ↗</a>{/if}</p>
+        {#if profile.bio}<p class="bio">{profile.bio}</p>{/if}
       {/if}
     </div>
     {#if profile.isMe}
-      <a class="btn" href="/settings">Edit profile</a>
+      {#if !editing}
+        <button type="button" class="iconbtn" onclick={startEdit} aria-label="Edit profile" title="Edit profile">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>
+        </button>
+      {/if}
     {:else if session.user}
       <button class="btn" class:following={profile.people.isFollowing} onclick={toggleFollow} disabled={followBusy} aria-pressed={profile.people.isFollowing}>{profile.people.isFollowing ? 'Following' : 'Follow'}</button>
     {:else}
@@ -150,19 +228,36 @@
     {/if}
   </header>
 
-  {#if profile.isMe && profile.visibility}
-    {#if profile.visibility.profile === 'private'}
-      <p class="note">Your profile is <strong>private</strong>. Only you can see this page. <a href="/settings">Change</a></p>
-    {:else if narrowed.length}
-      <p class="note">{narrowed.join(' ')} <a href="/settings">Change</a></p>
-    {/if}
+  {#if profile.isMe && su}
+    <section>
+      <h2>Profile visibility</h2>
+      <div class="card">
+        <div class="pad visrow">
+          <div class="vislabel">
+            <span class="publabel">Who can see this page</span>
+            <p class="hint">{su.profileVisibility === 'private' ? 'Hidden so only you can see this page. You still count toward feed follower numbers, but no one can tell it’s you.' : 'Anyone can open it and see the parts you share below.'}</p>
+          </div>
+          <div class="seg two" role="radiogroup" aria-label="Who can see this page">
+            <button type="button" role="radio" aria-checked={su.profileVisibility === 'public'} class:on={su.profileVisibility === 'public'} onclick={() => save({ profileVisibility: 'public' }, 'Profile is public')}>Anyone</button>
+            <button type="button" role="radio" aria-checked={su.profileVisibility === 'private'} class:on={su.profileVisibility === 'private'} onclick={() => save({ profileVisibility: 'private' }, 'Profile is private')}>Only me</button>
+          </div>
+        </div>
+      </div>
+    </section>
   {/if}
 
   {#if profile.collections}
     <section>
       <h2>Collections <span class="n">{profile.collections.length}</span></h2>
-      {#if profile.collections.length === 0 && !profile.isMe}
-        <p class="status">No collections to show.</p>
+      <div class="card">
+        {#if profile.isMe && su && su.profileVisibility !== 'private'}
+          <div class="cardhead">
+            <span class="ctrl-label">Who sees this</span>
+            <SectionAudience level={su.collectionsVisibility} label="your collections" onchange={(l) => save({ collectionsVisibility: l }, `Collections: ${AUD[l]}`)} />
+          </div>
+        {/if}
+        {#if profile.collections.length === 0 && !profile.isMe}
+        <div class="pad"><p class="status">No collections to show.</p></div>
       {:else}
         {#snippet colRow(c: ProfileCollection, depth: number)}
           <li class:nested={depth > 0}>
@@ -198,9 +293,10 @@
           {/if}
         </ul>
         {#if profile.collections.length === 0 && profile.isMe}
-          <p class="status">A collection is a handful of feeds you read together. Make one above, then add feeds to it from any feed’s Follow menu.</p>
+          <div class="pad"><p class="status">A collection is a handful of feeds you read together. Make one above, then add feeds to it from any feed’s Follow menu.</p></div>
         {/if}
       {/if}
+      </div>
     </section>
   {/if}
 
@@ -210,10 +306,17 @@
     <section>
       <h2>Notes <span class="n">{profile.notes.count}</span></h2>
       {#if profile.isMe}
-        <p class="status">
-          {#if profile.visibility?.notes === 'public'}Anyone can read your notes here and under posts on your public collections, signed in or not. People who follow you also see them on posts they come across.{:else if profile.visibility?.notes === 'friends'}The people you follow can read your notes here and on your collections, and see them on posts they come across.{:else}Only you can see your notes.{/if}
-          <a href="/settings">Change</a>.
-        </p>
+        {#if su && su.profileVisibility !== 'private'}
+          <div class="card">
+            <div class="cardhead">
+              <span class="ctrl-label">Who sees this</span>
+              <SectionAudience level={su.notesVisibility} label="your notes" onchange={(l) => save({ notesVisibility: l }, `Notes: ${AUD[l]}`)} />
+            </div>
+            <div class="pad"><p class="status">
+              {#if su.notesVisibility === 'public'}Anyone can see your notes, whether they are signed in or not. They display on your profile and under the post each note is about.{:else if su.notesVisibility === 'friends'}Only people you follow can see your notes. They display on your profile and under the post each note is about.{:else}Only you can see your notes.{/if}
+            </p></div>
+          </div>
+        {/if}
       {:else if session.user && profile.people.isFollowing}
         <p class="status">You also see their notes on posts you come across{#if session.user.notesFrom === 'none'}, once you allow notes in <a href="/settings">Settings</a>{/if}.</p>
       {:else if session.user?.notesFrom === 'following'}
@@ -239,13 +342,54 @@
   {#if profile.bookmarks}
     <section>
       <h2>Bookmarks <span class="n">{profile.bookmarks.count}</span></h2>
-      {#if profile.bookmarks.count === 0}
-        <p class="status">{profile.isMe ? 'Nothing saved yet.' : 'No bookmarks to show.'}</p>
-      {:else}
-        <ul class="list">
-          <li><a href="/@{profile.handle}/bookmarks"><div class="meta2"><span class="name">{profile.isMe ? 'Your' : `${profile.displayName ?? profile.handle}’s`} bookmarks</span><span class="desc">{profile.isMe ? 'As others see them' : 'Save any to your own'}</span></div><span class="chev" aria-hidden="true">›</span></a></li>
-        </ul>
+      <div class="card">
+        {#if profile.isMe && su && su.profileVisibility !== 'private'}
+          <div class="cardhead">
+            <span class="ctrl-label">Who sees this</span>
+            <SectionAudience level={su.bookmarksVisibility} label="your bookmarks" onchange={(l) => save({ bookmarksVisibility: l }, `Bookmarks: ${AUD[l]}`)} />
+          </div>
+        {/if}
+        {#if profile.bookmarks.count === 0}
+          <div class="pad"><p class="status">{profile.isMe ? 'Nothing saved yet.' : 'No bookmarks to show.'}</p></div>
+        {:else if recentBookmarks === null}
+          <div class="pad"><p class="status">Loading…</p></div>
+        {:else}
+          <ul class="list">
+            {#each recentBookmarks as b (b.id)}
+              <li><a href={b.url} target="_blank" rel="noopener">
+                <div class="meta2"><span class="name">{b.title ?? b.url}</span><span class="desc">{b.siteTitle ?? hostOf(b.url)}</span></div>
+                <span class="chev" aria-hidden="true">↗</span>
+              </a></li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
+      {#if recentBookmarks && recentBookmarks.length > 0 && profile.bookmarks.count > recentBookmarks.length}
+        <a class="all" href="/@{profile.handle}/bookmarks">All {profile.bookmarks.count} bookmarks <span aria-hidden="true">›</span></a>
       {/if}
+    </section>
+  {/if}
+
+  {#if profile.isMe || (following !== null && following.length > 0)}
+    <section>
+      <h2>Following {#if following}<span class="n">{following.length}</span>{/if}</h2>
+      <div class="card">
+        {#if following === null}
+          <div class="pad"><p class="status">Loading…</p></div>
+        {:else if following.length === 0}
+          <div class="pad"><p class="status">{profile.isMe ? 'You aren’t following anyone yet. Open someone’s profile and press Follow.' : 'Not following anyone yet.'}</p></div>
+        {:else}
+          <ul class="list">
+            {#each following as p (p.handle)}
+              <li><a href="/@{p.handle}">
+                <Monogram name={p.displayName ?? p.handle} size={34} />
+                <div class="meta2"><span class="name">{p.displayName ?? p.handle}</span><span class="desc">@{p.handle}</span></div>
+                <span class="chev" aria-hidden="true">›</span>
+              </a></li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
     </section>
   {/if}
 
@@ -255,26 +399,66 @@
 {/if}
 
 <style>
-  .who { display: flex; gap: 16px; align-items: flex-start; margin: 8px 0 18px; }
+  .who { display: flex; gap: 16px; align-items: flex-start; margin: 8px 0 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
   .names { flex: 1; min-width: 0; }
-  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
+  /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
+  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .handle { margin: 2px 0 0; color: var(--text-3); font-size: calc(15px * var(--size-app)); }
+  .site { color: var(--accent); font-weight: 600; }
   .bio { margin: 10px 0 0; color: var(--text); font-size: calc(15px * var(--size-app)); white-space: pre-line; }
-  .meta { margin: 8px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
-  .meta a { color: var(--accent); font-weight: 600; }
   .btn { flex: none; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .note { margin: 0 0 16px; padding: 10px 14px; border-radius: 12px; background: var(--surface-2); font-size: calc(14px * var(--size-app)); color: var(--text-2); }
-  .note a { color: var(--accent); font-weight: 600; }
+  /* Edit: a quiet pencil, the same at every width. */
+  .iconbtn { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--text-3); }
+  .iconbtn:hover { background: var(--surface-2); color: var(--text); }
+
+  /* Owner only: a muted one-line reminder in a soft box at the very top of the page. */
+  .ownerbar { margin: 0 0 18px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); font-size: calc(13px * var(--size-app)); color: var(--text-3); text-align: center; }
+
+  /* Every section's content sits in a card — the same surface + shadow the
+     lists always used. The audience control rides at the top in a header bar. */
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .pad { padding: 16px; }
+  /* A tinted control strip, not a list row: the background sets it apart from
+     the white rows below, and the label sits right beside its buttons. */
+  .cardhead { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface-2); }
+  .ctrl-label { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
+  .cardhead :global(.seg) { flex: none; width: min(320px, 100%); }
+
+  /* Visibility: the label and its explanation on the left, the switch on the right. */
+  .visrow { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .vislabel { flex: 1; min-width: 12ch; }
+  .publabel { display: block; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.25; }
+  .hint { margin: 2px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+
+  /* The public/private switch on this page; the section controls reuse SectionAudience. */
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .seg.two { margin-left: auto; flex: none; }
+  .seg button { padding: 7px 14px; font-size: calc(12.5px * var(--size-app)); font-weight: 600; color: var(--text-3); background: var(--surface); border-left: 1px solid var(--line); white-space: nowrap; }
+  .seg button:first-child { border-left: 0; }
+  .seg button.on { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+
+  /* Editing name, bio and homepage right in the header. */
+  .edit { display: flex; flex-direction: column; gap: 10px; }
+  .edit label { display: flex; flex-direction: column; gap: 5px; font-size: calc(12px * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  .edit input, .edit textarea { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(15px * var(--size-app)); font-family: inherit; resize: vertical; }
+  .edit input:focus, .edit textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .editrow { display: flex; justify-content: flex-end; gap: 8px; }
+  .editrow button { padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: calc(14px * var(--size-app)); }
+  .editrow .ghost { border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
+  .editrow .save { background: var(--accent); color: var(--accent-ink); }
+  .editrow button:disabled { opacity: 0.5; }
+
   section { margin-bottom: 22px; }
-  h2 { font-size: calc(16px * var(--size-app)); margin: 0 0 8px; display: flex; align-items: baseline; gap: 8px; }
-  .n { font-size: calc(13px * var(--size-app)); color: var(--text-3); font-weight: 400; }
-  .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; display: flex; align-items: baseline; gap: 8px; line-height: 1.25; }
+  /* A count badge, not floating text: a quiet neutral pill. (Accessibility contrast pass to come.) */
+  .n { font-size: calc(12px * var(--size-app)); font-weight: 600; color: var(--text-2); background: var(--surface-2); border-radius: 999px; padding: 1px 8px; font-variant-numeric: tabular-nums; }
+  .list { list-style: none; margin: 0; padding: 0; }
   li a { display: flex; align-items: center; gap: 12px; padding: 14px 16px 14px calc(16px + var(--indent, 0px)); border-top: 1px solid var(--line); }
   /* A sub-collection is indented and its name sits quieter than its parent's, so the tree reads at a glance. */
   .nested .name { font-weight: 500; color: var(--text-2); }
   li:first-child a { border-top: 0; }
   .meta2 { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .name { font-weight: 600; }
+  .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; vertical-align: middle; margin-left: 4px; }
   .desc { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .count { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; }
@@ -290,7 +474,7 @@
   .status { color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 8px 0; margin: 0; }
   .status a { color: var(--accent); font-weight: 600; }
   .notes { display: flex; flex-direction: column; gap: 14px; margin: 4px 0 0; padding: 0; list-style: none; }
-  .all { display: inline-block; margin-top: 12px; color: var(--accent); font-weight: 600; font-size: calc(14px * var(--size-app)); }
+  .all { display: block; width: fit-content; margin: 12px 0 0 auto; color: var(--accent); font-weight: 600; font-size: calc(14px * var(--size-app)); }
   .empty { text-align: center; padding: 50px 20px; color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: 10px; }
   .empty p { margin: 0; }
   .join { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); margin-top: 30px; }

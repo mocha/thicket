@@ -97,7 +97,7 @@ export const ROLES: { id: Role; label: string; note: string }[] = [
 
 export const READING_MODES: { id: ReadingMode; label: string; note: string }[] = [
   { id: 'tabs', label: 'New tabs', note: 'A post opens on its own site, in a new tab.' },
-  { id: 'inline', label: 'In the app', note: 'A post opens here, in a reader over the list. Sites that only send a preview still get a link out.' }
+  { id: 'inline', label: 'In the app', note: 'A post opens in the in-app reader. Sites that only send a preview still link out.' }
 ];
 
 export const LAYOUTS: { id: Layout; label: string; note: string }[] = [

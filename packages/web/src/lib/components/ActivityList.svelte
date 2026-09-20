@@ -7,15 +7,28 @@
    * or hide simply stops appearing. A burst of feed adds to one collection (an
    * import, a copy) arrives already collapsed, so one act reads as one line.
    */
-  import { profilesApi, publicCollectionHref, type ActivityEntry } from '$lib/api';
-  import { api } from '$lib/api';
+  import { api, authApi, profilesApi, publicCollectionHref, type ActivityEntry, type ShareLevel } from '$lib/api';
   import SourceIcon from './SourceIcon.svelte';
+  import SectionAudience from './SectionAudience.svelte';
   import { relativeTime, hostOf } from '$lib/time';
   import { audienceTag } from '$lib/visibility';
-  import { session } from '$lib/session.svelte';
+  import { session, setMe } from '$lib/session.svelte';
+  import { showToast } from '$lib/toast.svelte';
   import VisitorMore from './VisitorMore.svelte';
 
   let { handle, isMe }: { handle: string; isMe: boolean } = $props();
+
+  /** The owner sets who sees this list; it saves the moment they pick. */
+  const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
+  async function saveActivityVis(level: ShareLevel) {
+    try {
+      setMe(await authApi.update({ activityVisibility: level }));
+      api.event('settings_changed', { keys: ['activityVisibility'] });
+      showToast(`Recent activity: ${AUD[level]}`);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    }
+  }
 
   /**
    * Shown PAGE at a time. Signed in, each Show more asks the server for the
@@ -67,15 +80,21 @@
 
 <section>
   <h2>Recent activity</h2>
-
-  {#if failed}
-    <p class="status">{failed}</p>
-  {:else if entries === null}
-    <p class="status">Loading…</p>
-  {:else if entries.length === 0}
-    <p class="status">{isMe ? 'Follow a feed, save a post or write a note and it shows up here.' : 'Nothing to show yet.'}</p>
-  {:else}
-    <ul class="acts">
+  <div class="card">
+    {#if isMe && session.user && session.user.profileVisibility !== 'private'}
+      <div class="cardhead">
+        <span class="ctrl-label">Who sees this</span>
+        <SectionAudience level={session.user.activityVisibility} label="your recent activity" onchange={saveActivityVis} />
+      </div>
+    {/if}
+    {#if failed}
+      <div class="pad"><p class="status">{failed}</p></div>
+    {:else if entries === null}
+      <div class="pad"><p class="status">Loading…</p></div>
+    {:else if entries.length === 0}
+      <div class="pad"><p class="status">{isMe ? 'Follow a feed, save a post or write a note and it shows up here.' : 'Nothing to show yet.'}</p></div>
+    {:else}
+      <ul class="acts">
       {#each visible as e (key(e))}
         <li>
           {#if e.kind === 'feeds'}
@@ -133,19 +152,26 @@
         </li>
       {/each}
     </ul>
-    {#if cursor || shown < entries.length}
-      <button class="more" onclick={more} disabled={busy}>{busy ? 'Loading…' : 'Show more'}</button>
-    {:else if cappedAt}
-      <VisitorMore cap={cappedAt} />
+      {#if cursor || shown < entries.length}
+        <div class="foot"><button class="more" onclick={more} disabled={busy}>{busy ? 'Loading…' : 'Show more'}</button></div>
+      {:else if cappedAt}
+        <div class="foot"><VisitorMore cap={cappedAt} /></div>
+      {/if}
     {/if}
-  {/if}
+  </div>
 </section>
 
 <style>
   section { margin-bottom: 22px; }
-  h2 { font-size: calc(16px * var(--size-app)); margin: 0 0 8px; }
-  .status { color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 8px 0; margin: 0; }
-  .acts { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .cardhead { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface-2); }
+  .ctrl-label { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
+  .cardhead :global(.seg) { flex: none; width: min(320px, 100%); }
+  .pad { padding: 16px; }
+  .foot { padding: 12px 16px; border-top: 1px solid var(--line); }
+  .status { color: var(--text-3); font-size: calc(14px * var(--size-app)); margin: 0; }
+  .acts { list-style: none; margin: 0; padding: 0; }
   li { padding: 12px 16px; border-top: 1px solid var(--line); }
   li:first-child { border-top: 0; }
   .row { display: flex; align-items: center; gap: 10px; }
@@ -164,6 +190,6 @@
   .rest::before { content: '· '; }
   blockquote { margin: 6px 0 0 30px; padding-left: 10px; border-left: 2px solid var(--line); font-size: calc(14px * var(--size-app)); color: var(--text-2); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
-  .more { display: block; width: 100%; margin-top: 10px; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: calc(14px * var(--size-app)); font-weight: 600; }
+  .more { display: block; width: 100%; text-align: center; color: var(--accent); font-weight: 600; font-size: calc(14px * var(--size-app)); }
   .more:disabled { opacity: 0.6; }
 </style>
