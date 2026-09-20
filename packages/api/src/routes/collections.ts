@@ -22,6 +22,11 @@ collections.post("/", async (c) => {
   const user = currentUser(c);
   const body = await c.req.json<{ name: string; parentId?: number; description?: string }>();
   if (!body.name?.trim()) return c.json({ error: "name is required" }, 400);
+  // Sub-collections are on hold (2026-09-20, per Patrick). This parentId path
+  // works and is exercised by seeding, but no shipping UI passes one yet, so in
+  // practice every collection created here lands at the top level. Don't wire a
+  // "create sub-collection" affordance until Product decides the feature is
+  // wanted or needed. (Matching note in web collections.svelte.ts.)
   const parentId = body.parentId ?? user.rootCollectionId;
   const [parent] = await db.select().from(schema.collections).where(and(eq(schema.collections.id, parentId), eq(schema.collections.userId, user.id)));
   if (!parent) return c.json({ error: "parent not found" }, 404);

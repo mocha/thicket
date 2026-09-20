@@ -2,9 +2,10 @@
   /**
    * Add a feed, in a sheet you can flick away. Top to bottom, in the order you
    * decide things: the address, which of your collections it goes in, then
-   * Follow. Every feed lives in a collection, so one is always ticked: the one
-   * the sheet was opened from, or your first. Success lands on the feed's own
-   * page. Nothing is saved until Follow, so closing is a true cancel.
+   * Follow. Opened from a collection, that one is ticked; opened from
+   * Everything, none is — and if you leave it that way, Follow drops the feed
+   * in your default collection. Success lands on the feed's own page. Nothing
+   * is saved until Follow, so closing is a true cancel.
    */
   import { tick } from 'svelte';
   import { goto } from '$app/navigation';
@@ -21,6 +22,7 @@
   let url = $state('');
   let ids = $state<number[]>([]);
   let newName = $state('');
+  let filter = $state('');
   let creating = $state(false);
   let busy = $state(false);
   let outcome = $state<SubscribeOutcome | null>(null);
@@ -33,16 +35,19 @@
     const o = addFeed.opts;
     url = o.url ?? '';
     ids = [...(o.collectionIds ?? [])];
-    newName = ''; outcome = null; busy = false; landing = false;
-    // Opened from a collection, it goes there; opened from anywhere else, it goes
-    // where a bare Follow would put it. Either way the sheet shows the answer.
+    newName = ''; filter = ''; outcome = null; busy = false; landing = false;
+    // Opened from a collection, that one starts ticked. Opened from Everything,
+    // nothing is ticked — leave it and Follow drops the feed in your default
+    // collection, which the hint below spells out.
     void loadCollections().then(async (s) => {
       ids = ids.filter((id) => id !== s.rootId);
-      if (!ids.length) { const d = defaultCollection(); if (d) ids = [d.id]; }
-      // The list scrolls and is alphabetical, so the ticked one is often below
-      // the fold. Bring it up: where this is going should never be off screen.
+      // The list scrolls and is alphabetical, so a ticked one is often below
+      // the fold. Opened from a collection, center that ticked row so where the
+      // feed is going is plainly in view, not clipped to an edge. (Opened from
+      // Everything nothing is ticked, so this is a no-op and the list starts at
+      // the top.)
       await tick();
-      list?.querySelector('input:checked')?.closest('li')?.scrollIntoView({ block: 'nearest' });
+      list?.querySelector('input:checked')?.closest('li')?.scrollIntoView({ block: 'center' });
     });
     dialog?.showModal();
     if (o.autoSubmit && url) void submit(url);
@@ -54,6 +59,15 @@
   }
 
   const nameOf = (id: number) => namedCollections().find((c) => c.id === id)?.name ?? 'a collection';
+
+  // With a lot of collections the list becomes a scroll, so offer a filter —
+  // but only once there are enough to bother, so short lists stay clean. It
+  // narrows to names that contain what you type, ignoring case.
+  const showFilter = $derived(namedCollections().length > 6);
+  const visibleCollections = $derived.by(() => {
+    const q = filter.trim().toLowerCase();
+    return q ? namedCollections().filter((c) => c.name.toLowerCase().includes(q)) : namedCollections();
+  });
 
   async function createCollection() {
     const name = newName.trim();
@@ -108,7 +122,7 @@
       <h2>Add a feed</h2>
       <button type="button" class="close" onclick={() => dialog?.close()} aria-label="Close">×</button>
     </header>
-    <p class="lede">Paste the address of a site, a blog, a YouTube channel or video, a subreddit, or a feed. thicket finds the feed.</p>
+    <p class="lede">Enter the address of a site, blog, subreddit, or YouTube channel or video, and thicket finds the feed for you. You can also enter the feed itself.</p>
     <input bind:this={input} bind:value={url} type="url" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="example.com" required disabled={busy} />
 
     {#if outcome && 'error' in outcome}
@@ -127,9 +141,18 @@
     {/if}
 
     <div class="eyebrow">Put it in a collection</div>
+    {#if showFilter}
+      <div class="filter">
+        <input type="text" bind:value={filter} placeholder="Filter collections…" aria-label="Filter collections" disabled={busy}
+          onkeydown={(e) => { if (e.key === 'Enter') e.preventDefault(); else if (e.key === 'Escape') filter = ''; }} />
+        {#if filter}
+          <button type="button" class="clear" aria-label="Clear filter" onclick={() => (filter = '')} disabled={busy}>×</button>
+        {/if}
+      </div>
+    {/if}
     <div class="scroll" bind:this={list}>
     <ul class="checks">
-      {#each namedCollections() as c (c.id)}
+      {#each visibleCollections as c (c.id)}
         <li>
           <label>
             <input type="checkbox" checked={ids.includes(c.id)} onchange={() => toggle(c.id)} disabled={busy} />
@@ -139,6 +162,9 @@
         </li>
       {/each}
     </ul>
+    {#if filter.trim() && !visibleCollections.length}
+      <p class="nomatch">No collections match “{filter.trim()}”. Start one below.</p>
+    {/if}
     </div>
     <p class="hint">{#if !namedCollections().length}No collections yet — one will be made for this feed.{:else if ids.length === 1}It goes in {nameOf(ids[0])}. Tick more if it belongs in several.{:else if ids.length}It goes in {ids.length} of your collections.{:else}Pick one, or it goes in {defaultCollection()?.name ?? 'your first collection'}.{/if}</p>
     {#if collectionStore.loaded}
@@ -163,7 +189,6 @@
   }
   @media (min-width: 700px) {
     .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 460px; border-radius: 20px; max-height: 86vh; }
-    .scroll { max-height: 300px; }
   }
   header { display: flex; align-items: center; justify-content: space-between; }
   h2 { margin: 0; font-size: calc(22px * var(--size-headings)); font-family: var(--font-headings); }
@@ -178,7 +203,18 @@
   .candidates button { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); }
   .candidates span { font-size: calc(12px * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
   .eyebrow { font-size: calc(11px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 4px; }
+  .filter { display: flex; align-items: center; gap: 6px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
+  .filter:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  .filter input { flex: 1; min-width: 0; border: 0; padding: 0; background: transparent; color: var(--text); font-size: calc(14px * var(--size-app)); }
+  .filter input:focus { outline: none; }
+  .filter .clear { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: var(--text-3); font-size: calc(16px * var(--size-app)); line-height: 1; }
+  .filter .clear:hover { background: var(--surface-2); color: var(--text); }
+  .nomatch { margin: 0; padding: 12px 8px; color: var(--text-3); font-size: calc(13px * var(--size-app)); }
   .scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: 38vh; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; }
+  /* Desktop cap. Must come after the base .scroll rule above: same specificity,
+     so source order decides, and the list should top out at ~7 rows and scroll,
+     not grow to a third of a tall screen. */
+  @media (min-width: 700px) { .scroll { max-height: 300px; } }
   .checks { list-style: none; margin: 0; padding: 0; }
   .checks label { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-top: 1px solid var(--line); cursor: pointer; }
   .checks li:first-child label { border-top: 0; }

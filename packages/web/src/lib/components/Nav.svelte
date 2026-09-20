@@ -81,6 +81,19 @@
     }
   }
 
+  // Filter the sidebar's collections: a slim field sits at the top of the list
+  // and narrows it to names containing what you type, ignoring case. Shown only
+  // once there are enough collections to bother, so short lists stay clean.
+  let filter = $state('');
+  const showFilter = $derived(namedCollections().length > 6);
+  const filtered = $derived.by(() => {
+    const q = filter.trim().toLowerCase();
+    return q ? namedCollections().filter((c) => c.name.toLowerCase().includes(q)) : [];
+  });
+  // Leaving for a page clears the filter, so you never return to a sidebar
+  // mysteriously narrowed to your last search.
+  $effect(() => { void path; filter = ''; });
+
   const icons = {
     everything: 'M4 12c3-3 5-3 8 0s5 3 8 0M4 17c3-3 5-3 8 0s5 3 8 0M4 7c3-3 5-3 8 0s5 3 8 0',
     collections: 'M4 6h16M4 12h16M4 18h10',
@@ -121,22 +134,41 @@
       </button>
       {#if collectionsOpen.open}
       <ul class="cols" id="my-collections" aria-label="Your collections">
-        {#each topLevelCollections() as c (c.id)}
-          {@const kids = childrenOf(c.id)}
-          <li class:parent={kids.length > 0}>
-            {@render row(c)}
-            {#if kids.length}
-              <button type="button" class="caret" class:open={isOpen(c)} aria-expanded={isOpen(c)} aria-label="{isOpen(c) ? 'Hide' : 'Show'} the collections inside {c.name}" onclick={() => toggleNavOpen(c.id)}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
-              </button>
+        {#if showFilter}
+          <li class="filterrow">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            <input type="text" bind:value={filter} placeholder="Filter collections…" aria-label="Filter collections" maxlength="60" autocomplete="off"
+              onkeydown={(e) => { if (e.key === 'Escape') filter = ''; }} />
+            {#if filter}
+              <button type="button" class="clear" aria-label="Clear filter" onclick={() => (filter = '')}>×</button>
             {/if}
           </li>
-          {#if kids.length && isOpen(c)}
-            {#each kids as k (k.id)}
-              <li class="child">{@render row(k)}</li>
-            {/each}
-          {/if}
-        {/each}
+        {/if}
+        {#if filter.trim()}
+          <!-- A search wants a flat list of matches, not the folded tree. -->
+          {#each filtered as c (c.id)}
+            <li>{@render row(c)}</li>
+          {:else}
+            <li class="nomatch">No collections match “{filter.trim()}”.</li>
+          {/each}
+        {:else}
+          {#each topLevelCollections() as c (c.id)}
+            {@const kids = childrenOf(c.id)}
+            <li class:parent={kids.length > 0}>
+              {@render row(c)}
+              {#if kids.length}
+                <button type="button" class="caret" class:open={isOpen(c)} aria-expanded={isOpen(c)} aria-label="{isOpen(c) ? 'Hide' : 'Show'} the collections inside {c.name}" onclick={() => toggleNavOpen(c.id)}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                </button>
+              {/if}
+            </li>
+            {#if kids.length && isOpen(c)}
+              {#each kids as k (k.id)}
+                <li class="child">{@render row(k)}</li>
+              {/each}
+            {/if}
+          {/each}
+        {/if}
         <li class="new">
           {#if creating}
             <form onsubmit={(e) => { e.preventDefault(); void create(); }}>
@@ -237,6 +269,14 @@
     nav:not(.paged) .heading:hover { background: var(--surface-2); }
     nav:not(.paged) .groupcaret { flex: none; margin-left: auto; color: var(--text-3); transition: transform 120ms ease; }
     nav:not(.paged) .groupcaret.open { transform: rotate(90deg); }
+    nav:not(.paged) .cols .filterrow { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); }
+    nav:not(.paged) .cols .filterrow:focus-within { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
+    nav:not(.paged) .cols .filterrow svg { flex: none; color: var(--text-3); }
+    nav:not(.paged) .cols .filterrow input { flex: 1; min-width: 0; border: 0; padding: 0; background: transparent; color: var(--text); font-size: calc(14px * var(--size-app)); }
+    nav:not(.paged) .cols .filterrow input:focus { outline: none; }
+    nav:not(.paged) .cols .filterrow .clear { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: var(--text-3); font-size: calc(16px * var(--size-app)); line-height: 1; }
+    nav:not(.paged) .cols .filterrow .clear:hover { background: var(--surface-2); color: var(--text); }
+    nav:not(.paged) .cols .nomatch { padding: 7px 12px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
     /* The Everything row is a normal-height row: undo the full-height stretch the bottom-bar tabs use. */
     nav:not(.paged) .readall { height: auto; }
     /* It carries the whole stream's "what's new" count, pushed to the row's end. */
