@@ -12,6 +12,7 @@ import {
 } from "../lib/auth.js";
 import { consumeInvite, findUsableInvite, publicStatus, signupPolicy } from "../lib/instance.js";
 import { LIMITS, clear, clientKey, hit, tooMany } from "../lib/ratelimit.js";
+import { defaultPlan, effectivePlan, limitsOf, usageOf } from "../lib/entitlements.js";
 
 export const auth = new Hono();
 
@@ -21,8 +22,15 @@ const MIN_PASSWORD = 8;
 async function me(userId: number) {
   const [u] = await db.select().from(schema.users).where(eq(schema.users.id, userId));
   if (!u) return null;
-  const { passwordHash, ...rest } = u;
-  return { ...rest, hasPassword: !!passwordHash, createdAt: u.createdAt.toISOString(), claimVerifiedAt: u.claimVerifiedAt?.toISOString() ?? null, instanceTracking: trackingEnabled() };
+  const { passwordHash, plan: granted, ...rest } = u;
+  // The plan in force, what it allows, and how much of that is used: the web app
+  // shows "18 of 20 feeds" and knows when to offer the next plan.
+  const plan = effectivePlan(u, await defaultPlan());
+  return {
+    ...rest, hasPassword: !!passwordHash, createdAt: u.createdAt.toISOString(), claimVerifiedAt: u.claimVerifiedAt?.toISOString() ?? null, instanceTracking: trackingEnabled(),
+    planUntil: u.planUntil?.toISOString() ?? null,
+    plan, grantedPlan: granted, limits: limitsOf(plan), usage: await usageOf(u.id),
+  };
 }
 
 /** Instance name, public URL, and sign-up policy. Public; the sign-up page renders from it. */

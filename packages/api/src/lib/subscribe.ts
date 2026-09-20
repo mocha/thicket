@@ -5,6 +5,7 @@ import { discover, type Discovery } from "../feeds/discover.js";
 import { normalizeFeedUrl } from "../feeds/normalize.js";
 import { storeItems, chooseInterval } from "../feeds/refresh.js";
 import { backfillFeed } from "../feeds/backfill.js";
+import { assertCanFollow } from "./entitlements.js";
 
 /** Get-or-create a global feed row from a discovery result and store its first batch of items. */
 export async function ensureFeedFromDiscovery(d: Extract<Discovery, { status: "feed" }>) {
@@ -77,10 +78,14 @@ export async function defaultCollectionFor(user: SessionUser): Promise<number> {
  * Put a feed in a collection. Every write path goes through here. The root row
  * is the tree's parent and nothing else: a feed filed there would be followed
  * but in no collection, which is the state this app no longer has.
+ * Throws PlanLimitError when the owner's plan has no room for another feed.
  */
 export async function addFeedToCollection(collectionId: number, feedId: number) {
   const [col] = await db.select({ userId: schema.collections.userId, parentId: schema.collections.parentId }).from(schema.collections).where(eq(schema.collections.id, collectionId));
   if (!col || col.parentId === null) return;
+  // The owner's plan caps how many feeds they follow. Checked here because every
+  // write path comes through here; throws PlanLimitError (lib/plans.ts).
+  await assertCanFollow(col.userId, feedId);
   await db.insert(schema.collectionFeeds).values({ collectionId, feedId }).onConflictDoNothing();
 }
 

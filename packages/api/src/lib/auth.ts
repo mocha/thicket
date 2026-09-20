@@ -18,6 +18,7 @@ import { HTTPException } from "hono/http-exception";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { IS_HTTPS, TRACK_ACTIVITY } from "./config.js";
+import { defaultPlan, effectivePlan, type Plan, type PlanSource, type Tier } from "./entitlements.js";
 
 const scrypt = promisify(scryptCb);
 export const COOKIE = "thicket_session";
@@ -34,6 +35,9 @@ export type SessionUser = {
   defaultCollectionId: number | null;
   /** Effective tracking flag: per-user override, else the instance setting. */
   trackActivity: boolean;
+  isAdmin: boolean;
+  /** The tier in force for this request (lib/plans.ts): the granted plan resolved against the instance default and any expiry, or `admin`. */
+  plan: Tier;
 };
 
 declare module "hono" {
@@ -114,8 +118,10 @@ export const attachUser: MiddlewareHandler = async (c, next) => {
     const rows = await db.execute<{
       id: number; handle: string; displayName: string | null; trackActivity: boolean | null; rootCollectionId: number | null;
       defaultCollectionId: number | null; lastSeenAt: string; expiresAt: string;
+      isAdmin: boolean; plan: Plan; planSource: PlanSource; planUntil: string | null;
     }>(sql`
       select u.id, u.handle, u.display_name as "displayName", u.track_activity as "trackActivity",
+             u.is_admin as "isAdmin", u.plan, u.plan_source as "planSource", u.plan_until as "planUntil",
              (select col.id from collections col where col.user_id = u.id and col.parent_id is null limit 1) as "rootCollectionId",
              (select col.id from collections col where col.user_id = u.id and col.parent_id is not null order by col.id limit 1) as "defaultCollectionId",
              s.last_seen_at as "lastSeenAt", s.expires_at as "expiresAt"
@@ -128,6 +134,8 @@ export const attachUser: MiddlewareHandler = async (c, next) => {
         id: Number(row.id), handle: row.handle, displayName: row.displayName, rootCollectionId: Number(row.rootCollectionId),
         defaultCollectionId: row.defaultCollectionId === null ? null : Number(row.defaultCollectionId),
         trackActivity: row.trackActivity ?? trackingEnabled(),
+        isAdmin: row.isAdmin,
+        plan: effectivePlan(row, await defaultPlan()),
       });
       c.set("sessionId", id);
       // Sliding expiry, written at most once a day so reads stay reads.

@@ -5,6 +5,8 @@ import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { slugify, slugTaken, uniqueCollectionSlug } from "../lib/slug.js";
 import { isShareLevel } from "../lib/visibility.js";
+import { assertCanCreateCollection, assertNested } from "../lib/entitlements.js";
+import { opmlHasFolders } from "../lib/opml.js";
 
 export const collections = new Hono();
 /** Flat list with parent pointers and feed counts; the client builds the tree. */
@@ -25,6 +27,9 @@ collections.post("/", async (c) => {
   const parentId = body.parentId ?? user.rootCollectionId;
   const [parent] = await db.select().from(schema.collections).where(and(eq(schema.collections.id, parentId), eq(schema.collections.userId, user.id)));
   if (!parent) return c.json({ error: "parent not found" }, 404);
+  // Plans: a sub-collection needs a plan that nests; a new collection needs room (lib/plans.ts, 403 via app.onError).
+  if (parentId !== user.rootCollectionId) assertNested(user.plan);
+  await assertCanCreateCollection(user.id, user.plan);
   // A person typed this name. Say it is taken rather than quietly renaming it;
   // the machine paths (copy, import) are the ones that dedupe on their own.
   const slug = slugify(body.name);
@@ -39,6 +44,7 @@ collections.patch("/:id", async (c) => {
   const body = await c.req.json<{ name?: string; description?: string; parentId?: number; visibility?: string }>();
   if (body.parentId !== undefined) {
     if (body.parentId === id) return c.json({ error: "a collection cannot contain itself" }, 400);
+    if (body.parentId !== user.rootCollectionId) assertNested(user.plan);
     // Cycle check: the new parent must not be a descendant of this collection.
     const desc = await db.execute<{ id: number }>(sql`with recursive t as (select id from collections where id = ${id} union all select c.id from collections c join t on c.parent_id = t.id) select id from t`);
     if (desc.rows.some((r) => Number(r.id) === body.parentId)) return c.json({ error: "cannot move a collection under its own descendant" }, 400);
@@ -230,11 +236,16 @@ collections.post("/import-url", async (c) => {
   }
 
   let title: string | null = null;
+  let doc: ReturnType<typeof parseOpml>;
   try {
-    title = parseOpml(text).head?.title?.trim() || null;
+    doc = parseOpml(text);
+    title = doc.head?.title?.trim() || null;
   } catch (err) {
     return c.json({ error: `That isn’t a collection we can read: ${err instanceof Error ? err.message : err}` }, 400);
   }
+  // A collection with sub-collections inside it can only be copied whole by a plan that nests (decided 2026-09-20).
+  if (opmlHasFolders(doc)) assertNested(user.plan);
+  await assertCanCreateCollection(user.id, user.plan);
   // Nobody is at the keyboard here, so this renames rather than refusing:
   // "News", then "News 2". Checked against every slug of mine, not just my
   // top-level ones, because slugs are unique per user now.
@@ -256,6 +267,10 @@ collections.post("/:id/import", async (c) => {
   if (!col) return c.json({ error: "not found" }, 404);
   const text = await c.req.text();
   if (!text.trim()) return c.json({ error: "empty body" }, 400);
+  // Folders import as sub-collections, which only a plan that nests may have (403 via app.onError, outside the parse guard below).
+  let hasFolders = false;
+  try { hasFolders = opmlHasFolders(parseOpml(text)); } catch { /* the import below reports the parse error */ }
+  if (hasFolders) assertNested(user.plan);
   try {
     const result = await importOpml(user.id, id, text);
     return c.json(result);

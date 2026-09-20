@@ -8,6 +8,7 @@ import { Hono } from "hono";
 import { and, eq, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
+import { limitsOf } from "../lib/plans.js";
 
 export const bookmarks = new Hono();
 
@@ -103,7 +104,18 @@ bookmarks.post("/", async (c) => {
     .values(values)
     .onConflictDoUpdate({ target: [schema.bookmarks.userId, schema.bookmarks.url], set: { savedAt: new Date() } })
     .returning();
-  return c.json(saved, 201);
+  // The Free cap rolls: saving past it lets the oldest go (lib/plans.ts). Told,
+  // so the web app can say so rather than have a bookmark quietly vanish.
+  const max = limitsOf(user.plan).bookmarks;
+  let evicted = 0;
+  if (max !== null) {
+    const gone = await db.execute(sql`
+      delete from bookmarks where user_id = ${user.id} and id in (
+        select id from bookmarks where user_id = ${user.id} order by saved_at desc, id desc offset ${max})
+      returning id`);
+    evicted = gone.rows.length;
+  }
+  return c.json({ ...saved, evicted, bookmarkCap: max }, 201);
 });
 
 bookmarks.delete("/:id", async (c) => {

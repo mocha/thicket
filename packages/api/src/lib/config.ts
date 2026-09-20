@@ -34,3 +34,11 @@ export const INSTANCE_NAME = env("INSTANCE_NAME") ?? new URL(PUBLIC_URL).hostnam
 export const RETAIN_ITEMS_DAYS = Number(env("RETAIN_ITEMS_DAYS") ?? 0);
 export const RETAIN_FETCH_LOG_DAYS = Number(env("RETAIN_FETCH_LOG_DAYS") ?? 90);
 export const RETAIN_EVENTS_DAYS = Number(env("RETAIN_EVENTS_DAYS") ?? 90);
+
+/**
+ * The plan every account gets unless an admin or a subscription says
+ * otherwise (lib/plans.ts). `advanced` means no limits, which is what a
+ * self-hosted instance wants; the hosted instance runs `free`. Seeds the
+ * instance setting; the admin page changes it at runtime.
+ */
+export const DEFAULT_PLAN = ((v) => (v === "free" || v === "basic" || v === "advanced" ? v : "advanced"))(env("DEFAULT_PLAN"));

@@ -14,6 +14,8 @@ import { isHttpUrl, normalizeFeedUrl } from "../feeds/normalize.js";
 import { refreshIcon } from "../feeds/icons.js";
 import { isYouTubeUrl, YOUTUBE_FEED_PATTERN } from "../feeds/youtube.js";
 import { feedSlugSql } from "../lib/slug.js";
+import { limitsOf } from "../lib/plans.js";
+import { hit, tooMany } from "../lib/ratelimit.js";
 
 export const feeds = new Hono();
 
@@ -126,6 +128,9 @@ feeds.post("/", async (c) => {
   }
   if (!isHttpUrl(normalized)) return c.json({ error: "only http(s) URLs" }, 400);
   const user = currentUser(c);
+  // Each of these makes thicket fetch a URL somebody typed; the plan says how many an hour (lib/plans.ts).
+  const pace = hit(`addfeed:${user.id}`, { limit: limitsOf(user.plan).addFeedPerHour, windowMs: 3600_000 });
+  if (!pace.ok) return tooMany(c, pace.retryAfterS, "That’s a lot of new feeds for one hour.");
   // Several collections at once: only the caller's own count; anything else is silently dropped.
   const wanted = [...new Set([...(body.collectionIds ?? []), ...(body.collectionId ? [body.collectionId] : [])].map(Number).filter(Number.isFinite))];
   const mine = wanted.length

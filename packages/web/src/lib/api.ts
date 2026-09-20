@@ -21,7 +21,8 @@ export type RiverItem = {
  */
 /** One collection's "what's new": posts newer than the point this device sent, counted up to 100 (`more` past that), and its posts in the last week. */
 export type Mark = { collectionId: number; count: number; more: boolean; weekly: number };
-export type RiverPage = { items: RiverItem[]; nextCursor: string | null; hidden: number; cappedAt?: number | null };
+/** `capReason`: why the page stops (a visitor without an account, or the account's plan). `perFeedCap`: only the newest N of each feed are shown; null = every post. */
+export type RiverPage = { items: RiverItem[]; nextCursor: string | null; hidden: number; cappedAt?: number | null; capReason?: 'visitor' | 'plan' | null; perFeedCap?: number | null };
 
 /**
  * A post fetched on its own, by its address rather than out of a list. Same
@@ -76,9 +77,12 @@ export type SubscribeOutcome =
   | { status: 'none'; pageUrl: string }
   | { error: string };
 
-/** Thrown for non-2xx responses; `field` names the form field when the server says which. */
+/** Where a plan says no: which limit, on which plan, and the smallest plan that lifts it (null = none does). */
+export type PlanLimit = { kind: 'feeds' | 'collections' | 'notes' | 'nested'; plan: Tier; max: number | null; upgrade: Plan | null };
+
+/** Thrown for non-2xx responses; `field` names the form field when the server says which; `limit` is set when a plan said no. */
 export class ApiError extends Error {
-  constructor(message: string, public status: number, public field?: string) { super(message); }
+  constructor(message: string, public status: number, public field?: string, public limit?: PlanLimit) { super(message); }
 }
 
 let onUnauthorized: (() => void) | null = null;
@@ -92,7 +96,8 @@ async function j<T>(input: string, init?: RequestInit): Promise<T> {
   // thicket itself never answers 429 through this path (the one 429, refresh cooldown, uses raw fetch),
   // so a 429 here means a proxy in front dropped the request before the server saw it. That makes it
   // safe to retry any method. Back off 0.5s, 1s, 2s, 4s with jitter, honouring Retry-After if present.
-  for (let attempt = 0; res.status === 429 && attempt < 4; attempt++) {
+  // A 429 that carries a JSON error is thicket's own (a pace the plan sets, a refresh cooldown): not worth retrying.
+  for (let attempt = 0; res.status === 429 && attempt < 4 && !(res.headers.get('content-type') ?? '').includes('json'); attempt++) {
     const hinted = Number(res.headers.get('retry-after') ?? 0) * 1000;
     await sleep(Math.min(6000, hinted || 500 * 2 ** attempt) + Math.random() * 300);
     res = await fetch(input, { headers: { 'content-type': 'application/json' }, ...init });
@@ -100,7 +105,7 @@ async function j<T>(input: string, init?: RequestInit): Promise<T> {
   if (res.status === 204) return undefined as T;
   const body = await res.json().catch(() => ({}));
   if (res.status === 401) onUnauthorized?.();
-  if (!res.ok && !('status' in body)) throw new ApiError(body.error ?? `HTTP ${res.status}`, res.status, body.field);
+  if (!res.ok && !('status' in body)) throw new ApiError(body.error ?? `HTTP ${res.status}`, res.status, body.field, body.code === 'plan_limit' ? body.limit : undefined);
   return body as T;
 }
 
@@ -274,7 +279,17 @@ export type Me = {
   trackActivity: boolean | null; instanceTracking: boolean; hasPassword: boolean; createdAt: string; isAdmin: boolean;
   /** Feed setting defaults: leave Shorts out of YouTube channels unless a channel's own setting says otherwise. */
   hideShortsByDefault: boolean;
+  /** The plan in force, what it allows, and how much of that is used (api lib/plans.ts). */
+  plan: Tier; grantedPlan: Plan; planSource: PlanSource; planUntil: string | null; email: string | null;
+  limits: PlanLimits; usage: { feeds: number; collections: number; bookmarks: number; notes: number };
 };
+export type Plan = 'free' | 'basic' | 'advanced';
+/** What an account is on: a plan, or `admin`, which sits above every plan and checks nothing. Never granted, never stored. */
+export type Tier = Plan | 'admin';
+export type PlanSource = 'instance' | 'comp' | 'stripe';
+export const PLAN_NAMES: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', admin: 'Admin' };
+export type ViewWindow = { perFeed: number | null; total: number | null; days: number | null };
+export type PlanLimits = { feeds: number | null; collections: number | null; bookmarks: number | null; notes: boolean; nested: boolean; addFeedPerHour: number; feedView: ViewWindow; collectionView: ViewWindow };
 export type SignupPolicy = 'open' | 'invite' | 'closed';
 /** `visitorLimit`: visitors without an account see only the newest items of anything a page lists. */
 export type InstanceStatus = { name: string; url: string; signups: SignupPolicy; visitorLimit: boolean };
@@ -293,18 +308,22 @@ export const authApi = {
 export type AdminUser = {
   id: number; handle: string; displayName: string | null; isAdmin: boolean; profileVisibility: 'public' | 'private';
   createdAt: string; lastSeenAt: string | null; following: number; collections: number; bookmarks: number; invitedBy: string | null;
+  /** `plan` is the one in force; `grantedPlan`, `planSource` and `planUntil` are what was set (api lib/plans.ts). */
+  plan: Tier; grantedPlan: Plan; planSource: PlanSource; planUntil: string | null;
 };
 
 export const adminApi = {
   users: () => j<{ users: AdminUser[] }>('/api/admin/users'),
   setAdmin: (id: number, isAdmin: boolean) => j<{ id: number; handle: string; isAdmin: boolean }>(`/api/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify({ isAdmin }) }),
+  /** Grant a plan by hand (until a date, or not); null returns the account to the instance default. */
+  setPlan: (id: number, plan: Plan | null, planUntil?: string | null) => j<{ id: number; handle: string; plan: Tier; grantedPlan: Plan; planSource: PlanSource; planUntil: string | null }>(`/api/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify({ plan, planUntil: planUntil ?? null }) }),
   resetPassword: (id: number) => j<{ handle: string; password: string }>(`/api/admin/users/${id}/password`, { method: 'POST' }),
   deleteUser: (id: number) => j<void>(`/api/admin/users/${id}`, { method: 'DELETE' }),
   /** Moderation: what removing this feed from the instance takes with it, then the removal itself. */
   feedImpact: (id: number) => j<{ title: string | null; url: string; posts: number; followers: number; collections: number; notes: number; bookmarks: number }>(`/api/admin/feeds/${id}/impact`),
   deleteFeed: (id: number) => j<void>(`/api/admin/feeds/${id}`, { method: 'DELETE' }),
-  settings: () => j<InstanceStatus & { signupsStored: SignupPolicy | null; signupsDefault: SignupPolicy }>('/api/admin/settings'),
-  update: (patch: { signups?: SignupPolicy; name?: string; visitorLimit?: boolean }) => j<InstanceStatus>('/api/admin/settings', { method: 'PATCH', body: JSON.stringify(patch) }),
+  settings: () => j<InstanceStatus & { signupsStored: SignupPolicy | null; signupsDefault: SignupPolicy; defaultPlan: Plan; defaultPlanDefault: Plan }>('/api/admin/settings'),
+  update: (patch: { signups?: SignupPolicy; name?: string; visitorLimit?: boolean; defaultPlan?: Plan }) => j<InstanceStatus>('/api/admin/settings', { method: 'PATCH', body: JSON.stringify(patch) }),
   invites: () => j<{ invites: Invite[] }>('/api/admin/invites'),
   createInvite: (note?: string) => j<Invite>('/api/admin/invites', { method: 'POST', body: JSON.stringify({ note }) }),
   revokeInvite: (code: string) => j<void>(`/api/admin/invites/${encodeURIComponent(code)}`, { method: 'DELETE' }),

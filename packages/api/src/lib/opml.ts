@@ -9,6 +9,7 @@ import { generateOpml, parseOpml } from "feedsmith";
 import { db, schema } from "../db/client.js";
 import { addFeedToCollection, ensureFeedLazy } from "./subscribe.js";
 import { uniqueCollectionSlug } from "./slug.js";
+import { PlanLimitError, assertCanCreateCollection } from "./entitlements.js";
 import { type ShareLevel } from "./visibility.js";
 
 type Outline = { text: string; title?: string; type?: string; xmlUrl?: string; htmlUrl?: string; description?: string; outlines?: Outline[] };
@@ -60,22 +61,35 @@ export async function exportCollectionOpml(
   return generateOpml({ head, body: { outlines } });
 }
 
-export type ImportResult = { feeds: number; collections: number; skipped: string[] };
+/** `overLimit`: feeds the document had that the plan's cap left no room for. */
+export type ImportResult = { feeds: number; collections: number; skipped: string[]; overLimit: number };
+
+/** Does the document nest outlines, which import as sub-collections? */
+export function opmlHasFolders(doc: ReturnType<typeof parseOpml>): boolean {
+  const has = (outlines: Outline[] | undefined): boolean => (outlines ?? []).some((o) => !o.xmlUrl && !!o.outlines?.length);
+  return has(doc.body?.outlines as Outline[] | undefined);
+}
 
 /** Import an OPML document into a collection. Feeds are registered lazily; the scheduler fetches them. */
 export async function importOpml(userId: number, collectionId: number, text: string): Promise<ImportResult> {
   const doc = parseOpml(text);
-  const result: ImportResult = { feeds: 0, collections: 0, skipped: [] };
+  const result: ImportResult = { feeds: 0, collections: 0, skipped: [], overLimit: 0 };
+  // Past the plan's feed cap the rest are counted rather than followed, so a copy
+  // fills to the cap and says so instead of failing (lib/plans.ts).
+  let full = false;
 
   async function walk(outlines: Outline[] | undefined, target: number) {
     for (const o of outlines ?? []) {
-      if (o.xmlUrl) {
+      if (o.xmlUrl && full) {
+        result.overLimit++;
+      } else if (o.xmlUrl) {
         try {
           const feed = await ensureFeedLazy(o.xmlUrl);
           await addFeedToCollection(target, feed.id);
           if (!feed.title && (o.title || o.text)) await db.update(schema.feeds).set({ title: o.title ?? o.text }).where(eq(schema.feeds.id, feed.id));
           result.feeds++;
-        } catch {
+        } catch (err) {
+          if (err instanceof PlanLimitError && err.kind === "feeds") { full = true; result.overLimit++; continue; }
           result.skipped.push(o.xmlUrl);
         }
       } else if (o.outlines?.length) {
@@ -86,6 +100,7 @@ export async function importOpml(userId: number, collectionId: number, text: str
         // may carry a -2 that the document knows nothing about.
         let [child] = await db.select().from(schema.collections).where(sql`${schema.collections.parentId} = ${target} and ${schema.collections.name} = ${name}`);
         if (!child) {
+          await assertCanCreateCollection(userId);
           [child] = await db.insert(schema.collections).values({ userId, parentId: target, name, slug: await uniqueCollectionSlug(userId, name), description: o.description ?? null }).returning();
           result.collections++;
         }

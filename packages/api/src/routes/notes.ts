@@ -8,6 +8,7 @@ import { Hono } from "hono";
 import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
+import { PlanLimitError, assertNotes } from "../lib/entitlements.js";
 import { NOTE_MAX, noteColumns } from "../lib/notes.js";
 import { feedSlugSql } from "../lib/slug.js";
 
@@ -55,6 +56,7 @@ notes.get("/count", async (c) => {
 /** Write or rewrite my note on a post. Body: { body }. Empty body is a 400; deleting is its own verb. */
 notes.put("/items/:itemId", async (c) => {
   const user = currentUser(c);
+  try { assertNotes(user.plan); } catch (e) { if (e instanceof PlanLimitError) return c.json(e.body(), 403); throw e; }
   const itemId = Number(c.req.param("itemId"));
   const payload = await c.req.json<{ body?: string }>().catch(() => ({} as { body?: string }));
   const body = (payload.body ?? "").replace(/\r\n/g, "\n").trim();

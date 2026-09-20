@@ -14,6 +14,7 @@
     "icons": "tsx --env-file=../../.env src/scripts/icons.ts",
     "passwd": "tsx --env-file=../../.env src/scripts/passwd.ts",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/**/*.test.ts",
     "ingest": "tsx --env-file=../../.env src/scripts/ingest.ts",
     "fix-previews": "tsx --env-file=../../.env src/scripts/fix-previews.ts",
     "fix-entities": "tsx --env-file=../../.env src/scripts/fix-entities.ts",

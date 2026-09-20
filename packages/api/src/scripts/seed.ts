@@ -27,7 +27,7 @@ async function main() {
   if (!account) throw new Error(handle ? `no user @${handle}` : "no users yet; sign up first");
   const rootCollectionId = await rootCollectionOf(account.id);
   if (!rootCollectionId) throw new Error("user has no root collection");
-  const user = { id: account.id, handle: account.handle, displayName: account.displayName, rootCollectionId, defaultCollectionId: null, trackActivity: false };
+  const user = { id: account.id, handle: account.handle, displayName: account.displayName, rootCollectionId, defaultCollectionId: null, trackActivity: false, isAdmin: true, plan: "admin" as const };
   console.log(`user #${user.id}, root collection #${user.rootCollectionId}`);
 
   const ars = await subscribe(user, "https://feeds.arstechnica.com/arstechnica/index");

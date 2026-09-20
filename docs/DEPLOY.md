@@ -92,6 +92,7 @@ with comments. Only `DATABASE_URL` and `PUBLIC_URL` are required.
 | `INSTANCE_NAME` | hostname of `PUBLIC_URL` | Shown on the sign-up page |
 | `SIGNUPS` | `invite` | Initial policy: `open`, `invite`, `closed`. Admin can change at runtime |
 | `TRACK_ACTIVITY` | `true` | Product analytics on/off for the whole instance |
+| `DEFAULT_PLAN` | `advanced` | The plan every account gets unless an admin grants another: `free`, `basic`, `advanced` (no limits). Admin can change at runtime |
 | `SCHEDULER` | `on` | `off` disables the in-process fetcher |
 | `FETCH_CONCURRENCY` | `8` | Parallel feed fetches |
 | `RETAIN_ITEMS_DAYS` | `0` (off) | Delete posts older than this. Off by default on purpose: feeds serve a window, not an archive, so a deleted post is usually gone for good. Posts with notes on them are always kept |

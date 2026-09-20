@@ -36,6 +36,8 @@
   let hidden = $state(0);
   /** Set when a visitor without an account has had all the instance lets visitors see; the number is that limit. */
   let cappedAt = $state<number | null>(null);
+  let capReason = $state<'visitor' | 'plan'>('visitor');
+  let perFeedCap = $state<number | null>(null);
   let sentinel = $state<HTMLElement | null>(null);
   let loadedKey = $state<string | undefined>(undefined);
   /**
@@ -77,7 +79,7 @@
       cursor = pg.nextCursor;
       done = pg.nextCursor === null;
       hidden = reset ? pg.hidden : hidden + pg.hidden;
-      cappedAt = pg.cappedAt ?? null;
+      cappedAt = pg.cappedAt ?? null; capReason = pg.capReason ?? 'visitor'; perFeedCap = pg.perFeedCap ?? null;
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -246,7 +248,7 @@
     {/if}
     {#if error}<p class="status error">Couldn’t load posts: {error}</p>{/if}
     {#if loading && !pageItems.length}<p class="status">Loading…</p>{/if}
-    {#if cappedAt && !canNext}<VisitorMore cap={cappedAt} />{/if}
+    {#if cappedAt && !canNext}<VisitorMore cap={cappedAt} reason={capReason} perFeed={perFeedCap} />{/if}
   </section>
   <Pager {canPrev} {canNext} onprev={prevPage} onnext={nextPage} label="page of posts" top="{frameTop}px" bottom="calc(var(--nav-h) + var(--safe-b))" />
 {:else}
@@ -281,7 +283,7 @@
     {/if}
     {#if error}<p class="status error">Couldn’t load posts: {error}</p>{/if}
     {#if loading}<p class="status">Loading…</p>{/if}
-    {#if cappedAt}<VisitorMore cap={cappedAt} />{:else if done && items.length > 0}<p class="status">That’s everything.{#if hidden} {hidden} hidden by your blocks.{/if}</p>{/if}
+    {#if cappedAt}<VisitorMore cap={cappedAt} reason={capReason} perFeed={perFeedCap} />{:else if done && items.length > 0}<p class="status">That’s everything.{#if hidden} {hidden} hidden by your blocks.{/if}</p>{/if}
     <div bind:this={sentinel} class="sentinel" aria-hidden="true"></div>
   </section>
 {/if}

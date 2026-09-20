@@ -12,7 +12,7 @@ import { sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { noteColumns } from "../lib/notes.js";
-import { visitorCap } from "../lib/instance.js";
+import { viewFor } from "../lib/entitlements.js";
 import { SHORTS_URL_PATTERN } from "../feeds/youtube.js";
 import { feedSlugSql } from "../lib/slug.js";
 import { allowsSql } from "../lib/visibility.js";
@@ -63,11 +63,16 @@ river.get("/", async (c) => {
   // collection can be read by anyone; bookmark/block columns just come back empty.
   const user = feedId || collectionId ? c.get("user") : currentUser(c);
   const userId = user?.id ?? -1;
-  // Signed out, one page of at most VISITOR_CAP and nothing after it (lib/instance.ts).
-  const cap = await visitorCap(user);
-  const limit = Math.min(cap ?? 100, Math.max(1, Number(c.req.query("limit") ?? 40)));
+  // What this reader may see of the page: the plan's window, or the visitor's
+  // (lib/plans.ts). `total` is one page and nothing after it; `perFeed` and
+  // `days` shape what that page is drawn from, below.
+  const view = await viewFor(user, feedId ? "feed" : "collection");
+  const cap = view.total;
+  const capReason = user ? ("plan" as const) : ("visitor" as const);
+  // A capped window comes as one page, whole, whatever page size was asked for: there is no page after it.
+  const limit = cap ?? Math.min(100, Math.max(1, Number(c.req.query("limit") ?? 40)));
   const before = c.req.query("before"); // "<iso>|<id>" cursor
-  if (cap && before) return c.json({ items: [], nextCursor: null, hidden: 0, cappedAt: cap });
+  if (cap && before) return c.json({ items: [], nextCursor: null, hidden: 0, cappedAt: cap, capReason, perFeedCap: view.perFeed });
   // A collection is someone's page: its owner's notes show to whoever they share notes with, signed out included (lib/notes.ts).
   const pageOwnerId = collectionId
     ? Number((await db.execute<{ userId: string }>(sql`select user_id as "userId" from collections where id = ${collectionId}`)).rows[0]?.userId ?? 0) || null
@@ -117,15 +122,33 @@ river.get("/", async (c) => {
    * scan checks a column rather than looking the setting up per item.
    */
   const perFeed = limit + 1;
+  /**
+   * The plan's window on a feed. A horizon (`days`) is one more condition on
+   * the scan. A per-feed cap is the feed's newest N taken *before* the cursor,
+   * so paging can never reach past them; that needs the scan wrapped once,
+   * which only happens for a plan that has such a cap.
+   */
+  const horizon = view.days === null ? sql`` : sql`and i.published_at > now() - make_interval(days => ${view.days})`;
+  // On a feed's own page the window and the page are the same size, so one row
+  // past it is fetched only to learn there was more (it is never shown); in a
+  // merged river the window is exact, since a 26th post of one feed could
+  // otherwise slip into the page.
+  const newestN = view.perFeed === null ? null : feedId ? view.perFeed + 1 : view.perFeed;
+  const cursorOnNewest = before ? sql`where (n.published_at, n.id) < (${before.split("|")[0]}::timestamptz, ${Number(before.split("|")[1])}::bigint)` : sql``;
+  const feedPage = (feedRef: SQL, hidden: SQL) =>
+    view.perFeed === null
+      ? sql`select i.id, i.published_at from items i where i.feed_id = ${feedRef} ${cursorClause} ${horizon}
+              and not (${hidden})
+            order by i.published_at desc, i.id desc limit ${perFeed}`
+      : sql`select n.id, n.published_at from (
+              select i.id, i.published_at from items i where i.feed_id = ${feedRef} ${horizon}
+                and not (${hidden})
+              order by i.published_at desc, i.id desc limit ${newestN}
+            ) n ${cursorOnNewest} order by n.published_at desc, n.id desc limit ${perFeed}`;
   const pageCte = feedId
-    ? sql`select i.id, i.published_at from items i where i.feed_id = ${feedId} ${cursorClause}
-             and not (${isShort} and ${hidesShorts(userId, sql`i.feed_id`)})
-           order by i.published_at desc, i.id desc limit ${perFeed}`
+    ? feedPage(sql`${feedId}`, sql`${isShort} and ${hidesShorts(userId, sql`i.feed_id`)}`)
     : sql`select p.id, p.published_at from followed cross join lateral (
-             select i.id, i.published_at from items i
-             where i.feed_id = followed.feed_id ${cursorClause}
-               and not (followed.hide_shorts and ${isShort})
-             order by i.published_at desc, i.id desc limit ${perFeed}
+             ${feedPage(sql`followed.feed_id`, sql`followed.hide_shorts and ${isShort}`)}
            ) p
            order by p.published_at desc, p.id desc limit ${perFeed}`;
 
@@ -164,5 +187,8 @@ river.get("/", async (c) => {
     items: page.map(({ blocked, ...r }) => ({ ...r, publishedAt: new Date(r.publishedAt).toISOString() })),
     nextCursor: cap ? null : nextCursor, hidden,
     cappedAt: cap && last ? cap : null,
+    capReason: cap && last ? capReason : null,
+    /** The newest N of each feed this reader is shown, so the page can say so. null = every post. */
+    perFeedCap: view.perFeed,
   });
 });

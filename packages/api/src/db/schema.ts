@@ -32,6 +32,10 @@ export const notesFrom = pgEnum("notes_from", ["none", "following", "everyone"])
  * carry 'public'; see docs/DECISIONS.md in the notes repo.
  */
 export const shareLevel = pgEnum("share_level", ["private", "friends", "public"]);
+/** What an account may do (lib/plans.ts). `advanced` is "no limits" and is what a self-hosted instance runs. */
+export const plan = pgEnum("plan", ["free", "basic", "advanced"]);
+/** Where the plan came from: the instance default, an admin's grant, or a subscription. */
+export const planSource = pgEnum("plan_source", ["instance", "comp", "stripe"]);
 
 /**
  * A person on this instance. Handle + password, no email: identity here is the
@@ -73,6 +77,21 @@ export const users = pgTable("users", {
   hideShortsByDefault: boolean("hide_shorts_by_default").notNull().default(false),
   /** The first account on an instance is the admin; admins can promote others later. */
   isAdmin: boolean("is_admin").notNull().default(false),
+  /**
+   * The plan this account was granted, and by whom. With source `instance` the
+   * plan column is ignored and the instance default applies; with `comp` an
+   * admin set it, until plan_until if that is set; with `stripe` a subscription
+   * keeps it current. The plan in force is lib/plans.ts effectivePlan().
+   */
+  plan: plan("plan").notNull().default("free"),
+  planSource: planSource("plan_source").notNull().default("instance"),
+  planUntil: timestamp("plan_until", { withTimezone: true }),
+  /**
+   * Billing contact only. Never used to sign in, never shown, never required of
+   * a free account: Checkout fills it in when someone subscribes, so a receipt
+   * can be traced to an account. Decided 2026-09-20.
+   */
+  email: text("email"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

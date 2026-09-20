@@ -6,7 +6,7 @@
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { api, adminApi, profileHref, type AdminUser, type InstanceStatus, type Invite, type SignupPolicy } from '$lib/api';
+  import { api, adminApi, profileHref, PLAN_NAMES, type AdminUser, type InstanceStatus, type Invite, type Plan, type SignupPolicy } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import type { StarterCandidate } from '$lib/api';
   import { relativeTime } from '$lib/time';
@@ -14,7 +14,8 @@
   import Monogram from '$lib/components/Monogram.svelte';
 
   const me = $derived(session.user);
-  let instance = $state<(InstanceStatus & { signupsStored: SignupPolicy | null }) | null>(null);
+  let instance = $state<(InstanceStatus & { signupsStored: SignupPolicy | null; defaultPlan: Plan }) | null>(null);
+  const PLANS: Plan[] = ['free', 'basic', 'advanced'];
   let name = $state('');
   let invites = $state<Invite[]>([]);
   let inviteNote = $state('');
@@ -57,6 +58,27 @@
     instance = { ...instance, ...(await adminApi.update({ signups })) };
     api.event('instance_signups_changed', { signups });
     showToast(signups === 'open' ? 'Anyone can sign up' : signups === 'invite' ? 'Sign-ups need an invite' : 'Sign-ups closed');
+  }
+  async function setDefaultPlan(defaultPlan: Plan) {
+    if (!instance) return;
+    await adminApi.update({ defaultPlan });
+    instance = { ...instance, defaultPlan };
+    api.event('instance_default_plan_changed', { defaultPlan });
+    showToast(`New and ungranted accounts are `);
+  }
+  /** Grant a plan by hand, or (null) return the account to the instance default. */
+  async function setPlan(u: AdminUser, plan: Plan | null) {
+    busyId = u.id;
+    try {
+      const r = await adminApi.setPlan(u.id, plan);
+      users = users.map((x) => (x.id === u.id ? { ...x, plan: r.plan, grantedPlan: r.grantedPlan, planSource: r.planSource, planUntil: r.planUntil } : x));
+      api.event('admin_plan_changed', { userId: u.id, plan });
+      showToast(plan ? `@ is ` : `@ is back on the instance default`);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Could not save');
+    } finally {
+      busyId = null;
+    }
   }
   async function setVisitorLimit(visitorLimit: boolean) {
     if (!instance) return;
@@ -163,6 +185,13 @@
       <label class="radio"><input type="radio" name="visitors" checked={instance.visitorLimit} onchange={() => setVisitorLimit(true)} /><span><strong>The newest 100</strong><small>Feed pages, collections, and people’s notes, bookmarks and activity show their 100 most recent items, then ask visitors to log in or make an account.</small></span></label>
       <label class="radio"><input type="radio" name="visitors" checked={!instance.visitorLimit} onchange={() => setVisitorLimit(false)} /><span><strong>Everything</strong><small>Visitors can scroll back as far as anyone signed in.</small></span></label>
     </fieldset>
+    <fieldset>
+      <legend>The plan accounts get</legend>
+      <p class="help">Unless you grant one below. <strong>Advanced</strong> has no limits and is right for an instance you run for yourself and friends. <strong>Free</strong> is the hosted product's starting plan: a taste, with room for 20 feeds.</p>
+      <label class="radio"><input type="radio" name="defaultPlan" checked={instance.defaultPlan === 'advanced'} onchange={() => setDefaultPlan('advanced')} /><span><strong>Advanced</strong><small>No limits; sub-collections.</small></span></label>
+      <label class="radio"><input type="radio" name="defaultPlan" checked={instance.defaultPlan === 'basic'} onchange={() => setDefaultPlan('basic')} /><span><strong>Basic</strong><small>Up to 500 feeds and 100 collections; notes; a year of posts.</small></span></label>
+      <label class="radio"><input type="radio" name="defaultPlan" checked={instance.defaultPlan === 'free'} onchange={() => setDefaultPlan('free')} /><span><strong>Free</strong><small>20 feeds, one collection, 50 bookmarks, the newest 25 posts of each feed.</small></span></label>
+    </fieldset>
   </section>
 
   <section class="card">
@@ -234,7 +263,7 @@
           <div class="who">
             <a class="handle" href={profileHref(u.handle)}>{u.displayName ?? u.handle}<span class="h"> @{u.handle}</span></a>
             <div class="facts">
-              {#if u.isAdmin}<span class="tag">Admin</span>{/if}
+              {#if u.isAdmin}<span class="tag">Admin</span>{:else}<span class="tag plan">{PLAN_NAMES[u.plan]}{#if u.planSource === 'comp'}&nbsp;· granted{#if u.planUntil} until {new Date(u.planUntil).toLocaleDateString()}{/if}{:else if u.planSource === 'stripe'}&nbsp;· subscribed{/if}</span>{/if}
               {#if u.profileVisibility === 'private'}<span class="tag">Private</span>{/if}
               {u.following} {u.following === 1 ? 'feed' : 'feeds'} · {u.collections} {u.collections === 1 ? 'collection' : 'collections'} · {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'}
               · joined {relativeTime(u.createdAt)}{#if u.invitedBy} via @{u.invitedBy}{/if}
@@ -245,6 +274,10 @@
             {#if u.id !== me?.id}
               <button onclick={() => setAdmin(u, !u.isAdmin)} disabled={busyId === u.id}>{u.isAdmin ? 'Remove admin' : 'Make admin'}</button>
               <button onclick={() => resetPassword(u)} disabled={busyId === u.id}>Reset password</button>
+              <select aria-label="Plan for @{u.handle}" disabled={busyId === u.id || u.isAdmin} value={u.planSource === 'comp' ? u.grantedPlan : ''} onchange={(e) => setPlan(u, (e.currentTarget.value || null) as Plan | null)}>
+                <option value="">Instance default</option>
+                {#each PLANS as p}<option value={p}>Grant {PLAN_NAMES[p]}</option>{/each}
+              </select>
               <button class="danger" onclick={() => remove(u)} disabled={busyId === u.id}>Delete</button>
             {:else}
               <span class="you">You</span>

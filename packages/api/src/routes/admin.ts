@@ -11,7 +11,8 @@ import { eq, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { currentUser, destroyAllSessions, hashPassword } from "../lib/auth.js";
 import { createInvite, getSetting, listInvites, publicStatus, revokeInvite, setSetting, type SignupPolicy } from "../lib/instance.js";
-import { SIGNUPS_DEFAULT } from "../lib/config.js";
+import { DEFAULT_PLAN, SIGNUPS_DEFAULT } from "../lib/config.js";
+import { PLANS, defaultPlan, effectivePlan, forgetDefaultPlan, isPlan, type Plan, type PlanRow } from "../lib/entitlements.js";
 
 export const admin = new Hono();
 
@@ -25,12 +26,12 @@ async function requireAdmin(c: Parameters<typeof currentUser>[0]) {
 admin.get("/settings", async (c) => {
   await requireAdmin(c);
   const status = await publicStatus();
-  return c.json({ ...status, signupsStored: (await getSetting<SignupPolicy>("signups")) ?? null, signupsDefault: SIGNUPS_DEFAULT });
+  return c.json({ ...status, signupsStored: (await getSetting<SignupPolicy>("signups")) ?? null, signupsDefault: SIGNUPS_DEFAULT, defaultPlan: await defaultPlan(), defaultPlanDefault: DEFAULT_PLAN, plans: PLANS });
 });
 
 admin.patch("/settings", async (c) => {
   await requireAdmin(c);
-  type Body = { signups?: SignupPolicy; name?: string; visitorLimit?: boolean };
+  type Body = { signups?: SignupPolicy; name?: string; visitorLimit?: boolean; defaultPlan?: Plan };
   const body = await c.req.json<Body>().catch(() => ({} as Body));
   if (body.signups) {
     if (!["open", "invite", "closed"].includes(body.signups)) return c.json({ error: "signups must be open, invite, or closed" }, 400);
@@ -39,6 +40,8 @@ admin.patch("/settings", async (c) => {
   if (typeof body.name === "string") await setSetting("name", body.name.trim().slice(0, 60) || null);
   // true holds visitors without an account to their newest VISITOR_CAP of anything; false shows them everything.
   if (typeof body.visitorLimit === "boolean") await setSetting("visitorLimit", body.visitorLimit);
+  // The plan every account gets unless granted another (lib/plans.ts). A self-hosted instance leaves this at advanced.
+  if (isPlan(body.defaultPlan)) { await setSetting("default_plan", body.defaultPlan); forgetDefaultPlan(); }
   return c.json(await publicStatus());
 });
 
@@ -59,6 +62,7 @@ admin.get("/users", async (c) => {
   await requireAdmin(c);
   const rows = await db.execute(sql`
     select u.id, u.handle, u.display_name as "displayName", u.is_admin as "isAdmin", u.profile_visibility as "profileVisibility",
+           u.plan as "grantedPlan", u.plan_source as "planSource", u.plan_until as "planUntil",
            u.created_at as "createdAt", (select max(s.last_seen_at) from sessions s where s.user_id = u.id) as "lastSeenAt",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = u.id) as following,
            (select count(*)::int from collections col where col.user_id = u.id and col.parent_id is not null) as collections,
@@ -68,7 +72,9 @@ admin.get("/users", async (c) => {
   `);
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
   const byId = new Map(rows.rows.map((r: any) => [Number(r.id), r.handle]));
-  return c.json({ users: rows.rows.map((r: any) => ({ ...r, id: Number(r.id), createdAt: iso(r.createdAt), lastSeenAt: iso(r.lastSeenAt), invitedBy: r.invitedById ? byId.get(Number(r.invitedById)) ?? null : null, invitedById: undefined })) });
+  const fallback = await defaultPlan();
+  return c.json({ users: rows.rows.map((r: any) => ({ ...r, id: Number(r.id), createdAt: iso(r.createdAt), lastSeenAt: iso(r.lastSeenAt), planUntil: iso(r.planUntil),
+    plan: effectivePlan({ plan: r.grantedPlan, planSource: r.planSource, planUntil: r.planUntil, isAdmin: r.isAdmin } as PlanRow, fallback), invitedBy: r.invitedById ? byId.get(Number(r.invitedById)) ?? null : null, invitedById: undefined })) });
 });
 
 async function adminCount() {
@@ -76,16 +82,35 @@ async function adminCount() {
   return n;
 }
 
-/** Promote or demote. You cannot demote yourself, and the last admin cannot be demoted. */
+/**
+ * Promote or demote, or grant a plan. You cannot demote yourself, and the last
+ * admin cannot be demoted. `plan` grants that plan by hand (source `comp`),
+ * until `planUntil` if given; `plan: null` returns the account to the instance
+ * default. A subscription (source `stripe`) is never overwritten from here.
+ */
 admin.patch("/users/:id", async (c) => {
   const me = await requireAdmin(c);
   const id = Number(c.req.param("id"));
-  const body = await c.req.json<{ isAdmin?: boolean }>().catch(() => ({} as { isAdmin?: boolean }));
-  if (typeof body.isAdmin !== "boolean") return c.json({ error: "isAdmin (boolean) is required" }, 400);
-  if (id === me.id && !body.isAdmin) return c.json({ error: "You can’t remove your own admin role. Ask another admin." }, 400);
-  if (!body.isAdmin && (await adminCount()) <= 1) return c.json({ error: "That’s the last admin." }, 400);
-  const [row] = await db.update(schema.users).set({ isAdmin: body.isAdmin }).where(eq(schema.users.id, id)).returning({ id: schema.users.id, handle: schema.users.handle, isAdmin: schema.users.isAdmin });
-  return row ? c.json(row) : c.json({ error: "not found" }, 404);
+  type Body = { isAdmin?: boolean; plan?: Plan | null; planUntil?: string | null };
+  const body = await c.req.json<Body>().catch(() => ({} as Body));
+  const patch: Partial<typeof schema.users.$inferInsert> = {};
+  if (typeof body.isAdmin === "boolean") {
+    if (id === me.id && !body.isAdmin) return c.json({ error: "You can’t remove your own admin role. Ask another admin." }, 400);
+    if (!body.isAdmin && (await adminCount()) <= 1) return c.json({ error: "That’s the last admin." }, 400);
+    patch.isAdmin = body.isAdmin;
+  }
+  if ("plan" in body) {
+    if (body.plan === null) Object.assign(patch, { plan: "free", planSource: "instance", planUntil: null });
+    else if (isPlan(body.plan)) {
+      const until = body.planUntil ? new Date(body.planUntil) : null;
+      if (until && Number.isNaN(until.getTime())) return c.json({ error: "planUntil must be a date" }, 400);
+      Object.assign(patch, { plan: body.plan, planSource: "comp", planUntil: until });
+    } else return c.json({ error: "plan must be free, basic, advanced, or null" }, 400);
+  }
+  if (!Object.keys(patch).length) return c.json({ error: "nothing to change" }, 400);
+  const [row] = await db.update(schema.users).set(patch).where(eq(schema.users.id, id)).returning({ id: schema.users.id, handle: schema.users.handle, isAdmin: schema.users.isAdmin, grantedPlan: schema.users.plan, planSource: schema.users.planSource, planUntil: schema.users.planUntil });
+  if (!row) return c.json({ error: "not found" }, 404);
+  return c.json({ ...row, planUntil: row.planUntil?.toISOString() ?? null, plan: effectivePlan({ plan: row.grantedPlan, planSource: row.planSource, planUntil: row.planUntil, isAdmin: row.isAdmin }, await defaultPlan()) });
 });
 
 /** A one-time temporary password, shown once to the admin to pass along. Signs the user out everywhere. */

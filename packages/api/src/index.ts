@@ -10,6 +10,7 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 import { river } from "./routes/river.js";
 import { feeds } from "./routes/feeds.js";
@@ -26,6 +27,7 @@ import { items } from "./routes/items.js";
 import { marks } from "./routes/marks.js";
 import { startScheduler } from "./feeds/scheduler.js";
 import { attachUser, pruneSessions } from "./lib/auth.js";
+import { PlanLimitError } from "./lib/plans.js";
 import { startRetention } from "./lib/retention.js";
 import { ensureAdmin, publicStatus } from "./lib/instance.js";
 import { runMigrations } from "./db/migrate.js";
@@ -41,6 +43,13 @@ app.use(logger());
 // credentials must be allowed for the cookie to ride along.
 app.use("/api/*", cors({ origin: (o) => o, credentials: true }));
 app.use("/api/*", attachUser);
+// A plan saying no is one shape everywhere (lib/plans.ts): 403 with code "plan_limit" and the plan that would allow it.
+app.onError((err, c) => {
+  if (err instanceof PlanLimitError) return c.json(err.body(), 403);
+  if (err instanceof HTTPException) return err.getResponse();
+  console.error(err);
+  return c.json({ error: "something went wrong" }, 500);
+});
 
 app.route("/api/auth", auth);
 app.route("/api/admin", admin);

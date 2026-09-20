@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, authApi, ApiError } from '$lib/api';
+  import { api, authApi, ApiError, PLAN_NAMES } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { display, setDisplay, APPEARANCES, READING_MODES, LAYOUTS, FRESH_OPTIONS, type Display } from '$lib/display.svelte';
   import Tiles from '$lib/components/display/Tiles.svelte';
@@ -59,6 +59,19 @@
 <header class="top">
   <h1>Settings</h1>
 </header>
+
+<section class="card" id="plan">
+  <h2>Your plan</h2>
+  <p class="plan-name"><strong>{PLAN_NAMES[me.plan]}</strong>{#if me.plan === 'admin'}&nbsp;· runs this instance; nothing is limited{:else if me.planSource === 'comp' && me.planUntil}&nbsp;· until {new Date(me.planUntil).toLocaleDateString()}{:else if me.planSource === 'comp'}&nbsp;· granted{/if}</p>
+  <ul class="usage">
+    <li><span>Feeds</span><b>{me.usage.feeds}{#if me.limits.feeds !== null}&nbsp;of {me.limits.feeds}{/if}</b></li>
+    <li><span>Collections</span><b>{me.usage.collections}{#if me.limits.collections !== null}&nbsp;of {me.limits.collections}{/if}</b></li>
+    <li><span>Bookmarks</span><b>{me.usage.bookmarks}{#if me.limits.bookmarks !== null}&nbsp;of {me.limits.bookmarks}{/if}</b></li>
+    <li><span>Notes</span><b>{#if me.limits.notes}{me.usage.notes}{:else}not on this plan{/if}</b></li>
+    <li><span>Sub-collections</span><b>{me.limits.nested ? 'yes' : 'not on this plan'}</b></li>
+    <li><span>Posts shown</span><b>{#if me.limits.collectionView.perFeed !== null}the newest {me.limits.collectionView.perFeed} of each feed{:else if me.limits.collectionView.days !== null}the last {Math.round(me.limits.collectionView.days / 365)} year{:else}everything{/if}</b></li>
+  </ul>
+</section>
 
 <section class="card">
   <h2>Appearance</h2>
@@ -161,6 +174,10 @@
   .top { margin-bottom: 14px; }
   h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
+  .plan-name { margin: 0 0 10px; font-size: calc(16px * var(--size-app)); }
+  .usage { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px 16px; }
+  .usage li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: calc(14px * var(--size-app)); }
+  .usage li span { color: var(--text-2); }
   h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
   /* When a description follows the header, pull it up tight; the 12px gap then sits under the description. */
   h2 + .help { margin-top: -8px; }
