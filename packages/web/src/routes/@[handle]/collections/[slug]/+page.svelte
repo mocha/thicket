@@ -71,8 +71,6 @@
   <link rel="alternate" type="text/x-opml" title={col?.name ?? 'Collection'} href={opml} />
 </svelte:head>
 
-<nav class="crumbs"><a href={profileHref(handle)}>@{handle}</a> <span aria-hidden="true">›</span></nav>
-
 {#if error}
   <div class="empty"><h1>Not here</h1><p>{error === 'not found' ? 'This collection doesn’t exist or isn’t shared.' : error}</p></div>
 {:else if !col}
@@ -84,7 +82,7 @@
       <div class="actions">
         {#if col.isMe}
           <AddFeedButton collectionIds={[col!.id]} via="collection_page" />
-          <a class="btn" href={manageCollectionHref(handle, slug)}>Settings</a>
+          <a class="btn icon" href={manageCollectionHref(handle, slug)} aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg></a>
         {:else if session.user}
           <button class="btn primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</button>
         {:else}
@@ -92,10 +90,9 @@
         {/if}
       </div>
     </div>
+    {#if col.description}<p class="desc">{col.description}</p>{/if}
     <p class="sub">
-      {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> · {/if}<button class="reveal" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style:transform={showFeeds ? 'rotate(180deg)' : 'none'}><path d="M6 9l6 6 6-6" /></svg></button>
-      {#if col.description} · {col.description}{/if}
-      {#if col.isMe && audienceTag(col.visibility)} · <span class="tag">{audienceTag(col.visibility)}</span>{/if}
+      {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> ·&nbsp;{/if}{#if col.isMe && audienceTag(col.visibility)}<span class="tag">{audienceTag(col.visibility)}</span> ·&nbsp;{/if}<button class="reveal" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style:transform={showFeeds ? 'rotate(90deg)' : 'none'}><path d="M9 6l6 6-6 6" /></svg></button>
     </p>
   </header>
 
@@ -154,11 +151,10 @@
 {/if}
 
 <style>
-  .crumbs { font-size: calc(13px * var(--size-app)); color: var(--text-3); margin-bottom: 4px; }
-  .crumbs a { color: var(--accent); font-weight: 600; }
   .top { margin-bottom: 16px; }
   .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1; }
+  .desc { margin: 6px 0 0; color: var(--text-2); font-size: calc(14px * var(--size-app)); overflow-wrap: anywhere; }
   .sub { margin: 4px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
   .reveal { display: inline-flex; align-items: center; gap: 3px; font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
@@ -167,6 +163,7 @@
   .actions { flex: none; display: flex; gap: 8px; align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
   .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
   .btn:hover { background: var(--surface-2); color: var(--text); }
+  .btn.icon { display: inline-flex; align-items: center; justify-content: center; padding: 9px; }
   .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .btn:disabled { opacity: 0.6; }
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
