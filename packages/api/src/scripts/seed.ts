@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 import { rootCollectionOf } from "../lib/auth.js";
 import { addFeedToCollection, ensureFeedLazy, subscribe } from "../lib/subscribe.js";
 import { db, pool, schema } from "../db/client.js";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 const SMALLWEB = process.env.SMALLWEB_TXT ?? "smallweb.txt";
 const count = Number(process.argv[2] ?? 200);
@@ -32,6 +32,45 @@ async function main() {
 
   const ars = await subscribe(user, "https://feeds.arstechnica.com/arstechnica/index");
   console.log("ars:", ars.status, ars.status === "subscribed" ? `${ars.feed.title} (#${ars.feed.id})` : "");
+
+  // Ten collections, all top-level. Sub-collections are on hold (see the note
+  // in web collections.svelte.ts), so this seed deliberately doesn't nest — it
+  // just gives a realistic, slightly crowded list to work against, e.g. for the
+  // "Add a feed" picker. Idempotent: keyed on (this user, slug), so re-running
+  // seed reuses them.
+  const ensureCollection = async (name: string, slug: string, parentId: number, description?: string) => {
+    let [c] = await db.select().from(schema.collections)
+      .where(and(eq(schema.collections.userId, user.id), eq(schema.collections.slug, slug)));
+    if (!c) [c] = await db.insert(schema.collections)
+      .values({ userId: user.id, parentId, name, slug, description: description ?? null }).returning();
+    return c;
+  };
+
+  const seedCollections: Array<{ name: string; slug: string; description?: string; feeds: string[] }> = [
+    { name: "News", slug: "news", description: "World headlines", feeds: ["https://feeds.bbci.co.uk/news/world/rss.xml", "https://feeds.npr.org/1001/rss.xml"] },
+    { name: "Technology", slug: "technology", description: "What's shipping and what's breaking", feeds: ["https://www.theverge.com/rss/index.xml", "https://hnrss.org/frontpage"] },
+    { name: "Business", slug: "business", feeds: ["https://feeds.bbci.co.uk/news/business/rss.xml"] },
+    { name: "Science", slug: "science", feeds: ["https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", "https://www.sciencedaily.com/rss/all.xml"] },
+    { name: "Film", slug: "film", feeds: ["https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml"] },
+    { name: "Music", slug: "music", feeds: ["https://www.stereogum.com/feed/"] },
+    { name: "Gaming", slug: "gaming", feeds: ["https://www.polygon.com/rss/index.xml"] },
+    { name: "Design", slug: "design", feeds: ["https://www.smashingmagazine.com/feed/"] },
+    { name: "Sports", slug: "sports", feeds: ["https://feeds.bbci.co.uk/sport/rss.xml", "https://www.espn.com/espn/rss/news"] },
+    { name: "Longreads", slug: "longreads", description: "Save the big ones for later", feeds: ["https://longreads.com/feed/"] },
+  ];
+
+  for (const spec of seedCollections) {
+    const col = await ensureCollection(spec.name, spec.slug, user.rootCollectionId, spec.description);
+    for (const url of spec.feeds) {
+      try {
+        const feed = await ensureFeedLazy(url);
+        await addFeedToCollection(col.id, feed.id);
+      } catch (e) {
+        console.warn(`skip ${url}: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+  }
+  console.log(`collections: ${seedCollections.length} top-level under root`);
 
   if (count > 0) {
     const all = readFileSync(SMALLWEB, "utf8").split("\n").map((l) => l.trim()).filter((l) => l.startsWith("http"));

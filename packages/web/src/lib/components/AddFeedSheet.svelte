@@ -2,9 +2,10 @@
   /**
    * Add a feed, in a sheet you can flick away. Top to bottom, in the order you
    * decide things: the address, which of your collections it goes in, then
-   * Follow. Every feed lives in a collection, so one is always ticked: the one
-   * the sheet was opened from, or your first. Success lands on the feed's own
-   * page. Nothing is saved until Follow, so closing is a true cancel.
+   * Follow. Opened from a collection, that one is ticked; opened from
+   * Everything, none is — and if you leave it that way, Follow drops the feed
+   * in your default collection. Success lands on the feed's own page. Nothing
+   * is saved until Follow, so closing is a true cancel.
    */
   import { tick } from 'svelte';
   import { goto } from '$app/navigation';
@@ -34,12 +35,12 @@
     url = o.url ?? '';
     ids = [...(o.collectionIds ?? [])];
     newName = ''; outcome = null; busy = false; landing = false;
-    // Opened from a collection, it goes there; opened from anywhere else, it goes
-    // where a bare Follow would put it. Either way the sheet shows the answer.
+    // Opened from a collection, that one starts ticked. Opened from Everything,
+    // nothing is ticked — leave it and Follow drops the feed in your default
+    // collection, which the hint below spells out.
     void loadCollections().then(async (s) => {
       ids = ids.filter((id) => id !== s.rootId);
-      if (!ids.length) { const d = defaultCollection(); if (d) ids = [d.id]; }
-      // The list scrolls and is alphabetical, so the ticked one is often below
+      // The list scrolls and is alphabetical, so a ticked one is often below
       // the fold. Bring it up: where this is going should never be off screen.
       await tick();
       list?.querySelector('input:checked')?.closest('li')?.scrollIntoView({ block: 'nearest' });
@@ -108,7 +109,7 @@
       <h2>Add a feed</h2>
       <button type="button" class="close" onclick={() => dialog?.close()} aria-label="Close">×</button>
     </header>
-    <p class="lede">Paste the address of a site, a blog, a YouTube channel or video, a subreddit, or a feed. thicket finds the feed.</p>
+    <p class="lede">Enter the address of a site, blog, subreddit, or YouTube channel or video, and thicket finds the feed for you. You can also enter the feed itself.</p>
     <input bind:this={input} bind:value={url} type="url" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="example.com" required disabled={busy} />
 
     {#if outcome && 'error' in outcome}
