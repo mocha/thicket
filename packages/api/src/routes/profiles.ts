@@ -90,6 +90,27 @@ profiles.get("/:handle", async (c) => {
 });
 
 /**
+ * The people this person follows. Visible whenever the profile itself is (a
+ * private profile is a 404 here too). Only public followees are listed — a
+ * private profile stays opaque even in someone else's following list — so the
+ * count can be smaller than the raw follow count on the profile.
+ */
+profiles.get("/:handle/following", async (c) => {
+  const u = await owner(c.req.param("handle"));
+  if (!u) return c.json({ error: "not found" }, 404);
+  const who = await audienceFor(u, c.get("user")?.id);
+  if (u.profileVisibility === "private" && !who.isMe) return c.json({ error: "not found" }, 404);
+  const rows = (await db.execute<{ handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: Date }>(sql`
+    select tu.handle, tu.display_name as "displayName", tu.bio, tu.homepage_url as "homepageUrl", tu.created_at as "createdAt"
+    from user_follows uf join users tu on tu.id = uf.followee_id
+    where uf.follower_id = ${u.id} and tu.profile_visibility = 'public'
+    order by lower(coalesce(tu.display_name, tu.handle))
+  `)).rows;
+  const users = rows.map((r) => ({ handle: r.handle, displayName: r.displayName, bio: r.bio, homepageUrl: r.homepageUrl, createdAt: new Date(r.createdAt).toISOString() }));
+  return c.json({ owner: publicUser(u), isMe: who.isMe, users });
+});
+
+/**
  * Follow a person. One-directional; nothing is sent to them. You can only
  * follow a profile you can see, so a private profile is a 404 here too.
  */

@@ -267,6 +267,8 @@ export type Me = {
   id: number; handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null;
   profileVisibility: 'public' | 'private';
   collectionsVisibility: ShareLevel; bookmarksVisibility: ShareLevel; notesVisibility: ShareLevel;
+  /** Who may see the one running list of what I've been up to. Caps the whole list; each source still obeys its own section. */
+  activityVisibility: ShareLevel;
   notesFrom: 'none' | 'following' | 'everyone';
   /** null = follow the instance setting (instanceTracking). */
   trackActivity: boolean | null; instanceTracking: boolean; hasPassword: boolean; createdAt: string; isAdmin: boolean;
@@ -284,7 +286,7 @@ export const authApi = {
   signup: (handle: string, password: string, displayName?: string, inviteCode?: string) => j<Me>('/api/auth/signup', { method: 'POST', body: JSON.stringify({ handle, password, displayName, inviteCode }) }),
   login: (handle: string, password: string) => j<Me>('/api/auth/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   logout: () => j<void>('/api/auth/logout', { method: 'POST' }),
-  update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'notesFrom' | 'trackActivity' | 'hideShortsByDefault'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
+  update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'activityVisibility' | 'notesFrom' | 'trackActivity' | 'hideShortsByDefault'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
   changePassword: (current: string, next: string) => j<void>('/api/auth/me/password', { method: 'POST', body: JSON.stringify({ current, next }) })
 };
 
@@ -339,6 +341,8 @@ export type PublicBookmark = Omit<Bookmark, 'note'> & { myBookmarkId: number | n
 
 export const profilesApi = {
   get: (handle: string) => j<Profile>(`/api/profiles/${encodeURIComponent(handle)}`),
+  /** The people this person follows (public profiles only). */
+  following: (handle: string) => j<{ owner: PublicUser; isMe: boolean; users: PublicUser[] }>(`/api/profiles/${encodeURIComponent(handle)}/following`),
   follow: (handle: string) => j<{ handle: string; isFollowing: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/follow`, { method: 'POST' }),
   unfollow: (handle: string) => j<{ handle: string; isFollowing: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/follow`, { method: 'DELETE' }),
   collection: (handle: string, slug: string) => j<PublicCollection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}`),

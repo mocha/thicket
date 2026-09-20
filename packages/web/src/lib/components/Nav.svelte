@@ -6,6 +6,7 @@
   import { session } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
   import Monogram from './Monogram.svelte';
+  import AccountMenu from './AccountMenu.svelte';
   import { display } from '$lib/display.svelte';
   import { marks, badge, anyNew, countText } from '$lib/marks.svelte';
 
@@ -46,6 +47,16 @@
   const fresh = $derived(display.fresh);
   const rootMark = $derived(collectionStore.rootId ? marks.byId[collectionStore.rootId] : undefined);
   const anyColNew = $derived(fresh && anyNew(namedCollections().map((c) => c.id)));
+
+  // The account menu (Your profile / Settings / Log out), opened from the
+  // avatar block on desktop and the "You" tab on the phone. It anchors itself
+  // to whichever of the two opened it.
+  let menuOpen = $state(false);
+  let menuAnchor = $state<HTMLElement | null>(null);
+  function openMenu(e: MouseEvent) {
+    menuAnchor = e.currentTarget as HTMLElement;
+    menuOpen = true;
+  }
 
   // "+ New collection" turns into an input in place; Enter makes it and opens it.
   let creating = $state(false);
@@ -149,10 +160,10 @@
     <li>
       <a href="/explore" aria-current={current('/explore') || inFeeds ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
     </li>
-    <!-- Mobile: you. The profile is where Settings lives when there is no sidebar. -->
+    <!-- Mobile: you. Opens the account menu — your profile, settings, and log out. -->
     {#if me}
       <li class="mobile-only you">
-        <a href={meHref} aria-current={path === meHref || current('/settings') ? 'page' : undefined}><span class="mono"><Monogram name={me.displayName ?? me.handle} size={24} /></span><span class="shortl">You</span></a>
+        <button type="button" class="tab" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}><span class="mono"><Monogram name={me.displayName ?? me.handle} size={24} /></span><span class="shortl">You</span></button>
       </li>
     {/if}
     {#if me?.isAdmin}
@@ -164,14 +175,16 @@
 
   {#if me}
     <div class="account">
-      <a class="who" href={meHref}>
+      <button type="button" class="who" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}>
         <Monogram name={me.displayName ?? me.handle} size={34} />
         <span class="names"><span class="dn">{me.displayName ?? me.handle}</span><span class="h">@{me.handle}</span></span>
-      </a>
-      <a class="gear" href="/settings" aria-label="Settings" title="Settings">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
-      </a>
+        <svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10l4 4 4-4" /></svg>
+      </button>
     </div>
+  {/if}
+
+  {#if menuOpen}
+    <AccountMenu anchor={menuAnchor} onclose={() => (menuOpen = false)} />
   {/if}
 </nav>
 
@@ -187,7 +200,7 @@
   .brand, .account, .long, li.admin, li.collections { display: none; }
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
   li { flex: 1; min-width: 0; }
-  li > a {
+  li > a, li.you > .tab {
     display: flex; width: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
     height: 100%; font-size: calc(10.5px * var(--size-app)); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
   }
@@ -198,12 +211,12 @@
   .dot-new { position: absolute; top: -1px; right: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
   .fresh { flex: none; font-size: calc(11.5px * var(--size-app)); font-weight: 700; line-height: 1.5; padding: 0 7px; border-radius: 999px; color: var(--accent-ink); background: var(--accent); font-variant-numeric: tabular-nums; }
   .dot-new.inrow { position: static; flex: none; box-shadow: none; margin-right: 4px; }
-  li.you > a[aria-current='page'] .mono { outline: 2px solid var(--accent); outline-offset: 1px; }
+  li.you > .tab[aria-expanded='true'] .mono { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   /* Desktop: the sidebar. */
   @media (min-width: 900px) {
     nav:not(.paged) {
-      top: 0; bottom: auto; right: auto; width: 240px; height: 100vh; padding: 20px 12px 0; overflow: hidden;
+      top: 0; bottom: auto; right: auto; width: 240px; height: 100vh; height: 100dvh; padding: 20px 12px 0; overflow: hidden;
       display: flex; flex-direction: column;
       border-top: 0; border-right: 1px solid var(--line); background: var(--bg); backdrop-filter: none;
     }
@@ -248,12 +261,11 @@
     nav:not(.paged) .cols .new input { width: 100%; font-size: calc(14px * var(--size-app)); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--surface); color: var(--text); }
 
     nav:not(.paged) .account { display: flex; flex: none; align-items: center; gap: 4px; padding: 12px 0 16px; border-top: 1px solid var(--line); background: var(--bg); }
-    nav:not(.paged) .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; }
+    nav:not(.paged) .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; text-align: left; }
     nav:not(.paged) .who:hover { background: var(--surface-2); }
     nav:not(.paged) .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
     nav:not(.paged) .dn { font-weight: 600; font-size: calc(14px * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     nav:not(.paged) .h { font-size: calc(12px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    nav:not(.paged) .gear { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--text-3); }
-    nav:not(.paged) .gear:hover { background: var(--surface-2); color: var(--text); }
+    nav:not(.paged) .who .chev { flex: none; margin-left: auto; color: var(--text-3); }
   }
 </style>

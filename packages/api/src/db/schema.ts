@@ -56,6 +56,12 @@ export const users = pgTable("users", {
   bookmarksVisibility: shareLevel("bookmarks_visibility").notNull().default("public"),
   /** Who may see the notes I leave on posts. A reader still has to want them (notes_from). */
   notesVisibility: shareLevel("notes_visibility").notNull().default("public"),
+  /**
+   * Who may see my recent activity as one list. This caps the whole list; each
+   * source inside it still obeys its own section audience, so nobody sees an
+   * entry here they couldn't see in the section it came from.
+   */
+  activityVisibility: shareLevel("activity_visibility").notNull().default("public"),
   /** Whose notes appear on posts in my rivers. Default: people I follow. */
   notesFrom: notesFrom("notes_from").notNull().default("following"),
   /** Future: a "writes at" link to a feed in the index, verified via rel="me" on the site. Unverified claims are never shown. */
