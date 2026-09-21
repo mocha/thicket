@@ -72,9 +72,13 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* On the two hard-edged color themes every surface is the same flat color,
+     so the quiet pill would melt into the page. There it gets the same outline
+     the cards get. */
   .pill.neutral {
     background: var(--surface-2);
     color: var(--text-2);
+    border: var(--card-border, 0);
   }
 
   .pill.accent {
