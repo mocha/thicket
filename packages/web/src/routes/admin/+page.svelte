@@ -234,21 +234,18 @@
         <li class:busy={busyId === u.id}>
           <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={36} v={u.avatarUpdatedAt} />
           <div class="who">
-            <a class="handle" href={profileHref(u.handle)}>{u.displayName ?? u.handle}<span class="h"> @{u.handle}</span></a>
-            <div class="facts">
-              {#if u.isAdmin}<Badge class="beforetext">Admin</Badge>{/if}{#if u.profileVisibility === 'private'}<Badge class="beforetext">Private</Badge>{/if}{u.following} {u.following === 1 ? 'feed' : 'feeds'} · {u.collections} {u.collections === 1 ? 'collection' : 'collections'} · {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'}
-              · joined {relativeTime(u.createdAt)}{#if u.invitedBy} via @{u.invitedBy}{/if}
-              {#if u.lastSeenAt} · seen {relativeTime(u.lastSeenAt)}{/if}
+            <div class="line">
+              <a class="name" href={profileHref(u.handle)}>{u.displayName ?? u.handle}</a><span class="facts">{' · '}@{u.handle}{#if u.isAdmin}{' · '}<Badge>Admin</Badge>{/if}{#if u.profileVisibility === 'private'}{' · '}<Badge>Private</Badge>{/if} · {u.following} {u.following === 1 ? 'feed' : 'feeds'} · {u.collections} {u.collections === 1 ? 'collection' : 'collections'} · {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'} · joined {relativeTime(u.createdAt)}{#if u.invitedBy}{' via @'}{u.invitedBy}{/if}{#if u.lastSeenAt}{' · seen '}{relativeTime(u.lastSeenAt)}{/if}</span>
             </div>
-          </div>
-          <div class="acts">
-            {#if u.id !== me?.id}
-              <Button size="sm" onclick={() => setAdmin(u, !u.isAdmin)} disabled={busyId === u.id}>{u.isAdmin ? 'Remove admin' : 'Make admin'}</Button>
-              <Button size="sm" onclick={() => resetPassword(u)} disabled={busyId === u.id}>Reset password</Button>
-              <Button variant="danger" size="sm" onclick={() => remove(u)} disabled={busyId === u.id}>Delete</Button>
-            {:else}
-              <span class="you">You</span>
-            {/if}
+            <div class="acts">
+              {#if u.id !== me?.id}
+                <Button size="sm" onclick={() => setAdmin(u, !u.isAdmin)} disabled={busyId === u.id}>{u.isAdmin ? 'Remove admin' : 'Make admin'}</Button>
+                <Button size="sm" onclick={() => resetPassword(u)} disabled={busyId === u.id}>Reset password</Button>
+                <Button variant="danger" size="sm" onclick={() => remove(u)} disabled={busyId === u.id}>Delete</Button>
+              {:else}
+                <span class="you">You</span>
+              {/if}
+            </div>
           </div>
         </li>
       {/each}
@@ -296,19 +293,16 @@
   .issued code { font-size: calc(var(--text-base) * var(--size-app)); user-select: all; }
   .row { display: flex; gap: 8px; }
   .users { list-style: none; margin: 0; padding: 0; }
-  .users li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
-  .users li:first-child { border-top: 0; padding-top: 4px; }
+  .users li { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
+  .users li:first-child { border-top: 0; padding-top: var(--space-1); }
   .users li.busy { opacity: 0.6; }
-  /* The floor the name column can squeeze to before the three actions drop
-     to their own line. Low enough to keep them beside the name on a desktop,
-     high enough that a phone still stacks them. */
-  .who { flex: 1; min-width: 150px; }
-  .handle { font-weight: 600; }
-  .handle .h { color: var(--text-3); font-weight: 400; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .facts { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); margin-top: 2px; }
-  /* The labels sit at the head of a line of text, so each carries its own gap. */
-  .facts :global(.beforetext) { margin-right: var(--space-2); }
-  .acts { display: flex; gap: 6px; flex-wrap: wrap; }
-  .you { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); padding: 6px 4px; }
+  .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+  /* Name, handle, badges and the account facts all run together on one line,
+     wrapping at narrow widths rather than the actions dropping below the avatar. */
+  .line { line-height: 1.4; }
+  .name { font-weight: 600; }
+  .facts { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .acts { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .you { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); padding: var(--space-2) var(--space-1); }
   .status { text-align: center; color: var(--text-3); padding: 30px 0; }
 </style>
