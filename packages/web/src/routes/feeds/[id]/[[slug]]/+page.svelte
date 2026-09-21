@@ -111,7 +111,8 @@
   .actions { display: flex; gap: 8px; align-items: center; flex: none; }
   .host { display: inline-block; margin-top: 2px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
   .desc { margin: 8px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px 8px; margin: 16px 0 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  /* 132px is the narrowest column that keeps the longest label, "Users following", on one line. */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px 8px; margin: 16px 0 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .stats div { display: flex; flex-direction: column; gap: 2px; }
   dt { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
   dd { margin: 0; font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
