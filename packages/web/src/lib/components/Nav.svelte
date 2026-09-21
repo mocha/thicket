@@ -237,7 +237,8 @@
   li { flex: 1; min-width: 0; }
   li > a, li.you > .tab {
     display: flex; width: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    height: 100%; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
+    /* Held at 11px until Notes and Bookmarks merge into one tab; with five tabs this moves to --text-xs. */
+    height: 100%; font-size: calc(11px * var(--size-app)); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
   }
   li > a[aria-current='page'] { color: var(--accent); }
   .mono { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; }
@@ -304,7 +305,7 @@
     nav:not(.paged) .who:hover { background: var(--surface-2); }
     nav:not(.paged) .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
     nav:not(.paged) .dn { font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    nav:not(.paged) .h { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    nav:not(.paged) .h { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     nav:not(.paged) .who .chev { flex: none; margin-left: auto; display: flex; color: var(--text-3); }
   }
 </style>
