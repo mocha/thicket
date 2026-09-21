@@ -12,7 +12,8 @@
   import { feedListName } from '$lib/feedname';
   import { session } from '$lib/session.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
-  import IconButton from '$lib/components/IconButton.svelte';
+  import Field from '$lib/components/Field.svelte';
+  import Input from '$lib/components/Input.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
@@ -267,17 +268,20 @@
 
 <section class="pane">
   <div class="head">
-    <div class="field">
-      <svg class="glass" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
-      <input
-        bind:this={searchInput}
-        class="search" class:clearable={draft} type="search" value={draft} oninput={(e) => onSearch(e.currentTarget.value)}
-        placeholder="Search for anything" aria-label="Search"
-      />
-      {#if draft}
-        <IconButton class="clear" icon="close" onclick={clearSearch} label="Clear search" />
-      {/if}
-    </div>
+    <Field label="Search" hideLabel>
+      {#snippet children({ id })}
+        <Input
+          {id}
+          bind:element={searchInput}
+          variant="search"
+          size="lg"
+          value={draft}
+          oninput={(e) => onSearch(e.currentTarget.value)}
+          onclear={clearSearch}
+          placeholder="Search for anything"
+        />
+      {/snippet}
+    </Field>
   </div>
 
   <Tabs
@@ -512,14 +516,6 @@
   @media (max-width: 560px) { .sub .tail { display: none; } }
   .pane { margin-bottom: 8px; }
   .head { margin-bottom: 20px; }
-  .field { position: relative; display: flex; align-items: center; }
-  .search { width: 100%; min-width: 0; padding: 12px 16px 12px 44px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); text-overflow: ellipsis; }
-  /* Extra room on the right so long text doesn't run under the clear button. */
-  .search.clearable { padding-right: 44px; }
-  /* Hide the browser's own clear widget so there aren't two. */
-  .search::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
-  .glass { position: absolute; left: 16px; color: var(--text-3); pointer-events: none; }
-  .field :global(.clear) { position: absolute; right: 8px; }
   .pane :global(.scopes) { margin-bottom: 4px; }
   h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0; display: flex; align-items: baseline; gap: 8px; }
   /* The per-view explainer: the caption above the filters, saying what this

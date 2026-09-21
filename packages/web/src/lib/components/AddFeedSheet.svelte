@@ -16,6 +16,9 @@
   import { hostOf } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
   import IconButton from './IconButton.svelte';
+  import Button from './Button.svelte';
+  import Field from './Field.svelte';
+  import Input from './Input.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let input = $state<HTMLInputElement | null>(null);
@@ -29,6 +32,17 @@
   let outcome = $state<SubscribeOutcome | null>(null);
   /** Set while we leave for the feed page, so closing the sheet doesn't also send /add home. */
   let landing = false;
+
+  /* Both ways this can go wrong are about the address, so they belong under
+     the address box. "More than one feed here" isn't a failure and stays a
+     list further down. */
+  const urlError = $derived(
+    outcome && 'error' in outcome
+      ? `Couldn’t reach that: ${outcome.error}`
+      : outcome?.status === 'none'
+        ? `No feed found at ${hostOf(outcome.pageUrl)}. Try the site’s blog or news section.`
+        : null
+  );
 
   // Each open() resets the form from the options it was opened with.
   $effect(() => {
@@ -124,13 +138,28 @@
       <IconButton icon="close" label="Close" onclick={() => dialog?.close()} />
     </header>
     <p class="lede">Enter the address of a site, blog, subreddit, or YouTube channel or video, and thicket finds the feed for you. You can also enter the feed itself.</p>
-    <input bind:this={input} bind:value={url} type="url" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="example.com" required disabled={busy} />
+    <Field label="Address" hideLabel error={urlError}>
+      {#snippet children({ id, describedBy, invalid })}
+        <Input
+          {id}
+          aria-describedby={describedBy}
+          {invalid}
+          bind:element={input}
+          bind:value={url}
+          inset
+          type="url"
+          inputmode="url"
+          autocapitalize="off"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="example.com"
+          required
+          disabled={busy}
+        />
+      {/snippet}
+    </Field>
 
-    {#if outcome && 'error' in outcome}
-      <p class="result bad">Couldn’t reach that: {outcome.error}</p>
-    {:else if outcome?.status === 'none'}
-      <p class="result bad">No feed found at {hostOf(outcome.pageUrl)}. Try the site’s blog or news section.</p>
-    {:else if outcome?.status === 'choose'}
+    {#if outcome && !('error' in outcome) && outcome.status === 'choose'}
       <div class="result">
         <p>There’s more than one way to follow this. Which one?</p>
         <ul class="candidates">
@@ -143,13 +172,20 @@
 
     <div class="eyebrow">Put it in a collection</div>
     {#if showFilter}
-      <div class="filter">
-        <input type="text" bind:value={filter} placeholder="Filter collections…" aria-label="Filter collections" disabled={busy}
-          onkeydown={(e) => { if (e.key === 'Enter') e.preventDefault(); else if (e.key === 'Escape') filter = ''; }} />
-        {#if filter}
-          <IconButton icon="close" size="sm" label="Clear filter" onclick={() => (filter = '')} disabled={busy} />
-        {/if}
-      </div>
+      <Field label="Filter collections" hideLabel>
+        {#snippet children({ id })}
+          <Input
+            {id}
+            variant="search"
+            size="sm"
+            inset
+            bind:value={filter}
+            placeholder="Filter collections…"
+            disabled={busy}
+            onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') e.preventDefault(); else if (e.key === 'Escape') filter = ''; }}
+          />
+        {/snippet}
+      </Field>
     {/if}
     <div class="scroll" bind:this={list}>
     <ul class="checks">
@@ -171,8 +207,22 @@
     {#if collectionStore.loaded}
       <div class="new">
         <span class="plus" aria-hidden="true">+</span>
-        <input type="text" placeholder="Start a new collection…" bind:value={newName} disabled={creating} onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void createCollection(); } }} />
-        <button type="button" onclick={createCollection} disabled={creating || !newName.trim()}>Create</button>
+        <Field label="New collection name" hideLabel class="grow">
+          {#snippet children({ id })}
+            <Input
+              {id}
+              variant="create"
+              bind:value={newName}
+              placeholder="Start a new collection…"
+              disabled={creating}
+              onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); void createCollection(); } }}
+            >
+              {#snippet trailing()}
+                <Button variant="primary" onclick={createCollection} disabled={creating || !newName.trim()}>Create</Button>
+              {/snippet}
+            </Input>
+          {/snippet}
+        </Field>
       </div>
     {/if}
 
@@ -194,19 +244,12 @@
   header { display: flex; align-items: center; justify-content: space-between; }
   h2 { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }
   .lede { color: var(--text-2); margin: -6px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
-  input[type='url'] { padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); width: 100%; }
-  input[type='url']:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .result { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .result p { margin: 0 0 6px; }
-  .bad { color: var(--danger); }
   .candidates { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
   .candidates button { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); }
   .candidates span { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
   .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 4px; }
-  .filter { display: flex; align-items: center; gap: 6px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
-  .filter:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
-  .filter input { flex: 1; min-width: 0; border: 0; padding: 0; background: transparent; color: var(--text); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .filter input:focus { outline: none; }
   .nomatch { margin: 0; padding: 12px 8px; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: 38vh; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; }
   /* Desktop cap. Must come after the base .scroll rule above: same specificity,
@@ -221,12 +264,8 @@
   .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .hint { margin: -4px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .new { display: flex; align-items: center; gap: 8px; }
+  .new :global(.grow) { flex: 1; }
   .plus { width: 20px; text-align: center; color: var(--accent); font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; font-weight: 600; }
-  .new input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--accent); background: var(--surface); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); }
-  .new input::placeholder { color: var(--accent); opacity: 0.85; }
-  .new input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-style: solid; }
-  .new button { padding: 10px 14px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-  .new button:disabled { opacity: 0.35; }
   .follow { margin-top: 6px; padding: 14px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .follow:disabled { opacity: 0.5; }
 </style>

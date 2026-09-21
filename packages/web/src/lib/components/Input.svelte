@@ -113,6 +113,7 @@
   class:disabled
   class:inset
   class:hasclear={showClear}
+  class:hastrail={!!trailing}
 >
   {#if variant === 'search'}
     <span class="lead" aria-hidden="true"><Icon name="search" size={glyph} /></span>
@@ -162,6 +163,10 @@
 
   /* Room on the right for the clear button without pushing the text under it. */
   .hasclear { padding-right: var(--space-2); }
+  /* A button living inside the box brings its own height and its own edge, so
+     the box tightens around it rather than framing it in white space. */
+  .hastrail { padding: var(--space-1); padding-left: var(--space-4); }
+  .sm.hastrail { padding: var(--space-1); padding-left: var(--space-3); }
 
   input {
     flex: 1;
