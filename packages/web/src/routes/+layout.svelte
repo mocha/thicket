@@ -73,13 +73,13 @@
   /* Paged: room for the page-turn strips down both sides. */
   main.paged { max-width: none; padding-left: calc(var(--pager-w) + 8px); padding-right: calc(var(--pager-w) + 8px); }
   .unreachable { text-align: center; padding: 80px 20px; color: var(--text-2); }
-  .unreachable h1 { font-family: var(--font-headings); font-size: calc(24px * var(--size-headings)); margin: 0 0 8px; color: var(--text); }
+  .unreachable h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 8px; color: var(--text); }
   .unreachable p { margin: 0; }
   header.anon {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     max-width: 640px; margin: 0 auto; padding: 14px 12px 4px;
   }
-  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: calc(18px * var(--size-app)); letter-spacing: -0.01em; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: calc(var(--text-xl) * var(--size-app)); letter-spacing: -0.01em; }
   .auth { display: flex; gap: 8px; align-items: center; }
   @media (min-width: 900px) {
     main:not(.anon):not(.paged) { margin-left: calc(240px + max(24px, (100vw - 240px - 640px) / 2)); padding: 28px 24px 60px; }

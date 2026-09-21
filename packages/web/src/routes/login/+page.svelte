@@ -39,15 +39,15 @@
 
 <style>
   .auth { max-width: 380px; margin: 40px auto 0; }
-  h1 { font-family: var(--font-headings); font-size: calc(30px * var(--size-headings)); margin: 0 0 20px; }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 20px; }
   form { display: flex; flex-direction: column; gap: 14px; }
-  label { display: flex; flex-direction: column; gap: 6px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  input { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: calc(16px * var(--size-app)); }
+  label { display: flex; flex-direction: column; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  input { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); }
   input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  button { margin-top: 4px; padding: 13px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(16px * var(--size-app)); }
+  button { margin-top: 4px; padding: 13px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   button:disabled { opacity: 0.5; }
-  .bad { color: var(--danger); margin: 0; font-size: calc(14px * var(--size-app)); }
+  .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .alt { margin: 22px 0 0; color: var(--text-2); }
   .alt a { color: var(--accent); font-weight: 600; }
-  .hint { margin: 8px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .hint { margin: 8px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
 </style>

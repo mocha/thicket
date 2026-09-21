@@ -259,28 +259,28 @@
 
 <style>
   .top { margin-bottom: 14px; }
-  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; }
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
-  code { font-size: calc(12px * var(--size-app)); background: var(--surface-2); padding: 1px 6px; border-radius: 6px; }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
+  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  code { font-size: calc(var(--text-xs) * var(--size-app)); background: var(--surface-2); padding: 1px 6px; border-radius: 6px; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
-  h2 { font-size: calc(16px * var(--size-app)); margin: 0 0 10px; display: flex; align-items: baseline; gap: 8px; }
-  h2 .n { font-size: calc(13px * var(--size-app)); color: var(--text-3); font-weight: 400; }
-  .help { margin: 0; font-size: calc(14px * var(--size-app)); color: var(--text-3); }
+  h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 10px; display: flex; align-items: baseline; gap: 8px; }
+  h2 .n { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); font-weight: 400; }
+  .help { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .inline { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 14px; }
-  .inline label { flex: 1; display: flex; flex-direction: column; gap: 6px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  input[type='text'] { padding: 10px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(15px * var(--size-app)); font-family: inherit; }
+  .inline label { flex: 1; display: flex; flex-direction: column; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  input[type='text'] { padding: 10px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); font-family: inherit; }
   input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  button { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(13px * var(--size-app)); color: var(--text-2); background: var(--surface); white-space: nowrap; }
+  button { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); white-space: nowrap; }
   button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   button.danger { color: var(--danger); }
   button:disabled { opacity: 0.5; }
   fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
   fieldset + fieldset { margin-top: 18px; }
-  legend { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); padding: 0; margin-bottom: 6px; }
+  legend { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); padding: 0; margin-bottom: 6px; }
   .radio { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
   .radio input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
-  .radio span { display: flex; flex-direction: column; gap: 2px; font-size: calc(14px * var(--size-app)); }
-  .radio small { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .radio span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .radio small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .mint { display: flex; gap: 8px; }
   .mint input { flex: 1; min-width: 0; }
   .packs { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 6px; }
@@ -289,16 +289,16 @@
   .packs label { display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer; }
   .packs input { accent-color: var(--accent); }
   .pk { display: flex; flex-direction: column; }
-  .pk small { color: var(--text-3); font-size: calc(12.5px * var(--size-app)); }
+  .pk small { color: var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); }
   @media (min-width: 760px) { .packs { grid-template-columns: repeat(2, 1fr); } }
   .invites { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  .invites li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg); font-size: calc(14px * var(--size-app)); }
+  .invites li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); }
   .invites .note { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .invites .exp { font-size: calc(12px * var(--size-app)); color: var(--text-3); white-space: nowrap; }
+  .invites .exp { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); white-space: nowrap; }
   .invites button { padding: 6px 10px; }
   .issued { background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid var(--accent); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
-  .issued p { margin: 0 0 6px; font-size: calc(14px * var(--size-app)); }
-  .issued code { font-size: calc(16px * var(--size-app)); user-select: all; }
+  .issued p { margin: 0 0 6px; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .issued code { font-size: calc(var(--text-base) * var(--size-app)); user-select: all; }
   .row { display: flex; gap: 8px; }
   .users { list-style: none; margin: 0; padding: 0; }
   .users li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
@@ -306,12 +306,12 @@
   .users li.busy { opacity: 0.6; }
   .who { flex: 1; min-width: 200px; }
   .handle { font-weight: 600; }
-  .handle .h { color: var(--text-3); font-weight: 400; font-size: calc(13px * var(--size-app)); }
-  .facts { font-size: calc(13px * var(--size-app)); color: var(--text-3); margin-top: 2px; }
+  .handle .h { color: var(--text-3); font-weight: 400; font-size: calc(var(--text-xs) * var(--size-app)); }
+  .facts { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); margin-top: 2px; }
   /* The labels sit at the head of a line of text, so each carries its own gap. */
   .facts :global(.beforetext) { margin-right: var(--space-2); }
   .acts { display: flex; gap: 6px; flex-wrap: wrap; }
   .acts button { padding: 6px 10px; }
-  .you { font-size: calc(13px * var(--size-app)); color: var(--text-3); padding: 6px 4px; }
+  .you { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); padding: 6px 4px; }
   .status { text-align: center; color: var(--text-3); padding: 30px 0; }
 </style>
