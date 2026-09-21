@@ -535,7 +535,8 @@
   .browse .blurb { margin: 0; padding: 20px 12px 8px; }
   .group { margin-bottom: 22px; }
   .group h2 { margin-bottom: 8px; }
-  .all { margin-left: auto; font-size: calc(var(--text-sm) * var(--size-app)); }
+  /* Beats .link’s inherited size below: “See all” is a small action, not part of the heading. */
+  h2 .all { margin-left: auto; font-family: var(--font); font-size: calc(var(--text-sm) * var(--size-app)); }
   .filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 4px; }
   .filter { display: inline-flex; align-items: center; gap: 4px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .label { white-space: nowrap; }
