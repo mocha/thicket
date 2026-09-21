@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { noOrphan } from '$lib/orphans';
   import type { Note, RiverItem } from '$lib/api';
   import { api } from '$lib/api';
   import { relativeTime, hostOf } from '$lib/time';
@@ -73,7 +74,7 @@
     {#if item.imageUrl && !imgFailed}
       <img class="hero" src={item.imageUrl} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror={() => (imgFailed = true)} />
     {/if}
-    <h2 class="card-title" class:tight={compact}>{item.title ?? item.summary ?? item.url}</h2>
+    <h2 class="card-title" class:tight={compact}>{noOrphan(item.title ?? item.summary ?? item.url)}</h2>
     {#if item.title && item.summary && item.summary !== item.title}
       <p class="card-summary" class:tight={compact}>{item.summary}</p>
     {/if}

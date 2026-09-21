@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { noOrphan } from '$lib/orphans';
   /**
    * A post on a notes page: the same shape as a saved post on the Bookmarks
    * page (source line, title, two lines of summary, a small thumbnail), with
@@ -37,7 +38,7 @@
   <a class="body" href={item.url ?? item.siteUrl ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
     <div class="text">
       <CardMeta feedId={item.feedId} hasIcon={item.hasIcon} name={source} when={item.publishedAt} />
-      <h3 class="card-title">{item.title ?? item.summary ?? item.url}</h3>
+      <h3 class="card-title">{noOrphan(item.title ?? item.summary ?? item.url)}</h3>
       {#if item.title && item.summary && item.summary !== item.title}<p class="card-summary">{item.summary}</p>{/if}
     </div>
     {#if item.imageUrl && !imgFailed}<img class="thumb" src={item.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onerror={() => (imgFailed = true)} />{/if}

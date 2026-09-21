@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { noOrphan } from '$lib/orphans';
   /**
    * One saved post, mine or someone else's. The whole body — words and
    * thumbnail — links to the post, opening it here or in a tab depending on
@@ -48,7 +49,7 @@
   <a class="body" href={b.url} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
     <div class="text">
       <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} />
-      <h3 class="card-title">{b.title ?? b.url}</h3>
+      <h3 class="card-title">{noOrphan(b.title ?? b.url)}</h3>
       {#if b.summary}<p class="card-summary">{b.summary}</p>{/if}
       <div class="saved">Saved <time datetime={b.savedAt} title={new Date(b.savedAt).toLocaleString()}>{relativeTime(b.savedAt)}</time></div>
     </div>
