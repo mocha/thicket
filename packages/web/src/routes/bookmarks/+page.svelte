@@ -146,13 +146,12 @@
   h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
-  .filters { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
-  /* The tabs take what room is left and slide sideways inside it; the source
-     menu beside them keeps its own width and its own look. */
-  .filters :global(.tabs) { min-width: 0; }
+  /* The collections get the whole width to slide along; the source menu sits
+     on its own line under them, so neither one squeezes the other. */
+  .filters { margin-bottom: 12px; }
   .filters select {
-    flex: none; padding: 7px 14px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--line);
-    font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap;
+    margin-top: 8px; padding: 7px 14px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--line);
+    font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; max-width: 100%;
   }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
   .empty { text-align: center; padding: 40px 20px; color: var(--text-2); }

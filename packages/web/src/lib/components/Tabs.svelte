@@ -23,6 +23,14 @@
    * too long for its space slides sideways instead, and the lifted tab keeps
    * its shadow at both ends.
    *
+   * A row that is too long says so: the end with tabs hidden behind it softens
+   * into the page rather than slicing a word in half, and a small arrow floats
+   * there to move the row along by most of a screenful. Both appear only on
+   * the side that actually has something hidden, and the arrows are left out
+   * on a touchscreen, where the row is swiped. The chosen tab is brought back
+   * into view whenever it would be left off the end — on the way in, when the
+   * choice changes, and when the window changes shape.
+   *
    * Keyboard: one stop on the way through, the chosen tab. The arrow keys move
    * between tabs and switch as they go, wrapping around the ends, and Home and
    * End jump to the first and last. Tabs that are off are skipped. If the tab
@@ -33,6 +41,8 @@
    * and put `role="tabpanel"` and that same id on that region, so the tabs and
    * what they control are announced as one thing.
    */
+
+  import IconButton from './IconButton.svelte';
 
   interface Tab {
     value: string;
@@ -68,10 +78,15 @@
   }: Props = $props();
 
   let root = $state<HTMLDivElement>();
+  let scroller = $state<HTMLDivElement>();
   let btns: HTMLButtonElement[] = $state([]);
   /* Whether the reader was inside the row just before the tabs changed, so
      focus can be rescued if the tab they were on has gone. */
   let wasInside = false;
+  /* Whether there are tabs hidden off each end. Drives the soft edge that says
+     "more this way" instead of cutting a word in half. */
+  let moreLeft = $state(false);
+  let moreRight = $state(false);
 
   const off = (i: number) => !!tabs[i]?.disabled;
 
@@ -92,6 +107,56 @@
     if (!wasInside || !root || root.contains(document.activeElement)) return;
     btns[stop]?.focus();
   });
+
+  function measure() {
+    if (!scroller) return;
+    const { scrollLeft, clientWidth, scrollWidth } = scroller;
+    /* A pixel of slack: scroll positions are fractional at some zoom levels. */
+    moreLeft = scrollLeft > 1;
+    moreRight = scrollLeft + clientWidth < scrollWidth - 1;
+  }
+
+  /* Bring the chosen tab back into view when it is off the end — on the way in
+     and whenever the choice or the row changes. Only this row scrolls
+     sideways: the page itself is left where the reader put it. */
+  function reveal() {
+    const el = btns[stop];
+    if (!el || !scroller) return;
+    const tab = el.getBoundingClientRect();
+    const box = scroller.getBoundingClientRect();
+    const room = 8;
+    if (tab.left < box.left + room) scroller.scrollLeft -= box.left + room - tab.left;
+    else if (tab.right > box.right - room) scroller.scrollLeft += tab.right - (box.right - room);
+  }
+
+  $effect(() => {
+    tabs;
+    value;
+    if (!scroller) return;
+    reveal();
+    measure();
+  });
+
+  /* The row overflows or stops overflowing as the window, the type size or the
+     tabs themselves change — and the chosen tab can be carried off the edge by
+     the change, so it is brought back each time too. */
+  $effect(() => {
+    if (!scroller || !root) return;
+    const ro = new ResizeObserver(() => {
+      reveal();
+      measure();
+    });
+    ro.observe(scroller);
+    ro.observe(root);
+    return () => ro.disconnect();
+  });
+
+  /* A press of an arrow moves the row by most of a screenful, leaving a tab or
+     two of overlap so the reader keeps their place. */
+  function nudge(dir: 1 | -1) {
+    if (!scroller) return;
+    scroller.scrollBy({ left: dir * scroller.clientWidth * 0.8, behavior: 'smooth' });
+  }
 
   function next(from: number, dir: 1 | -1) {
     const n = tabs.length;
@@ -132,7 +197,13 @@
      the layout, so the row still sits exactly where it is put. The inner one
      is the track the reader sees. -->
 <div class="tabs {klass}" class:fill {...rest}>
-  <div class="scroll">
+  <div
+    bind:this={scroller}
+    class="scroll"
+    class:more-left={moreLeft}
+    class:more-right={moreRight}
+    onscroll={measure}
+  >
     <div bind:this={root} class="track" role="tablist" aria-label={label}>
       {#each tabs as t, i (t.value)}
         <button
@@ -151,9 +222,55 @@
       {/each}
     </div>
   </div>
+  <!-- The arrows sit outside the list of tabs, so they are never mistaken for
+       one, and float over the soft edge without taking any room. They are for
+       a mouse; on a touchscreen the row is swiped and only the soft edge
+       shows. -->
+  {#if moreLeft}
+    <div class="arrow left">
+      <IconButton icon="caret" dir="left" size="sm" label="Scroll tabs left" onclick={() => nudge(-1)} />
+    </div>
+  {/if}
+  {#if moreRight}
+    <div class="arrow right">
+      <IconButton icon="caret" dir="right" size="sm" label="Scroll tabs right" onclick={() => nudge(1)} />
+    </div>
+  {/if}
 </div>
 
 <style>
+  .tabs {
+    position: relative;
+  }
+
+  /* Over the soft edge, not beside it: the arrows take no room, so turning
+     them on and off never moves the tabs. */
+  .arrow {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+  }
+  .arrow.left {
+    left: 0;
+  }
+  .arrow.right {
+    right: 0;
+  }
+  /* The arrow sits on the page, not on the tabs: its own small disc, outlined
+     so it reads as something to press on every theme. */
+  .arrow :global(.ib) {
+    background: var(--bg);
+    box-shadow: 0 0 0 1px var(--line);
+  }
+  /* On a touchscreen the row is swiped, so the soft edge says it all. */
+  @media (hover: none) {
+    .arrow {
+      display: none;
+    }
+  }
+
   .scroll {
     /* The padding is the room the lifted tab's shadow needs; the matching
        negative margin takes it back off the layout. */
@@ -165,6 +282,35 @@
   }
   .scroll::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Tabs hidden off an end: that end softens into the page instead of being
+     sliced off mid-word, which is the only hint a reader gets that the row
+     slides. A row that fits gets no mask at all. */
+  .scroll.more-left,
+  .scroll.more-right {
+    --fade-l: 0px;
+    --fade-r: 0px;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 var(--fade-l),
+      #000 calc(100% - var(--fade-r)),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 var(--fade-l),
+      #000 calc(100% - var(--fade-r)),
+      transparent 100%
+    );
+  }
+  .scroll.more-left {
+    --fade-l: 28px;
+  }
+  .scroll.more-right {
+    --fade-r: 28px;
   }
 
   .track {
