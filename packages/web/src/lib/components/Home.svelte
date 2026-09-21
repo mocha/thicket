@@ -105,11 +105,11 @@
   .features ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
   .features li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
   .features svg { color: var(--accent); margin-bottom: 10px; }
-  .features h3 { margin: 0 0 6px; font-size: calc(var(--text-xl) * var(--size-app)); }
+  .features h3 { margin: 0 0 6px; font-size: calc(var(--text-base) * var(--size-headings)); font-weight: 700; }
   .features p { margin: 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.45; }
   .fine { margin: 18px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .apart ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; }
-  .apart h3 { font-family: var(--font-headings); margin: 0 0 5px; font-size: calc(var(--text-xl) * var(--size-headings)); }
+  .apart h3 { font-family: var(--font-headings); margin: 0 0 5px; font-size: calc(var(--text-base) * var(--size-headings)); font-weight: 700; }
   .apart p { margin: 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.5; }
   footer { margin: 44px 0 0; padding-top: 20px; border-top: 1px solid var(--line); color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   footer p { margin: 0; max-width: 70ch; }
