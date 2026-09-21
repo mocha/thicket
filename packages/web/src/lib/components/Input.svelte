@@ -165,7 +165,8 @@
     width: 100%;
     padding: var(--space-3) var(--space-4);
     border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
+    /* Single-line fields are pills, like buttons; Textarea keeps --radius-sm because a pill cannot wrap several lines. */
+    border-radius: var(--radius-pill);
     background: var(--surface);
     color: var(--text-2);
     transition: border-color 0.12s ease;
