@@ -85,7 +85,7 @@
 {/if}
 
 <style>
-  .crumbs { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); margin-bottom: 4px; }
+  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); margin-bottom: 4px; }
   .crumbs a { color: var(--accent); font-weight: 600; }
   .top { margin-bottom: 14px; }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; overflow-wrap: anywhere; }

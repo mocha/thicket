@@ -201,7 +201,7 @@
   .bad { color: var(--danger); }
   .candidates { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
   .candidates button { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); }
-  .candidates span { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
+  .candidates span { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
   .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 4px; }
   .filter { display: flex; align-items: center; gap: 6px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
   .filter:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
@@ -218,8 +218,8 @@
   .checks li:first-child label { border-top: 0; }
   .checks input { width: 20px; height: 20px; accent-color: var(--accent); }
   .name { flex: 1; font-weight: 500; }
-  .count { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
-  .hint { margin: -4px 0 0; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
+  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .hint { margin: -4px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .new { display: flex; align-items: center; gap: 8px; }
   .plus { width: 20px; text-align: center; color: var(--accent); font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; font-weight: 600; }
   .new input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--accent); background: var(--surface); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); }

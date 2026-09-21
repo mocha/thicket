@@ -87,7 +87,7 @@
   .card:hover { border-color: var(--accent); }
   .icons { display: flex; gap: 5px; margin-bottom: 9px; min-height: 26px; }
   .name { font-weight: 700; font-size: calc(var(--text-base) * var(--size-app)); }
-  .meta { color: var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); margin-top: 2px; }
+  .meta { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: 2px; }
   .desc { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: 7px; }
   .take { margin-top: 8px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .take:hover:not(:disabled) { border-color: var(--accent); }

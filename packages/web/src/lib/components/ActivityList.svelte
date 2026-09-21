@@ -165,7 +165,7 @@
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .cardhead { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface-2); }
-  .ctrl-label { font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
+  .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
   .cardhead :global(.cg) { flex: none; width: min(320px, 100%); }
   .pad { padding: 16px; }
   .foot { padding: 12px 16px; border-top: 1px solid var(--line); }
@@ -180,10 +180,10 @@
   .glyph { flex: none; width: 20px; text-align: center; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
   .what { flex: 1; min-width: 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .what a { color: var(--text); font-weight: 600; }
-  .src { color: var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); }
+  .src { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .src::before { content: ' · '; }
-  .when { flex: none; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
-  .names { display: flex; gap: 5px; margin: 4px 0 0 30px; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
+  .when { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .names { display: flex; gap: 5px; margin: 4px 0 0 30px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .trunc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rest { flex: none; }
   .rest::before { content: '· '; }

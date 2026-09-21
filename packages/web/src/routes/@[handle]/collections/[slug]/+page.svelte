@@ -185,8 +185,8 @@
   .children .name { flex: 1; font-weight: 600; }
   .meta { flex: 1; min-width: 0; }
   .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sub2 { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .count, .chev { color: var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); }
+  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .count, .chev { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .chev { font-size: calc(var(--text-xl) * var(--size-app)); }
   .status { text-align: center; color: var(--text-3); padding: 30px 0; }
   .empty { text-align: center; padding: 50px 20px; color: var(--text-2); }

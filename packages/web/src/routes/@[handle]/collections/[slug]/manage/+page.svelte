@@ -457,7 +457,7 @@
   .descbox { position: relative; }
   /* A fixed box tall enough for the full 300 characters; a reserved strip at the bottom keeps typed text clear of the "Saved" note. */
   .descbox textarea { padding-bottom: 30px; resize: none; }
-  .saved { position: absolute; right: 12px; bottom: 9px; font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); background: var(--surface); padding: 1px 6px; border-radius: 6px; pointer-events: none; }
+  .saved { position: absolute; right: 12px; bottom: 9px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); background: var(--surface); padding: 1px 6px; border-radius: 6px; pointer-events: none; }
   .radios label { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
   .vis label { gap: 8px; }
   .radios label:has(input:checked) { border-color: var(--accent); }
@@ -479,10 +479,10 @@
   .children .name { flex: 1; font-weight: 600; }
   .meta { flex: 1; min-width: 0; }
   .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sub2 { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bad { color: var(--danger); }
   .chip { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line); }
-  .count, .chev { color: var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); }
+  .count, .chev { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .chev { font-size: calc(var(--text-xl) * var(--size-app)); }
   .menu { position: relative; flex: none; }
   /* Hangs below the button, right-aligned, from its spot in the header. */

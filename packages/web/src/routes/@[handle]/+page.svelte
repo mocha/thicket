@@ -522,7 +522,7 @@
   /* A tinted control strip, not a list row: the background sets it apart from
      the white rows below, and the label sits right beside its buttons. */
   .cardhead { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface-2); }
-  .ctrl-label { font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
+  .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
   .cardhead :global(.cg) { flex: none; width: min(320px, 100%); }
 
   /* Visibility: the label and its explanation on the left, the switch on the right. */
@@ -536,7 +536,7 @@
 
   /* Editing name, bio and homepage right in the header. */
   .edit { display: flex; flex-direction: column; gap: 10px; }
-  .edit label { display: flex; flex-direction: column; gap: 5px; font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  .edit label { display: flex; flex-direction: column; gap: 5px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .edit input, .edit textarea { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); font-family: inherit; resize: vertical; }
   .edit input:focus, .edit textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .editrow { display: flex; justify-content: flex-end; gap: 8px; }
@@ -553,7 +553,7 @@
   /* A pill riding after a name needs its own gap: the words beside it are text, not a flex row. */
   .name :global(.aftertext) { margin-left: var(--space-2); }
   .desc { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .count { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); white-space: nowrap; }
+  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   .add { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); text-align: left; }
   li:first-child .add { border-top: 0; }

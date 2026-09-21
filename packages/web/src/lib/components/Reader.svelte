@@ -196,7 +196,7 @@
   }
   header {
     display: flex; align-items: center; gap: 8px; flex: none;
-    padding: 10px 8px 8px 16px; border-bottom: 1px solid var(--line); font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-2); min-width: 0;
+    padding: 10px 8px 8px 16px; border-bottom: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); min-width: 0;
   }
   .source { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

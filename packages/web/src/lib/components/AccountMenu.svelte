@@ -116,7 +116,7 @@
   .who { display: flex; align-items: center; gap: 12px; padding: 8px 10px 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
   .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
   .dn { font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .h { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .h { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .panel a, .panel button {
     display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 10px; border-radius: 10px;
     font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text-2); text-align: left;

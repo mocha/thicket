@@ -39,5 +39,5 @@
   .art :global(svg) { display: block; width: 100%; height: 100%; }
   .label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .on .label { color: var(--accent); }
-  .note { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); line-height: 1.35; }
+  .note { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.35; }
 </style>

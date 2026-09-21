@@ -82,7 +82,7 @@
   .t { display: block; height: 3px; border-radius: 2px; background: var(--sw-text); opacity: 0.85; }
   .t.short { width: 60%; opacity: 0.45; }
   .a { display: block; width: 34%; height: 5px; border-radius: 3px; background: var(--sw-accent); margin-top: 2px; }
-  .label { font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; padding: 0 2px; }
+  .label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; padding: 0 2px; }
   .on .label { color: var(--accent); }
 
   .accents { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }

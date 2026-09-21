@@ -134,12 +134,12 @@
 {/if}
 
 <style>
-  .crumbs { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); margin: 0 0 12px; }
+  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); margin: 0 0 12px; }
   .crumbs a { color: var(--text-2); }
   .crumbs a:hover { color: var(--text); }
 
   .post { max-width: 680px; }
-  header { display: flex; align-items: center; gap: 8px; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-2); min-width: 0; }
+  header { display: flex; align-items: center; gap: 8px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); min-width: 0; }
   .who { display: flex; align-items: center; gap: 8px; min-width: 0; color: inherit; }
   .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dot { color: var(--text-3); }

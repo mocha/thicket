@@ -101,7 +101,7 @@
 </div>
 
 <style>
-  .crumbs { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); margin-bottom: 8px; }
+  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); margin-bottom: 8px; }
   .crumbs a { color: var(--accent); font-weight: 600; }
   .profile { display: flex; gap: 14px; align-items: flex-start; }
   .who { flex: 1; min-width: 0; }

@@ -55,7 +55,7 @@
   .row { display: grid; grid-template-columns: minmax(84px, 1fr) auto auto; align-items: center; gap: 8px 10px; padding: 9px 0; }
   .row + .row { border-top: 1px solid var(--line); }
   .who { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); min-width: 0; }
-  .who small { font-weight: 400; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); line-height: 1.3; }
+  .who small { font-weight: 400; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.3; }
   /* The face row sits at the right-hand end, and each option is set in the
      face it offers. OpenDyslexic runs large, so it is knocked down a size. */
   .row :global(.faces) { justify-self: end; }
@@ -65,7 +65,7 @@
   .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--bg); justify-self: end; }
   .stepper button { width: 30px; height: 32px; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
   .stepper button:disabled { opacity: 0.35; }
-  .stepper output { min-width: 5.5ch; text-align: center; font-size: calc(var(--text-xs) * var(--size-app)); font-variant-numeric: tabular-nums; color: var(--text-2); }
+  .stepper output { min-width: 5.5ch; text-align: center; font-size: calc(var(--text-sm) * var(--size-app)); font-variant-numeric: tabular-nums; color: var(--text-2); }
   /* Narrow: the name and the size share the first line, and the three faces
      take the whole of the next one, where their names fit at full size. */
   @container (max-width: 479px) {

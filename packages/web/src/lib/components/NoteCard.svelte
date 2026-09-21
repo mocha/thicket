@@ -59,7 +59,7 @@
   .nc { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); border: var(--card-border, 0); list-style: none; overflow: hidden; }
   .row { display: flex; gap: 12px; padding: 12px 14px; }
   .body { flex: 1; min-width: 0; }
-  .meta { display: flex; align-items: center; gap: 6px; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); margin-bottom: 4px; min-width: 0; }
+  .meta { display: flex; align-items: center; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); margin-bottom: 4px; min-width: 0; }
   .site { font-weight: 600; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   time { white-space: nowrap; }
   h3 { margin: 0; font-family: var(--font-headings); font-size: calc(var(--text-base) * var(--size-headings)); line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
