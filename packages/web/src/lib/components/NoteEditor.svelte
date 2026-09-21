@@ -6,6 +6,7 @@
    */
   import { api, notesApi, NOTE_MAX, type Note } from '$lib/api';
   import { showToast } from '$lib/toast.svelte';
+  import Button from '$lib/components/Button.svelte';
 
   let { itemId, note = null, onsaved, ondeleted, oncancel }: {
     itemId: number; note?: Note | null;
@@ -58,10 +59,10 @@
   <textarea bind:this={box} bind:value={body} rows="4" maxlength={NOTE_MAX + 200} placeholder="What do you want to remember about this? Markdown works: **bold**, *italic*, [links](https://…), - lists."
     disabled={busy} onkeydown={(e) => { if (e.key === 'Escape') oncancel(); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void save(); } }}></textarea>
   <div class="row">
-    <button type="submit" class="btn primary" disabled={busy || !dirty || !body.trim() || over}>{busy ? 'Saving…' : 'Save'}</button>
-    <button type="button" class="btn" onclick={oncancel} disabled={busy}>Cancel</button>
-    {#if note}<button type="button" class="btn danger" onclick={remove} disabled={busy}>Delete</button>{/if}
-    <span class="counter" class:over class:near={!over && body.length > NOTE_MAX - 200}>{body.length}/{NOTE_MAX}</span>
+    <Button type="submit" variant="primary" disabled={busy || !dirty || !body.trim() || over}>{busy ? 'Saving…' : 'Save'}</Button>
+    <Button onclick={oncancel} disabled={busy}>Cancel</Button>
+    {#if note}<Button variant="danger" onclick={remove} disabled={busy} style="margin-left: auto">Delete</Button>{/if}
+    <span class="counter" class:pushright={!note} class:over class:near={!over && body.length > NOTE_MAX - 200}>{body.length}/{NOTE_MAX}</span>
   </div>
   {#if error}<p class="bad" role="alert">{error}</p>{/if}
 </form>
@@ -72,13 +73,8 @@
   textarea { width: 100%; font: inherit; font-size: calc(14px * var(--size-app)); line-height: 1.5; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); resize: vertical; }
   textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .btn { padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  .btn.danger { color: var(--danger); margin-left: auto; }
-  .btn:disabled { opacity: 0.5; }
   .counter { font-size: calc(12px * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
-  .btn.danger + .counter { margin-left: 0; }
-  .row:not(:has(.danger)) .counter { margin-left: auto; }
+  .counter.pushright { margin-left: auto; }
   .counter.near { color: var(--text-2); }
   .counter.over { color: var(--danger); font-weight: 700; }
   .bad { margin: 6px 0 0; font-size: calc(13px * var(--size-app)); color: var(--danger); }

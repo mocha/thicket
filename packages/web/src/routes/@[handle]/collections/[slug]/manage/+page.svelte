@@ -10,6 +10,7 @@
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import Button from '$lib/components/Button.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -258,8 +259,8 @@
           <!-- svelte-ignore a11y_autofocus -->
           <input type="text" bind:value={name} autofocus maxlength="60" aria-label="Collection name" disabled={savingName} onkeydown={(e) => { if (e.key === 'Escape') { renaming = false; name = col?.name ?? ''; } }} />
           <div class="row">
-            <button type="submit" class="btn primary" disabled={savingName || !name.trim()}>{savingName ? 'Saving…' : 'Save'}</button>
-            <button type="button" class="btn" onclick={() => { renaming = false; name = col?.name ?? ''; }} disabled={savingName}>Cancel</button>
+            <Button type="submit" variant="primary" disabled={savingName || !name.trim()}>{savingName ? 'Saving…' : 'Save'}</Button>
+            <Button onclick={() => { renaming = false; name = col?.name ?? ''; }} disabled={savingName}>Cancel</Button>
           </div>
         </form>
       {:else}
@@ -375,8 +376,8 @@
         {/if}
       {/if}
       <div class="row">
-        <button class="btn primary" onclick={mergeCollection} disabled={merging || !mergeTarget}>{merging ? 'Merging…' : 'Merge'}</button>
-        <button class="btn" onclick={() => mergeEl?.close()} disabled={merging}>Cancel</button>
+        <Button variant="primary" onclick={mergeCollection} disabled={merging || !mergeTarget}>{merging ? 'Merging…' : 'Merge'}</Button>
+        <Button onclick={() => mergeEl?.close()} disabled={merging}>Cancel</Button>
       </div>
     </div>
   </dialog>
@@ -414,8 +415,8 @@
         {/if}
       {/if}
       <div class="row">
-        <button class="btn danger" onclick={deleteCollection} disabled={deleting || orphans === null}>{deleting ? 'Deleting…' : 'Delete this collection'}</button>
-        <button class="btn" onclick={() => confirmEl?.close()} disabled={deleting}>Cancel</button>
+        <Button variant="danger" onclick={deleteCollection} disabled={deleting || orphans === null}>{deleting ? 'Deleting…' : 'Delete this collection'}</Button>
+        <Button onclick={() => confirmEl?.close()} disabled={deleting}>Cancel</Button>
       </div>
     </div>
   {/if}
@@ -473,10 +474,6 @@
   .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
   .counter { margin-left: auto; font-size: calc(12px * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
   .counter.near { color: var(--danger); }
-  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
-  .btn:disabled { opacity: 0.5; }
   .feedhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
   .feedhead h2 { margin: 0; }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }

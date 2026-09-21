@@ -11,6 +11,7 @@
   import SectionAudience from '$lib/components/SectionAudience.svelte';
   import NoteCard from '$lib/components/NoteCard.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import Button from '$lib/components/Button.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
@@ -283,8 +284,8 @@
           <label><span>About you</span><textarea bind:value={dbio} rows="3" maxlength="500" placeholder="A line or two. What you read, what you make."></textarea></label>
           <label><span>Homepage</span><input type="url" inputmode="url" bind:value={dhome} placeholder="https://" /></label>
           <div class="editrow">
-            <button type="button" class="ghost" onclick={() => (editing = false)} disabled={savingProfile}>Cancel</button>
-            <button type="button" class="save" onclick={saveEdit} disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save'}</button>
+            <Button onclick={() => (editing = false)} disabled={savingProfile}>Cancel</Button>
+            <Button variant="primary" onclick={saveEdit} disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save'}</Button>
           </div>
         </div>
       {:else}
@@ -302,9 +303,9 @@
         </div>
       {/if}
     {:else if session.user}
-      <button class="btn" class:following={profile.people.isFollowing} onclick={toggleFollow} disabled={followBusy} aria-pressed={profile.people.isFollowing}>{profile.people.isFollowing ? 'Following' : 'Follow'}</button>
+      <Button onclick={toggleFollow} disabled={followBusy} aria-pressed={profile.people.isFollowing} style="flex: none">{profile.people.isFollowing ? 'Following' : 'Follow'}</Button>
     {:else}
-      <a class="btn" href="/login?next={encodeURIComponent(page.url.pathname)}">Follow</a>
+      <Button href="/login?next={encodeURIComponent(page.url.pathname)}" style="flex: none">Follow</Button>
     {/if}
   </header>
 
@@ -490,7 +491,6 @@
   .handle { margin: 2px 0 0; color: var(--text-3); font-size: calc(15px * var(--size-app)); }
   .site { color: var(--accent); font-weight: 600; }
   .bio { margin: 10px 0 0; color: var(--text); font-size: calc(15px * var(--size-app)); white-space: pre-line; }
-  .btn { flex: none; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); }
   /* The avatar as a button: a camera badge in the corner says it's changeable. */
   .photobtn { flex: none; position: relative; padding: 0; border-radius: 30%; line-height: 0; }
   .photobtn .camera { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--accent); color: #fff; box-shadow: 0 0 0 2px var(--surface); }
@@ -539,10 +539,6 @@
   .edit input, .edit textarea { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(15px * var(--size-app)); font-family: inherit; resize: vertical; }
   .edit input:focus, .edit textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .editrow { display: flex; justify-content: flex-end; gap: 8px; }
-  .editrow button { padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: calc(14px * var(--size-app)); }
-  .editrow .ghost { border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
-  .editrow .save { background: var(--accent); color: var(--accent-ink); }
-  .editrow button:disabled { opacity: 0.5; }
 
   section { margin-bottom: 22px; }
   h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; display: flex; align-items: baseline; gap: 8px; line-height: 1.25; }

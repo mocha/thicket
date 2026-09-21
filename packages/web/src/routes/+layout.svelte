@@ -9,6 +9,7 @@
   import Reader from '$lib/components/Reader.svelte';
   import Configurator from '$lib/components/display/Configurator.svelte';
   import { addFeed } from '$lib/addfeed.svelte';
+  import Button from '$lib/components/Button.svelte';
   import { session, loadMe, isPublicPath } from '$lib/session.svelte';
   import { display, loadDisplay } from '$lib/display.svelte';
   import { watchMarks } from '$lib/marks.svelte';
@@ -45,7 +46,7 @@
   <header class="anon" class:home={path === '/'}>
     <a class="brand" href="/"><img src="/icon.svg" alt="" width="24" height="24" /><span>thicket</span></a>
     {#if path !== '/login' && path !== '/signup' && path !== '/'}
-      <span class="auth"><a href="/login?next={encodeURIComponent(path)}">Log in</a><a class="primary" href="/signup?next={encodeURIComponent(path)}">Sign up</a></span>
+      <span class="auth"><Button href="/login?next={encodeURIComponent(path)}">Log in</Button><Button variant="primary" href="/signup?next={encodeURIComponent(path)}">Sign up</Button></span>
     {/if}
   </header>
 {/if}
@@ -80,8 +81,6 @@
   }
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: calc(18px * var(--size-app)); letter-spacing: -0.01em; }
   .auth { display: flex; gap: 8px; align-items: center; }
-  .auth a { font-size: calc(14px * var(--size-app)); font-weight: 600; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--text-2); }
-  .auth a.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   @media (min-width: 900px) {
     main:not(.anon):not(.paged) { margin-left: calc(240px + max(24px, (100vw - 240px - 640px) / 2)); padding: 28px 24px 60px; }
     main.anon, header.anon { max-width: 680px; }

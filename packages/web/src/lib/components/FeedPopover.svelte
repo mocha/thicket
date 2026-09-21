@@ -10,6 +10,7 @@
   import SourceIcon from './SourceIcon.svelte';
   import FollowButton from './FollowButton.svelte';
   import Icon from './Icon.svelte';
+  import Button from './Button.svelte';
   import { session } from '$lib/session.svelte';
 
   let { feedId, onclose }: { feedId: number; onclose: () => void } = $props();
@@ -42,7 +43,7 @@
       </dl>
       <footer>
         {#if session.user}<FollowButton feedId={feed.id} bind:ids name={feed.title ?? hostOf(feed.url)} inline />{/if}
-        <a class="btn" href={feedHref(feed)} onclick={() => dialog?.close()}>Open feed</a>
+        <Button href={feedHref(feed)} onclick={() => dialog?.close()} style="flex: 1">Open feed</Button>
       </footer>
     {:else}
       <p class="loading">Loading…</p>
@@ -72,6 +73,5 @@
   dt { font-size: calc(11px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
   dd { margin: 0; font-weight: 600; font-size: calc(14px * var(--size-app)); }
   footer { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center; }
-  .btn { flex: 1; text-align: center; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text); }
   .loading { text-align: center; color: var(--text-3); padding: 30px 0; }
 </style>
