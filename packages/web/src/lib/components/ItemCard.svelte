@@ -128,7 +128,6 @@
     width: calc(100% + var(--card-pad) * 2); margin: 0 calc(var(--card-pad) * -1) var(--space-3); aspect-ratio: 16 / 9; object-fit: cover;
     background: var(--surface-2);
   }
-  p.card-summary { margin-top: var(--space-2); }
   footer { margin-top: 10px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .repeat {
     display: flex; gap: var(--space-2); align-items: flex-start; margin: -4px var(--card-pad) 14px; padding: var(--space-2) 10px;
@@ -142,7 +141,7 @@
   .link.compact { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto; column-gap: var(--space-3); padding: 6px var(--card-pad) 10px; }
   .link.compact .hero { grid-column: 2; grid-row: 1 / span 3; width: 108px; height: 100%; max-height: 92px; aspect-ratio: auto; margin: 0; border-radius: var(--radius-sm); align-self: start; }
   h2.tight { grid-column: 1; font-size: calc(var(--text-base) * var(--size-headings)); --title-lines: 2; }
-  p.tight { grid-column: 1; margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-reading)); --summary-lines: 2; }
+  p.tight { grid-column: 1; --summary-gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-reading)); --summary-lines: 2; }
   .link.compact footer { grid-column: 1; margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .notecount { position: absolute; right: var(--card-pad); bottom: var(--space-2); font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); }
 </style>

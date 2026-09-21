@@ -70,6 +70,7 @@
   .card :global(.card-title) {
     margin: 0;
     font-family: var(--font-headings);
+    text-wrap: pretty;
     font-weight: 600;
     font-size: calc(var(--text-lg) * var(--size-headings));
     line-height: 1.25;
@@ -82,7 +83,8 @@
     overflow: hidden;
   }
   .card :global(.card-summary) {
-    margin: 0;
+    /* Air between the title and the summary; a card can tighten it with --summary-gap. */
+    margin: var(--summary-gap, var(--space-2)) 0 0;
     color: var(--text-2);
     font-family: var(--font-reading);
     font-size: calc(var(--text-base) * var(--size-reading));
