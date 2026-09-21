@@ -39,11 +39,11 @@
 <style>
   .bm { position: relative; display: flex; gap: 12px; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; list-style: none; }
   .body { flex: 1; min-width: 0; padding-right: 28px; }
-  .meta { display: flex; align-items: center; gap: 6px; font-size: calc(12px * var(--size-app)); color: var(--text-3); margin-bottom: 4px; min-width: 0; }
+  .meta { display: flex; align-items: center; gap: 6px; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); margin-bottom: 4px; min-width: 0; }
   .site { font-weight: 600; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  h3 { margin: 0; font-family: var(--font-headings); font-size: calc(17px * var(--size-headings)); line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
-  .body p { margin: 4px 0 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .saved { margin-top: 6px; font-size: calc(12px * var(--size-app)); color: var(--text-3); }
+  h3 { margin: 0; font-family: var(--font-headings); font-size: calc(var(--text-base) * var(--size-headings)); line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
+  .body p { margin: 4px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .saved { margin-top: 6px; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
   .thumb { flex: none; width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--surface-2); align-self: center; }
   /* The one action sits in the card's top corner, over the body's padding. */
   .bm :global(.corner) { position: absolute; top: 6px; right: 6px; }
