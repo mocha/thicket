@@ -13,7 +13,7 @@
    * and bordered (the outlined circle that sits beside a page title).
    *
    * Give `pressed` only to a toggle. It announces the on/off state and, when
-   * on, fills the glyph and turns it the accent colour.
+   * on, fills the glyph and turns it the accent color.
    */
   interface Props {
     icon: 'gear' | 'pencil' | 'close' | 'caret' | 'back' | 'dots' | 'bookmark' | 'note';
@@ -107,7 +107,7 @@
   .bordered { border: 1px solid var(--line); background: var(--surface); }
   .bordered:hover { background: var(--surface-2); color: var(--text); }
 
-  /* A toggle leans towards the accent colour on hover, and stays there when on. */
+  /* A toggle leans towards the accent color on hover, and stays there when on. */
   .toggle:hover { color: var(--accent); }
   .on { color: var(--accent); }
 

@@ -4,10 +4,10 @@
 
   /**
    * An inline notice inside a page: something went wrong, or something is
-   * worth knowing before you read on. The tone sets the colour and the icon:
+   * worth knowing before you read on. The tone sets the color and the icon:
    *   error   red     something failed
    *   warning amber   something needs attention soon
-   *   info    grey    context, nothing wrong
+   *   info    gray    context, nothing wrong
    *   success green   something worked
    * A dismissible banner shows ✕ and calls `ondismiss`. Remembering the
    * dismissal is the caller's job, because only the caller knows what should
@@ -50,7 +50,7 @@
     color: var(--text); font-size: calc(14px * var(--size-app)); line-height: 1.45;
   }
   .error { --tone: var(--danger); }
-  /* Amber has no theme token yet; mixing it with the text colour darkens it on light grounds and lightens it on dark ones. */
+  /* Amber has no theme token yet; mixing it with the text color darkens it on light grounds and lightens it on dark ones. */
   .warning { --tone: color-mix(in srgb, #c7861a 78%, var(--text)); }
   .success { --tone: var(--accent); }
   .info { --tone: var(--text-3); background: var(--surface-2); border-color: var(--line); }

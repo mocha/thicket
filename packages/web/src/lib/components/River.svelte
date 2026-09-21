@@ -304,7 +304,7 @@
 
   /* Paged: a fixed frame, nothing scrolls, nothing moves. */
   .river.paged { gap: 0; overflow: hidden; }
-  /* "What's new": the line where the new posts end. Two colours only and no motion, so it reads on e-ink. */
+  /* "What's new": the line where the new posts end. Two colors only and no motion, so it reads on e-ink. */
   .divider { display: flex; align-items: center; gap: 12px; margin: 2px 0; color: var(--text-2); font-size: calc(13px * var(--size-app)); font-weight: 600; }
   .divider::before, .divider::after { content: ''; flex: 1; border-top: 2px solid var(--accent); }
   .divider span { flex: none; }

@@ -34,7 +34,7 @@ const MAX_PIXELS = 100_000_000;
 async function normalize(input: Buffer): Promise<{ bytes: Buffer; contentType: string }> {
   const bytes = await sharp(input, { limitInputPixels: MAX_PIXELS })
     .rotate() // honor EXIF orientation before we strip the metadata
-    .resize(SIZE, SIZE, { fit: "cover", position: "centre" })
+    .resize(SIZE, SIZE, { fit: "cover", position: "center" })
     .webp({ quality: 82 })
     .toBuffer();
   return { bytes, contentType: "image/webp" };

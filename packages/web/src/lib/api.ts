@@ -91,7 +91,7 @@ async function j<T>(input: string, init?: RequestInit): Promise<T> {
   let res = await fetch(input, { headers: { 'content-type': 'application/json' }, ...init });
   // thicket itself never answers 429 through this path (the one 429, refresh cooldown, uses raw fetch),
   // so a 429 here means a proxy in front dropped the request before the server saw it. That makes it
-  // safe to retry any method. Back off 0.5s, 1s, 2s, 4s with jitter, honouring Retry-After if present.
+  // safe to retry any method. Back off 0.5s, 1s, 2s, 4s with jitter, honoring Retry-After if present.
   for (let attempt = 0; res.status === 429 && attempt < 4; attempt++) {
     const hinted = Number(res.headers.get('retry-after') ?? 0) * 1000;
     await sleep(Math.min(6000, hinted || 500 * 2 ** attempt) + Math.random() * 300);

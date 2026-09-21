@@ -5,7 +5,7 @@
  * this, because RSS pagination is mostly theoretical:
  *
  *  - Reddit: the `.rss` address a feed already uses defaults to ~25 items,
- *    but honours `?limit=100` (Reddit's own listing size cap) — in testing
+ *    but honors `?limit=100` (Reddit's own listing size cap) — in testing
  *    that alone returned 100 items spanning five months for an active
  *    subreddit, no pagination required. Reddit rate-limits unauthenticated
  *    requests per IP hard enough that even a single request moments after

@@ -1,12 +1,12 @@
 /**
  * Survey a corpus of feed URLs without loading them into the app: fetch each
  * once, parse it, and write per-feed statistics (liveness, cadence, article
- * length) to a SQLite file. `pnpm survey:stats` summarises that file.
+ * length) to a SQLite file. `pnpm survey:stats` summarizes that file.
  *
  *   pnpm survey <file> [--limit N] [--offset N] [--concurrency N] [--db path]
  *
  * The file has one URL per line; "#" starts a comment, at the start of a line
- * or after the URL. URLs are normalised like the app's, deduplicated, then
+ * or after the URL. URLs are normalized like the app's, deduplicated, then
  * --offset skips the first N and --limit caps how many are attempted.
  *
  * Resumable: a URL already in the SQLite table is skipped, so a run can be
