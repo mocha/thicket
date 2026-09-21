@@ -13,6 +13,7 @@
   import NoteCard from '$lib/components/NoteCard.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
+  import Badge from '$lib/components/Badge.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
@@ -339,7 +340,7 @@
 
   {#if profile.collections}
     <section>
-      <h2>Collections <span class="n">{profile.collections.length}</span></h2>
+      <h2>Collections <Badge>{profile.collections.length}</Badge></h2>
       <div class="card">
         {#if profile.isMe && su && su.profileVisibility !== 'private'}
           <div class="cardhead">
@@ -354,10 +355,10 @@
           <li class:nested={depth > 0}>
             <a href={publicCollectionHref(handle, c.slug)} style:--indent="{depth * 18}px">
               <div class="meta2">
-                <span class="name">{c.name}{#if isMe && audienceTag(c.visibility)} <span class="tag">{audienceTag(c.visibility)}</span>{/if}</span>
+                <span class="name">{c.name}{#if isMe && audienceTag(c.visibility)} <Badge>{audienceTag(c.visibility)}</Badge>{/if}</span>
                 {#if c.description}<span class="desc">{c.description}</span>{/if}
               </div>
-              {#if isMe && display.fresh && countText(marks.byId[c.id])}<span class="fresh">{countText(marks.byId[c.id])} new</span>{/if}
+              {#if isMe && display.fresh && countText(marks.byId[c.id])}<Badge tone="accent">{countText(marks.byId[c.id])} new</Badge>{/if}
               <span class="count">{c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'}</span>
               <span class="chev" aria-hidden="true">›</span>
             </a>
@@ -395,7 +396,7 @@
 
   {#if profile.notes && (profile.notes.count > 0 || profile.isMe)}
     <section>
-      <h2>Notes <span class="n">{profile.notes.count}</span></h2>
+      <h2>Notes <Badge>{profile.notes.count}</Badge></h2>
       {#if profile.isMe}
         {#if su && su.profileVisibility !== 'private'}
           <div class="card">
@@ -432,7 +433,7 @@
 
   {#if profile.bookmarks}
     <section>
-      <h2>Bookmarks <span class="n">{profile.bookmarks.count}</span></h2>
+      <h2>Bookmarks <Badge>{profile.bookmarks.count}</Badge></h2>
       <div class="card">
         {#if profile.isMe && su && su.profileVisibility !== 'private'}
           <div class="cardhead">
@@ -463,7 +464,7 @@
 
   {#if profile.isMe || (following !== null && following.length > 0)}
     <section>
-      <h2>Following {#if following}<span class="n">{following.length}</span>{/if}</h2>
+      <h2>Following {#if following}<Badge>{following.length}</Badge>{/if}</h2>
       <div class="card">
         {#if following === null}
           <div class="pad"><p class="status">Loading…</p></div>
@@ -542,8 +543,6 @@
 
   section { margin-bottom: 22px; }
   h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; display: flex; align-items: baseline; gap: 8px; line-height: 1.25; }
-  /* A count badge, not floating text: a quiet neutral pill. (Accessibility contrast pass to come.) */
-  .n { font-size: calc(12px * var(--size-app)); font-weight: 600; color: var(--text-2); background: var(--surface-2); border-radius: 999px; padding: 1px 8px; font-variant-numeric: tabular-nums; }
   .list { list-style: none; margin: 0; padding: 0; }
   li a { display: flex; align-items: center; gap: 12px; padding: 14px 16px 14px calc(16px + var(--indent, 0px)); border-top: 1px solid var(--line); }
   /* A sub-collection is indented and its name sits quieter than its parent's, so the tree reads at a glance. */
@@ -551,10 +550,8 @@
   li:first-child a { border-top: 0; }
   .meta2 { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; vertical-align: middle; margin-left: 4px; }
   .desc { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .count { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; }
-  .fresh { flex: none; font-size: calc(11.5px * var(--size-app)); font-weight: 700; line-height: 1.5; padding: 0 7px; border-radius: 999px; color: var(--accent-ink); background: var(--accent); white-space: nowrap; }
   .chev { color: var(--text-3); font-size: calc(20px * var(--size-app)); }
   .add { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(15px * var(--size-app)); text-align: left; }
   li:first-child .add { border-top: 0; }
