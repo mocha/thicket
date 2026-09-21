@@ -12,6 +12,7 @@
   import { closeReader, reader, readerClosed } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
   import SourceIcon from './SourceIcon.svelte';
+  import Icon from './Icon.svelte';
   import ItemActions from './ItemActions.svelte';
   import NoteEditor from './NoteEditor.svelte';
   import NoteBlock from './NoteBlock.svelte';
@@ -133,7 +134,7 @@
         <span class="spacer"></span>
         <ItemActions {item} noteOpen={editing} onnote={noteButton} via="reader" />
         <button class="close" onclick={close} aria-label="Close">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          <Icon name="close" size={20} />
         </button>
       </header>
 

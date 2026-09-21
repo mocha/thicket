@@ -8,6 +8,7 @@
   import { loadCollections } from '$lib/collections.svelte';
   import CollectionCheckList from '$lib/components/CollectionCheckList.svelte';
   import Banner from '$lib/components/Banner.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -184,7 +185,7 @@
 
 {#if feed}
   <a class="back" href={feedHref(feed)}>
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+    <Icon name="back" size={16} stroke={2.4} />
     Back to feed
   </a>
 

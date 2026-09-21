@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import Icon from './Icon.svelte';
 
   /**
    * An inline notice inside a page: something went wrong, or something is
@@ -36,7 +37,7 @@
   </div>
   {#if dismissible}
     <button class="x" onclick={() => ondismiss?.()} aria-label="Dismiss">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+      <Icon name="close" size={16} stroke={2.2} />
     </button>
   {/if}
 </div>

@@ -9,6 +9,7 @@
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -246,7 +247,7 @@
 
 {#if col}
   <a class="back" href={collectionHref(handle, slug)}>
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+    <Icon name="back" size={16} stroke={2.4} />
     Back to {col.name} collection
   </a>
 
@@ -264,8 +265,8 @@
       {:else}
         <div class="titlerow">
           <h1>{col.name}</h1>
-          <button class="edit" onclick={() => (renaming = true)} aria-label="Rename this collection" title="Rename this collection">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z" /></svg>
+          <button class="iconbtn" onclick={() => (renaming = true)} aria-label="Rename this collection" title="Rename this collection">
+            <Icon name="pencil" size={20} />
           </button>
         </div>
       {/if}
@@ -396,7 +397,7 @@
         {#if orphans.length > 0}
           <button class="reveal" onclick={() => (showOrphans = !showOrphans)} aria-expanded={showOrphans}>
             View the {orphans.length} {orphans.length === 1 ? 'feed' : 'feeds'} which will be removed
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style:transform={showOrphans ? 'rotate(180deg)' : 'none'}><path d="M6 9l6 6 6-6" /></svg>
+            <Icon name="caret" size={14} stroke={2.4} dir={showOrphans ? 'up' : 'down'} />
           </button>
           {#if showOrphans}
             <ul class="orphans">
@@ -428,7 +429,6 @@
   .sheet h2 { font-family: var(--font-headings); font-size: calc(21px * var(--size-headings)); margin: 0 0 10px; overflow-wrap: anywhere; }
   .sheet p { margin: 0 0 10px; font-size: calc(15px * var(--size-app)); color: var(--text-2); }
   .reveal { display: inline-flex; align-items: center; gap: 6px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--accent); margin-bottom: 8px; }
-  .reveal svg { transition: transform 150ms ease; }
   .orphans { list-style: none; margin: 0 0 8px; padding: 0; border: 1px solid var(--line); border-radius: 12px; max-height: 40vh; overflow-y: auto; }
   .orphans li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-top: 1px solid var(--line); font-size: calc(14px * var(--size-app)); }
   .orphans li:first-child { border-top: 0; }
@@ -444,8 +444,8 @@
   .titlebar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .titlerow { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
   .rename { flex: 1; }
-  .edit { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
-  .edit:hover { background: var(--surface-2); color: var(--text); }
+  .iconbtn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
+  .iconbtn:hover { background: var(--surface-2); color: var(--text); }
   .rename { margin-top: 4px; }
   .rename input { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); font-weight: 600; width: 100%; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
   hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }

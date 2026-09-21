@@ -7,6 +7,7 @@
   import { showToast } from '$lib/toast.svelte';
   import Avatar from './Avatar.svelte';
   import AccountMenu from './AccountMenu.svelte';
+  import Icon from './Icon.svelte';
   import { display } from '$lib/display.svelte';
   import { marks, badge, anyNew, countText } from '$lib/marks.svelte';
 
@@ -130,7 +131,7 @@
       <!-- My collections: a group you can fold away. Your collections sit under it. -->
       <button type="button" class="heading" aria-expanded={collectionsOpen.open} aria-controls="my-collections" onclick={toggleCollectionsOpen}>
         {@render icon(icons.collections)}<span>Collections</span>
-        <svg class="groupcaret" class:open={collectionsOpen.open} viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+        <span class="groupcaret"><Icon name="caret" size={14} stroke={2.5} dir={collectionsOpen.open ? 'down' : 'right'} /></span>
       </button>
       {#if collectionsOpen.open}
       <ul class="cols" id="my-collections" aria-label="Your collections">
@@ -157,8 +158,8 @@
             <li class:parent={kids.length > 0}>
               {@render row(c)}
               {#if kids.length}
-                <button type="button" class="caret" class:open={isOpen(c)} aria-expanded={isOpen(c)} aria-label="{isOpen(c) ? 'Hide' : 'Show'} the collections inside {c.name}" onclick={() => toggleNavOpen(c.id)}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                <button type="button" class="caret" aria-expanded={isOpen(c)} aria-label="{isOpen(c) ? 'Hide' : 'Show'} the collections inside {c.name}" onclick={() => toggleNavOpen(c.id)}>
+                  <Icon name="caret" size={14} stroke={2.5} dir={isOpen(c) ? 'down' : 'right'} />
                 </button>
               {/if}
             </li>
@@ -210,7 +211,7 @@
       <button type="button" class="who" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}>
         <Avatar handle={me.handle} name={me.displayName ?? me.handle} size={34} v={me.avatarUpdatedAt} />
         <span class="names"><span class="dn">{me.displayName ?? me.handle}</span><span class="h">@{me.handle}</span></span>
-        <svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10l4 4 4-4" /></svg>
+        <span class="chev"><Icon name="caret" dir="down" size={16} stroke={2.5} /></span>
       </button>
     </div>
   {/if}
@@ -267,8 +268,7 @@
     /* "My collections": a header you can click to fold the list away. Looks like a row, reads like a heading. */
     nav:not(.paged) .heading { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 10px; font-size: calc(15px * var(--size-app)); font-weight: 600; color: var(--text); text-align: left; }
     nav:not(.paged) .heading:hover { background: var(--surface-2); }
-    nav:not(.paged) .groupcaret { flex: none; margin-left: auto; color: var(--text-3); transition: transform 120ms ease; }
-    nav:not(.paged) .groupcaret.open { transform: rotate(90deg); }
+    nav:not(.paged) .groupcaret { flex: none; margin-left: auto; display: flex; color: var(--text-3); }
     nav:not(.paged) .cols .filterrow { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); }
     nav:not(.paged) .cols .filterrow:focus-within { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
     nav:not(.paged) .cols .filterrow svg { flex: none; color: var(--text-3); }
@@ -288,8 +288,6 @@
     nav:not(.paged) .cols li.parent > a { flex: 1; min-width: 0; }
     nav:not(.paged) .cols .caret { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; color: var(--text-3); }
     nav:not(.paged) .cols .caret:hover { background: var(--surface-2); color: var(--text); }
-    nav:not(.paged) .cols .caret svg { transition: transform 120ms ease; }
-    nav:not(.paged) .cols .caret.open svg { transform: rotate(90deg); }
     nav:not(.paged) .cols li.child > a { padding-left: 24px; }
     nav:not(.paged) .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* Something new: the name goes bold, the count or dot sits beside it. Bold reads in greyscale where a colour would not. */
@@ -306,6 +304,6 @@
     nav:not(.paged) .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
     nav:not(.paged) .dn { font-weight: 600; font-size: calc(14px * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     nav:not(.paged) .h { font-size: calc(12px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    nav:not(.paged) .who .chev { flex: none; margin-left: auto; color: var(--text-3); }
+    nav:not(.paged) .who .chev { flex: none; margin-left: auto; display: flex; color: var(--text-3); }
   }
 </style>

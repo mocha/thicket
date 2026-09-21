@@ -10,6 +10,7 @@
   import ActivityList from '$lib/components/ActivityList.svelte';
   import SectionAudience from '$lib/components/SectionAudience.svelte';
   import NoteCard from '$lib/components/NoteCard.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
@@ -270,7 +271,7 @@
             <button type="button" class="removephoto" onclick={removePhoto} disabled={removingAvatar}>{removingAvatar ? 'Removing…' : 'Remove photo'}</button>
           {/if}
           <button type="button" class="iconbtn" onclick={startEdit} aria-label="Edit profile" title="Edit profile">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>
+            <Icon name="pencil" size={20} />
           </button>
         </div>
       {/if}
@@ -474,7 +475,7 @@
   .removephoto:hover:not(:disabled) { color: var(--danger); }
   .removephoto:disabled { opacity: 0.5; }
   /* Edit: a quiet pencil, the same at every width. */
-  .iconbtn { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--text-3); }
+  .iconbtn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
   .iconbtn:hover { background: var(--surface-2); color: var(--text); }
 
   /* Owner only: a muted one-line reminder in a soft box at the very top of the page. */
