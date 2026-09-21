@@ -9,6 +9,7 @@
   import { feedOrigin, hostOf, relativeTime } from '$lib/time';
   import SourceIcon from './SourceIcon.svelte';
   import FollowButton from './FollowButton.svelte';
+  import Icon from './Icon.svelte';
   import { session } from '$lib/session.svelte';
 
   let { feedId, onclose }: { feedId: number; onclose: () => void } = $props();
@@ -31,7 +32,7 @@
           <h2>{feed.title ?? hostOf(feed.url)}</h2>
           <a class="host" href={feed.siteUrl ?? feed.url} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
         </div>
-        <button class="close" onclick={() => dialog?.close()} aria-label="Close">×</button>
+        <button class="close" onclick={() => dialog?.close()} aria-label="Close"><Icon name="close" size={16} /></button>
       </header>
       {#if feed.description}<p class="desc">{feed.description}</p>{/if}
       <dl class="stats">
@@ -64,7 +65,7 @@
   .who { flex: 1; min-width: 0; }
   h2 { margin: 0; font-size: calc(19px * var(--size-headings)); font-family: var(--font-headings); line-height: 1.2; overflow-wrap: anywhere; }
   .host { font-size: calc(13px * var(--size-app)); color: var(--accent); font-weight: 600; }
-  .close { width: 32px; height: 32px; border-radius: 50%; font-size: calc(22px * var(--size-app)); color: var(--text-3); align-self: flex-start; }
+  .close { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; color: var(--text-3); align-self: flex-start; }
   .desc { margin: 12px 0 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .stats div { display: flex; flex-direction: column; gap: 2px; }

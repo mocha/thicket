@@ -12,6 +12,7 @@
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import River from '$lib/components/River.svelte';
   import { showToast } from '$lib/toast.svelte';
 
@@ -82,7 +83,7 @@
       <div class="actions">
         {#if col.isMe}
           <AddFeedButton collectionIds={[col!.id]} via="collection_page" />
-          <a class="btn icon" href={manageCollectionHref(handle, slug)} aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg></a>
+          <a class="btn icon" href={manageCollectionHref(handle, slug)} aria-label="Settings" title="Settings"><Icon name="gear" size={20} /></a>
         {:else if session.user}
           <button class="btn primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</button>
         {:else}
@@ -92,7 +93,7 @@
     </div>
     {#if col.description}<p class="desc">{col.description}</p>{/if}
     <p class="sub">
-      {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> ·&nbsp;{/if}{#if col.isMe && audienceTag(col.visibility)}<span class="tag">{audienceTag(col.visibility)}</span> ·&nbsp;{/if}<button class="reveal" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style:transform={showFeeds ? 'rotate(90deg)' : 'none'}><path d="M9 6l6 6-6 6" /></svg></button>
+      {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> ·&nbsp;{/if}{#if col.isMe && audienceTag(col.visibility)}<span class="tag">{audienceTag(col.visibility)}</span> ·&nbsp;{/if}<button class="reveal" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<Icon name="caret" size={14} stroke={2.4} dir={showFeeds ? 'down' : 'right'} /></button>
     </p>
   </header>
 
@@ -113,7 +114,7 @@
           <button class="btn" onclick={copyLink}>Copy link</button>
         </section>
       </div>
-      <button class="close" onclick={() => explain?.close()} aria-label="Close">×</button>
+      <button class="close" onclick={() => explain?.close()} aria-label="Close"><Icon name="close" size={16} /></button>
     </div>
   </dialog>
 
@@ -158,7 +159,6 @@
   .sub { margin: 4px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
   .reveal { display: inline-flex; align-items: center; gap: 3px; font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
-  .reveal svg { transition: transform 150ms ease; }
   .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
   .actions { flex: none; display: flex; gap: 8px; align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
   .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
@@ -176,7 +176,7 @@
   .ways section { background: var(--bg); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
   .ways h3 { margin: 0; font-size: calc(15px * var(--size-app)); }
   .ways p { margin: 0 0 4px; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
-  .close { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; font-size: calc(22px * var(--size-app)); color: var(--text-3); }
+  .close { position: absolute; top: 10px; right: 10px; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; color: var(--text-3); }
   .feeds { margin-bottom: 18px; }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .list li { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--line); }

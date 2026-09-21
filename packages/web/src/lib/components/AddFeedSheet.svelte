@@ -15,6 +15,7 @@
   import { collectionStore, defaultCollection, loadCollections, namedCollections } from '$lib/collections.svelte';
   import { hostOf } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
+  import Icon from './Icon.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let input = $state<HTMLInputElement | null>(null);
@@ -120,7 +121,7 @@
   <form class="sheet" onsubmit={(e) => { e.preventDefault(); void submit(); }}>
     <header>
       <h2>Add a feed</h2>
-      <button type="button" class="close" onclick={() => dialog?.close()} aria-label="Close">×</button>
+      <button type="button" class="close" onclick={() => dialog?.close()} aria-label="Close"><Icon name="close" size={16} /></button>
     </header>
     <p class="lede">Enter the address of a site, blog, subreddit, or YouTube channel or video, and thicket finds the feed for you. You can also enter the feed itself.</p>
     <input bind:this={input} bind:value={url} type="url" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="example.com" required disabled={busy} />
@@ -192,7 +193,7 @@
   }
   header { display: flex; align-items: center; justify-content: space-between; }
   h2 { margin: 0; font-size: calc(22px * var(--size-headings)); font-family: var(--font-headings); }
-  .close { width: 32px; height: 32px; border-radius: 50%; font-size: calc(22px * var(--size-app)); color: var(--text-3); }
+  .close { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; color: var(--text-3); }
   .lede { color: var(--text-2); margin: -6px 0 0; font-size: calc(14px * var(--size-app)); }
   input[type='url'] { padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); width: 100%; }
   input[type='url']:focus { outline: 2px solid var(--accent); outline-offset: 1px; }

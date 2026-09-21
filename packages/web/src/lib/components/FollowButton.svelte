@@ -21,6 +21,7 @@
   import { api } from '$lib/api';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import CollectionCheckList from './CollectionCheckList.svelte';
+  import Icon from './Icon.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   let { feedId, ids = $bindable(), name = 'this feed', compact = false, inline = false, mainLabel, onmain, onchange }: {
@@ -98,7 +99,7 @@
     <button class="main" onclick={toggle} aria-expanded={open}>{label}</button>
   {/if}
   <button class="more" onclick={toggle} aria-expanded={open} aria-label="More options for {name}">
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+    <Icon name="caret" dir="down" size={16} stroke={2.2} />
   </button>
 </div>
 
