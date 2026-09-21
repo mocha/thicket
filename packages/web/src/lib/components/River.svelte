@@ -288,8 +288,8 @@
 {/if}
 
 <style>
-  .river { display: flex; flex-direction: column; gap: 14px; }
-  .day { display: flex; flex-direction: column; gap: 14px; }
+  .river { display: flex; flex-direction: column; gap: var(--space-3); }
+  .day { display: flex; flex-direction: column; gap: var(--space-3); }
   /* Sticky within its own day, so the next day's heading pushes it away instead of piling on. Bleeds into main's side padding so card shadows don't peek past it. */
   .dayhead { position: sticky; top: 0; z-index: 5; margin: 0 -12px; padding: 10px 12px 6px; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text-2); background: var(--bg); }
   .dayhead::after { content: ''; position: absolute; left: 0; right: 0; bottom: -8px; height: 8px; background: linear-gradient(var(--bg), transparent); pointer-events: none; }

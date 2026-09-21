@@ -1,32 +1,60 @@
 <script lang="ts">
+  import { noOrphan } from '$lib/orphans';
   /**
-   * One saved post, mine or someone else's. The body links out (click out is
-   * the reading model); the one action in the corner is whatever the page
-   * passes: remove for my own list, save for someone else's.
+   * One saved post, mine or someone else's. The whole body — words and
+   * thumbnail — links to the post, opening it here or in a tab depending on
+   * the reader's setting, the same as every other card. The one action in the
+   * corner is whatever the page passes: remove for my own list, save for
+   * someone else's.
    */
   import type { Bookmark, PublicBookmark } from '$lib/api';
+  import { itemsApi } from '$lib/api';
   import { hostOf, relativeTime } from '$lib/time';
-  import SourceIcon from './SourceIcon.svelte';
+  import { openReader, readsInline } from '$lib/reader.svelte';
+  import Card from './Card.svelte';
+  import CardMeta from './CardMeta.svelte';
   import IconButton from './IconButton.svelte';
 
   let { b, onopen, action }: {
     b: Bookmark | PublicBookmark; onopen?: () => void;
     action?: { label: string; title?: string; on: boolean; run: () => void; kind: 'remove' | 'save' };
   } = $props();
+
+  const site = $derived(b.siteTitle ?? hostOf(b.url));
+
+  /**
+   * A plain click opens the post here when that is the reader's setting and we
+   * still know which post this was saved from; everything else — a bookmark
+   * saved from a bare address, middle-click, long-press — follows the link
+   * out. If fetching the post fails we open the tab ourselves, since the click
+   * was already held back.
+   */
+  async function opened(e: MouseEvent) {
+    const plain = e.type === 'click' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+    if (plain && b.itemId !== null && readsInline()) {
+      e.preventDefault();
+      onopen?.();
+      try {
+        openReader(await itemsApi.get(b.itemId));
+      } catch {
+        window.open(b.url, '_blank', 'noopener');
+      }
+      return;
+    }
+    onopen?.();
+  }
 </script>
 
-<li class="bm">
-  <a class="body" href={b.url} target="_blank" rel="noopener" onclick={onopen}>
-    <div class="meta">
-      <SourceIcon feedId={b.feedId} hasIcon={b.hasIcon} name={b.siteTitle ?? hostOf(b.url)} size={18} />
-      <span class="site">{b.siteTitle ?? hostOf(b.url)}</span>
-      {#if b.publishedAt}<span class="dot">·</span><time>{relativeTime(b.publishedAt)}</time>{/if}
+<Card as="li" class="bm">
+  <a class="body" href={b.url} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
+    <div class="text">
+      <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} />
+      <h3 class="card-title">{noOrphan(b.title ?? b.url)}</h3>
+      {#if b.summary}<p class="card-summary">{b.summary}</p>{/if}
+      <div class="saved">Saved <time datetime={b.savedAt} title={new Date(b.savedAt).toLocaleString()}>{relativeTime(b.savedAt)}</time></div>
     </div>
-    <h3>{b.title ?? b.url}</h3>
-    {#if b.summary}<p>{b.summary}</p>{/if}
-    <div class="saved">Saved {relativeTime(b.savedAt)}</div>
+    {#if b.imageUrl}<img class="thumb" src={b.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onerror={(e) => ((e.currentTarget as HTMLImageElement).hidden = true)} />{/if}
   </a>
-  {#if b.imageUrl}<img class="thumb" src={b.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onerror={(e) => ((e.currentTarget as HTMLImageElement).hidden = true)} />{/if}
   {#if action}
     {#if action.kind === 'remove'}
       <IconButton class="corner remove" icon="close" onclick={action.run} label={action.label} title={action.title ?? action.label} />
@@ -34,19 +62,17 @@
       <IconButton class="corner" icon="bookmark" pressed={action.on} onclick={action.run} label={action.label} title={action.title ?? action.label} />
     {/if}
   {/if}
-</li>
+</Card>
 
 <style>
-  .bm { position: relative; display: flex; gap: 12px; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; list-style: none; }
-  .body { flex: 1; min-width: 0; padding-right: 28px; }
-  .meta { display: flex; align-items: center; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); margin-bottom: 4px; min-width: 0; }
-  .site { font-weight: 600; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  h3 { margin: 0; font-family: var(--font-headings); font-size: calc(var(--text-base) * var(--size-headings)); line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
-  .body p { margin: 4px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .saved { margin-top: 6px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .thumb { flex: none; width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--surface-2); align-self: center; }
+  .body { display: flex; gap: var(--space-3); align-items: center; }
+  .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); padding-right: 28px; }
+  @media (hover: hover) { .body:hover h3 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
+  p { --summary-lines: 2; }
+  .saved { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .thumb { flex: none; width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--surface-2); }
   /* The one action sits in the card's top corner, over the body's padding. */
-  .bm :global(.corner) { position: absolute; top: 6px; right: 6px; }
+  :global(.bm .corner) { position: absolute; top: 6px; right: 6px; }
   /* Taking a bookmark away is the one destructive thing here, so it hovers red. */
-  .bm :global(button.remove):hover { color: var(--danger); }
+  :global(.bm button.remove):hover { color: var(--danger); }
 </style>

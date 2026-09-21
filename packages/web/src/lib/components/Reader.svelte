@@ -208,7 +208,7 @@
   h1 { margin: 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
   .byline { margin: 10px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); display: flex; gap: 6px; flex-wrap: wrap; }
   .hero { width: 100%; border-radius: var(--radius-sm); margin-top: 18px; background: var(--surface-2); }
-  .teaser { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); color: var(--text-2); margin: 18px 0 0; }
+  .teaser { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: 18px 0 0; }
   .loading, .nobody { margin: 20px 0 0; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
 
   /* The article. Publisher HTML, sanitized to a known set of tags, set in the reading face. */

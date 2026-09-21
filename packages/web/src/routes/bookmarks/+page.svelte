@@ -153,7 +153,7 @@
     margin-top: 8px; padding: 7px 14px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--line);
     font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; max-width: 100%;
   }
-  .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .empty { text-align: center; padding: 40px 20px; color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 6px; }
   .empty p { margin: 0 auto; max-width: 440px; font-size: calc(var(--text-base) * var(--size-app)); }

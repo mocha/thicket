@@ -60,13 +60,15 @@
   --space-6: 32px;
 
   /* Type scale: one ladder of named interface sizes. Every size in the app is
-     one of these six. Multiply by the reader's role scale at the point of use,
-     e.g. calc(var(--text-sm) * var(--size-app)), so text resizing keeps
+     one of these seven. Multiply by the reader's role scale at the point of
+     use, e.g. calc(var(--text-sm) * var(--size-app)), so text resizing keeps
      working exactly as before. --text-reading is the article body's own size
-     and is always multiplied by --size-reading. */
+     and is always multiplied by --size-reading. --text-lg is the card title:
+     bigger than body text, smaller than a page heading. */
   --text-xs: 12px;
   --text-sm: 14px;
   --text-base: 16px;
+  --text-lg: 20px;
   --text-xl: 21px;
   --text-2xl: 26px;
   --text-reading: 17px;

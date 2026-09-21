@@ -85,7 +85,7 @@
   .top { margin-bottom: 14px; }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .list { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; }
+  .list { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; }
   .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: 18px 0; margin: 0; }
   .status.error { color: var(--danger); }
   .empty { text-align: center; padding: 40px 20px; color: var(--text-2); }
