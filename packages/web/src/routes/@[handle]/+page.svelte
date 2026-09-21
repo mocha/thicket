@@ -564,7 +564,7 @@
   .new form button:disabled { opacity: 0.5; }
   .status { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: 8px 0; margin: 0; }
   .status a { color: var(--accent); font-weight: 600; }
-  .notes { display: flex; flex-direction: column; gap: 14px; margin: 4px 0 0; padding: 0; list-style: none; }
+  .notes { display: flex; flex-direction: column; gap: var(--space-3); margin: 4px 0 0; padding: 0; list-style: none; }
   .all { display: block; width: fit-content; margin: 12px 0 0 auto; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .empty { text-align: center; padding: 50px 20px; color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: 10px; }
   .empty p { margin: 0; }
