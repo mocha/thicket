@@ -3,6 +3,10 @@
 A feed reader for the rewilded web. **Early — running, in use, and changing
 weekly.** Expect rough edges and occasional breaking changes before 1.0.
 
+The project's home is **[readthicket.com](https://readthicket.com)**: that is
+the instance its authors run, and the place to read about it or sign up. This
+repository is the code for anyone who wants to run their own.
+
 You follow the sites you like; thicket shows you what they published, newest
 first. It is a reader, not a network, and the difference is the point:
 
