@@ -15,6 +15,7 @@
   import { session, setMe } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
   import VisitorMore from './VisitorMore.svelte';
+  import Badge from './Badge.svelte';
 
   let { handle, isMe }: { handle: string; isMe: boolean } = $props();
 
@@ -106,8 +107,7 @@
               </div>
               <p class="what">
                 Added {plural(e.payload.count, 'feed')} to
-                <a href={publicCollectionHref(handle, e.payload.collection.slug)}>{e.payload.collection.name}</a>
-                {#if isMe && audienceTag(e.payload.collection.visibility)}<span class="tag">{audienceTag(e.payload.collection.visibility)}</span>{/if}
+                <a href={publicCollectionHref(handle, e.payload.collection.slug)}>{e.payload.collection.name}</a>{#if isMe && audienceTag(e.payload.collection.visibility)}<Badge class="aftertext">{audienceTag(e.payload.collection.visibility)}</Badge>{/if}
               </p>
               <span class="when">{relativeTime(e.at)}</span>
             </div>
@@ -124,8 +124,7 @@
                   from <a href="/@{e.payload.copiedFrom.handle}">@{e.payload.copiedFrom.handle}</a>
                 {:else}
                   Made a collection, <a href={publicCollectionHref(handle, e.payload.slug)}>{e.payload.name}</a>
-                {/if}
-                {#if isMe && audienceTag(e.payload.visibility)}<span class="tag">{audienceTag(e.payload.visibility)}</span>{/if}
+                {/if}{#if isMe && audienceTag(e.payload.visibility)}<Badge class="aftertext">{audienceTag(e.payload.visibility)}</Badge>{/if}
               </p>
               <span class="when">{relativeTime(e.at)}</span>
             </div>
@@ -189,7 +188,8 @@
   .rest { flex: none; }
   .rest::before { content: '· '; }
   blockquote { margin: 6px 0 0 30px; padding-left: 10px; border-left: 2px solid var(--line); font-size: calc(14px * var(--size-app)); color: var(--text-2); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-  .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
+  /* A pill riding after a link, mid-sentence, needs its own gap. */
+  .what :global(.aftertext) { margin-left: var(--space-2); }
   .more { display: block; width: 100%; text-align: center; color: var(--accent); font-weight: 600; font-size: calc(14px * var(--size-app)); }
   .more:disabled { opacity: 0.6; }
 </style>
