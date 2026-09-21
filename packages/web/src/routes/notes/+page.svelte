@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { api, notesApi, type RiverItem } from '$lib/api';
   import NoteCard from '$lib/components/NoteCard.svelte';
+  import Button from '$lib/components/Button.svelte';
 
   /**
    * My Notes: every post I have left a note on, newest note first, shown as
@@ -67,7 +68,7 @@
     </svg>
     <h2>No notes yet</h2>
     <p>Every post has a note icon next to its bookmark. Press it, write what you thought, and it stays with the post: in All my feeds, in any collection it appears in, and here. Markdown works. One note per post, edit it any time. Depending on your settings, people who follow you can read your notes and you can read theirs.</p>
-    <div class="ctas"><a class="cta" href="/">Go to All my feeds</a><a class="cta ghost" href="/settings">Note settings</a></div>
+    <div class="ctas"><Button variant="primary" size="lg" href="/">Go to All my feeds</Button><Button size="lg" href="/settings">Note settings</Button></div>
   </div>
 {:else}
   <ul class="list">
@@ -92,6 +93,4 @@
   .empty p { margin: 0 auto; max-width: 460px; font-size: calc(15px * var(--size-app)); }
   .illo { display: block; margin: 0 auto 16px; max-width: 100%; }
   .ctas { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
-  .cta { display: inline-block; background: var(--accent); color: var(--accent-ink); padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: calc(14px * var(--size-app)); }
-  .cta.ghost { background: var(--surface); color: var(--text-2); border: 1px solid var(--line); }
 </style>

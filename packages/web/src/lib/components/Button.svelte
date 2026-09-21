@@ -8,7 +8,7 @@
    */
   interface Props {
     variant?: 'primary' | 'ghost' | 'danger';
-    size?: 'sm' | 'md';
+    size?: 'sm' | 'md' | 'lg';
     solid?: boolean;
     href?: string;
     type?: 'button' | 'submit' | 'reset';
@@ -87,6 +87,10 @@
   }
   .btn.sm {
     padding: var(--space-1) var(--space-3);
+  }
+  .btn.lg {
+    padding: var(--space-3) var(--space-5);
+    font-size: calc(var(--text-base) * var(--size-app));
   }
 
   .btn.primary {

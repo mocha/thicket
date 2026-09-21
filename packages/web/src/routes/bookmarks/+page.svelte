@@ -5,6 +5,7 @@
   import { api, bookmarksApi, profileHref, type Bookmark, type BookmarkSources } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
+  import Button from '$lib/components/Button.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   let list = $state<Bookmark[]>([]);
@@ -111,7 +112,7 @@
       </svg>
       <h2>Nothing saved yet</h2>
       <p>Every post has a bookmark in its top right corner. Press it and the post is kept here for as long as you like, even after it has scrolled out of All my feeds. Save what you want to read later, come back to, or share from your profile.</p>
-      <div class="ctas"><a class="cta" href="/">Go to All my feeds</a><a class="cta ghost" href="/explore">Explore feeds</a></div>
+      <div class="ctas"><Button variant="primary" size="lg" href="/">Go to All my feeds</Button><Button size="lg" href="/explore">Explore feeds</Button></div>
     {/if}
   </div>
 {:else}
@@ -143,7 +144,5 @@
   .empty p { margin: 0 auto; max-width: 440px; font-size: calc(15px * var(--size-app)); }
   .illo { display: block; margin: 0 auto 16px; max-width: 100%; }
   .ctas { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
-  .cta { display: inline-block; background: var(--accent); color: var(--accent-ink); padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: calc(14px * var(--size-app)); }
-  .cta.ghost { background: var(--surface); color: var(--text-2); border: 1px solid var(--line); }
   .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 16px 0; }
 </style>

@@ -255,8 +255,8 @@
           <label><span>About you</span><textarea bind:value={dbio} rows="3" maxlength="500" placeholder="A line or two. What you read, what you make."></textarea></label>
           <label><span>Homepage</span><input type="url" inputmode="url" bind:value={dhome} placeholder="https://" /></label>
           <div class="editrow">
-            <button type="button" class="ghost" onclick={() => (editing = false)} disabled={savingProfile}>Cancel</button>
-            <button type="button" class="save" onclick={saveEdit} disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save'}</button>
+            <Button onclick={() => (editing = false)} disabled={savingProfile}>Cancel</Button>
+            <Button variant="primary" onclick={saveEdit} disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save'}</Button>
           </div>
         </div>
       {:else}
@@ -269,7 +269,7 @@
       {#if !editing}
         <div class="ownerctrls">
           {#if profile.avatarUpdatedAt}
-            <button type="button" class="removephoto" onclick={removePhoto} disabled={removingAvatar}>{removingAvatar ? 'Removing…' : 'Remove photo'}</button>
+            <Button onclick={removePhoto} disabled={removingAvatar}>{removingAvatar ? 'Removing…' : 'Remove photo'}</Button>
           {/if}
           <button type="button" class="iconbtn" onclick={startEdit} aria-label="Edit profile" title="Edit profile">
             <Icon name="pencil" size={20} />
@@ -471,9 +471,6 @@
   .photobtn:hover { opacity: 0.92; }
   .photobtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .ownerctrls { flex: none; display: flex; align-items: center; gap: 8px; }
-  .removephoto { padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-3); }
-  .removephoto:hover:not(:disabled) { color: var(--danger); }
-  .removephoto:disabled { opacity: 0.5; }
   /* Edit: a quiet pencil, the same at every width. */
   .iconbtn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
   .iconbtn:hover { background: var(--surface-2); color: var(--text); }
@@ -510,10 +507,6 @@
   .edit input, .edit textarea { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(15px * var(--size-app)); font-family: inherit; resize: vertical; }
   .edit input:focus, .edit textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .editrow { display: flex; justify-content: flex-end; gap: 8px; }
-  .editrow button { padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: calc(14px * var(--size-app)); }
-  .editrow .ghost { border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
-  .editrow .save { background: var(--accent); color: var(--accent-ink); }
-  .editrow button:disabled { opacity: 0.5; }
 
   section { margin-bottom: 22px; }
   h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; display: flex; align-items: baseline; gap: 8px; line-height: 1.25; }

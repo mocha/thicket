@@ -14,6 +14,7 @@
   import Tiles from './Tiles.svelte';
   import FontTable from './FontTable.svelte';
   import { APPEARANCE_ART, READING_ART } from './art';
+  import Button from '$lib/components/Button.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let open = $state(false);
@@ -62,11 +63,11 @@
       <footer>
         <button type="button" class="link" onclick={() => finish('advanced')}>Advanced options</button>
         <span class="spacer"></span>
-        {#if step > 0}<button type="button" onclick={() => step--}>Back</button>{/if}
+        {#if step > 0}<Button onclick={() => step--}>Back</Button>{/if}
         {#if step < STEPS.length - 1}
-          <button type="button" class="primary" onclick={() => step++}>Next</button>
+          <Button variant="primary" onclick={() => step++}>Next</Button>
         {:else}
-          <button type="button" class="primary" onclick={() => finish('done')}>Start reading</button>
+          <Button variant="primary" onclick={() => finish('done')}>Start reading</Button>
         {/if}
       </footer>
     </div>
@@ -92,7 +93,6 @@
   footer { display: flex; align-items: center; gap: 8px; padding: 14px 20px calc(16px + var(--safe-b)); border-top: 1px solid var(--line); margin-top: 12px; }
   .spacer { flex: 1; }
   footer button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text-2); background: var(--surface); }
-  footer button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   footer button.link { border: 0; padding: 10px 4px; color: var(--accent); }
   footer button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>

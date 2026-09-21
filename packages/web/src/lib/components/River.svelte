@@ -20,6 +20,7 @@
   import { marks, loadMarks, anchorFor, advance, begin, recount, countText } from '$lib/marks.svelte';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import VisitorMore from './VisitorMore.svelte';
+  import Button from '$lib/components/Button.svelte';
 
   let { collection = null, feed = null, showSource = true, emptyTitle = 'Nothing here yet', emptyBody = 'thicket shows the posts of sites you follow, newest first, with nothing in between. Add a site by its address and its posts start arriving here, or look through Explore to see what other people here read.', emptyHref = null, emptyCta = 'Add a feed', emptyAction = () => openAddFeed({ via: 'empty_river' }) }: {
     collection?: number | null; feed?: number | null; showSource?: boolean;
@@ -239,8 +240,8 @@
         <h2>{emptyTitle}</h2>
         <p>{emptyBody}</p>
         <div class="ctas">
-          {#if emptyHref}<a class="cta" href={emptyHref}>{emptyCta}</a>{:else if emptyAction}<button type="button" class="cta" onclick={emptyAction}>{emptyCta}</button>{/if}
-          {#if collection === null && feed === null}<a class="cta ghost" href="/explore">Explore feeds</a>{/if}
+          {#if emptyHref}<Button variant="primary" size="lg" href={emptyHref}>{emptyCta}</Button>{:else if emptyAction}<Button variant="primary" size="lg" onclick={emptyAction}>{emptyCta}</Button>{/if}
+          {#if collection === null && feed === null}<Button size="lg" href="/explore">Explore feeds</Button>{/if}
         </div>
       </div>
     {/if}
@@ -274,8 +275,8 @@
         <h2>{emptyTitle}</h2>
         <p>{emptyBody}</p>
         <div class="ctas">
-          {#if emptyHref}<a class="cta" href={emptyHref}>{emptyCta}</a>{:else if emptyAction}<button type="button" class="cta" onclick={emptyAction}>{emptyCta}</button>{/if}
-          {#if collection === null && feed === null}<a class="cta ghost" href="/explore">Explore feeds</a>{/if}
+          {#if emptyHref}<Button variant="primary" size="lg" href={emptyHref}>{emptyCta}</Button>{:else if emptyAction}<Button variant="primary" size="lg" onclick={emptyAction}>{emptyCta}</Button>{/if}
+          {#if collection === null && feed === null}<Button size="lg" href="/explore">Explore feeds</Button>{/if}
         </div>
       </div>
     {/if}
@@ -297,8 +298,6 @@
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(24px * var(--size-headings)); margin: 0 0 8px; }
   .empty p { margin: 0 auto; max-width: 440px; }
   .ctas { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
-  .cta { display: inline-block; background: var(--accent); color: var(--accent-ink); padding: 12px 20px; border-radius: 999px; font-weight: 600; }
-  .cta.ghost { background: var(--surface); color: var(--text-2); border: 1px solid var(--line); }
   .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 18px 0; margin: 0; }
   .status.error { color: var(--danger); }
   .sentinel { height: 1px; }
