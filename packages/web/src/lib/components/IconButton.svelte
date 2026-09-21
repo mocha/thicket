@@ -18,6 +18,8 @@
   interface Props {
     icon: 'gear' | 'pencil' | 'close' | 'caret' | 'back' | 'dots' | 'bookmark' | 'note';
     label: string;
+    /** Which way a caret points. Ignored by the glyphs that have no direction. */
+    dir?: 'right' | 'down' | 'left' | 'up';
     variant?: 'plain' | 'bordered';
     size?: 'sm' | 'md' | 'lg';
     /** Only for a spot that needs a glyph off the default scale. */
@@ -34,6 +36,7 @@
   let {
     icon,
     label,
+    dir = 'right',
     variant = 'plain',
     size = 'md',
     iconSize,
@@ -63,7 +66,7 @@
     onclick={disabled ? undefined : onclick}
     {...rest}
   >
-    <Icon name={icon} size={glyph} fill={pressed} />
+    <Icon name={icon} size={glyph} fill={pressed} {dir} />
   </a>
 {:else}
   <button
@@ -77,7 +80,7 @@
     {onclick}
     {...rest}
   >
-    <Icon name={icon} size={glyph} fill={pressed} />
+    <Icon name={icon} size={glyph} fill={pressed} {dir} />
   </button>
 {/if}
 
