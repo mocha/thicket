@@ -17,6 +17,7 @@
   import FollowButton from '$lib/components/FollowButton.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
+  import Badge from '$lib/components/Badge.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   /**
@@ -457,31 +458,31 @@
   {#if scope === 'all'}
     {#if res.feeds.rows.length}
       <section class="group">
-        <h2>Feeds <span class="count">{res.feeds.total.toLocaleString()}</span>{#if res.feeds.total > res.feeds.rows.length}<button class="link all" onclick={() => setScope('feeds')}>See all</button>{/if}</h2>
+        <h2>Feeds <Badge>{res.feeds.total.toLocaleString()}</Badge>{#if res.feeds.total > res.feeds.rows.length}<button class="link all" onclick={() => setScope('feeds')}>See all</button>{/if}</h2>
         <ul class="list">{#each res.feeds.rows as f (f.id)}{@render feedRow(f, f)}{/each}</ul>
       </section>
     {/if}
     {#if res.collections.rows.length}
       <section class="group">
-        <h2>Collections <span class="count">{res.collections.total.toLocaleString()}</span>{#if res.collections.total > res.collections.rows.length}<button class="link all" onclick={() => setScope('collections')}>See all</button>{/if}</h2>
+        <h2>Collections <Badge>{res.collections.total.toLocaleString()}</Badge>{#if res.collections.total > res.collections.rows.length}<button class="link all" onclick={() => setScope('collections')}>See all</button>{/if}</h2>
         <ul class="list">{#each res.collections.rows as c (c.id)}{@render colRow(c, c)}{/each}</ul>
       </section>
     {/if}
     {#if res.posts.rows.length}
       <section class="group">
-        <h2>Posts <span class="count">{res.posts.total.toLocaleString()}</span>{#if res.posts.total > res.posts.rows.length}<button class="link all" onclick={() => setScope('posts')}>See all</button>{/if}</h2>
+        <h2>Posts <Badge>{res.posts.total.toLocaleString()}</Badge>{#if res.posts.total > res.posts.rows.length}<button class="link all" onclick={() => setScope('posts')}>See all</button>{/if}</h2>
         <ul class="list">{#each res.posts.rows as p (p.id)}{@render postRow(p)}{/each}</ul>
       </section>
     {/if}
     {#if res.people.rows.length}
       <section class="group">
-        <h2>People <span class="count">{res.people.total.toLocaleString()}</span>{#if res.people.total > res.people.rows.length}<button class="link all" onclick={() => setScope('people')}>See all</button>{/if}</h2>
+        <h2>People <Badge>{res.people.total.toLocaleString()}</Badge>{#if res.people.total > res.people.rows.length}<button class="link all" onclick={() => setScope('people')}>See all</button>{/if}</h2>
         <ul class="list">{#each res.people.rows as u (u.handle)}{@render personRow(u, u)}{/each}</ul>
       </section>
     {/if}
   {:else}
     <section class="group">
-      <h2>{SCOPES.find((s) => s.id === scope)?.label} <span class="count">{(group?.total ?? 0).toLocaleString()}</span></h2>
+      <h2>{SCOPES.find((s) => s.id === scope)?.label} <Badge>{(group?.total ?? 0).toLocaleString()}</Badge></h2>
       <ul class="list">
         {#if scope === 'feeds'}{#each more as f (( f as SearchFeed).id)}{@render feedRow(f as SearchFeed, f as SearchFeed)}{/each}
         {:else if scope === 'collections'}{#each more as c ((c as SearchCollection).id)}{@render colRow(c as SearchCollection, c as SearchCollection)}{/each}
@@ -521,7 +522,6 @@
   .field :global(.clear) { position: absolute; right: 8px; }
   .pane :global(.scopes) { margin-bottom: 4px; }
   h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0; display: flex; align-items: baseline; gap: 8px; }
-  .count { color: var(--text-3); font-weight: 400; font-size: calc(var(--text-base) * var(--size-app)); font-family: var(--font); font-variant-numeric: tabular-nums; }
   /* The per-view explainer: the caption above the filters, saying what this
      view is before its controls. A small accent-tinted icon sets it apart from
      the plain text below; the icon's left edge lines up with the filter labels. */
@@ -565,9 +565,9 @@
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .handle { font-weight: 400; color: var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); margin-left: 4px; }
+  .handle { font-weight: 400; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-left: 4px; }
   /* Wraps rather than truncates: every part of it is a fact someone is deciding on. */
-  .sub2 { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
+  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .desc { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .desc mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
   /* Why this row is here: the same numbers the ranking is made of, in words. */
