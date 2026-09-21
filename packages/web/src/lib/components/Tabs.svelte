@@ -126,39 +126,44 @@
   }
 </script>
 
-<!-- Two elements, not one: the outer one does the sideways scrolling and is
-     given a little room above and below so it never crops the lifted tab's
-     shadow; the inner one is the track the reader sees. -->
+<!-- Three elements, not one. The outer one is the caller's to position. The
+     middle one does the sideways scrolling, with a little room above and below
+     so it never crops the lifted tab's shadow — room it then takes back off
+     the layout, so the row still sits exactly where it is put. The inner one
+     is the track the reader sees. -->
 <div class="tabs {klass}" class:fill {...rest}>
-  <div bind:this={root} class="track" role="tablist" aria-label={label} {onkeydown}>
-    {#each tabs as t, i (t.value)}
-      <button
-        bind:this={btns[i]}
-        type="button"
-        role="tab"
-        aria-selected={t.value === value}
-        aria-controls={panel}
-        tabindex={i === stop ? 0 : -1}
-        disabled={t.disabled}
-        onclick={() => t.value !== value && onchange(t.value)}
-      >
-        {t.label}{#if t.count !== undefined}<span class="n">{t.count}</span>{/if}
-      </button>
-    {/each}
+  <div class="scroll">
+    <div bind:this={root} class="track" role="tablist" aria-label={label}>
+      {#each tabs as t, i (t.value)}
+        <button
+          bind:this={btns[i]}
+          type="button"
+          role="tab"
+          aria-selected={t.value === value}
+          aria-controls={panel}
+          tabindex={i === stop ? 0 : -1}
+          disabled={t.disabled}
+          onclick={() => t.value !== value && onchange(t.value)}
+          {onkeydown}
+        >
+          {t.label}{#if t.count !== undefined}<span class="n">{t.count}</span>{/if}
+        </button>
+      {/each}
+    </div>
   </div>
 </div>
 
 <style>
-  .tabs {
-    /* The padding is the room the lifted tab's shadow needs; the margin takes
-       it back off the layout, so the row still sits where it is put. */
+  .scroll {
+    /* The padding is the room the lifted tab's shadow needs; the matching
+       negative margin takes it back off the layout. */
     padding: 6px 0;
     margin: -6px 0;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
   }
-  .tabs::-webkit-scrollbar {
+  .scroll::-webkit-scrollbar {
     display: none;
   }
 
@@ -189,7 +194,7 @@
     white-space: nowrap;
     transition: background 0.12s ease, color 0.12s ease;
   }
-  .tabs.fill .track button {
+  .fill .track button {
     flex: 1;
   }
 
