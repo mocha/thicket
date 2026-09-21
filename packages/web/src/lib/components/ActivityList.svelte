@@ -167,7 +167,7 @@
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .cardhead { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface-2); }
   .ctrl-label { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
-  .cardhead :global(.seg) { flex: none; width: min(320px, 100%); }
+  .cardhead :global(.cg) { flex: none; width: min(320px, 100%); }
   .pad { padding: 16px; }
   .foot { padding: 12px 16px; border-top: 1px solid var(--line); }
   .status { color: var(--text-3); font-size: calc(14px * var(--size-app)); margin: 0; }

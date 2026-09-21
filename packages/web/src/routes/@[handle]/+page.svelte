@@ -9,6 +9,7 @@
   import AvatarCropDialog from '$lib/components/AvatarCropDialog.svelte';
   import ActivityList from '$lib/components/ActivityList.svelte';
   import SectionAudience from '$lib/components/SectionAudience.svelte';
+  import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import NoteCard from '$lib/components/NoteCard.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
@@ -133,6 +134,10 @@
    */
   const su = $derived(session.user);
   const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
+  const VISIBILITY = [
+    { value: 'public', label: 'Anyone' },
+    { value: 'private', label: 'Only me' }
+  ];
 
   // The name/bio/homepage block: one "Edit profile" button turns it into a
   // small form that saves all three together, then settles back into text.
@@ -320,10 +325,13 @@
             <span class="publabel">Who can see this page</span>
             <p class="hint">{su.profileVisibility === 'private' ? 'Hidden so only you can see this page. You still count toward feed follower numbers, but no one can tell it’s you.' : 'Anyone can open it and see the parts you share below.'}</p>
           </div>
-          <div class="seg two" role="radiogroup" aria-label="Who can see this page">
-            <button type="button" role="radio" aria-checked={su.profileVisibility === 'public'} class:on={su.profileVisibility === 'public'} onclick={() => save({ profileVisibility: 'public' }, 'Profile is public')}>Anyone</button>
-            <button type="button" role="radio" aria-checked={su.profileVisibility === 'private'} class:on={su.profileVisibility === 'private'} onclick={() => save({ profileVisibility: 'private' }, 'Profile is private')}>Only me</button>
-          </div>
+          <ChoiceGroup
+            class="vis"
+            options={VISIBILITY}
+            value={su.profileVisibility}
+            label="Who can see this page"
+            onchange={(v) => save({ profileVisibility: v as 'public' | 'private' }, v === 'public' ? 'Profile is public' : 'Profile is private')}
+          />
         </div>
       </div>
     </section>
@@ -504,7 +512,7 @@
   /* Edit: a quiet pencil, the same at every width. */
 
   /* Owner only: a muted one-line reminder in a soft box at the very top of the page. */
-  .ownerbar { margin: 0 0 18px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); font-size: calc(13px * var(--size-app)); color: var(--text-3); text-align: center; }
+  .ownerbar { margin: 0 0 18px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); font-size: calc(13px * var(--size-app)); color: var(--text-2); text-align: center; }
 
   /* Every section's content sits in a card — the same surface + shadow the
      lists always used. The audience control rides at the top in a header bar. */
@@ -514,20 +522,16 @@
      the white rows below, and the label sits right beside its buttons. */
   .cardhead { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface-2); }
   .ctrl-label { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
-  .cardhead :global(.seg) { flex: none; width: min(320px, 100%); }
+  .cardhead :global(.cg) { flex: none; width: min(320px, 100%); }
 
   /* Visibility: the label and its explanation on the left, the switch on the right. */
   .visrow { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
   .vislabel { flex: 1; min-width: 12ch; }
   .publabel { display: block; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.25; }
-  .hint { margin: 2px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .hint { margin: 2px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-2); line-height: 1.4; }
 
-  /* The public/private switch on this page; the section controls reuse SectionAudience. */
-  .seg { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  .seg.two { margin-left: auto; flex: none; }
-  .seg button { padding: 7px 14px; font-size: calc(12.5px * var(--size-app)); font-weight: 600; color: var(--text-3); background: var(--surface); border-left: 1px solid var(--line); white-space: nowrap; }
-  .seg button:first-child { border-left: 0; }
-  .seg button.on { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+  /* The public/private switch sits at the right-hand end of its row. */
+  .visrow :global(.vis) { margin-left: auto; flex: none; }
 
   /* Editing name, bio and homepage right in the header. */
   .edit { display: flex; flex-direction: column; gap: 10px; }
@@ -547,7 +551,7 @@
   li:first-child a { border-top: 0; }
   .meta2 { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; vertical-align: middle; margin-left: 4px; }
+  .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; vertical-align: middle; margin-left: 4px; }
   .desc { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .count { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; }
   .fresh { flex: none; font-size: calc(11.5px * var(--size-app)); font-weight: 700; line-height: 1.5; padding: 0 7px; border-radius: 999px; color: var(--accent-ink); background: var(--accent); white-space: nowrap; }
