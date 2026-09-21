@@ -3,7 +3,8 @@
   import { api } from '$lib/api';
   import { relativeTime, hostOf } from '$lib/time';
   import { session } from '$lib/session.svelte';
-  import SourceIcon from './SourceIcon.svelte';
+  import Card from './Card.svelte';
+  import CardMeta from './CardMeta.svelte';
   import FeedPopover from './FeedPopover.svelte';
   import NoteBlock from './NoteBlock.svelte';
   import NoteEditor from './NoteEditor.svelte';
@@ -53,29 +54,28 @@
   The body is the link out, or opens the reader for those who read here. Notes (mine, then
   the ones I'm allowed to see) hang off the bottom.
 -->
-<article class="card" class:compact>
-  <header>
+<Card {compact} pad={false}>
+  <header class:compact>
     {#if showSource}
-      <button class="source" onclick={openSource} title="About {source}">
-        <SourceIcon feedId={item.feedId} hasIcon={item.hasIcon} name={source} />
-        <span class="name">{source}</span>
-      </button>
-      <span class="dot">·</span>
+      <CardMeta feedId={item.feedId} hasIcon={item.hasIcon} name={source} when={item.publishedAt} onsource={openSource}>
+        {#if fresh}<span class="fresh" title="Newer than where you last stopped in this list">New</span>{/if}
+      </CardMeta>
+    {:else}
+      <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{relativeTime(item.publishedAt)}</time>
+      {#if fresh}<span class="fresh" title="Newer than where you last stopped in this list">New</span>{/if}
     {/if}
-    <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{relativeTime(item.publishedAt)}</time>
-    {#if fresh}<span class="fresh" title="Newer than where you last stopped in this list">New</span>{/if}
     <span class="spacer"></span>
     {#if session.user}
       <ItemActions {item} noteOpen={editing} onnote={noteButton} via="card" />
     {/if}
   </header>
-  <a class="link" href={item.url ?? item.siteUrl ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
+  <a class="link" class:compact href={item.url ?? item.siteUrl ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
     {#if item.imageUrl && !imgFailed}
       <img class="hero" src={item.imageUrl} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror={() => (imgFailed = true)} />
     {/if}
-    <h2>{item.title ?? item.summary ?? item.url}</h2>
+    <h2 class="card-title" class:tight={compact}>{item.title ?? item.summary ?? item.url}</h2>
     {#if item.title && item.summary && item.summary !== item.title}
-      <p>{item.summary}</p>
+      <p class="card-summary" class:tight={compact}>{item.summary}</p>
     {/if}
     {#if item.author}
       <footer>{item.author}</footer>
@@ -106,64 +106,43 @@
       <NoteBlock note={n} />
     {/each}
   {/if}
-</article>
+</Card>
 
 {#if popover}
   <FeedPopover feedId={item.feedId} onclose={() => (popover = false)} />
 {/if}
 
 <style>
-  .card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    border: var(--card-border, 0);
-    overflow: hidden;
-    transition: transform 120ms ease;
-  }
-  .card:active { transform: scale(0.99); }
   header {
-    display: flex; align-items: center; gap: 8px;
-    font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); padding: 10px 8px 0 16px; min-width: 0;
+    display: flex; align-items: center; gap: var(--space-2);
+    font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2);
+    padding: 10px var(--space-2) 0 var(--card-pad); min-width: 0;
   }
-  .source { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 4px 6px 4px 0; border-radius: 8px; text-align: left; }
-  .source:hover { background: var(--surface-2); }
-  .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dot { color: var(--text-3); }
+  header.compact { padding-top: var(--space-2); }
   time { color: var(--text-3); white-space: nowrap; }
   .fresh { font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
   .spacer { flex: 1; }
-  .link { display: block; padding: 8px 16px 16px; -webkit-tap-highlight-color: transparent; }
+  .link { display: block; padding: var(--space-2) var(--card-pad) var(--card-pad); -webkit-tap-highlight-color: transparent; }
   @media (hover: hover) { .link:hover h2 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   .hero {
-    width: calc(100% + 32px); margin: 0 -16px 12px; aspect-ratio: 16 / 9; object-fit: cover;
+    width: calc(100% + var(--card-pad) * 2); margin: 0 calc(var(--card-pad) * -1) var(--space-3); aspect-ratio: 16 / 9; object-fit: cover;
     background: var(--surface-2);
   }
-  h2 {
-    margin: 0; font-family: var(--font-headings); font-weight: 600;
-    font-size: calc(var(--text-xl) * var(--size-headings)); line-height: 1.25; letter-spacing: -0.01em; overflow-wrap: anywhere;
-  }
-  p {
-    margin: 8px 0 0; color: var(--text-2); font-family: var(--font-reading); font-size: calc(var(--text-base) * var(--size-reading));
-    display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-  }
+  p.card-summary { margin-top: var(--space-2); }
   footer { margin-top: 10px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .repeat {
-    display: flex; gap: 8px; align-items: flex-start; margin: -4px 16px 14px; padding: 8px 10px;
-    border-radius: 10px; font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; color: var(--text-2);
+    display: flex; gap: var(--space-2); align-items: flex-start; margin: -4px var(--card-pad) 14px; padding: var(--space-2) 10px;
+    border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; color: var(--text-2);
     background: color-mix(in srgb, #c7861a 12%, var(--surface));
   }
   .repeat svg { flex: none; margin-top: 1px; color: color-mix(in srgb, #c7861a 78%, var(--text)); }
   .repeat a { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
 
   /* Compact: a fixed height so a page of cards lines up. The picture sits beside the words. */
-  .card.compact { height: 100%; display: flex; flex-direction: column; position: relative; }
-  .card.compact:active { transform: none; }
-  .card.compact header { padding: 8px 8px 0 14px; }
-  .card.compact .link { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto; column-gap: 12px; padding: 6px 14px 10px; }
-  .card.compact .hero { grid-column: 2; grid-row: 1 / span 3; width: 108px; height: 100%; max-height: 92px; aspect-ratio: auto; margin: 0; border-radius: 8px; align-self: start; }
-  .card.compact h2 { grid-column: 1; font-size: calc(var(--text-base) * var(--size-headings)); line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .card.compact p { grid-column: 1; margin-top: 4px; font-size: calc(var(--text-sm) * var(--size-reading)); -webkit-line-clamp: 2; line-clamp: 2; }
-  .card.compact footer { grid-column: 1; margin-top: 4px; font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .notecount { position: absolute; right: 14px; bottom: 8px; font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); }
+  .link.compact { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto; column-gap: var(--space-3); padding: 6px var(--card-pad) 10px; }
+  .link.compact .hero { grid-column: 2; grid-row: 1 / span 3; width: 108px; height: 100%; max-height: 92px; aspect-ratio: auto; margin: 0; border-radius: var(--radius-sm); align-self: start; }
+  h2.tight { grid-column: 1; font-size: calc(var(--text-base) * var(--size-headings)); --title-lines: 2; }
+  p.tight { grid-column: 1; margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-reading)); --summary-lines: 2; }
+  .link.compact footer { grid-column: 1; margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .notecount { position: absolute; right: var(--card-pad); bottom: var(--space-2); font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); }
 </style>
