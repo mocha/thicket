@@ -355,7 +355,7 @@
           <li class:nested={depth > 0}>
             <a href={publicCollectionHref(handle, c.slug)} style:--indent="{depth * 18}px">
               <div class="meta2">
-                <span class="name">{c.name}{#if isMe && audienceTag(c.visibility)} <Badge>{audienceTag(c.visibility)}</Badge>{/if}</span>
+                <span class="name">{c.name}{#if isMe && audienceTag(c.visibility)}<Badge class="aftertext">{audienceTag(c.visibility)}</Badge>{/if}</span>
                 {#if c.description}<span class="desc">{c.description}</span>{/if}
               </div>
               {#if isMe && display.fresh && countText(marks.byId[c.id])}<Badge tone="accent">{countText(marks.byId[c.id])} new</Badge>{/if}
@@ -550,6 +550,8 @@
   li:first-child a { border-top: 0; }
   .meta2 { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* A pill riding after a name needs its own gap: the words beside it are text, not a flex row. */
+  .name :global(.aftertext) { margin-left: var(--space-2); }
   .desc { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .count { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; }
   .chev { color: var(--text-3); font-size: calc(20px * var(--size-app)); }

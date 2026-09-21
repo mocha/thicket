@@ -63,9 +63,9 @@
 
   .pill {
     display: inline-block;
-    padding: 1px var(--space-2);
+    padding: 2px var(--space-2);
     border-radius: var(--radius-pill);
-    font-size: calc(var(--text-xs) * var(--size-app));
+    font-size: calc(var(--text-sm) * var(--size-app));
     font-weight: 600;
     line-height: 1.5;
     white-space: nowrap;

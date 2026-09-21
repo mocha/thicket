@@ -96,7 +96,7 @@
     </div>
     {#if col.description}<p class="desc">{col.description}</p>{/if}
     <p class="sub">
-      {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> ·&nbsp;{/if}{#if col.isMe && audienceTag(col.visibility)}<Badge>{audienceTag(col.visibility)}</Badge> ·&nbsp;{/if}<button class="reveal" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<Icon name="caret" size={14} stroke={2.4} dir={showFeeds ? 'down' : 'right'} /></button>
+      {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> ·&nbsp;{/if}{#if col.isMe && audienceTag(col.visibility)}<Badge class="beforetext">{audienceTag(col.visibility)}</Badge>·&nbsp;{/if}<button class="reveal" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<Icon name="caret" size={14} stroke={2.4} dir={showFeeds ? 'down' : 'right'} /></button>
     </p>
   </header>
 
@@ -161,6 +161,8 @@
   .desc { margin: 6px 0 0; color: var(--text-2); font-size: calc(14px * var(--size-app)); overflow-wrap: anywhere; }
   .sub { margin: 4px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
+  /* The pill sits in a line of text, so it carries its own gap to the separator after it. */
+  .sub :global(.beforetext) { margin-right: var(--space-2); }
   .reveal { display: inline-flex; align-items: center; gap: 3px; font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
   .actions { flex: none; display: flex; gap: 8px; align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }

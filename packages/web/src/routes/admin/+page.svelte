@@ -235,9 +235,7 @@
           <div class="who">
             <a class="handle" href={profileHref(u.handle)}>{u.displayName ?? u.handle}<span class="h"> @{u.handle}</span></a>
             <div class="facts">
-              {#if u.isAdmin}<Badge>Admin</Badge>{/if}
-              {#if u.profileVisibility === 'private'}<Badge>Private</Badge>{/if}
-              {u.following} {u.following === 1 ? 'feed' : 'feeds'} · {u.collections} {u.collections === 1 ? 'collection' : 'collections'} · {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'}
+              {#if u.isAdmin}<Badge class="beforetext">Admin</Badge>{/if}{#if u.profileVisibility === 'private'}<Badge class="beforetext">Private</Badge>{/if}{u.following} {u.following === 1 ? 'feed' : 'feeds'} · {u.collections} {u.collections === 1 ? 'collection' : 'collections'} · {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'}
               · joined {relativeTime(u.createdAt)}{#if u.invitedBy} via @{u.invitedBy}{/if}
               {#if u.lastSeenAt} · seen {relativeTime(u.lastSeenAt)}{/if}
             </div>
@@ -310,6 +308,8 @@
   .handle { font-weight: 600; }
   .handle .h { color: var(--text-3); font-weight: 400; font-size: calc(13px * var(--size-app)); }
   .facts { font-size: calc(13px * var(--size-app)); color: var(--text-3); margin-top: 2px; }
+  /* The labels sit at the head of a line of text, so each carries its own gap. */
+  .facts :global(.beforetext) { margin-right: var(--space-2); }
   .acts { display: flex; gap: 6px; flex-wrap: wrap; }
   .acts button { padding: 6px 10px; }
   .you { font-size: calc(13px * var(--size-app)); color: var(--text-3); padding: 6px 4px; }
