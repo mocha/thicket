@@ -97,21 +97,21 @@
   .hero { display: grid; gap: 28px; padding: 20px 0 8px; }
   h1 { font-family: var(--font-headings); font-size: clamp(34px, 5vw, 52px); line-height: 1.08; margin: 0 0 16px; letter-spacing: -0.015em; }
   .sub { font-size: clamp(18px, 2.2vw, 22px); color: var(--text); margin: 0 0 14px; line-height: 1.35; }
-  .body { color: var(--text-2); margin: 0; font-size: calc(16px * var(--size-app)); max-width: 46ch; }
+  .body { color: var(--text-2); margin: 0; font-size: calc(var(--text-base) * var(--size-app)); max-width: 46ch; }
   .auth { align-self: start; }
   hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
   .longer p { font-family: var(--font-headings); font-size: clamp(19px, 2.4vw, 24px); line-height: 1.45; margin: 0; max-width: 64ch; }
-  h2 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0 0 16px; }
+  h2 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 16px; }
   .features ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
   .features li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
   .features svg { color: var(--accent); margin-bottom: 10px; }
-  .features h3 { margin: 0 0 6px; font-size: calc(17px * var(--size-app)); }
-  .features p { margin: 0; color: var(--text-2); font-size: calc(15px * var(--size-app)); line-height: 1.45; }
-  .fine { margin: 18px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
+  .features h3 { margin: 0 0 6px; font-size: calc(var(--text-xl) * var(--size-app)); }
+  .features p { margin: 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.45; }
+  .fine { margin: 18px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .apart ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; }
-  .apart h3 { font-family: var(--font-headings); margin: 0 0 5px; font-size: calc(18px * var(--size-headings)); }
-  .apart p { margin: 0; color: var(--text-2); font-size: calc(15px * var(--size-app)); line-height: 1.5; }
-  footer { margin: 44px 0 0; padding-top: 20px; border-top: 1px solid var(--line); color: var(--text-3); font-size: calc(14px * var(--size-app)); }
+  .apart h3 { font-family: var(--font-headings); margin: 0 0 5px; font-size: calc(var(--text-xl) * var(--size-headings)); }
+  .apart p { margin: 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.5; }
+  footer { margin: 44px 0 0; padding-top: 20px; border-top: 1px solid var(--line); color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   footer p { margin: 0; max-width: 70ch; }
   footer a { color: var(--accent); font-weight: 600; }
   @media (min-width: 820px) {

@@ -162,14 +162,14 @@
 
 <style>
   section { margin-bottom: 22px; }
-  h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
+  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .cardhead { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface-2); }
-  .ctrl-label { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
+  .ctrl-label { font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
   .cardhead :global(.cg) { flex: none; width: min(320px, 100%); }
   .pad { padding: 16px; }
   .foot { padding: 12px 16px; border-top: 1px solid var(--line); }
-  .status { color: var(--text-3); font-size: calc(14px * var(--size-app)); margin: 0; }
+  .status { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin: 0; }
   .acts { list-style: none; margin: 0; padding: 0; }
   li { padding: 12px 16px; border-top: 1px solid var(--line); }
   li:first-child { border-top: 0; }
@@ -177,19 +177,19 @@
   .icons { display: flex; flex: none; }
   /* Overlapped, so a burst of feeds reads as one object rather than a row of them. */
   .icons > :global(*:not(:first-child)) { margin-left: -7px; }
-  .glyph { flex: none; width: 20px; text-align: center; color: var(--text-3); font-size: calc(15px * var(--size-app)); }
-  .what { flex: 1; min-width: 0; margin: 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .glyph { flex: none; width: 20px; text-align: center; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
+  .what { flex: 1; min-width: 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .what a { color: var(--text); font-weight: 600; }
-  .src { color: var(--text-3); font-size: calc(13px * var(--size-app)); }
+  .src { color: var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); }
   .src::before { content: ' · '; }
-  .when { flex: none; font-size: calc(12px * var(--size-app)); color: var(--text-3); }
-  .names { display: flex; gap: 5px; margin: 4px 0 0 30px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .when { flex: none; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
+  .names { display: flex; gap: 5px; margin: 4px 0 0 30px; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
   .trunc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rest { flex: none; }
   .rest::before { content: '· '; }
-  blockquote { margin: 6px 0 0 30px; padding-left: 10px; border-left: 2px solid var(--line); font-size: calc(14px * var(--size-app)); color: var(--text-2); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  blockquote { margin: 6px 0 0 30px; padding-left: 10px; border-left: 2px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   /* A pill riding after a link, mid-sentence, needs its own gap. */
   .what :global(.aftertext) { margin-left: var(--space-2); }
-  .more { display: block; width: 100%; text-align: center; color: var(--accent); font-weight: 600; font-size: calc(14px * var(--size-app)); }
+  .more { display: block; width: 100%; text-align: center; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .more:disabled { opacity: 0.6; }
 </style>

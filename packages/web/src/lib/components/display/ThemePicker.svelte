@@ -82,11 +82,11 @@
   .t { display: block; height: 3px; border-radius: 2px; background: var(--sw-text); opacity: 0.85; }
   .t.short { width: 60%; opacity: 0.45; }
   .a { display: block; width: 34%; height: 5px; border-radius: 3px; background: var(--sw-accent); margin-top: 2px; }
-  .label { font-size: calc(12.5px * var(--size-app)); font-weight: 600; padding: 0 2px; }
+  .label { font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; padding: 0 2px; }
   .on .label { color: var(--accent); }
 
   .accents { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
-  .lead { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); margin-right: 4px; }
+  .lead { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); margin-right: 4px; }
   /* On a narrow screen the row drops below the word "Accent" rather than being squeezed. */
   .accents :global(.cg) { flex: none; }
 </style>

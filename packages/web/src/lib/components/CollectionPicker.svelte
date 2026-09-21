@@ -38,7 +38,7 @@
     .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 420px; border-radius: 20px; }
   }
   header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-  .eyebrow { font-size: calc(12px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
-  h2 { margin: 2px 0 0; font-size: calc(18px * var(--size-headings)); font-family: var(--font-headings); overflow-wrap: anywhere; }
+  .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+  h2 { margin: 2px 0 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); overflow-wrap: anywhere; }
   .close { color: var(--accent); font-weight: 600; padding: 6px 4px; }
 </style>

@@ -9,7 +9,7 @@
 </script>
 
 <span class="add-feed-cta">
-  <Button variant="primary" onclick={() => openAddFeed(collectionIds ? { via, collectionIds } : { via })}>
+  <Button variant="primary" size="sm" onclick={() => openAddFeed(collectionIds ? { via, collectionIds } : { via })}>
     <span class="plus" aria-hidden="true">+</span> Add new feed
   </Button>
 </span>
@@ -28,11 +28,10 @@
     font-size: 1.3em;
     line-height: 1;
   }
-  /* On a phone it steps down so it doesn't outweigh the page title. */
+  /* On a phone it tightens up so it doesn't outweigh the page title. */
   @media (max-width: 560px) {
     .add-feed-cta :global(.btn) {
       padding: var(--space-1) var(--space-3);
-      font-size: calc(11.5px * var(--size-app));
     }
     .plus {
       font-size: 1.15em;
