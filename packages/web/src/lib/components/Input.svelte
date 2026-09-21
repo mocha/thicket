@@ -13,9 +13,15 @@
    * built around. Medium and large are set at body size on purpose — a field
    * below that makes an iPhone zoom in the moment you tap it.
    *
-   * Three looks. The plain one; `search`, which is a pill with a magnifier in
-   * front and a clear button that turns up as soon as there is something to
-   * clear; and `create`, the accent-outlined box for starting something new.
+   * Three looks, all the same shape: the plain one; `search`, which adds a
+   * magnifier in front; and `create`, the accent-outlined box for starting
+   * something new. Every field in the app is the same rounded rectangle —
+   * buttons are the pills, fields are not.
+   *
+   * Every field clears. A small X turns up at the end as soon as there is
+   * something to clear, empties the field, leaves your cursor in it, and tells
+   * the caller through both `oninput` and `onclear`. With a Create button
+   * inside the box, the X sits between the text and the button.
    *
    * The focus ring is the point of this component. Focus of any kind turns the
    * outline the accent color, quietly. The thick ring on top of it appears only
@@ -35,7 +41,7 @@
     invalid?: boolean;
     disabled?: boolean;
     readonly?: boolean;
-    /** Show the clear button once there's text. On by default for a search box. */
+    /** The clear X, on by default. Off only for a field that must not be emptied. */
     clearable?: boolean;
     onclear?: () => void;
     /** Sit on the page background instead of the raised surface. */
@@ -61,7 +67,7 @@
     invalid = false,
     disabled = false,
     readonly = false,
-    clearable,
+    clearable = true,
     onclear,
     inset = false,
     leading,
@@ -75,16 +81,14 @@
     ...rest
   }: Props = $props();
 
-  /* A search box is typed into and thrown away, so it clears by default. */
-  const canClear = $derived(clearable ?? variant === 'search');
-  const showClear = $derived(canClear && !!value && !disabled && !readonly);
+  /* Nothing to clear when it's empty, and no clearing a field you can't edit. */
+  const showClear = $derived(clearable && !!value && !disabled && !readonly);
 
   /* A search box asks for the search keyboard unless told otherwise. We draw
      our own clear button, so the browser's is hidden in the styles below. */
   const kind = $derived(type ?? (variant === 'search' ? 'search' : 'text'));
 
   const glyph = $derived(size === 'sm' ? 15 : 20);
-  const clearSize = $derived(size === 'sm' ? 'sm' : 'md');
 
   /* Whether this focus arrived by keyboard. Read once as focus lands and kept,
      so typing in a field you clicked doesn't light the ring up mid-sentence. */
@@ -102,10 +106,18 @@
     value = e.currentTarget.value;
     oninput?.(e);
   }
+  /* Emptying the field is a real edit, so it goes through the same path typing
+     does — the caller hears about it on `oninput` as well as `onclear`, and a
+     field whose value the caller owns one-way still updates. */
   function clear() {
-    value = '';
+    if (element) {
+      element.value = '';
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      element.focus();
+    } else {
+      value = '';
+    }
     onclear?.();
-    element?.focus();
   }
 </script>
 
@@ -136,7 +148,7 @@
     onblur={blurred}
   />
   {#if showClear}
-    <IconButton class="clear" icon="close" size={clearSize} label="Clear" onclick={clear} />
+    <IconButton class="clear" icon="close" size="sm" label="Clear" onclick={clear} />
   {/if}
   {#if trailing}{@render trailing()}{/if}
 </div>
@@ -161,9 +173,9 @@
   .inset { background: var(--bg); }
 
   .sm { padding: var(--space-2) var(--space-3); }
-  .lg { border-radius: var(--radius); }
-  /* A search box is a pill, at every size. */
-  .search { border-radius: var(--radius-pill); }
+
+  /* One shape for every field, whatever its size or look: the rounded
+     rectangle set on .wrap above. Pills are for buttons. */
 
   /* Room on the right for the clear button without pushing the text under it. */
   .hasclear { padding-right: var(--space-2); }
