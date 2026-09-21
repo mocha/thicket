@@ -48,6 +48,8 @@
     onfocus?: (e: FocusEvent) => void;
     onblur?: (e: FocusEvent) => void;
     class?: string;
+    /** Goes on the box, like `class` does — so `--field-gap` lands where it works. */
+    style?: string;
     [key: string]: unknown;
   }
 
@@ -69,6 +71,7 @@
     onfocus,
     onblur,
     class: klass = '',
+    style,
     ...rest
   }: Props = $props();
 
@@ -114,6 +117,7 @@
   class:inset
   class:hasclear={showClear}
   class:hastrail={!!trailing}
+  {style}
 >
   {#if variant === 'search'}
     <span class="lead" aria-hidden="true"><Icon name="search" size={glyph} /></span>

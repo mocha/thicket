@@ -28,6 +28,8 @@
     onfocus?: (e: FocusEvent) => void;
     onblur?: (e: FocusEvent) => void;
     class?: string;
+    /** Goes on the outer element, like `class` does. */
+    style?: string;
     [key: string]: unknown;
   }
 
@@ -45,6 +47,7 @@
     onfocus,
     onblur,
     class: klass = '',
+    style,
     ...rest
   }: Props = $props();
 
@@ -70,7 +73,7 @@
   }
 </script>
 
-<div class="outer {klass}">
+<div class="outer {klass}" {style}>
   <div class="wrap" class:kb={byKeyboard} class:invalid={wrong} class:disabled class:inset>
     <textarea
       bind:this={element}
