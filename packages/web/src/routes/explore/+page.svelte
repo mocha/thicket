@@ -12,7 +12,7 @@
   import { feedListName } from '$lib/feedname';
   import { session } from '$lib/session.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
-  import Icon from '$lib/components/Icon.svelte';
+  import IconButton from '$lib/components/IconButton.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
@@ -260,9 +260,7 @@
         placeholder="Search for anything" aria-label="Search"
       />
       {#if draft}
-        <button class="clear" type="button" onclick={clearSearch} aria-label="Clear search">
-          <Icon name="close" size={18} />
-        </button>
+        <IconButton class="clear" icon="close" onclick={clearSearch} label="Clear search" />
       {/if}
     </div>
   </div>
@@ -508,8 +506,7 @@
   /* Hide the browser's own clear widget so there aren't two. */
   .search::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
   .glass { position: absolute; left: 16px; color: var(--text-3); pointer-events: none; }
-  .clear { position: absolute; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 999px; color: var(--text-3); }
-  .clear:hover { color: var(--text); background: var(--surface-2); }
+  .field :global(.clear) { position: absolute; right: 8px; }
   .scopes { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-2); margin-bottom: 4px; overflow-x: auto; }
   .scopes button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; border-radius: 999px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
   .scopes button[aria-selected='true'] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
