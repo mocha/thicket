@@ -7,6 +7,7 @@
    */
   import { display, setDisplay, PALETTES, ACCENTS, type Palette, type Accent } from '$lib/display.svelte';
   import { api } from '$lib/api';
+  import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
 
   type Sw = { bg: string; surface: string; text: string; accent: string };
   const SWATCHES: Record<Palette, { light: Sw; dark: Sw }> = {
@@ -37,6 +38,8 @@
 
   function choose(p: Palette) { setDisplay({ palette: p }); api.event('display_changed', { key: 'palette', value: p }); }
   function chooseAccent(a: Accent) { setDisplay({ accent: a }); api.event('display_changed', { key: 'accent', value: a }); }
+  /* Each accent shows its own color, in whichever half the screen is in. */
+  const accentOptions = $derived(ACCENTS.map((a) => ({ value: a.id, label: a.label, swatch: ACCENT_HEX[a.id][half] })));
 </script>
 
 <div class="palettes" role="radiogroup" aria-label="Colour theme">
@@ -52,13 +55,15 @@
   {/each}
 </div>
 {#if display.palette === 'contrast'}
-  <div class="accents" role="radiogroup" aria-label="Accent colour">
+  <div class="accents">
     <span class="lead">Accent</span>
-    {#each ACCENTS as a (a.id)}
-      <button type="button" role="radio" aria-checked={display.accent === a.id} class:on={display.accent === a.id} onclick={() => chooseAccent(a.id)}>
-        <i style="background:{ACCENT_HEX[a.id][half]}" aria-hidden="true"></i>{a.label}
-      </button>
-    {/each}
+    <ChoiceGroup
+      options={accentOptions}
+      value={display.accent}
+      label="Accent colour"
+      size="sm"
+      onchange={(v) => chooseAccent(v as Accent)}
+    />
   </div>
 {/if}
 
@@ -70,7 +75,7 @@
   }
   .palettes button:hover { border-color: var(--text-3); }
   .palettes button.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-  .palettes button:focus-visible, .accents button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .palettes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .sw { display: block; aspect-ratio: 5 / 3; border-radius: 8px; background: var(--sw-bg); padding: 7px 8px 0; overflow: hidden; border: 1px solid rgba(128, 128, 128, 0.18); }
   .card { display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 6px 7px; border-radius: 5px 5px 0 0; background: var(--sw-surface); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
   .hard .card { box-shadow: none; border: 1px solid var(--sw-text); border-bottom: 0; }
@@ -82,7 +87,4 @@
 
   .accents { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
   .lead { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); margin-right: 4px; }
-  .accents button { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px 6px 7px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .accents button.on { border-color: var(--accent); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent); }
-  .accents i { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(128,128,128,0.25); }
 </style>

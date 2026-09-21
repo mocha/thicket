@@ -7,10 +7,13 @@
    */
   import { display, setFont, stepSize, FAMILIES, ROLES, SIZE_MIN, SIZE_MAX, sizeLabel, type Family, type Role } from '$lib/display.svelte';
   import { api } from '$lib/api';
+  import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
 
   let { compact = false }: { compact?: boolean } = $props();
 
   function family(role: Role, f: Family) { setFont(role, { family: f }); api.event('display_changed', { key: `font.${role}`, value: f }); }
+  /* Each option is set in the face it offers, so the row is its own preview. */
+  const FACES = FAMILIES.map((f) => ({ value: f.id, label: f.label, data: { 'data-face': f.id } }));
   function step(role: Role, d: 1 | -1) { stepSize(role, d); api.event('display_changed', { key: `size.${role}`, value: display.fonts[role].size }); }
 </script>
 
@@ -19,11 +22,14 @@
     {#each ROLES as r (r.id)}
       <div class="row">
         <div class="who"><span>{r.label}</span>{#if !compact}<small>{r.note}</small>{/if}</div>
-        <div class="seg" role="radiogroup" aria-label="{r.label} font">
-          {#each FAMILIES as f (f.id)}
-            <button type="button" role="radio" aria-checked={display.fonts[r.id].family === f.id} class:on={display.fonts[r.id].family === f.id} onclick={() => family(r.id, f.id)} data-face={f.id}>{f.label}</button>
-          {/each}
-        </div>
+        <ChoiceGroup
+          class="faces"
+          options={FACES}
+          value={display.fonts[r.id].family}
+          label="{r.label} font"
+          size="sm"
+          onchange={(v) => family(r.id, v as Family)}
+        />
         <div class="stepper" role="group" aria-label="{r.label} size">
           <button type="button" onclick={() => step(r.id, -1)} disabled={display.fonts[r.id].size <= SIZE_MIN} aria-label="Smaller {r.label.toLowerCase()}">−</button>
           <output>{sizeLabel(display.fonts[r.id].size)}</output>
@@ -50,13 +56,12 @@
   .row + .row { border-top: 1px solid var(--line); }
   .who { display: flex; flex-direction: column; gap: 2px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text); min-width: 0; }
   .who small { font-weight: 400; font-size: calc(11.5px * var(--size-app)); color: var(--text-3); line-height: 1.3; }
-  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--bg); justify-self: end; }
-  .seg button { padding: 7px 9px; font-size: calc(12.5px * var(--size-app)); font-weight: 600; color: var(--text-3); border-left: 1px solid var(--line); white-space: nowrap; }
-  .seg button:first-child { border-left: 0; }
-  .seg button.on { background: var(--accent); color: var(--accent-ink); }
-  .seg button:focus-visible, .stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; position: relative; z-index: 1; }
-  .seg button[data-face='serif'] { font-family: var(--font-serif); }
-  .seg button[data-face='dyslexic'] { font-family: var(--font-dyslexic); font-size: calc(11.5px * var(--size-app)); }
+  /* The face row sits at the right-hand end, and each option is set in the
+     face it offers. OpenDyslexic runs large, so it is knocked down a size. */
+  .row :global(.faces) { justify-self: end; }
+  .row :global(.faces button[data-face='serif']) { font-family: var(--font-serif); }
+  .row :global(.faces button[data-face='dyslexic']) { font-family: var(--font-dyslexic); font-size: calc(var(--text-xs) * var(--size-app)); }
+  .stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; position: relative; z-index: 1; }
   .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--bg); justify-self: end; }
   .stepper button { width: 30px; height: 32px; font-size: calc(17px * var(--size-app)); color: var(--text-2); }
   .stepper button:disabled { opacity: 0.35; }
@@ -66,8 +71,8 @@
     .row { grid-template-columns: 1fr auto; }
     .who { grid-column: 1 / -1; }
     .who small { display: none; }
-    .seg { justify-self: start; }
-    .seg button { padding: 7px 7px; font-size: calc(11.5px * var(--size-app)); }
+    .row :global(.faces) { justify-self: start; }
+    .row :global(.faces button) { padding-left: var(--space-2); padding-right: var(--space-2); }
     .stepper button { width: 26px; }
   }
 
