@@ -9,6 +9,7 @@
   import AccountMenu from './AccountMenu.svelte';
   import Icon from './Icon.svelte';
   import IconButton from './IconButton.svelte';
+  import Badge from './Badge.svelte';
   import { display } from '$lib/display.svelte';
   import { marks, badge, anyNew, countText } from '$lib/marks.svelte';
 
@@ -108,7 +109,7 @@
 
 {#snippet row(c: { id: number; name: string; slug: string })}
   {@const b = fresh ? badge(marks.byId[c.id]) : { kind: 'none' as const }}
-  <a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined} class:new={b.kind !== 'none'}><span class="name">{c.name}</span>{#if b.kind === 'count'}<span class="fresh">{b.text}</span>{:else if b.kind === 'dot'}<span class="dot-new inrow" title={b.title}></span>{/if}</a>
+  <a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined} class:new={b.kind !== 'none'}><span class="name">{c.name}</span>{#if b.kind === 'count'}<Badge tone="accent">{b.text}</Badge>{:else if b.kind === 'dot'}<Badge variant="dot" class="inrow" title={b.title} />{/if}</a>
 {/snippet}
 
 {#snippet icon(d: string)}
@@ -121,14 +122,14 @@
   <ul>
     <!-- Mobile-only tabs. On desktop, Everything and My collections live in the li.collections block below. -->
     <li class="mobile-only">
-      <a href="/" aria-current={path === '/' ? 'page' : undefined}><span class="ic">{@render icon(icons.everything)}{#if fresh && rootMark?.count}<span class="dot-new" aria-label="New posts"></span>{/if}</span><span class="shortl">Everything</span></a>
+      <a href="/" aria-current={path === '/' ? 'page' : undefined}><span class="ic">{@render icon(icons.everything)}{#if fresh && rootMark?.count}<Badge variant="dot" class="pin" aria-label="New posts" />{/if}</span><span class="shortl">Everything</span></a>
     </li>
     <li class="mobile-only">
-      <a href={meHref} aria-current={onAnyCollection ? 'page' : undefined}><span class="ic">{@render icon(icons.collections)}{#if anyColNew}<span class="dot-new" aria-label="New posts"></span>{/if}</span><span class="shortl">Collections</span></a>
+      <a href={meHref} aria-current={onAnyCollection ? 'page' : undefined}><span class="ic">{@render icon(icons.collections)}{#if anyColNew}<Badge variant="dot" class="pin" aria-label="New posts" />{/if}</span><span class="shortl">Collections</span></a>
     </li>
     <li class="collections">
       <!-- Everything: the whole stream, its own item now — the job the old italic "All collections" row did. -->
-      <a class="readall" href="/" aria-current={path === '/' ? 'page' : undefined}>{@render icon(icons.everything)}<span>Everything</span>{#if fresh && rootMark?.count}<span class="fresh">{countText(rootMark)}</span>{/if}</a>
+      <a class="readall" href="/" aria-current={path === '/' ? 'page' : undefined}>{@render icon(icons.everything)}<span>Everything</span>{#if fresh && rootMark?.count}<Badge tone="accent" class="tail">{countText(rootMark)}</Badge>{/if}</a>
       <!-- My collections: a group you can fold away. Your collections sit under it. -->
       <button type="button" class="heading" aria-expanded={collectionsOpen.open} aria-controls="my-collections" onclick={toggleCollectionsOpen}>
         {@render icon(icons.collections)}<span>Collections</span>
@@ -242,9 +243,10 @@
   .mono { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; }
   /* "What's new": a dot on a tab, a count in the sidebar. */
   .ic { position: relative; display: grid; place-items: center; }
-  .dot-new { position: absolute; top: -1px; right: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
-  .fresh { flex: none; font-size: calc(11.5px * var(--size-app)); font-weight: 700; line-height: 1.5; padding: 0 7px; border-radius: 999px; color: var(--accent-ink); background: var(--accent); font-variant-numeric: tabular-nums; }
-  .dot-new.inrow { position: static; flex: none; box-shadow: none; margin-right: 4px; }
+  /* Pinned to the corner of a tab's icon; the dot itself is a Badge. */
+  .ic :global(.pin) { position: absolute; top: -1px; right: -5px; }
+  /* Sitting inline before a collection's name, where it needs no ring to lift it. */
+  nav :global(.inrow) { box-shadow: none; margin-right: 4px; }
   li.you > .tab[aria-expanded='true'] .mono { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   /* Desktop: the sidebar. */
@@ -279,7 +281,7 @@
     /* The Everything row is a normal-height row: undo the full-height stretch the bottom-bar tabs use. */
     nav:not(.paged) .readall { height: auto; }
     /* It carries the whole stream's "what's new" count, pushed to the row's end. */
-    nav:not(.paged) .readall .fresh { margin-left: auto; }
+    nav:not(.paged) .readall :global(.tail) { margin-left: auto; }
     nav:not(.paged) .cols { display: flex; flex-direction: column; gap: 1px; padding-left: 36px; height: auto; }
     nav:not(.paged) .cols li > a { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
     /* A parent: the name is the link, the caret beside it opens the group. Children sit indented under it. */
@@ -289,7 +291,7 @@
     nav:not(.paged) .cols .caret:hover { background: var(--surface-2); color: var(--text); }
     nav:not(.paged) .cols li.child > a { padding-left: 24px; }
     nav:not(.paged) .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    /* Something new: the name goes bold, the count or dot sits beside it. Bold reads in greyscale where a colour would not. */
+    /* Something new: the name goes bold, the count or dot sits beside it. Bold reads in grayscale where a color would not. */
     nav:not(.paged) .cols a.new .name { font-weight: 600; color: var(--text); }
 
     nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 12px; border-radius: 8px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
