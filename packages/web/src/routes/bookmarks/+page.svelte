@@ -6,6 +6,7 @@
   import { session } from '$lib/session.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import Button from '$lib/components/Button.svelte';
+  import Tabs from '$lib/components/Tabs.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   let list = $state<Bookmark[]>([]);
@@ -19,6 +20,14 @@
   const collection = $derived(page.url.searchParams.get('c') ? Number(page.url.searchParams.get('c')) : null);
   const feed = $derived(page.url.searchParams.get('f') ? Number(page.url.searchParams.get('f')) : null);
   let loadedKey = $state<string | undefined>(undefined);
+  const hasFilters = $derived(sources.collections.length > 0 || sources.feeds.length > 0);
+  /* One tab per collection, plus All. Filtering by source instead leaves no
+     tab chosen, which is what the empty value here means. */
+  const filterTabs = $derived([
+    { value: 'all', label: 'All' },
+    ...sources.collections.map((c) => ({ value: String(c.id), label: c.name, count: c.count }))
+  ]);
+  const filterValue = $derived(collection ? String(collection) : feed ? '' : 'all');
 
   async function loadMore(reset = false) {
     if (loading || (done && !reset)) return;
@@ -79,12 +88,16 @@
   <p class="sub">Posts you've saved. {#if session.user?.profileVisibility === 'public' && session.user.bookmarksVisibility === 'public'}Shown on <a href={profileHref(session.user.handle)}>your profile</a>.{:else if session.user?.profileVisibility === 'public' && session.user.bookmarksVisibility === 'friends'}Shown on <a href={profileHref(session.user.handle)}>your profile</a> to the people you follow.{:else}Only you can see them.{/if}</p>
 </header>
 
-{#if sources.collections.length || sources.feeds.length}
-  <div class="filters" role="tablist" aria-label="Filter bookmarks">
-    <button role="tab" aria-selected={!collection && !feed} onclick={() => setFilter(null)}>All</button>
-    {#each sources.collections as c (c.id)}
-      <button role="tab" aria-selected={collection === c.id} onclick={() => setFilter('c', c.id)}>{c.name} <span class="n">{c.count}</span></button>
-    {/each}
+{#if hasFilters}
+  <div class="filters">
+    <Tabs
+      class="tabs"
+      tabs={filterTabs}
+      value={filterValue}
+      onchange={(v) => (v === 'all' ? setFilter(null) : setFilter('c', Number(v)))}
+      label="Filter bookmarks"
+      panel="bookmark-results"
+    />
     {#if sources.feeds.length > 1}
       <select aria-label="Filter by source" value={feed ?? ''} onchange={(e) => { const v = e.currentTarget.value; v ? setFilter('f', Number(v)) : setFilter(null); }}>
         <option value="">By source…</option>
@@ -94,50 +107,53 @@
   </div>
 {/if}
 
-{#if !loading && list.length === 0}
-  <div class="empty">
-    {#if collection || feed}
-      <h2>No bookmarks match this filter.</h2>
-    {:else}
-      <!-- A post card, drawn small, with the bookmark corner lit up: this is the thing to press. -->
-      <svg class="illo" viewBox="0 0 260 120" width="260" height="120" aria-hidden="true">
-        <rect x="8" y="10" width="244" height="100" rx="14" fill="var(--surface)" stroke="var(--line)" />
-        <circle cx="34" cy="34" r="9" fill="var(--surface-2)" />
-        <rect x="50" y="29" width="70" height="10" rx="5" fill="var(--surface-2)" />
-        <rect x="24" y="56" width="200" height="12" rx="6" fill="var(--line)" />
-        <rect x="24" y="76" width="150" height="12" rx="6" fill="var(--line)" />
-        <circle cx="222" cy="36" r="20" fill="color-mix(in srgb, var(--accent) 18%, transparent)" />
-        <circle cx="222" cy="36" r="20" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 4" />
-        <path d="M215 27h14v18l-7-4.5-7 4.5z" fill="var(--accent)" />
-      </svg>
-      <h2>Nothing saved yet</h2>
-      <p>Every post has a bookmark in its top right corner. Press it and the post is kept here for as long as you like, even after it has scrolled out of All my feeds. Save what you want to read later, come back to, or share from your profile.</p>
-      <div class="ctas"><Button variant="primary" size="lg" href="/">Go to All my feeds</Button><Button size="lg" href="/explore">Explore feeds</Button></div>
-    {/if}
-  </div>
-{:else}
-  <ul class="list">
-    {#each list as b (b.id)}
-      <BookmarkCard {b} onopen={() => api.event('bookmark_opened', { bookmarkId: b.id })} action={{ kind: 'remove', on: true, label: 'Remove bookmark', run: () => remove(b) }} />
-    {/each}
-  </ul>
-  {#if loading}<p class="status">Loading…</p>{/if}
-  <div bind:this={sentinel} aria-hidden="true"></div>
-{/if}
+<!-- What the tabs above switch between. -->
+<div id="bookmark-results" role={hasFilters ? 'tabpanel' : undefined}>
+  {#if !loading && list.length === 0}
+    <div class="empty">
+      {#if collection || feed}
+        <h2>No bookmarks match this filter.</h2>
+      {:else}
+        <!-- A post card, drawn small, with the bookmark corner lit up: this is the thing to press. -->
+        <svg class="illo" viewBox="0 0 260 120" width="260" height="120" aria-hidden="true">
+          <rect x="8" y="10" width="244" height="100" rx="14" fill="var(--surface)" stroke="var(--line)" />
+          <circle cx="34" cy="34" r="9" fill="var(--surface-2)" />
+          <rect x="50" y="29" width="70" height="10" rx="5" fill="var(--surface-2)" />
+          <rect x="24" y="56" width="200" height="12" rx="6" fill="var(--line)" />
+          <rect x="24" y="76" width="150" height="12" rx="6" fill="var(--line)" />
+          <circle cx="222" cy="36" r="20" fill="color-mix(in srgb, var(--accent) 18%, transparent)" />
+          <circle cx="222" cy="36" r="20" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 4" />
+          <path d="M215 27h14v18l-7-4.5-7 4.5z" fill="var(--accent)" />
+        </svg>
+        <h2>Nothing saved yet</h2>
+        <p>Every post has a bookmark in its top right corner. Press it and the post is kept here for as long as you like, even after it has scrolled out of All my feeds. Save what you want to read later, come back to, or share from your profile.</p>
+        <div class="ctas"><Button variant="primary" size="lg" href="/">Go to All my feeds</Button><Button size="lg" href="/explore">Explore feeds</Button></div>
+      {/if}
+    </div>
+  {:else}
+    <ul class="list">
+      {#each list as b (b.id)}
+        <BookmarkCard {b} onopen={() => api.event('bookmark_opened', { bookmarkId: b.id })} action={{ kind: 'remove', on: true, label: 'Remove bookmark', run: () => remove(b) }} />
+      {/each}
+    </ul>
+    {#if loading}<p class="status">Loading…</p>{/if}
+    <div bind:this={sentinel} aria-hidden="true"></div>
+  {/if}
+</div>
 
 <style>
   .top { margin-bottom: 12px; }
   h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
-  .filters { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 12px; align-items: center; }
-  .filters::-webkit-scrollbar { display: none; }
-  .filters button, .filters select {
-    flex: none; padding: 7px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line);
-    font-size: calc(14px * var(--size-app)); color: var(--text-2); white-space: nowrap;
+  .filters { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+  /* The tabs take what room is left and slide sideways inside it; the source
+     menu beside them keeps its own width and its own look. */
+  .filters :global(.tabs) { min-width: 0; }
+  .filters select {
+    flex: none; padding: 7px 14px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--line);
+    font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap;
   }
-  .filters button[aria-selected='true'] { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
-  .filters .n { opacity: 0.6; font-size: calc(12px * var(--size-app)); margin-left: 2px; }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
   .empty { text-align: center; padding: 40px 20px; color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(22px * var(--size-headings)); margin: 0 0 6px; }
