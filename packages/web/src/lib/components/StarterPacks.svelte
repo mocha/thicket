@@ -79,7 +79,7 @@
 
 <style>
   .packs { margin: 0; }
-  h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 4px; }
+  h2 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 4px; }
   .lede { margin: 0 0 16px; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); max-width: 60ch; }
   ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
   li { display: flex; flex-direction: column; }
