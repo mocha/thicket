@@ -186,6 +186,33 @@ export const collectionsApi = {
   }
 };
 
+/** The import page (api/src/lib/importer.ts). `unsure`: couldn't be checked just now; it is added and retried. */
+export type ImportFeedState = 'ok' | 'failed' | 'unsure' | 'pending';
+export type ImportFeed = { url: string; title: string | null; siteUrl: string | null; state: ImportFeedState; reason: string | null; following: boolean };
+export type ImportGroup = { name: string; feeds: ImportFeed[]; existing: { id: number; name: string; slug: string } | null };
+export type ImportPreview = { title: string | null; source: string | null; groups: ImportGroup[]; emptyFolders: string[]; duplicates: number };
+export type ImportCheck = { url: string; state: ImportFeedState; reason: string | null; title: string | null; finalUrl: string | null };
+export type ImportCommitted = { id: number; name: string; slug: string; created: boolean; added: number; alreadyThere: number };
+/** Feeds per check request; the server takes no more. */
+export const IMPORT_CHECK_BATCH = 8;
+
+/** Read and check go around j(): they answer 429 when someone is checking far too much, and that must not be retried. */
+async function raw<T>(input: string, init: RequestInit): Promise<T> {
+  const res = await fetch(input, init);
+  const body = await res.json().catch(() => ({}));
+  if (res.status === 401) onUnauthorized?.();
+  if (!res.ok) throw new ApiError(body.error ?? `HTTP ${res.status}`, res.status);
+  return body as T;
+}
+
+export const importApi = {
+  readFile: async (file: File) => raw<ImportPreview>('/api/import/read', { method: 'POST', headers: { 'content-type': 'text/x-opml' }, body: await file.text() }),
+  readLink: (url: string) => raw<ImportPreview>('/api/import/read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }) }),
+  check: (urls: string[]) => raw<{ results: ImportCheck[] }>('/api/import/check', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ urls }) }),
+  commit: (groups: { name: string; feeds: { url: string; title: string | null }[] }[]) =>
+    j<{ collections: ImportCommitted[] }>('/api/import/commit', { method: 'POST', body: JSON.stringify({ groups }) }),
+};
+
 export type Bookmark = {
   id: number; itemId: number | null; feedId: number | null; url: string; title: string | null; summary: string | null;
   imageUrl: string | null; siteTitle: string | null; author: string | null; publishedAt: string | null; note: string | null;

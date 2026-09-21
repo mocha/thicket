@@ -150,6 +150,12 @@
   </form>
 </section>
 
+<section class="card">
+  <h2>Bring your feeds in</h2>
+  <p class="help">Coming from Feedly or another reader? Export your subscriptions as an OPML file there, and bring them in here. Each folder becomes a collection.</p>
+  <div class="row"><a class="linkbtn" href="/import">Import from OPML</a></div>
+</section>
+
 {#if me.isAdmin}
   <section class="card admin">
     <h2>Admin</h2>
@@ -173,6 +179,7 @@
   .row { display: flex; justify-content: flex-end; }
   button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text-2); background: var(--surface); }
   button:disabled { opacity: 0.5; }
+  .linkbtn { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text-2); background: var(--surface); }
   fieldset { border: 0; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 10px; }
   .radio, .switch { flex-direction: row; align-items: flex-start; gap: 12px; font-weight: 400; color: var(--text); cursor: pointer; }
   .radio input, .switch input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }

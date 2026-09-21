@@ -24,6 +24,7 @@ import { notes } from "./routes/notes.js";
 import { search } from "./routes/search.js";
 import { items } from "./routes/items.js";
 import { marks } from "./routes/marks.js";
+import { imports } from "./routes/imports.js";
 import { startScheduler } from "./feeds/scheduler.js";
 import { attachUser, pruneSessions } from "./lib/auth.js";
 import { startRetention } from "./lib/retention.js";
@@ -55,6 +56,7 @@ app.route("/api/bookmarks", bookmarks);
 app.route("/api/notes", notes);
 app.route("/api/items", items);
 app.route("/api/marks", marks);
+app.route("/api/import", imports);
 
 const scheduler = SCHEDULER
   ? startScheduler({ tickMs: SCHEDULER_TICK_MS, concurrency: FETCH_CONCURRENCY, log: (m) => console.log(`[fetch] ${m}`) })
