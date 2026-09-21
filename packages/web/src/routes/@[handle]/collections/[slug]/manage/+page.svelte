@@ -424,50 +424,50 @@
   dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: 20px 20px 0 0; padding: 20px 18px calc(18px + var(--safe-b)); box-shadow: 0 -10px 40px rgba(0,0,0,0.25); max-height: 88vh; overflow: auto; }
   @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 520px; border-radius: 20px; } }
-  .sheet h2 { font-family: var(--font-headings); font-size: calc(21px * var(--size-headings)); margin: 0 0 10px; overflow-wrap: anywhere; }
-  .sheet p { margin: 0 0 10px; font-size: calc(15px * var(--size-app)); color: var(--text-2); }
-  .reveal { display: inline-flex; align-items: center; gap: 6px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--accent); margin-bottom: 8px; }
+  .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 10px; overflow-wrap: anywhere; }
+  .sheet p { margin: 0 0 10px; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
+  .reveal { display: inline-flex; align-items: center; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); margin-bottom: 8px; }
   .orphans { list-style: none; margin: 0 0 8px; padding: 0; border: 1px solid var(--line); border-radius: 12px; max-height: 40vh; overflow-y: auto; }
-  .orphans li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-top: 1px solid var(--line); font-size: calc(14px * var(--size-app)); }
+  .orphans li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
   .orphans li:first-child { border-top: 0; }
   .oname { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .hint { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
-  .pick { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 12px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .pick select { font: inherit; font-size: calc(15px * var(--size-app)); font-weight: 400; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+  .hint { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .pick { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 12px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  .pick select { font: inherit; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 400; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
   .pick select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .sheet .row { margin-top: 14px; }
-  .back { display: inline-flex; align-items: center; gap: 4px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--accent); padding: 6px 0; margin-bottom: 8px; }
+  .back { display: inline-flex; align-items: center; gap: 4px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); padding: 6px 0; margin-bottom: 8px; }
   .top { margin-bottom: 6px; }
-  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 2px 0 0; overflow-wrap: anywhere; }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 2px 0 0; overflow-wrap: anywhere; }
   .titlebar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .titlerow { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
   .rename { flex: 1; }
   .rename { margin-top: 4px; }
-  .rename input { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); font-weight: 600; width: 100%; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+  .rename input { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); font-weight: 600; width: 100%; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
   hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
   .opt { margin-bottom: 18px; }
-  h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
-  h3 { font-size: calc(13px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin: 16px 0 6px; }
-  .info { margin: 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; }
+  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
+  h3 { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin: 16px 0 6px; }
+  .info { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; }
   .info a { color: var(--accent); font-weight: 600; }
-  .subtle { margin: -4px 0 10px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .subtle { margin: -4px 0 10px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .radios { display: flex; flex-direction: column; gap: 8px; }
   /* Side by side once there is room for three; stacked on a phone, where they would be three slivers. */
   @media (min-width: 620px) { .vis { display: grid; grid-template-columns: repeat(3, 1fr); align-items: stretch; } }
   .descbox { position: relative; }
   /* A fixed box tall enough for the full 300 characters; a reserved strip at the bottom keeps typed text clear of the "Saved" note. */
   .descbox textarea { padding-bottom: 30px; resize: none; }
-  .saved { position: absolute; right: 12px; bottom: 9px; font-size: calc(12px * var(--size-app)); font-weight: 600; color: var(--accent); background: var(--surface); padding: 1px 6px; border-radius: 6px; pointer-events: none; }
+  .saved { position: absolute; right: 12px; bottom: 9px; font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); background: var(--surface); padding: 1px 6px; border-radius: 6px; pointer-events: none; }
   .radios label { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
   .vis label { gap: 8px; }
   .radios label:has(input:checked) { border-color: var(--accent); }
   .radios input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
-  .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(14px * var(--size-app)); }
-  .radios small { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
-  textarea { width: 100%; font: inherit; font-size: calc(15px * var(--size-app)); line-height: 1.4; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); resize: vertical; }
+  .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  textarea { width: 100%; font: inherit; font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.4; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); resize: vertical; }
   textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-  .counter { margin-left: auto; font-size: calc(12px * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .counter { margin-left: auto; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
   .counter.near { color: var(--danger); }
   .feedhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
   .feedhead h2 { margin: 0; }
@@ -479,16 +479,16 @@
   .children .name { flex: 1; font-weight: 600; }
   .meta { flex: 1; min-width: 0; }
   .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sub2 { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub2 { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bad { color: var(--danger); }
-  .chip { flex: none; font-size: calc(13px * var(--size-app)); color: var(--text-2); padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line); }
-  .count, .chev { color: var(--text-3); font-size: calc(13px * var(--size-app)); }
-  .chev { font-size: calc(20px * var(--size-app)); }
+  .chip { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line); }
+  .count, .chev { color: var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); }
+  .chev { font-size: calc(var(--text-xl) * var(--size-app)); }
   .menu { position: relative; flex: none; }
   /* Hangs below the button, right-aligned, from its spot in the header. */
   .menupanel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 60; min-width: 244px; background: var(--surface); border-radius: 14px; padding: 6px; box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 0 1px var(--line); display: flex; flex-direction: column; }
-  .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text); }
+  .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
   .mi:hover { background: var(--surface-2); }
   .mi.danger { color: var(--danger); }
-  .status { text-align: center; color: var(--text-3); padding: 24px 0; margin: 0; font-size: calc(14px * var(--size-app)); }
+  .status { text-align: center; color: var(--text-3); padding: 24px 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>

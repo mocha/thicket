@@ -504,15 +504,15 @@
 <style>
   .top { margin-bottom: 12px; }
   .titlerow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; min-width: 0; }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; min-width: 0; }
   /* text-wrap: pretty keeps a lone last word from stranding on its own line. */
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); max-width: 62ch; text-wrap: pretty; }
+  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 62ch; text-wrap: pretty; }
   /* On a phone the subtitle drops its "all in one search" tail to stay one tidy line. */
   @media (max-width: 560px) { .sub .tail { display: none; } }
   .pane { margin-bottom: 8px; }
   .head { margin-bottom: 20px; }
   .field { position: relative; display: flex; align-items: center; }
-  .search { width: 100%; min-width: 0; padding: 12px 16px 12px 44px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: calc(16px * var(--size-app)); text-overflow: ellipsis; }
+  .search { width: 100%; min-width: 0; padding: 12px 16px 12px 44px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); text-overflow: ellipsis; }
   /* Extra room on the right so long text doesn't run under the clear button. */
   .search.clearable { padding-right: 44px; }
   /* Hide the browser's own clear widget so there aren't two. */
@@ -520,14 +520,14 @@
   .glass { position: absolute; left: 16px; color: var(--text-3); pointer-events: none; }
   .field :global(.clear) { position: absolute; right: 8px; }
   .pane :global(.scopes) { margin-bottom: 4px; }
-  h2 { font-family: var(--font-headings); font-size: calc(21px * var(--size-headings)); margin: 0; display: flex; align-items: baseline; gap: 8px; }
-  .count { color: var(--text-3); font-weight: 400; font-size: calc(15px * var(--size-app)); font-family: var(--font); font-variant-numeric: tabular-nums; }
+  h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0; display: flex; align-items: baseline; gap: 8px; }
+  .count { color: var(--text-3); font-weight: 400; font-size: calc(var(--text-base) * var(--size-app)); font-family: var(--font); font-variant-numeric: tabular-nums; }
   /* The per-view explainer: the caption above the filters, saying what this
      view is before its controls. A small accent-tinted icon sets it apart from
      the plain text below; the icon's left edge lines up with the filter labels. */
   /* Icon flows inline with the text so it always rides beside the first word —
      centered together, and never pinned to the edge when the text fills the line. */
-  .blurb { margin: 8px 0 16px; color: var(--accent); font-size: calc(14px * var(--size-app)); text-align: center; text-wrap: pretty; }
+  .blurb { margin: 8px 0 16px; color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); text-align: center; text-wrap: pretty; }
   .blurb span { font-weight: 600; }
   .blurb-i { display: inline-block; vertical-align: -3px; margin-right: 6px; color: var(--accent); }
   /* Browsing, the filters and list are one card; the caption leads it, inset to
@@ -535,9 +535,9 @@
   .browse .blurb { margin: 0; padding: 20px 12px 8px; }
   .group { margin-bottom: 22px; }
   .group h2 { margin-bottom: 8px; }
-  .all { margin-left: auto; font-size: calc(14px * var(--size-app)); }
+  .all { margin-left: auto; font-size: calc(var(--text-sm) * var(--size-app)); }
   .filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 4px; }
-  .filter { display: inline-flex; align-items: center; gap: 4px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .filter { display: inline-flex; align-items: center; gap: 4px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .label { white-space: nowrap; }
   /* Narrow screens: the filters stack full-width into a tidy little form
      instead of wrapping into an orphaned control. */
@@ -547,7 +547,7 @@
     .filter .label { min-width: 44px; }
     .filter select { flex: 1; }
   }
-  .filter select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: calc(13px * var(--size-app)); }
+  .filter select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   /* Browse: the filters are the list card's header, so the two read as one unit. */
   .browse { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
@@ -564,13 +564,13 @@
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .handle { font-weight: 400; color: var(--text-3); font-size: calc(13px * var(--size-app)); margin-left: 4px; }
+  .handle { font-weight: 400; color: var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); margin-left: 4px; }
   /* Wraps rather than truncates: every part of it is a fact someone is deciding on. */
-  .sub2 { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
-  .desc { font-size: calc(13px * var(--size-app)); color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .sub2 { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
+  .desc { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .desc mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
   /* Why this row is here: the same numbers the ranking is made of, in words. */
-  .why { font-size: calc(13px * var(--size-app)); color: var(--accent); margin: 2px 0 1px; }
+  .why { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); margin: 2px 0 1px; }
   .why strong { font-weight: 700; }
   .why.muted { color: var(--text-3); }
   .who { color: var(--text-2); font-weight: 600; }
@@ -581,13 +581,13 @@
   .stack :global(> :nth-child(1)) { left: 0; z-index: 3; }
   .stack :global(> :nth-child(2)) { left: 9px; z-index: 2; }
   .stack :global(> :nth-child(3)) { left: 18px; z-index: 1; }
-  .chev { color: var(--text-3); font-size: calc(20px * var(--size-app)); }
-  .follow, .save { flex: none; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: calc(13px * var(--size-app)); font-weight: 600; }
+  .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
+  .follow, .save { flex: none; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .follow.on, .save.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
   .follow:disabled, .save:disabled { opacity: 0.6; }
-  .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 18px 0; margin: 0; }
+  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: 18px 0; margin: 0; }
   .status.error { color: var(--danger); }
-  .empty { text-align: center; color: var(--text-2); padding: 34px 16px; font-size: calc(15px * var(--size-app)); }
+  .empty { text-align: center; color: var(--text-2); padding: 34px 16px; font-size: calc(var(--text-base) * var(--size-app)); }
   .empty p { margin: 0 auto; max-width: 480px; }
   .link { color: var(--accent); font-weight: 600; font-size: inherit; }
 </style>
