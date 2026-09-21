@@ -4,6 +4,8 @@
   import { page } from '$app/state';
   import { api, authApi, ApiError, type InstanceStatus } from '$lib/api';
   import { setMe } from '$lib/session.svelte';
+  import Field from '$lib/components/Field.svelte';
+  import Input from '$lib/components/Input.svelte';
 
   /**
    * Sign-up is a handle and a password. Everything on the profile is optional
@@ -59,26 +61,45 @@
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); void submit(); }}>
       {#if needsInvite}
-        <label class:err={error?.field === 'inviteCode'}>
-          <span>Invite code</span>
-          <input type="text" bind:value={inviteCode} autocapitalize="off" spellcheck="false" required />
-        </label>
+        <Field label="Invite code" error={error?.field === 'inviteCode' ? error.message : null}>
+          {#snippet children({ id, describedBy, invalid })}
+            <Input {id} aria-describedby={describedBy} {invalid} bind:value={inviteCode} autocapitalize="off" spellcheck="false" required />
+          {/snippet}
+        </Field>
       {/if}
-      <label class:err={error?.field === 'handle'}>
-        <span>Handle</span>
-        <span class="at"><span aria-hidden="true">@</span><input type="text" bind:value={handle} autocomplete="username" autocapitalize="off" spellcheck="false" required placeholder="you" /></span>
-        <small>Your page will be <strong>/@{handleClean || 'you'}</strong>. Lowercase letters, numbers, - and _.</small>
-      </label>
-      <label class:err={error?.field === 'password'}>
-        <span>Password</span>
-        <input type="password" bind:value={password} autocomplete="new-password" required minlength="8" />
-        <small>At least 8 characters.</small>
-      </label>
-      <label>
-        <span>Display name <em>optional</em></span>
-        <input type="text" bind:value={displayName} autocomplete="name" placeholder="How you’d like to appear" />
-      </label>
-      {#if error}<p class="bad" role="alert">{error.message}</p>{/if}
+      <Field
+        label="Handle"
+        hint="Your page will be /@{handleClean || 'you'}. Lowercase letters, numbers, - and _."
+        error={error?.field === 'handle' ? error.message : null}
+      >
+        {#snippet children({ id, describedBy, invalid })}
+          <Input
+            {id}
+            aria-describedby={describedBy}
+            {invalid}
+            bind:value={handle}
+            autocomplete="username"
+            autocapitalize="off"
+            spellcheck="false"
+            required
+            placeholder="you"
+            style="--field-gap: var(--space-1)"
+          >
+            {#snippet leading()}<span aria-hidden="true">@</span>{/snippet}
+          </Input>
+        {/snippet}
+      </Field>
+      <Field label="Password" hint="At least 8 characters." error={error?.field === 'password' ? error.message : null}>
+        {#snippet children({ id, describedBy, invalid })}
+          <Input {id} aria-describedby={describedBy} {invalid} type="password" bind:value={password} autocomplete="new-password" required minlength="8" />
+        {/snippet}
+      </Field>
+      <Field label="Display name" optional>
+        {#snippet children({ id, describedBy, invalid })}
+          <Input {id} aria-describedby={describedBy} {invalid} bind:value={displayName} autocomplete="name" placeholder="How you’d like to appear" />
+        {/snippet}
+      </Field>
+      {#if error && !error.field}<p class="bad" role="alert">{error.message}</p>{/if}
       <button type="submit" disabled={busy || !canSubmit}>{busy ? 'Creating…' : 'Create account'}</button>
     </form>
   {/if}
@@ -96,17 +117,6 @@
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 6px; }
   .lede { color: var(--text-2); margin: 0 0 20px; }
   form { display: flex; flex-direction: column; gap: 16px; }
-  label { display: flex; flex-direction: column; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  label em { font-weight: 400; color: var(--text-3); font-style: normal; margin-left: 4px; }
-  small { font-weight: 400; color: var(--text-3); }
-  small strong { color: var(--text-2); }
-  input { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); width: 100%; }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .at { display: flex; align-items: center; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); padding-left: 12px; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
-  .at input { border: 0; padding-left: 2px; }
-  .at:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .at input:focus { outline: none; }
-  .err input, .err .at { border-color: var(--danger); }
   button { margin-top: 4px; padding: 13px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   button:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }

@@ -10,6 +10,8 @@
   import { api, authApi, ApiError, type InstanceStatus } from '$lib/api';
   import { setMe } from '$lib/session.svelte';
   import Tabs from './Tabs.svelte';
+  import Field from './Field.svelte';
+  import Input from './Input.svelte';
 
   let { initial = 'signup' }: { initial?: 'signup' | 'login' } = $props();
   // svelte-ignore state_referenced_locally
@@ -71,22 +73,45 @@
     {:else}
       <form onsubmit={(e) => { e.preventDefault(); void submit(); }}>
         {#if mode === 'signup' && needsInvite}
-          <label class:err={error?.field === 'inviteCode'}>
-            <span>Invite code</span>
-            <input type="text" bind:value={inviteCode} autocapitalize="off" spellcheck="false" placeholder="From the person who invited you" required />
-          </label>
+          <Field label="Invite code" error={error?.field === 'inviteCode' ? error.message : null}>
+            {#snippet children({ id, describedBy, invalid })}
+              <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={inviteCode} autocapitalize="off" spellcheck="false" placeholder="From the person who invited you" required />
+            {/snippet}
+          </Field>
         {/if}
-        <label class:err={error?.field === 'handle'}>
-          <span>Handle</span>
-          <span class="at"><span aria-hidden="true">@</span><input type="text" bind:value={handle} autocomplete="username" autocapitalize="off" spellcheck="false" required placeholder="you" /></span>
-          {#if mode === 'signup'}<small>Your page will be /@{handleClean || 'you'}</small>{/if}
-        </label>
-        <label class:err={error?.field === 'password'}>
-          <span>Password</span>
-          <input type="password" bind:value={password} autocomplete={mode === 'signup' ? 'new-password' : 'current-password'} required minlength={mode === 'signup' ? 8 : undefined} />
-          {#if mode === 'signup'}<small>At least 8 characters.</small>{/if}
-        </label>
-        {#if error}<p class="bad" role="alert">{error.message}</p>{/if}
+        <Field
+          label="Handle"
+          hint={mode === 'signup' ? `Your page will be /@${handleClean || 'you'}` : undefined}
+          error={error?.field === 'handle' ? error.message : null}
+        >
+          {#snippet children({ id, describedBy, invalid })}
+            <Input
+              {id}
+              aria-describedby={describedBy}
+              {invalid}
+              inset
+              bind:value={handle}
+              autocomplete="username"
+              autocapitalize="off"
+              spellcheck="false"
+              required
+              placeholder="you"
+              style="--field-gap: var(--space-1)"
+            >
+              {#snippet leading()}<span aria-hidden="true">@</span>{/snippet}
+            </Input>
+          {/snippet}
+        </Field>
+        <Field
+          label="Password"
+          hint={mode === 'signup' ? 'At least 8 characters.' : undefined}
+          error={error?.field === 'password' ? error.message : null}
+        >
+          {#snippet children({ id, describedBy, invalid })}
+            <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={password} autocomplete={mode === 'signup' ? 'new-password' : 'current-password'} required minlength={mode === 'signup' ? 8 : undefined} />
+          {/snippet}
+        </Field>
+        {#if error && !error.field}<p class="bad" role="alert">{error.message}</p>{/if}
         <button type="submit" class="go" disabled={busy || (mode === 'signup' ? !canSignup : !handleClean || !password)}>
           {busy ? (mode === 'signup' ? 'Creating…' : 'Logging in…') : mode === 'signup' ? 'Create account' : 'Log in'}
         </button>
@@ -104,15 +129,6 @@
   .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
   .box :global(.tabs) { margin-bottom: 16px; }
   form { display: flex; flex-direction: column; gap: 12px; }
-  label { display: flex; flex-direction: column; gap: 5px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  small { font-weight: 400; color: var(--text-3); }
-  input { padding: 11px 13px; border-radius: 11px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); width: 100%; }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .at { display: flex; align-items: center; border-radius: 11px; border: 1px solid var(--line); background: var(--bg); padding-left: 12px; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
-  .at input { border: 0; padding-left: 2px; background: transparent; }
-  .at:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .at input:focus { outline: none; }
-  .err input, .err .at { border-color: var(--danger); }
   .go { margin-top: 2px; padding: 13px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .go:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }

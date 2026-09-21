@@ -3,6 +3,8 @@
   import { page } from '$app/state';
   import { authApi } from '$lib/api';
   import { setMe } from '$lib/session.svelte';
+  import Field from '$lib/components/Field.svelte';
+  import Input from '$lib/components/Input.svelte';
 
   let handle = $state('');
   let password = $state('');
@@ -28,8 +30,29 @@
 <section class="auth">
   <h1>Welcome back</h1>
   <form onsubmit={(e) => { e.preventDefault(); void submit(); }}>
-    <label><span>Handle</span><input type="text" bind:value={handle} autocomplete="username" autocapitalize="off" spellcheck="false" required placeholder="you" /></label>
-    <label><span>Password</span><input type="password" bind:value={password} autocomplete="current-password" required /></label>
+    <Field label="Handle">
+      {#snippet children({ id, describedBy, invalid })}
+        <Input
+          {id}
+          aria-describedby={describedBy}
+          {invalid}
+          bind:value={handle}
+          autocomplete="username"
+          autocapitalize="off"
+          spellcheck="false"
+          required
+          placeholder="you"
+          style="--field-gap: var(--space-1)"
+        >
+          {#snippet leading()}<span aria-hidden="true">@</span>{/snippet}
+        </Input>
+      {/snippet}
+    </Field>
+    <Field label="Password">
+      {#snippet children({ id, describedBy, invalid })}
+        <Input {id} aria-describedby={describedBy} {invalid} type="password" bind:value={password} autocomplete="current-password" required />
+      {/snippet}
+    </Field>
     {#if error}<p class="bad" role="alert">{error}</p>{/if}
     <button type="submit" disabled={busy || !handle.trim() || !password}>{busy ? 'Logging in…' : 'Log in'}</button>
   </form>
@@ -41,9 +64,6 @@
   .auth { max-width: 380px; margin: 40px auto 0; }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 20px; }
   form { display: flex; flex-direction: column; gap: 14px; }
-  label { display: flex; flex-direction: column; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  input { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   button { margin-top: 4px; padding: 13px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   button:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }

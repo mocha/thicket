@@ -8,7 +8,8 @@
   import Avatar from './Avatar.svelte';
   import AccountMenu from './AccountMenu.svelte';
   import Icon from './Icon.svelte';
-  import IconButton from './IconButton.svelte';
+  import Field from './Field.svelte';
+  import Input from './Input.svelte';
   import Badge from './Badge.svelte';
   import { display } from '$lib/display.svelte';
   import { marks, badge, anyNew, countText } from '$lib/marks.svelte';
@@ -139,12 +140,20 @@
       <ul class="cols" id="my-collections" aria-label="Your collections">
         {#if showFilter}
           <li class="filterrow">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-            <input type="text" bind:value={filter} placeholder="Filter collections…" aria-label="Filter collections" maxlength="60" autocomplete="off"
-              onkeydown={(e) => { if (e.key === 'Escape') filter = ''; }} />
-            {#if filter}
-              <IconButton icon="close" size="sm" label="Clear filter" onclick={() => (filter = '')} />
-            {/if}
+            <Field label="Filter collections" hideLabel>
+              {#snippet children({ id })}
+                <Input
+                  {id}
+                  variant="search"
+                  size="sm"
+                  bind:value={filter}
+                  placeholder="Filter collections…"
+                  maxlength="60"
+                  autocomplete="off"
+                  onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') filter = ''; }}
+                />
+              {/snippet}
+            </Field>
           </li>
         {/if}
         {#if filter.trim()}
@@ -175,8 +184,22 @@
         <li class="new">
           {#if creating}
             <form onsubmit={(e) => { e.preventDefault(); void create(); }}>
-              <input bind:this={input} type="text" bind:value={newName} placeholder="Name it…" maxlength="60" disabled={busy} aria-label="New collection name"
-                onkeydown={(e) => { if (e.key === 'Escape') creating = false; }} onblur={() => { if (!newName.trim()) creating = false; }} />
+              <Field label="New collection name" hideLabel>
+                {#snippet children({ id })}
+                  <Input
+                    {id}
+                    bind:element={input}
+                    variant="create"
+                    size="sm"
+                    bind:value={newName}
+                    placeholder="Name it…"
+                    maxlength="60"
+                    disabled={busy}
+                    onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') creating = false; }}
+                    onblur={() => { if (!newName.trim()) creating = false; }}
+                  />
+                {/snippet}
+              </Field>
             </form>
           {:else}
             <button type="button" onclick={startCreate}><span class="plus" aria-hidden="true">+</span> New collection</button>
@@ -273,11 +296,8 @@
     nav:not(.paged) .heading { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 10px; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); text-align: left; }
     nav:not(.paged) .heading:hover { background: var(--surface-2); }
     nav:not(.paged) .groupcaret { flex: none; margin-left: auto; display: flex; color: var(--text-3); }
-    nav:not(.paged) .cols .filterrow { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); }
-    nav:not(.paged) .cols .filterrow:focus-within { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
-    nav:not(.paged) .cols .filterrow svg { flex: none; color: var(--text-3); }
-    nav:not(.paged) .cols .filterrow input { flex: 1; min-width: 0; border: 0; padding: 0; background: transparent; color: var(--text); font-size: calc(var(--text-sm) * var(--size-app)); }
-    nav:not(.paged) .cols .filterrow input:focus { outline: none; }
+    /* The filter box draws itself; the row only holds it off the list below. */
+    nav:not(.paged) .cols .filterrow { margin-bottom: 3px; }
     nav:not(.paged) .cols .nomatch { padding: 7px 12px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
     /* The Everything row is a normal-height row: undo the full-height stretch the bottom-bar tabs use. */
     nav:not(.paged) .readall { height: auto; }
@@ -298,7 +318,6 @@
     nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 12px; border-radius: 8px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     nav:not(.paged) .cols .new button:hover { background: var(--surface-2); }
     nav:not(.paged) .plus { font-size: calc(var(--text-base) * var(--size-app)); line-height: 1; width: 10px; }
-    nav:not(.paged) .cols .new input { width: 100%; font-size: calc(var(--text-sm) * var(--size-app)); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--surface); color: var(--text); }
 
     nav:not(.paged) .account { display: flex; flex: none; align-items: center; gap: 4px; padding: 12px 0 16px; border-top: 1px solid var(--line); background: var(--bg); }
     nav:not(.paged) .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; text-align: left; }
