@@ -66,13 +66,14 @@
   .stepper button { width: 30px; height: 32px; font-size: calc(17px * var(--size-app)); color: var(--text-2); }
   .stepper button:disabled { opacity: 0.35; }
   .stepper output { min-width: 5.5ch; text-align: center; font-size: calc(12px * var(--size-app)); font-variant-numeric: tabular-nums; color: var(--text-2); }
-  /* Narrow: the name takes its own line, the two controls share the next. */
+  /* Narrow: the name and the size share the first line, and the three faces
+     take the whole of the next one, where their names fit at full size. */
   @container (max-width: 479px) {
     .row { grid-template-columns: 1fr auto; }
-    .who { grid-column: 1 / -1; }
+    .who { grid-column: 1; }
     .who small { display: none; }
-    .row :global(.faces) { justify-self: start; }
-    .row :global(.faces button) { padding-left: var(--space-2); padding-right: var(--space-2); }
+    .stepper { grid-column: 2; grid-row: 1; }
+    .row :global(.faces) { grid-column: 1 / -1; justify-self: start; }
     .stepper button { width: 26px; }
   }
 

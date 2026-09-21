@@ -87,4 +87,6 @@
 
   .accents { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
   .lead { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); margin-right: 4px; }
+  /* On a narrow screen the row drops below the word "Accent" rather than being squeezed. */
+  .accents :global(.cg) { flex: none; }
 </style>

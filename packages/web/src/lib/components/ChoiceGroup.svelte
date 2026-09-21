@@ -144,9 +144,13 @@
 <style>
   .cg {
     display: inline-flex;
+    max-width: 100%;
     border: 1px solid var(--line);
     border-radius: var(--radius-sm);
-    overflow: hidden;
+    /* A row too long for its space slides sideways rather than hiding an
+       option off the end. It rarely comes to this. */
+    overflow-x: auto;
+    overflow-y: hidden;
     background: var(--surface);
   }
   .cg.fill {
@@ -156,12 +160,12 @@
   .cg.fill button {
     flex: 1;
   }
-
   .cg button {
     display: inline-flex;
+    flex: none;
     align-items: center;
     justify-content: center;
-    gap: var(--space-2);
+    gap: var(--space-1);
     padding: var(--space-2) var(--space-4);
     background: var(--surface);
     border-left: 1px solid var(--line);
@@ -205,8 +209,8 @@
 
   .sw {
     flex: none;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     border: 1px solid rgba(128, 128, 128, 0.25);
   }
