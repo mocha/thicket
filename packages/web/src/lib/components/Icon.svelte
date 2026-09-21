@@ -1,13 +1,17 @@
 <script lang="ts">
   interface Props {
-    name: 'gear' | 'pencil' | 'close' | 'caret' | 'back';
+    name: 'gear' | 'pencil' | 'close' | 'caret' | 'back' | 'dots' | 'bookmark' | 'note';
     size?: number;
     stroke?: number;
+    /** Paint the shape solid instead of outlining it: the on state of a toggle. */
+    fill?: boolean;
     dir?: 'right' | 'down' | 'left' | 'up';
     class?: string;
   }
-  let { name, size = 20, stroke = 2, dir = 'right', class: klass = '' }: Props = $props();
+  let { name, size = 20, stroke = 2, fill = false, dir = 'right', class: klass = '' }: Props = $props();
   const rot = { right: 0, down: 90, left: 180, up: 270 } as const;
+  /* The three dots are solid discs, so they are always painted and never outlined. */
+  const solid = $derived(fill || name === 'dots');
 </script>
 
 <svg
@@ -15,8 +19,8 @@
   viewBox="0 0 24 24"
   width={size}
   height={size}
-  fill="none"
-  stroke="currentColor"
+  fill={solid ? 'currentColor' : 'none'}
+  stroke={name === 'dots' ? 'none' : 'currentColor'}
   stroke-width={stroke}
   stroke-linecap="round"
   stroke-linejoin="round"
@@ -35,5 +39,13 @@
     <path d="M9 6l6 6-6 6" />
   {:else if name === 'back'}
     <path d="M15 6l-6 6 6 6" />
+  {:else if name === 'dots'}
+    <circle cx="12" cy="5" r="2" />
+    <circle cx="12" cy="12" r="2" />
+    <circle cx="12" cy="19" r="2" />
+  {:else if name === 'bookmark'}
+    <path d="M6 4h12v17l-6-4-6 4z" />
+  {:else if name === 'note'}
+    <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H10l-5 4v-4H5.5A1.5 1.5 0 0 1 4 14.5z" />
   {/if}
 </svg>
