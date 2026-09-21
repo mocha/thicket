@@ -6,7 +6,7 @@
    * option should switch what you are looking at, that is a tab strip, not
    * this.
    *
-   * Two sizes, both 13px text: md is the roomier row (8px above and below,
+   * Two sizes, both 14px text: md is the roomier row (8px above and below,
    * 16px each side), sm is the tighter one for a crowded settings row (8px by
    * 12px). `fill` makes every option the same width so they share the row.
    *

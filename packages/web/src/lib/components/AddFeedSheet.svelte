@@ -192,22 +192,22 @@
     .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 460px; border-radius: 20px; max-height: 86vh; }
   }
   header { display: flex; align-items: center; justify-content: space-between; }
-  h2 { margin: 0; font-size: calc(22px * var(--size-headings)); font-family: var(--font-headings); }
-  .lede { color: var(--text-2); margin: -6px 0 0; font-size: calc(14px * var(--size-app)); }
-  input[type='url'] { padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); width: 100%; }
+  h2 { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }
+  .lede { color: var(--text-2); margin: -6px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
+  input[type='url'] { padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); width: 100%; }
   input[type='url']:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .result { margin: 0; color: var(--text-2); font-size: calc(14px * var(--size-app)); }
+  .result { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .result p { margin: 0 0 6px; }
   .bad { color: var(--danger); }
   .candidates { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
   .candidates button { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); }
-  .candidates span { font-size: calc(12px * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
-  .eyebrow { font-size: calc(11px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 4px; }
+  .candidates span { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
+  .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 4px; }
   .filter { display: flex; align-items: center; gap: 6px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
   .filter:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
-  .filter input { flex: 1; min-width: 0; border: 0; padding: 0; background: transparent; color: var(--text); font-size: calc(14px * var(--size-app)); }
+  .filter input { flex: 1; min-width: 0; border: 0; padding: 0; background: transparent; color: var(--text); font-size: calc(var(--text-sm) * var(--size-app)); }
   .filter input:focus { outline: none; }
-  .nomatch { margin: 0; padding: 12px 8px; color: var(--text-3); font-size: calc(13px * var(--size-app)); }
+  .nomatch { margin: 0; padding: 12px 8px; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: 38vh; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; }
   /* Desktop cap. Must come after the base .scroll rule above: same specificity,
      so source order decides, and the list should top out at ~7 rows and scroll,
@@ -218,15 +218,15 @@
   .checks li:first-child label { border-top: 0; }
   .checks input { width: 20px; height: 20px; accent-color: var(--accent); }
   .name { flex: 1; font-weight: 500; }
-  .count { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
-  .hint { margin: -4px 0 0; font-size: calc(12px * var(--size-app)); color: var(--text-3); }
+  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .hint { margin: -4px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .new { display: flex; align-items: center; gap: 8px; }
-  .plus { width: 20px; text-align: center; color: var(--accent); font-size: calc(20px * var(--size-app)); line-height: 1; font-weight: 600; }
-  .new input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--accent); background: var(--surface); color: var(--text); font-size: calc(15px * var(--size-app)); }
+  .plus { width: 20px; text-align: center; color: var(--accent); font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; font-weight: 600; }
+  .new input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--accent); background: var(--surface); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); }
   .new input::placeholder { color: var(--accent); opacity: 0.85; }
   .new input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-style: solid; }
   .new button { padding: 10px 14px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
   .new button:disabled { opacity: 0.35; }
-  .follow { margin-top: 6px; padding: 14px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(16px * var(--size-app)); }
+  .follow { margin-top: 6px; padding: 14px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .follow:disabled { opacity: 0.5; }
 </style>

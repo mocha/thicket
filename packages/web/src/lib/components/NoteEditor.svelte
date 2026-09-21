@@ -69,13 +69,13 @@
 
 <style>
   .editor { border-top: 1px solid var(--line); padding: 10px 16px 12px; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
-  .head { font-weight: 700; font-size: calc(12px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 6px; }
-  textarea { width: 100%; font: inherit; font-size: calc(14px * var(--size-app)); line-height: 1.5; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); resize: vertical; }
+  .head { font-weight: 700; font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 6px; }
+  textarea { width: 100%; font: inherit; font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); resize: vertical; }
   textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .counter { font-size: calc(12px * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .counter { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
   .counter.pushright { margin-left: auto; }
   .counter.near { color: var(--text-2); }
   .counter.over { color: var(--danger); font-weight: 700; }
-  .bad { margin: 6px 0 0; font-size: calc(13px * var(--size-app)); color: var(--danger); }
+  .bad { margin: 6px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--danger); }
 </style>

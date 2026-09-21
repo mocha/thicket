@@ -54,8 +54,8 @@
   .rows { display: flex; flex-direction: column; }
   .row { display: grid; grid-template-columns: minmax(84px, 1fr) auto auto; align-items: center; gap: 8px 10px; padding: 9px 0; }
   .row + .row { border-top: 1px solid var(--line); }
-  .who { display: flex; flex-direction: column; gap: 2px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text); min-width: 0; }
-  .who small { font-weight: 400; font-size: calc(11.5px * var(--size-app)); color: var(--text-3); line-height: 1.3; }
+  .who { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); min-width: 0; }
+  .who small { font-weight: 400; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.3; }
   /* The face row sits at the right-hand end, and each option is set in the
      face it offers. OpenDyslexic runs large, so it is knocked down a size. */
   .row :global(.faces) { justify-self: end; }
@@ -63,9 +63,9 @@
   .row :global(.faces button[data-face='dyslexic']) { font-family: var(--font-dyslexic); font-size: calc(var(--text-xs) * var(--size-app)); }
   .stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; position: relative; z-index: 1; }
   .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--bg); justify-self: end; }
-  .stepper button { width: 30px; height: 32px; font-size: calc(17px * var(--size-app)); color: var(--text-2); }
+  .stepper button { width: 30px; height: 32px; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
   .stepper button:disabled { opacity: 0.35; }
-  .stepper output { min-width: 5.5ch; text-align: center; font-size: calc(12px * var(--size-app)); font-variant-numeric: tabular-nums; color: var(--text-2); }
+  .stepper output { min-width: 5.5ch; text-align: center; font-size: calc(var(--text-sm) * var(--size-app)); font-variant-numeric: tabular-nums; color: var(--text-2); }
   /* Narrow: the name and the size share the first line, and the three faces
      take the whole of the next one, where their names fit at full size. */
   @container (max-width: 479px) {
@@ -79,9 +79,9 @@
 
   /* The preview is set in the live tokens, so it is not a mock-up: it is the app. */
   .preview { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 22px 14px 14px; border-radius: 12px; background: var(--bg); border: 1px dashed var(--text-3); }
-  .tag { position: absolute; top: -9px; left: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface); border: 1px dashed var(--text-3); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); }
+  .tag { position: absolute; top: -9px; left: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface); border: 1px dashed var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); }
   .preview p { margin: 0; }
-  .h { font-family: var(--font-headings); font-weight: 600; font-size: calc(19px * var(--size-headings)); line-height: 1.2; letter-spacing: -0.01em; }
-  .t { font-family: var(--font-reading); font-size: calc(14px * var(--size-reading)); line-height: 1.45; color: var(--text-2); }
-  .btn { font-family: var(--font); font-size: calc(13px * var(--size-app)); font-weight: 600; padding: 7px 13px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); }
+  .h { font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.01em; }
+  .t { font-family: var(--font-reading); font-size: calc(var(--text-sm) * var(--size-reading)); line-height: 1.45; color: var(--text-2); }
+  .btn { font-family: var(--font); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; padding: 7px 13px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); }
 </style>

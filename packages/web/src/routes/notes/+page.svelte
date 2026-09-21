@@ -83,14 +83,14 @@
 
 <style>
   .top { margin-bottom: 14px; }
-  h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; }
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
+  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .list { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; }
-  .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 18px 0; margin: 0; }
+  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: 18px 0; margin: 0; }
   .status.error { color: var(--danger); }
   .empty { text-align: center; padding: 40px 20px; color: var(--text-2); }
-  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(22px * var(--size-headings)); margin: 0 0 6px; }
-  .empty p { margin: 0 auto; max-width: 460px; font-size: calc(15px * var(--size-app)); }
+  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 6px; }
+  .empty p { margin: 0 auto; max-width: 460px; font-size: calc(var(--text-base) * var(--size-app)); }
   .illo { display: block; margin: 0 auto 16px; max-width: 100%; }
   .ctas { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
 </style>

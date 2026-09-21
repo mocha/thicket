@@ -159,25 +159,25 @@
 
 <style>
   .top { margin-bottom: 14px; }
-  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
-  h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
+  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
   /* When a description follows the header, pull it up tight; the 12px gap then sits under the description. */
   h2 + .help { margin-top: -8px; }
-  .help { margin: 0 0 12px; font-size: calc(14px * var(--size-app)); color: var(--text-3); line-height: 1.4; }
-  .fine { margin: 12px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
+  .help { margin: 0 0 12px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .fine { margin: 12px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
   form { display: flex; flex-direction: column; gap: 12px; }
-  label { display: flex; flex-direction: column; gap: 6px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  input[type='password'] { padding: 11px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); font-family: inherit; }
+  label { display: flex; flex-direction: column; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  input[type='password'] { padding: 11px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); font-family: inherit; }
   input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .row { display: flex; justify-content: flex-end; }
-  button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text-2); background: var(--surface); }
+  button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); }
   button:disabled { opacity: 0.5; }
   fieldset { border: 0; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 10px; }
   .radio, .switch { flex-direction: row; align-items: flex-start; gap: 12px; font-weight: 400; color: var(--text); cursor: pointer; }
   .radio input, .switch input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
   .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
-  .radio small, .switch small { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
-  .bad { color: var(--danger); margin: 0; font-size: calc(14px * var(--size-app)); }
+  .radio small, .switch small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .admin .help a { color: var(--accent); font-weight: 600; }
 </style>

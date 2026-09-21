@@ -79,22 +79,22 @@
 
 <style>
   .packs { margin: 0; }
-  h2 { font-family: var(--font-headings); font-size: calc(22px * var(--size-headings)); margin: 0 0 4px; }
-  .lede { margin: 0 0 16px; color: var(--text-2); font-size: calc(15px * var(--size-app)); max-width: 60ch; }
+  h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 4px; }
+  .lede { margin: 0 0 16px; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); max-width: 60ch; }
   ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
   li { display: flex; flex-direction: column; }
   .card { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; flex: 1; }
   .card:hover { border-color: var(--accent); }
   .icons { display: flex; gap: 5px; margin-bottom: 9px; min-height: 26px; }
-  .name { font-weight: 700; font-size: calc(16px * var(--size-app)); }
-  .meta { color: var(--text-3); font-size: calc(13px * var(--size-app)); margin-top: 2px; }
-  .desc { color: var(--text-2); font-size: calc(14px * var(--size-app)); margin-top: 7px; }
-  .take { margin-top: 8px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); font-weight: 600; font-size: calc(14px * var(--size-app)); }
+  .name { font-weight: 700; font-size: calc(var(--text-base) * var(--size-app)); }
+  .meta { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: 2px; }
+  .desc { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: 7px; }
+  .take { margin-top: 8px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .take:hover:not(:disabled) { border-color: var(--accent); }
   .take:disabled { opacity: 0.55; color: var(--text-3); }
-  .from { margin: 14px 0 0; color: var(--text-3); font-size: calc(13.5px * var(--size-app)); line-height: 1.5; max-width: 62ch; }
+  .from { margin: 14px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; max-width: 62ch; }
   .from a { color: var(--accent); font-weight: 600; }
-  .compact h2 { font-size: calc(19px * var(--size-app)); }
+  .compact h2 { font-size: calc(var(--text-xl) * var(--size-app)); }
   .compact .desc { display: none; }
   @media (min-width: 700px) { ul { grid-template-columns: repeat(2, 1fr); } }
   @media (min-width: 1100px) { ul { grid-template-columns: repeat(3, 1fr); } .compact ul { grid-template-columns: repeat(2, 1fr); } }

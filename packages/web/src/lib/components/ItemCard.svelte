@@ -124,14 +124,14 @@
   .card:active { transform: scale(0.99); }
   header {
     display: flex; align-items: center; gap: 8px;
-    font-size: calc(13px * var(--size-app)); color: var(--text-2); padding: 10px 8px 0 16px; min-width: 0;
+    font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); padding: 10px 8px 0 16px; min-width: 0;
   }
   .source { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 4px 6px 4px 0; border-radius: 8px; text-align: left; }
   .source:hover { background: var(--surface-2); }
   .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dot { color: var(--text-3); }
   time { color: var(--text-3); white-space: nowrap; }
-  .fresh { font-size: calc(10.5px * var(--size-app)); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+  .fresh { font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
   .spacer { flex: 1; }
   .link { display: block; padding: 8px 16px 16px; -webkit-tap-highlight-color: transparent; }
   @media (hover: hover) { .link:hover h2 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
@@ -141,16 +141,16 @@
   }
   h2 {
     margin: 0; font-family: var(--font-headings); font-weight: 600;
-    font-size: calc(21px * var(--size-headings)); line-height: 1.25; letter-spacing: -0.01em; overflow-wrap: anywhere;
+    font-size: calc(var(--text-xl) * var(--size-headings)); line-height: 1.25; letter-spacing: -0.01em; overflow-wrap: anywhere;
   }
   p {
-    margin: 8px 0 0; color: var(--text-2); font-family: var(--font-reading); font-size: calc(15px * var(--size-reading));
+    margin: 8px 0 0; color: var(--text-2); font-family: var(--font-reading); font-size: calc(var(--text-base) * var(--size-reading));
     display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
   }
-  footer { margin-top: 10px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  footer { margin-top: 10px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .repeat {
     display: flex; gap: 8px; align-items: flex-start; margin: -4px 16px 14px; padding: 8px 10px;
-    border-radius: 10px; font-size: calc(13px * var(--size-app)); line-height: 1.4; color: var(--text-2);
+    border-radius: 10px; font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; color: var(--text-2);
     background: color-mix(in srgb, #c7861a 12%, var(--surface));
   }
   .repeat svg { flex: none; margin-top: 1px; color: color-mix(in srgb, #c7861a 78%, var(--text)); }
@@ -162,8 +162,8 @@
   .card.compact header { padding: 8px 8px 0 14px; }
   .card.compact .link { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto; column-gap: 12px; padding: 6px 14px 10px; }
   .card.compact .hero { grid-column: 2; grid-row: 1 / span 3; width: 108px; height: 100%; max-height: 92px; aspect-ratio: auto; margin: 0; border-radius: 8px; align-self: start; }
-  .card.compact h2 { grid-column: 1; font-size: calc(17px * var(--size-headings)); line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .card.compact p { grid-column: 1; margin-top: 4px; font-size: calc(13.5px * var(--size-reading)); -webkit-line-clamp: 2; line-clamp: 2; }
-  .card.compact footer { grid-column: 1; margin-top: 4px; font-size: calc(12px * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .notecount { position: absolute; right: 14px; bottom: 8px; font-size: calc(11.5px * var(--size-app)); font-weight: 600; color: var(--accent); }
+  .card.compact h2 { grid-column: 1; font-size: calc(var(--text-base) * var(--size-headings)); line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card.compact p { grid-column: 1; margin-top: 4px; font-size: calc(var(--text-sm) * var(--size-reading)); -webkit-line-clamp: 2; line-clamp: 2; }
+  .card.compact footer { grid-column: 1; margin-top: 4px; font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .notecount { position: absolute; right: 14px; bottom: 8px; font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); }
 </style>

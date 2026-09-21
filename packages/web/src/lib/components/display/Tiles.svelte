@@ -37,7 +37,7 @@
   button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .art { display: block; aspect-ratio: 5 / 3; border-radius: 8px; overflow: hidden; background: var(--surface-2); }
   .art :global(svg) { display: block; width: 100%; height: 100%; }
-  .label { font-size: calc(14px * var(--size-app)); font-weight: 600; }
+  .label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .on .label { color: var(--accent); }
-  .note { font-size: calc(12.5px * var(--size-app)); color: var(--text-3); line-height: 1.35; }
+  .note { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.35; }
 </style>

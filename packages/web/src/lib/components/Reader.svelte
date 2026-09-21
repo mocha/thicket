@@ -196,7 +196,7 @@
   }
   header {
     display: flex; align-items: center; gap: 8px; flex: none;
-    padding: 10px 8px 8px 16px; border-bottom: 1px solid var(--line); font-size: calc(13px * var(--size-app)); color: var(--text-2); min-width: 0;
+    padding: 10px 8px 8px 16px; border-bottom: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); min-width: 0;
   }
   .source { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -205,14 +205,14 @@
 
   .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .page { max-width: 680px; margin: 0 auto; padding: 20px 16px calc(24px + var(--safe-b)); }
-  h1 { margin: 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(27px * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
-  .byline { margin: 10px 0 0; font-size: calc(14px * var(--size-app)); color: var(--text-3); display: flex; gap: 6px; flex-wrap: wrap; }
+  h1 { margin: 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
+  .byline { margin: 10px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); display: flex; gap: 6px; flex-wrap: wrap; }
   .hero { width: 100%; border-radius: var(--radius-sm); margin-top: 18px; background: var(--surface-2); }
-  .teaser { font-family: var(--font-reading); font-size: calc(17px * var(--size-reading)); color: var(--text-2); margin: 18px 0 0; }
-  .loading, .nobody { margin: 20px 0 0; color: var(--text-3); font-size: calc(15px * var(--size-app)); }
+  .teaser { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); color: var(--text-2); margin: 18px 0 0; }
+  .loading, .nobody { margin: 20px 0 0; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
 
   /* The article. Publisher HTML, sanitized to a known set of tags, set in the reading face. */
-  .body { margin-top: 20px; font-family: var(--font-reading); font-size: calc(17px * var(--size-reading)); line-height: 1.6; color: var(--text); overflow-wrap: anywhere; }
+  .body { margin-top: 20px; font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text); overflow-wrap: anywhere; }
   .body :global(p), .body :global(ul), .body :global(ol), .body :global(blockquote), .body :global(pre), .body :global(table), .body :global(figure), .body :global(details), .body :global(hr) { margin: 0 0 1em; }
   .body :global(h2), .body :global(h3), .body :global(h4), .body :global(h5), .body :global(h6) { font-family: var(--font-headings); line-height: 1.25; margin: 1.5em 0 0.5em; letter-spacing: -0.01em; }
   .body :global(h2) { font-size: 1.35em; } .body :global(h3) { font-size: 1.18em; } .body :global(h4), .body :global(h5), .body :global(h6) { font-size: 1em; }
@@ -235,8 +235,8 @@
   .body :global(a[data-embed])::before { content: '▶'; font-size: 0.85em; }
 
   footer { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-  .partial { margin: 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
-  .out { display: inline-flex; align-items: center; gap: 6px; padding: 12px 20px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(15px * var(--size-app)); }
+  .partial { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .out { display: inline-flex; align-items: center; gap: 6px; padding: 12px 20px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .out:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   footer + :global(.note) { margin-top: 18px; }
 
@@ -247,7 +247,7 @@
   .scroll.paged .body :global(img), .scroll.paged .hero { max-height: 55vh; width: auto; max-width: 100%; margin-left: auto; margin-right: auto; break-inside: avoid; }
   .scroll.paged .body :global(p), .scroll.paged .body :global(li) { orphans: 2; widows: 2; }
   .scroll.paged .body :global(figure), .scroll.paged .body :global(pre), .scroll.paged .body :global(blockquote), .scroll.paged .body :global(table) { break-inside: avoid; }
-  .pagenum { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: calc(12px * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; z-index: 31; pointer-events: none; }
+  .pagenum { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; z-index: 31; pointer-events: none; }
   /* Paged: the reader is a fixed sheet above the bottom bar (which stays clickable, since the dialog is not modal), full width at every size. */
   dialog.paged { position: fixed; top: 0; left: 0; right: 0; bottom: calc(var(--nav-h) + var(--safe-b)); width: auto; height: auto; max-height: none; z-index: 35; background: var(--surface); }
   dialog.paged .reader { position: absolute; inset: 0; transform: none; width: auto; border-radius: 0; box-shadow: none; border: 0; }

@@ -494,10 +494,10 @@
   .who { display: flex; gap: 16px; align-items: flex-start; margin: 8px 0 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
   .names { flex: 1; min-width: 0; }
   /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
-  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .handle { margin: 2px 0 0; color: var(--text-3); font-size: calc(15px * var(--size-app)); }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .handle { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
   .site { color: var(--accent); font-weight: 600; }
-  .bio { margin: 10px 0 0; color: var(--text); font-size: calc(15px * var(--size-app)); white-space: pre-line; }
+  .bio { margin: 10px 0 0; color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); white-space: pre-line; }
   /* The avatar as a button: a camera badge in the corner says it's changeable. */
   .photobtn { flex: none; position: relative; padding: 0; border-radius: 30%; line-height: 0; }
   .photobtn .camera { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--accent); color: #fff; box-shadow: 0 0 0 2px var(--surface); }
@@ -507,13 +507,13 @@
   /* The avatar's tap menu: hangs off the avatar, opening down and to the left. */
   .photomenu { position: relative; flex: none; }
   .menupanel { position: absolute; top: calc(100% + 8px); left: 0; z-index: 60; min-width: 200px; max-width: calc(100vw - 16px); background: var(--surface); border-radius: 14px; padding: 6px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--line); display: flex; flex-direction: column; }
-  .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text); }
+  .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
   .mi:hover { background: var(--surface-2); }
   .mi.danger { color: var(--danger); }
   /* Edit: a quiet pencil, the same at every width. */
 
   /* Owner only: a muted one-line reminder in a soft box at the very top of the page. */
-  .ownerbar { margin: 0 0 18px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); font-size: calc(13px * var(--size-app)); color: var(--text-2); text-align: center; }
+  .ownerbar { margin: 0 0 18px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); text-align: center; }
 
   /* Every section's content sits in a card — the same surface + shadow the
      lists always used. The audience control rides at the top in a header bar. */
@@ -522,27 +522,27 @@
   /* A tinted control strip, not a list row: the background sets it apart from
      the white rows below, and the label sits right beside its buttons. */
   .cardhead { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface-2); }
-  .ctrl-label { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
+  .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
   .cardhead :global(.cg) { flex: none; width: min(320px, 100%); }
 
   /* Visibility: the label and its explanation on the left, the switch on the right. */
   .visrow { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
   .vislabel { flex: 1; min-width: 12ch; }
-  .publabel { display: block; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.25; }
-  .hint { margin: 2px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-2); line-height: 1.4; }
+  .publabel { display: block; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.25; }
+  .hint { margin: 2px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
 
   /* The public/private switch sits at the right-hand end of its row. */
   .visrow :global(.vis) { margin-left: auto; flex: none; }
 
   /* Editing name, bio and homepage right in the header. */
   .edit { display: flex; flex-direction: column; gap: 10px; }
-  .edit label { display: flex; flex-direction: column; gap: 5px; font-size: calc(12px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .edit input, .edit textarea { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(15px * var(--size-app)); font-family: inherit; resize: vertical; }
+  .edit label { display: flex; flex-direction: column; gap: 5px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  .edit input, .edit textarea { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); font-family: inherit; resize: vertical; }
   .edit input:focus, .edit textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .editrow { display: flex; justify-content: flex-end; gap: 8px; }
 
   section { margin-bottom: 22px; }
-  h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; display: flex; align-items: baseline; gap: 8px; line-height: 1.25; }
+  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 12px; display: flex; align-items: baseline; gap: 8px; line-height: 1.25; }
   .list { list-style: none; margin: 0; padding: 0; }
   li a { display: flex; align-items: center; gap: 12px; padding: 14px 16px 14px calc(16px + var(--indent, 0px)); border-top: 1px solid var(--line); }
   /* A sub-collection is indented and its name sits quieter than its parent's, so the tree reads at a glance. */
@@ -552,22 +552,22 @@
   .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* A pill riding after a name needs its own gap: the words beside it are text, not a flex row. */
   .name :global(.aftertext) { margin-left: var(--space-2); }
-  .desc { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .count { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; }
-  .chev { color: var(--text-3); font-size: calc(20px * var(--size-app)); }
-  .add { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(15px * var(--size-app)); text-align: left; }
+  .desc { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; }
+  .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
+  .add { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); text-align: left; }
   li:first-child .add { border-top: 0; }
-  .plus { font-size: calc(20px * var(--size-app)); line-height: 1; width: 14px; }
+  .plus { font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; width: 14px; }
   .new form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
-  .new input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--accent); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); }
+  .new input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--accent); background: var(--bg); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); }
   .new form button { padding: 0 16px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
   .new form button:disabled { opacity: 0.5; }
-  .status { color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 8px 0; margin: 0; }
+  .status { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: 8px 0; margin: 0; }
   .status a { color: var(--accent); font-weight: 600; }
   .notes { display: flex; flex-direction: column; gap: 14px; margin: 4px 0 0; padding: 0; list-style: none; }
-  .all { display: block; width: fit-content; margin: 12px 0 0 auto; color: var(--accent); font-weight: 600; font-size: calc(14px * var(--size-app)); }
+  .all { display: block; width: fit-content; margin: 12px 0 0 auto; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .empty { text-align: center; padding: 50px 20px; color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: 10px; }
   .empty p { margin: 0; }
-  .join { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); margin-top: 30px; }
+  .join { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: 30px; }
   .join a { color: var(--accent); font-weight: 600; }
 </style>

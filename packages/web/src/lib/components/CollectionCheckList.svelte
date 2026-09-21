@@ -94,13 +94,13 @@
   li:first-child label { border-top: 0; }
   input[type='checkbox'] { width: 20px; height: 20px; accent-color: var(--accent); }
   .name { flex: 1; font-weight: 500; }
-  .count { font-size: calc(13px * var(--size-app)); color: var(--text-3); transition: color 300ms; }
+  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); transition: color 300ms; }
   .count.flash { color: var(--accent); font-weight: 700; animation: pop 1.2s ease-out; }
   @keyframes pop { 0% { transform: scale(1.4); } 30% { transform: scale(1); } 100% { transform: scale(1); } }
-  .hint { margin: 6px 0 0; font-size: calc(12px * var(--size-app)); color: var(--text-3); }
+  .hint { margin: 6px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .new { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
-  .plus { width: 20px; text-align: center; color: var(--accent); font-size: calc(20px * var(--size-app)); line-height: 1; font-weight: 600; }
-  .new input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1px dashed var(--accent); background: var(--surface); color: var(--text); font-size: calc(14px * var(--size-app)); }
+  .plus { width: 20px; text-align: center; color: var(--accent); font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; font-weight: 600; }
+  .new input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1px dashed var(--accent); background: var(--surface); color: var(--text); font-size: calc(var(--text-sm) * var(--size-app)); }
   .new input::placeholder { color: var(--accent); opacity: 0.85; }
   .new input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-style: solid; }
   .new button { padding: 9px 14px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
