@@ -13,6 +13,7 @@
   import FollowButton from '$lib/components/FollowButton.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
   import River from '$lib/components/River.svelte';
   import { showToast } from '$lib/toast.svelte';
@@ -84,7 +85,7 @@
       <div class="actions">
         {#if col.isMe}
           <AddFeedButton collectionIds={[col!.id]} via="collection_page" />
-          <a class="btn icon" href={manageCollectionHref(handle, slug)} aria-label="Settings" title="Settings"><Icon name="gear" size={20} /></a>
+          <IconButton icon="gear" variant="bordered" size="lg" href={manageCollectionHref(handle, slug)} label="Settings" title="Settings" />
         {:else if session.user}
           <Button variant="primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</Button>
         {:else}
@@ -115,7 +116,7 @@
           <Button onclick={copyLink}>Copy link</Button>
         </section>
       </div>
-      <button class="close" onclick={() => explain?.close()} aria-label="Close"><Icon name="close" size={16} /></button>
+      <IconButton class="close" icon="close" label="Close" onclick={() => explain?.close()} />
     </div>
   </dialog>
 
@@ -162,10 +163,6 @@
   .reveal { display: inline-flex; align-items: center; gap: 3px; font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
   .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
   .actions { flex: none; display: flex; gap: 8px; align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
-  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
-  .btn:hover { background: var(--surface-2); color: var(--text); }
-  .btn.icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; }
-  .btn:disabled { opacity: 0.6; }
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
   dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: 20px 20px 0 0; padding: 20px 18px calc(18px + var(--safe-b)); box-shadow: 0 -10px 40px rgba(0,0,0,0.25); }
@@ -176,7 +173,7 @@
   .ways section { background: var(--bg); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
   .ways h3 { margin: 0; font-size: calc(15px * var(--size-app)); }
   .ways p { margin: 0 0 4px; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
-  .close { position: absolute; top: 10px; right: 10px; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; color: var(--text-3); }
+  .sheet :global(.close) { position: absolute; top: 10px; right: 10px; }
   .feeds { margin-bottom: 18px; }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .list li { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--line); }

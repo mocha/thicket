@@ -9,7 +9,7 @@
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import River from '$lib/components/River.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
-  import Icon from '$lib/components/Icon.svelte';
+  import IconButton from '$lib/components/IconButton.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -59,7 +59,7 @@
         {#if session.user}
           <div class="actions">
             <FollowButton feedId={feed.id} bind:ids name={feedName(feed)} onchange={() => void loadFeed()} />
-            <a class="btn icon" href="/feeds/{feed.id}/settings" aria-label="Settings" title="Settings"><Icon name="gear" size={20} /></a>
+            <IconButton icon="gear" variant="bordered" size="lg" href="/feeds/{feed.id}/settings" label="Settings" title="Settings" />
           </div>
         {/if}
       </div>
@@ -117,8 +117,5 @@
   dd { margin: 0; font-weight: 600; font-size: calc(15px * var(--size-app)); }
   .banners { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
   .river { margin-top: 14px; }
-  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .btn:hover { background: var(--surface-2); color: var(--text); }
-  .btn.icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; }
   .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 18px 0; margin: 0; }
 </style>

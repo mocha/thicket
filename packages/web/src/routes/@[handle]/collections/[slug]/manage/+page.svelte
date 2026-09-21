@@ -10,6 +10,7 @@
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
@@ -266,15 +267,11 @@
       {:else}
         <div class="titlerow">
           <h1>{col.name}</h1>
-          <button class="iconbtn" onclick={() => (renaming = true)} aria-label="Rename this collection" title="Rename this collection">
-            <Icon name="pencil" size={20} />
-          </button>
+          <IconButton icon="pencil" variant="bordered" size="lg" onclick={() => (renaming = true)} label="Rename this collection" title="Rename this collection" />
         </div>
       {/if}
       <div class="menu" bind:this={menuAnchor}>
-        <button class="kebab" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="More collection actions" onclick={() => (menuOpen = !menuOpen)}>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" /></svg>
-        </button>
+        <IconButton icon="dots" variant="bordered" size="lg" aria-haspopup="menu" aria-expanded={menuOpen} label="More collection actions" onclick={() => (menuOpen = !menuOpen)} />
         {#if menuOpen}
           <div class="menupanel" role="menu" bind:this={menuPanel}>
             <a class="mi" role="menuitem" href={collectionsApi.opmlUrl(col.id)} download="{col.slug}.opml" onclick={() => { api.event('opml_exported', { collectionId: col?.id }); menuOpen = false; }} title="Save this collection as a file other readers can open">Export collection to file</a>
@@ -445,8 +442,6 @@
   .titlebar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .titlerow { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
   .rename { flex: 1; }
-  .iconbtn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
-  .iconbtn:hover { background: var(--surface-2); color: var(--text); }
   .rename { margin-top: 4px; }
   .rename input { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); font-weight: 600; width: 100%; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
   hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
@@ -490,8 +485,6 @@
   .count, .chev { color: var(--text-3); font-size: calc(13px * var(--size-app)); }
   .chev { font-size: calc(20px * var(--size-app)); }
   .menu { position: relative; flex: none; }
-  .kebab { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
-  .kebab:hover { background: var(--surface-2); color: var(--text); }
   /* Hangs below the button, right-aligned, from its spot in the header. */
   .menupanel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 60; min-width: 244px; background: var(--surface); border-radius: 14px; padding: 6px; box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 0 1px var(--line); display: flex; flex-direction: column; }
   .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text); }

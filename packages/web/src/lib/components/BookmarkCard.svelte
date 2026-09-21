@@ -7,6 +7,7 @@
   import type { Bookmark, PublicBookmark } from '$lib/api';
   import { hostOf, relativeTime } from '$lib/time';
   import SourceIcon from './SourceIcon.svelte';
+  import IconButton from './IconButton.svelte';
 
   let { b, onopen, action }: {
     b: Bookmark | PublicBookmark; onopen?: () => void;
@@ -28,11 +29,9 @@
   {#if b.imageUrl}<img class="thumb" src={b.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onerror={(e) => ((e.currentTarget as HTMLImageElement).hidden = true)} />{/if}
   {#if action}
     {#if action.kind === 'remove'}
-      <button class="remove" onclick={action.run} aria-label={action.label} title={action.title ?? action.label}>×</button>
+      <IconButton class="corner remove" icon="close" onclick={action.run} label={action.label} title={action.title ?? action.label} />
     {:else}
-      <button class="save" class:on={action.on} onclick={action.run} aria-pressed={action.on} aria-label={action.label} title={action.title ?? action.label}>
-        <svg viewBox="0 0 24 24" width="18" height="18" fill={action.on ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4z" /></svg>
-      </button>
+      <IconButton class="corner" icon="bookmark" pressed={action.on} onclick={action.run} label={action.label} title={action.title ?? action.label} />
     {/if}
   {/if}
 </li>
@@ -46,9 +45,8 @@
   .body p { margin: 4px 0 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .saved { margin-top: 6px; font-size: calc(12px * var(--size-app)); color: var(--text-3); }
   .thumb { flex: none; width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--surface-2); align-self: center; }
-  .remove, .save { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--text-3); }
-  .remove { font-size: calc(18px * var(--size-app)); }
-  .remove:hover { color: var(--danger); background: var(--surface-2); }
-  .save:hover { background: var(--surface-2); color: var(--accent); }
-  .save.on { color: var(--accent); }
+  /* The one action sits in the card's top corner, over the body's padding. */
+  .bm :global(.corner) { position: absolute; top: 6px; right: 6px; }
+  /* Taking a bookmark away is the one destructive thing here, so it hovers red. */
+  .bm :global(button.remove):hover { color: var(--danger); }
 </style>

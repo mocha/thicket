@@ -10,7 +10,7 @@
   import ActivityList from '$lib/components/ActivityList.svelte';
   import SectionAudience from '$lib/components/SectionAudience.svelte';
   import NoteCard from '$lib/components/NoteCard.svelte';
-  import Icon from '$lib/components/Icon.svelte';
+  import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
@@ -297,9 +297,7 @@
     {#if profile.isMe}
       {#if !editing}
         <div class="ownerctrls">
-          <button type="button" class="iconbtn" onclick={startEdit} aria-label="Edit profile" title="Edit profile">
-            <Icon name="pencil" size={20} />
-          </button>
+          <IconButton icon="pencil" variant="bordered" size="lg" onclick={startEdit} label="Edit profile" title="Edit profile" />
         </div>
       {/if}
     {:else if session.user}
@@ -504,8 +502,6 @@
   .mi:hover { background: var(--surface-2); }
   .mi.danger { color: var(--danger); }
   /* Edit: a quiet pencil, the same at every width. */
-  .iconbtn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
-  .iconbtn:hover { background: var(--surface-2); color: var(--text); }
 
   /* Owner only: a muted one-line reminder in a soft box at the very top of the page. */
   .ownerbar { margin: 0 0 18px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); font-size: calc(13px * var(--size-app)); color: var(--text-3); text-align: center; }

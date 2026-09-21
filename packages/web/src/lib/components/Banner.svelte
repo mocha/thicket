@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import Icon from './Icon.svelte';
+  import IconButton from './IconButton.svelte';
 
   /**
    * An inline notice inside a page: something went wrong, or something is
@@ -36,9 +36,7 @@
     {#if children}<div class="text">{@render children()}</div>{/if}
   </div>
   {#if dismissible}
-    <button class="x" onclick={() => ondismiss?.()} aria-label="Dismiss">
-      <Icon name="close" size={16} stroke={2.2} />
-    </button>
+    <IconButton class="x" icon="close" size="sm" label="Dismiss" onclick={() => ondismiss?.()} />
   {/if}
 </div>
 
@@ -61,6 +59,6 @@
   .body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .title { margin: 0 0 2px; font-weight: 650; }
   .text :global(a) { color: var(--accent); font-weight: 600; }
-  .x { flex: none; display: grid; place-items: center; width: 26px; height: 26px; margin: -3px -4px -3px 0; border-radius: 999px; color: var(--text-3); }
-  .x:hover { background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); }
+  /* Pulled flush with the banner's padding so it sits in the corner. */
+  .banner :global(.x) { margin: -3px -4px -3px 0; }
 </style>
