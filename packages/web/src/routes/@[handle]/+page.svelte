@@ -14,6 +14,8 @@
   import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
   import Badge from '$lib/components/Badge.svelte';
+  import Field from '$lib/components/Field.svelte';
+  import Input from '$lib/components/Input.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
@@ -375,8 +377,25 @@
             <li class="new">
               {#if creating}
                 <form onsubmit={(e) => { e.preventDefault(); void createCollection(); }}>
-                  <input bind:this={newInput} type="text" bind:value={newName} placeholder="Name it, e.g. News" maxlength="60" disabled={newBusy} aria-label="New collection name" onkeydown={(e) => { if (e.key === 'Escape') creating = false; }} />
-                  <button type="submit" disabled={newBusy || !newName.trim()}>{newBusy ? 'Creating…' : 'Create'}</button>
+                  <Field label="New collection name" hideLabel class="grow">
+                    {#snippet children({ id })}
+                      <Input
+                        {id}
+                        bind:element={newInput}
+                        variant="create"
+                        inset
+                        bind:value={newName}
+                        placeholder="Name it, e.g. News"
+                        maxlength="60"
+                        disabled={newBusy}
+                        onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') creating = false; }}
+                      >
+                        {#snippet trailing()}
+                          <Button type="submit" variant="primary" disabled={newBusy || !newName.trim()}>{newBusy ? 'Creating…' : 'Create'}</Button>
+                        {/snippet}
+                      </Input>
+                    {/snippet}
+                  </Field>
                 </form>
               {:else}
                 <button class="add" onclick={() => { creating = true; queueMicrotask(() => newInput?.focus()); }}><span class="plus" aria-hidden="true">+</span> New collection</button>
@@ -559,9 +578,7 @@
   li:first-child .add { border-top: 0; }
   .plus { font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; width: 14px; }
   .new form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
-  .new input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--accent); background: var(--bg); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); }
-  .new form button { padding: 0 16px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-  .new form button:disabled { opacity: 0.5; }
+  .new form :global(.grow) { flex: 1; min-width: 0; }
   .status { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: 8px 0; margin: 0; }
   .status a { color: var(--accent); font-weight: 600; }
   .notes { display: flex; flex-direction: column; gap: var(--space-3); margin: 4px 0 0; padding: 0; list-style: none; }
