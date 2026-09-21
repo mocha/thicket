@@ -5,18 +5,22 @@
  *   pnpm seed 0               → Ars only
  *   pnpm seed 200 alice       → into a specific account (default: the first user)
  *
- * The Small Web list is a plain text file of one feed URL per line; point
- * SMALLWEB_TXT at your own. Those feeds are registered lazily and the
+ * The Small Web list is a plain text file of one feed URL per line. The repo
+ * ships one (packages/api/smallweb.txt), used by default; set SMALLWEB_TXT to
+ * point at your own instead. Those feeds are registered lazily and the
  * scheduler fetches them in the background, which doubles as a realistic
  * load test of the poller.
  */
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { rootCollectionOf } from "../lib/auth.js";
 import { addFeedToCollection, ensureFeedLazy, subscribe } from "../lib/subscribe.js";
 import { db, pool, schema } from "../db/client.js";
 import { and, eq } from "drizzle-orm";
 
-const SMALLWEB = process.env.SMALLWEB_TXT ?? "smallweb.txt";
+// Resolve relative to this script, not the shell's working directory, so
+// `pnpm seed` finds the bundled list wherever it's run from.
+const SMALLWEB = process.env.SMALLWEB_TXT ?? fileURLToPath(new URL("../../smallweb.txt", import.meta.url));
 const count = Number(process.argv[2] ?? 200);
 const handle = process.argv[3];
 
