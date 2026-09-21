@@ -11,8 +11,8 @@
    * 12px). `fill` makes every option the same width so they share the row.
    *
    * The chosen option is drawn three ways at once — a wash of the accent
-   * color, accent-colored words, and a thin accent ring around it — so it
-   * still reads as chosen without relying on color.
+   * color, accent-colored words, and its own outline repainted in the accent
+   * color — so it still reads as chosen without relying on color.
    *
    * Keyboard: one stop on the way through, the chosen option. The arrow keys
    * move between options and pick as they go, wrapping around the ends, and
@@ -142,16 +142,17 @@
 </div>
 
 <style>
+  /* The outline belongs to the options, not to the row around them: each
+     option draws its own box and overlaps its neighbor by a hairline, so
+     they share one line between them. The chosen one then repaints that line
+     in the accent color on all four of its sides. */
   .cg {
     display: inline-flex;
     max-width: 100%;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
     /* A row too long for its space slides sideways rather than hiding an
        option off the end. It rarely comes to this. */
     overflow-x: auto;
     overflow-y: hidden;
-    background: var(--surface);
   }
   .cg.fill {
     display: flex;
@@ -166,20 +167,28 @@
     align-items: center;
     justify-content: center;
     gap: var(--space-1);
+    margin-left: -1px;
     padding: var(--space-2) var(--space-4);
     background: var(--surface);
-    border-left: 1px solid var(--line);
+    border: 1px solid var(--line);
     font-size: calc(var(--text-sm) * var(--size-app));
     font-weight: 600;
     color: var(--text-2);
     white-space: nowrap;
-    transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
   }
   .cg.sm button {
     padding: var(--space-2) var(--space-3);
   }
   .cg button:first-child {
-    border-left: 0;
+    margin-left: 0;
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  }
+  .cg button:last-child {
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+  .cg button:only-child {
+    border-radius: var(--radius-sm);
   }
 
   .cg button:hover:not(.on):not(:disabled) {
@@ -187,19 +196,22 @@
     color: var(--text);
   }
 
-  /* Chosen: a wash of the accent, accent words, and a ring — so it is not
-     color alone that says which one is on. */
+  /* Chosen: a wash of the accent, accent words, and its own outline drawn in
+     the accent color over its neighbors' — so it is not color alone that
+     says which one is on. */
   .cg button.on {
     background: color-mix(in srgb, var(--accent) 14%, transparent);
     color: var(--accent);
-    box-shadow: inset 0 0 0 1px var(--accent);
+    border-color: var(--accent);
+    position: relative;
+    z-index: 1;
   }
 
   .cg button:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: -2px;
     position: relative;
-    z-index: 1;
+    z-index: 2;
   }
 
   .cg button:disabled {
