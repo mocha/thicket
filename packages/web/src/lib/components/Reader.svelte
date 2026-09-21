@@ -12,7 +12,7 @@
   import { closeReader, reader, readerClosed } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
   import SourceIcon from './SourceIcon.svelte';
-  import Icon from './Icon.svelte';
+  import IconButton from './IconButton.svelte';
   import ItemActions from './ItemActions.svelte';
   import NoteEditor from './NoteEditor.svelte';
   import NoteBlock from './NoteBlock.svelte';
@@ -133,9 +133,7 @@
         <time datetime={item.publishedAt}>{relativeTime(item.publishedAt)}</time>
         <span class="spacer"></span>
         <ItemActions {item} noteOpen={editing} onnote={noteButton} via="reader" />
-        <button class="close" onclick={close} aria-label="Close">
-          <Icon name="close" size={20} />
-        </button>
+        <IconButton icon="close" label="Close" iconSize={20} onclick={close} />
       </header>
 
       <div class="scroll" class:paged bind:this={scroller}>
@@ -204,9 +202,6 @@
   .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   header time { color: var(--text-3); white-space: nowrap; }
   .spacer { flex: 1; }
-  .close { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--text-2); flex: none; margin-left: 4px; }
-  .close:hover { background: var(--surface-2); color: var(--text); }
-  .close:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
   .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .page { max-width: 680px; margin: 0 auto; padding: 20px 16px calc(24px + var(--safe-b)); }

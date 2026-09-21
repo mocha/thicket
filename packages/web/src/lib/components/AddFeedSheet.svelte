@@ -15,7 +15,7 @@
   import { collectionStore, defaultCollection, loadCollections, namedCollections } from '$lib/collections.svelte';
   import { hostOf } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
-  import Icon from './Icon.svelte';
+  import IconButton from './IconButton.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let input = $state<HTMLInputElement | null>(null);
@@ -121,7 +121,7 @@
   <form class="sheet" onsubmit={(e) => { e.preventDefault(); void submit(); }}>
     <header>
       <h2>Add a feed</h2>
-      <button type="button" class="close" onclick={() => dialog?.close()} aria-label="Close"><Icon name="close" size={16} /></button>
+      <IconButton icon="close" label="Close" onclick={() => dialog?.close()} />
     </header>
     <p class="lede">Enter the address of a site, blog, subreddit, or YouTube channel or video, and thicket finds the feed for you. You can also enter the feed itself.</p>
     <input bind:this={input} bind:value={url} type="url" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="example.com" required disabled={busy} />
@@ -147,7 +147,7 @@
         <input type="text" bind:value={filter} placeholder="Filter collections…" aria-label="Filter collections" disabled={busy}
           onkeydown={(e) => { if (e.key === 'Enter') e.preventDefault(); else if (e.key === 'Escape') filter = ''; }} />
         {#if filter}
-          <button type="button" class="clear" aria-label="Clear filter" onclick={() => (filter = '')} disabled={busy}>×</button>
+          <IconButton icon="close" size="sm" label="Clear filter" onclick={() => (filter = '')} disabled={busy} />
         {/if}
       </div>
     {/if}
@@ -193,7 +193,6 @@
   }
   header { display: flex; align-items: center; justify-content: space-between; }
   h2 { margin: 0; font-size: calc(22px * var(--size-headings)); font-family: var(--font-headings); }
-  .close { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; color: var(--text-3); }
   .lede { color: var(--text-2); margin: -6px 0 0; font-size: calc(14px * var(--size-app)); }
   input[type='url'] { padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); width: 100%; }
   input[type='url']:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -208,8 +207,6 @@
   .filter:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
   .filter input { flex: 1; min-width: 0; border: 0; padding: 0; background: transparent; color: var(--text); font-size: calc(14px * var(--size-app)); }
   .filter input:focus { outline: none; }
-  .filter .clear { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: var(--text-3); font-size: calc(16px * var(--size-app)); line-height: 1; }
-  .filter .clear:hover { background: var(--surface-2); color: var(--text); }
   .nomatch { margin: 0; padding: 12px 8px; color: var(--text-3); font-size: calc(13px * var(--size-app)); }
   .scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: 38vh; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; }
   /* Desktop cap. Must come after the base .scroll rule above: same specificity,

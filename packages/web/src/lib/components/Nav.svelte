@@ -8,6 +8,7 @@
   import Avatar from './Avatar.svelte';
   import AccountMenu from './AccountMenu.svelte';
   import Icon from './Icon.svelte';
+  import IconButton from './IconButton.svelte';
   import { display } from '$lib/display.svelte';
   import { marks, badge, anyNew, countText } from '$lib/marks.svelte';
 
@@ -141,7 +142,7 @@
             <input type="text" bind:value={filter} placeholder="Filter collections…" aria-label="Filter collections" maxlength="60" autocomplete="off"
               onkeydown={(e) => { if (e.key === 'Escape') filter = ''; }} />
             {#if filter}
-              <button type="button" class="clear" aria-label="Clear filter" onclick={() => (filter = '')}>×</button>
+              <IconButton icon="close" size="sm" label="Clear filter" onclick={() => (filter = '')} />
             {/if}
           </li>
         {/if}
@@ -274,8 +275,6 @@
     nav:not(.paged) .cols .filterrow svg { flex: none; color: var(--text-3); }
     nav:not(.paged) .cols .filterrow input { flex: 1; min-width: 0; border: 0; padding: 0; background: transparent; color: var(--text); font-size: calc(14px * var(--size-app)); }
     nav:not(.paged) .cols .filterrow input:focus { outline: none; }
-    nav:not(.paged) .cols .filterrow .clear { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: var(--text-3); font-size: calc(16px * var(--size-app)); line-height: 1; }
-    nav:not(.paged) .cols .filterrow .clear:hover { background: var(--surface-2); color: var(--text); }
     nav:not(.paged) .cols .nomatch { padding: 7px 12px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
     /* The Everything row is a normal-height row: undo the full-height stretch the bottom-bar tabs use. */
     nav:not(.paged) .readall { height: auto; }
