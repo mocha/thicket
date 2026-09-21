@@ -16,6 +16,7 @@
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
+  import Tabs from '$lib/components/Tabs.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   /**
@@ -109,6 +110,19 @@
     if (!res) return null;
     return s === 'all' ? found : res[s].total;
   }
+  /* Posts only make sense once something is typed, and a scope with nothing in
+     it is shown but switched off, so the counts still say "nothing here". */
+  const scopeTabs = $derived(
+    SCOPES.filter((s) => searching || s.id !== 'posts').map((s) => {
+      const n = searching ? countFor(s.id) : null;
+      return {
+        value: s.id,
+        label: s.label,
+        count: n === null ? undefined : n.toLocaleString(),
+        disabled: n === 0
+      };
+    })
+  );
 
   async function loadSearch(reset = false) {
     if (loading || (!reset && scope !== 'all' && moreNext === null)) return;
@@ -265,16 +279,14 @@
     </div>
   </div>
 
-  <div class="scopes" role="tablist" aria-label="What to search">
-    {#each SCOPES as s (s.id)}
-      {#if searching || s.id !== 'posts'}
-        {@const n = searching ? countFor(s.id) : null}
-        <button role="tab" aria-selected={scope === s.id} onclick={() => setScope(s.id)} disabled={searching && n === 0}>
-          {s.label}{#if n !== null}<span class="n">{n.toLocaleString()}</span>{/if}
-        </button>
-      {/if}
-    {/each}
-  </div>
+  <Tabs
+    class="scopes"
+    tabs={scopeTabs}
+    value={scope}
+    onchange={(v) => setScope(v as SearchScope)}
+    label="What to search"
+    fill
+  />
 </section>
 
 <!-- The filters that act on a browse list. Rendered as the list card's header
@@ -507,11 +519,7 @@
   .search::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
   .glass { position: absolute; left: 16px; color: var(--text-3); pointer-events: none; }
   .field :global(.clear) { position: absolute; right: 8px; }
-  .scopes { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-2); margin-bottom: 4px; overflow-x: auto; }
-  .scopes button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; border-radius: 999px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
-  .scopes button[aria-selected='true'] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
-  .scopes button:disabled { opacity: 0.4; }
-  .scopes .n { font-weight: 400; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .pane :global(.scopes) { margin-bottom: 4px; }
   h2 { font-family: var(--font-headings); font-size: calc(21px * var(--size-headings)); margin: 0; display: flex; align-items: baseline; gap: 8px; }
   .count { color: var(--text-3); font-weight: 400; font-size: calc(15px * var(--size-app)); font-family: var(--font); font-variant-numeric: tabular-nums; }
   /* The per-view explainer: the caption above the filters, saying what this
