@@ -13,6 +13,7 @@
   import FollowButton from '$lib/components/FollowButton.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import Button from '$lib/components/Button.svelte';
   import River from '$lib/components/River.svelte';
   import { showToast } from '$lib/toast.svelte';
 
@@ -85,9 +86,9 @@
           <AddFeedButton collectionIds={[col!.id]} via="collection_page" />
           <a class="btn icon" href={manageCollectionHref(handle, slug)} aria-label="Settings" title="Settings"><Icon name="gear" size={20} /></a>
         {:else if session.user}
-          <button class="btn primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</button>
+          <Button variant="primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</Button>
         {:else}
-          <button class="btn primary" onclick={() => { api.event('copy_explainer_opened', { handle, slug }); explain?.showModal(); }}>Copy this collection</button>
+          <Button variant="primary" onclick={() => { api.event('copy_explainer_opened', { handle, slug }); explain?.showModal(); }}>Copy this collection</Button>
         {/if}
       </div>
     </div>
@@ -105,13 +106,13 @@
         <section>
           <h3>New here?</h3>
           <p>Make an account on this thicket. You’ll land right back here, and the copy is one tap.</p>
-          <a class="btn primary" href="/signup?next={encodeURIComponent(page.url.pathname)}">Create an account</a>
-          <a class="btn" href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a>
+          <Button variant="primary" href="/signup?next={encodeURIComponent(page.url.pathname)}">Create an account</Button>
+          <Button href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</Button>
         </section>
         <section>
           <h3>On another thicket?</h3>
           <p>Copying a collection between thickets by link is on its way. Keep this page’s link; it’s what you’ll paste.</p>
-          <button class="btn" onclick={copyLink}>Copy link</button>
+          <Button onclick={copyLink}>Copy link</Button>
         </section>
       </div>
       <button class="close" onclick={() => explain?.close()} aria-label="Close"><Icon name="close" size={16} /></button>
@@ -164,7 +165,6 @@
   .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
   .btn:hover { background: var(--surface-2); color: var(--text); }
   .btn.icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; }
-  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .btn:disabled { opacity: 0.6; }
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
   dialog::backdrop { background: rgba(0, 0, 0, 0.45); }

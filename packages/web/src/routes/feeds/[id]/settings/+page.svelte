@@ -9,6 +9,7 @@
   import CollectionCheckList from '$lib/components/CollectionCheckList.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import Button from '$lib/components/Button.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -203,9 +204,9 @@
       <form onsubmit={(e) => { e.preventDefault(); void saveName(displayName); }}>
         <input id="dname" type="text" bind:value={displayName} maxlength="120" placeholder={original} disabled={savingName} />
         <div class="row">
-          <button type="submit" class="btn primary" disabled={!nameDirty || savingName}>{savingName ? 'Saving…' : 'Save'}</button>
+          <Button type="submit" variant="primary" disabled={!nameDirty || savingName}>{savingName ? 'Saving…' : 'Save'}</Button>
           {#if feed.displayName}
-            <button type="button" class="btn" onclick={() => saveName('')} disabled={savingName}>Use “{original}”</button>
+            <Button onclick={() => saveName('')} disabled={savingName}>Use “{original}”</Button>
           {/if}
         </div>
       </form>
@@ -238,7 +239,7 @@
     <div class="card">
       <CollectionCheckList feedId={feed.id} bind:ids name={feedName(feed)} />
     </div>
-    <button class="btn danger" onclick={removeFromAll} disabled={ids.length === 0}>Remove from all collections</button>
+    <Button variant="danger" onclick={removeFromAll} disabled={ids.length === 0}>Remove from all collections</Button>
   </section>
 
   <hr />
@@ -248,7 +249,7 @@
       <Banner tone="error">Last fetch failed: {feed.lastError ?? `HTTP ${feed.lastStatus}`}</Banner>
     {/if}
     <div class="row">
-      <button class="btn" onclick={refresh} disabled={refreshing}>{refreshing ? 'Fetching…' : 'Refresh now'}</button>
+      <Button onclick={refresh} disabled={refreshing}>{refreshing ? 'Fetching…' : 'Refresh now'}</Button>
       <span class="hint inline">{feed.lastFetchedAt ? `Last checked ${relativeTime(feed.lastFetchedAt)}` : 'Not fetched yet'}</span>
     </div>
     {#if refreshNote}
@@ -273,7 +274,7 @@
     <section class="admin">
       <h2>Admin</h2>
       <p class="hint">Feeds are shared. Removing this one takes it away from everyone on this instance: its posts, the notes on them, and its place in every collection. Bookmarks keep their address. Use it for spam, abuse, or a feed that should never have been indexed.</p>
-      <button class="btn danger" onclick={askRemove}>Remove this feed from thicket</button>
+      <Button variant="danger" onclick={askRemove}>Remove this feed from thicket</Button>
     </section>
 
     <dialog bind:this={removeDialog} class="remove" onclick={(e) => { if (e.target === removeDialog) removeDialog?.close(); }} aria-labelledby="remove-title">
@@ -284,8 +285,8 @@
         <p class="hint">Counting what this would take with it…</p>
       {/if}
       <div class="actions">
-        <button class="btn" onclick={() => removeDialog?.close()}>Keep it</button>
-        <button class="btn danger solid" onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</button>
+        <Button onclick={() => removeDialog?.close()}>Keep it</Button>
+        <Button variant="danger" solid onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</Button>
       </div>
     </dialog>
   {/if}
@@ -315,11 +316,6 @@
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(14px * var(--size-app)); }
   .radios small { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 4px 14px 12px; margin-bottom: 12px; }
-  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
-  .btn:disabled { opacity: 0.5; }
-  .btn.danger.solid { background: var(--danger); color: #fff; border-color: var(--danger); }
   .admin { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
   .admin > h2 { margin: 0; }
   dialog.remove { max-width: 440px; padding: 22px 22px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); }
