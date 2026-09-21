@@ -111,7 +111,7 @@
     closeReader();
   }
   /** Escape closes the dialog natively when modal; keep history in step. Non-modal (paged) gets no cancel event, so listen for the key. */
-  function cancelled(e: Event) { e.preventDefault(); close(); }
+  function canceled(e: Event) { e.preventDefault(); close(); }
   function keys(e: KeyboardEvent) { if (paged && item && e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); close(); } }
 
   function noteButton() {
@@ -125,7 +125,7 @@
 
 <svelte:window onkeydown={keys} />
 
-<dialog bind:this={dialog} class:paged onclose={() => closeReader()} oncancel={cancelled} onclick={(e) => { if (e.target === dialog) close(); }} aria-label={item?.title ?? 'Post'}>
+<dialog bind:this={dialog} class:paged onclose={() => closeReader()} oncancel={canceled} onclick={(e) => { if (e.target === dialog) close(); }} aria-label={item?.title ?? 'Post'}>
   {#if item}
     <article class="reader">
       <header bind:this={head}>

@@ -4,7 +4,7 @@
   /**
    * The one button. Renders a <button>, or an <a> when given href. Three looks
    * (primary / ghost / danger) and two sizes, all built on the shared spacing,
-   * type, and colour tokens so every button in the app matches by default.
+   * type, and color tokens so every button in the app matches by default.
    */
   interface Props {
     variant?: 'primary' | 'ghost' | 'danger';

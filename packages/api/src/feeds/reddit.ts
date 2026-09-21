@@ -12,10 +12,10 @@
  *   reddit.com/user/name/m/multi      → a multireddit
  *   reddit.com/…/.rss or .json        → already a feed address
  *
- * old., np., m., i. and bare reddit.com all normalise to www.reddit.com.
+ * old., np., m., i. and bare reddit.com all normalize to www.reddit.com.
  * Reddit rate-limits unauthenticated clients per IP (roughly one request
  * every couple of seconds; a burst gets 429s), which is a scheduler concern,
- * not a discovery one: the scheduler does not yet honour `Retry-After` or
+ * not a discovery one: the scheduler does not yet honor `Retry-After` or
  * space requests to one host over time.
  */
 import type { Candidate } from "./discover.js";

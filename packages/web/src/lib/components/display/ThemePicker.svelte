@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * The colour themes, as swatches: page, card, text and accent of each, in
+   * The color themes, as swatches: page, card, text and accent of each, in
    * whichever half (light or dark) the screen is showing right now. High
    * contrast grows a second row for its accent, because that is the one theme
    * where the accent is a separate choice.
@@ -42,7 +42,7 @@
   const accentOptions = $derived(ACCENTS.map((a) => ({ value: a.id, label: a.label, swatch: ACCENT_HEX[a.id][half] })));
 </script>
 
-<div class="palettes" role="radiogroup" aria-label="Colour theme">
+<div class="palettes" role="radiogroup" aria-label="Color theme">
   {#each PALETTES as p (p.id)}
     {@const s = SWATCHES[p.id][half]}
     {@const hard = p.id === 'contrast' || p.id === 'mono'}
@@ -60,7 +60,7 @@
     <ChoiceGroup
       options={accentOptions}
       value={display.accent}
-      label="Accent colour"
+      label="Accent color"
       size="sm"
       onchange={(v) => chooseAccent(v as Accent)}
     />

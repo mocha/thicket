@@ -4,7 +4,7 @@
  * Only settings that REMOVE content are listed. A renamed feed is visibly
  * renamed, but a hidden post leaves no trace, so the reader has to be told.
  * Every future setting that hides something (keyword filters, say) adds its
- * sentence here, and every place that summarises settings picks it up.
+ * sentence here, and every place that summarizes settings picks it up.
  */
 export type ViewSettings = {
   /** Whether Shorts are left out of this feed for me, all things considered. */

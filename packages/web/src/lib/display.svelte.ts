@@ -4,7 +4,7 @@
  *
  * That is deliberate: a phone in bed and a desk at noon want different
  * answers, a reader who needs OpenDyslexic needs it on the machine they read
- * from, and an e-ink tablet wants pages and no colour while the laptop wants
+ * from, and an e-ink tablet wants pages and no color while the laptop wants
  * neither. Nothing here reaches the server.
  *
  * The record is applied as data attributes and a few custom properties on
@@ -67,13 +67,13 @@ export const APPEARANCES: { id: Appearance; label: string; note: string }[] = [
 export const PALETTES: { id: Palette; label: string; note: string }[] = [
   { id: 'default', label: 'Thicket', note: 'Cream paper and moss green. The default.' },
   { id: 'kingfisher', label: 'Kingfisher', note: 'Cool white, river-blue accent. Vivid.' },
-  { id: 'slate', label: 'Slate', note: 'Blue-grey stone, steel accent. Cool and calm.' },
+  { id: 'slate', label: 'Slate', note: 'Blue-gray stone, steel accent. Cool and calm.' },
   { id: 'ember', label: 'Ember', note: 'Ivory, burnt-orange accent. Warm and awake.' },
   { id: 'parchment', label: 'Parchment', note: 'Sepia on old paper. Soft, for eyes that find black on white harsh.' },
-  { id: 'graphite', label: 'Graphite', note: 'Plain greys, quiet steel accent.' },
-  { id: 'fog', label: 'Fog', note: 'Grey on grey, sage accent. The gentlest.' },
+  { id: 'graphite', label: 'Graphite', note: 'Plain grays, quiet steel accent.' },
+  { id: 'fog', label: 'Fog', note: 'Gray on gray, sage accent. The gentlest.' },
   { id: 'contrast', label: 'High contrast', note: 'Black and white with hard edges and one strong accent.' },
-  { id: 'mono', label: 'Black and white', note: 'Two colours, no shading. For e-ink.' }
+  { id: 'mono', label: 'Black and white', note: 'Two colors, no shading. For e-ink.' }
 ];
 
 export const ACCENTS: { id: Accent; label: string }[] = [
@@ -176,7 +176,7 @@ function apply() {
 }
 
 /**
- * The address bar and task switcher take their colour from <meta theme-color>.
+ * The address bar and task switcher take their color from <meta theme-color>.
  * Two media-scoped tags cover "match my device" on the default palette; any
  * explicit choice needs a third, unscoped one, which wins by being last.
  */

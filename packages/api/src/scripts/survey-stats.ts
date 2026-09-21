@@ -1,5 +1,5 @@
 /**
- * Summarise a survey.sqlite written by scripts/survey.ts: synoptic tables only,
+ * Summarize a survey.sqlite written by scripts/survey.ts: synoptic tables only,
  * no per-feed rows.
  *
  *   pnpm survey:stats [--db path]
