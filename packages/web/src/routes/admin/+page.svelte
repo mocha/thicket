@@ -15,6 +15,17 @@
   import Badge from '$lib/components/Badge.svelte';
   import Button from '$lib/components/Button.svelte';
 
+  /**
+   * "last active 23h ago" while relativeTime is still giving a relative form
+   * (just now / 5m / 3h / 2d); once it falls back to an absolute date ("Aug
+   * 12"), "ago" stops making sense, so we drop it: "last active Aug 12".
+   */
+  function lastActive(iso: string): string {
+    const r = relativeTime(iso);
+    if (r === 'just now' || /^\d+[mhd]$/.test(r)) return `last active ${r}${r === 'just now' ? '' : ' ago'}`;
+    return `last active ${r}`;
+  }
+
   const me = $derived(session.user);
   let instance = $state<(InstanceStatus & { signupsStored: SignupPolicy | null }) | null>(null);
   let name = $state('');
@@ -235,8 +246,9 @@
           <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={36} v={u.avatarUpdatedAt} />
           <div class="who">
             <div class="line">
-              <a class="name" href={profileHref(u.handle)}>{u.displayName ?? u.handle}</a><span class="facts">{' · '}@{u.handle}{#if u.isAdmin}{' · '}<Badge>Admin</Badge>{/if}{#if u.profileVisibility === 'private'}{' · '}<Badge>Private</Badge>{/if} · {u.following} {u.following === 1 ? 'feed' : 'feeds'} · {u.collections} {u.collections === 1 ? 'collection' : 'collections'} · {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'} · joined {relativeTime(u.createdAt)}{#if u.invitedBy}{' via @'}{u.invitedBy}{/if}{#if u.lastSeenAt}{' · seen '}{relativeTime(u.lastSeenAt)}{/if}</span>
+              <a class="name" href={profileHref(u.handle)}>{u.displayName ?? u.handle}</a><span class="handle">{' · '}@{u.handle}{#if u.isAdmin}{' · '}<Badge>Admin</Badge>{/if}{#if u.profileVisibility === 'private'}{' · '}<Badge>Private</Badge>{/if}</span>
             </div>
+            <div class="facts">{u.following} {u.following === 1 ? 'feed' : 'feeds'} · {u.collections} {u.collections === 1 ? 'collection' : 'collections'} · {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'} · joined {relativeTime(u.createdAt)}{#if u.invitedBy}{' via @'}{u.invitedBy}{/if}{#if u.lastSeenAt}{' · '}{lastActive(u.lastSeenAt)}{/if}</div>
             <div class="acts">
               {#if u.id !== me?.id}
                 <Button size="sm" onclick={() => setAdmin(u, !u.isAdmin)} disabled={busyId === u.id}>{u.isAdmin ? 'Remove admin' : 'Make admin'}</Button>
@@ -296,13 +308,14 @@
   .users li { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
   .users li:first-child { border-top: 0; padding-top: var(--space-1); }
   .users li.busy { opacity: 0.6; }
-  .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
-  /* Name, handle, badges and the account facts all run together on one line,
-     wrapping at narrow widths rather than the actions dropping below the avatar. */
+  /* Three stacked rows, all aligned under the name (not the avatar): name +
+     handle + badges, then the account facts, then the actions. */
+  .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
   .line { line-height: 1.4; }
   .name { font-weight: 600; }
+  .handle { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .facts { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .acts { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .acts { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-1); }
   .you { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); padding: var(--space-2) var(--space-1); }
   .status { text-align: center; color: var(--text-3); padding: 30px 0; }
 </style>
