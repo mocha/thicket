@@ -59,14 +59,17 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  /* Type scale: named interface sizes. Multiply by the reader's role scale at
-     the point of use, e.g. calc(var(--text-sm) * var(--size-app)), so text
-     resizing keeps working exactly as before. */
-  --text-xs: 11px;
-  --text-sm: 13px;
-  --text-base: 15px;
-  --text-lg: 17px;
+  /* Type scale: one ladder of named interface sizes. Every size in the app is
+     one of these six. Multiply by the reader's role scale at the point of use,
+     e.g. calc(var(--text-sm) * var(--size-app)), so text resizing keeps
+     working exactly as before. --text-reading is the article body's own size
+     and is always multiplied by --size-reading. */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
   --text-xl: 21px;
+  --text-2xl: 26px;
+  --text-reading: 17px;
 
   /* The three faces on offer, and the three roles they can fill. Which face
      fills which role is the reader's choice (data-font-* on <html>); these
@@ -220,7 +223,7 @@ body {
   color: var(--text);
   font-family: var(--font);
   /* The App size scales the interface's text (every component multiplies its pixel sizes by --size-app), not its layout. */
-  font-size: calc(16px * var(--size-app));
+  font-size: calc(var(--text-base) * var(--size-app));
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
