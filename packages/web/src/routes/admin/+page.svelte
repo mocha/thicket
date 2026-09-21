@@ -246,18 +246,16 @@
           <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={36} v={u.avatarUpdatedAt} />
           <div class="who">
             <div class="line">
-              <a class="name" href={profileHref(u.handle)}>{u.displayName ?? u.handle}</a><span class="handle">{' · '}@{u.handle}{#if u.isAdmin}{' · '}<Badge>Admin</Badge>{/if}{#if u.profileVisibility === 'private'}{' · '}<Badge>Private</Badge>{/if}</span>
+              <a class="name" href={profileHref(u.handle)}>{u.displayName ?? u.handle}</a><span class="handle">{' · '}@{u.handle}{#if u.isAdmin}{' · '}<Badge>Admin</Badge>{/if}{#if u.profileVisibility === 'private'}{' · '}<Badge>Private</Badge>{/if}{#if u.id === me?.id}{' · '}<Badge>You</Badge>{/if}</span>
             </div>
             <div class="facts">{u.following} {u.following === 1 ? 'feed' : 'feeds'} · {u.collections} {u.collections === 1 ? 'collection' : 'collections'} · {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'} · joined {relativeTime(u.createdAt)}{#if u.invitedBy}{' via @'}{u.invitedBy}{/if}{#if u.lastSeenAt}{' · '}{lastActive(u.lastSeenAt)}{/if}</div>
-            <div class="acts">
-              {#if u.id !== me?.id}
+            {#if u.id !== me?.id}
+              <div class="acts">
                 <Button size="sm" onclick={() => setAdmin(u, !u.isAdmin)} disabled={busyId === u.id}>{u.isAdmin ? 'Remove admin' : 'Make admin'}</Button>
                 <Button size="sm" onclick={() => resetPassword(u)} disabled={busyId === u.id}>Reset password</Button>
                 <Button variant="danger" size="sm" onclick={() => remove(u)} disabled={busyId === u.id}>Delete</Button>
-              {:else}
-                <span class="you">You</span>
-              {/if}
-            </div>
+              </div>
+            {/if}
           </div>
         </li>
       {/each}
@@ -308,14 +306,15 @@
   .users li { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
   .users li:first-child { border-top: 0; padding-top: var(--space-1); }
   .users li.busy { opacity: 0.6; }
-  /* Three stacked rows, all aligned under the name (not the avatar): name +
-     handle + badges, then the account facts, then the actions. */
+  /* Two or three stacked rows, all aligned under the name (not the avatar):
+     name + handle + badges, then the account facts, then the actions —
+     skipped entirely on your own row, where the "You" badge on row one
+     already says there is nothing to act on. */
   .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
   .line { line-height: 1.4; }
   .name { font-weight: 600; }
   .handle { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .facts { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .acts { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-1); }
-  .you { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); padding: var(--space-2) var(--space-1); }
   .status { text-align: center; color: var(--text-3); padding: 30px 0; }
 </style>
