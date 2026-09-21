@@ -178,6 +178,25 @@
   let pendingFile = $state<File | null>(null);
   let removingAvatar = $state(false);
   function pickPhoto() { fileInput?.click(); }
+
+  // Tapping your avatar. With a photo, both actions (change, remove) live in a
+  // small menu hung off the avatar; with no photo there's only one thing to do,
+  // so we skip the menu and open the file picker straight away.
+  let photoMenuOpen = $state(false);
+  let photoMenuAnchor = $state<HTMLElement | null>(null);
+  let photoMenuPanel = $state<HTMLElement | null>(null);
+  function onPhotoClick() {
+    if (profile && !profile.private && profile.avatarUpdatedAt) photoMenuOpen = !photoMenuOpen;
+    else pickPhoto();
+  }
+  $effect(() => {
+    if (!photoMenuOpen) return;
+    const onDoc = (e: MouseEvent) => { if (!photoMenuPanel?.contains(e.target as Node) && !photoMenuAnchor?.contains(e.target as Node)) photoMenuOpen = false; };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') photoMenuOpen = false; };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  });
   function onFilePicked(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
     const f = input.files?.[0] ?? null;
@@ -239,12 +258,22 @@
   <header class="who">
     {#if profile.isMe}
       <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" bind:this={fileInput} onchange={onFilePicked} hidden />
-      <button type="button" class="photobtn" onclick={pickPhoto} aria-label="Change your profile picture" title="Change your profile picture">
-        <Avatar handle={profile.handle} name={profile.displayName ?? profile.handle} size={56} v={profile.avatarUpdatedAt} />
-        <span class="camera" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
-        </span>
-      </button>
+      <div class="photomenu" bind:this={photoMenuAnchor}>
+        <button type="button" class="photobtn" onclick={onPhotoClick} aria-haspopup={profile.avatarUpdatedAt ? 'menu' : undefined} aria-expanded={profile.avatarUpdatedAt ? photoMenuOpen : undefined} aria-label={profile.avatarUpdatedAt ? 'Profile picture options' : 'Add a profile picture'} title={profile.avatarUpdatedAt ? 'Profile picture options' : 'Add a profile picture'}>
+          <Avatar handle={profile.handle} name={profile.displayName ?? profile.handle} size={56} v={profile.avatarUpdatedAt} />
+          <span class="camera" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+          </span>
+        </button>
+        {#if photoMenuOpen}
+          <div class="menupanel" role="menu" aria-label="Profile picture" bind:this={photoMenuPanel}>
+            <button type="button" class="mi" role="menuitem" onclick={() => { photoMenuOpen = false; pickPhoto(); }}>Change photo</button>
+            {#if profile.avatarUpdatedAt}
+              <button type="button" class="mi danger" role="menuitem" onclick={() => { photoMenuOpen = false; void removePhoto(); }}>Remove photo</button>
+            {/if}
+          </div>
+        {/if}
+      </div>
     {:else}
       <Avatar handle={profile.handle} name={profile.displayName ?? profile.handle} size={56} v={profile.avatarUpdatedAt} />
     {/if}
@@ -268,9 +297,6 @@
     {#if profile.isMe}
       {#if !editing}
         <div class="ownerctrls">
-          {#if profile.avatarUpdatedAt}
-            <Button onclick={removePhoto} disabled={removingAvatar}>{removingAvatar ? 'Removing…' : 'Remove photo'}</Button>
-          {/if}
           <button type="button" class="iconbtn" onclick={startEdit} aria-label="Edit profile" title="Edit profile">
             <Icon name="pencil" size={20} />
           </button>
@@ -471,6 +497,12 @@
   .photobtn:hover { opacity: 0.92; }
   .photobtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .ownerctrls { flex: none; display: flex; align-items: center; gap: 8px; }
+  /* The avatar's tap menu: hangs off the avatar, opening down and to the left. */
+  .photomenu { position: relative; flex: none; }
+  .menupanel { position: absolute; top: calc(100% + 8px); left: 0; z-index: 60; min-width: 200px; max-width: calc(100vw - 16px); background: var(--surface); border-radius: 14px; padding: 6px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--line); display: flex; flex-direction: column; }
+  .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text); }
+  .mi:hover { background: var(--surface-2); }
+  .mi.danger { color: var(--danger); }
   /* Edit: a quiet pencil, the same at every width. */
   .iconbtn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
   .iconbtn:hover { background: var(--surface-2); color: var(--text); }
