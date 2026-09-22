@@ -41,7 +41,7 @@
   }
   .prev { left: 0; border-right: 1px solid var(--line); }
   .next { right: 0; border-left: 1px solid var(--line); }
-  .turn svg { background: var(--accent); color: var(--accent-ink); border-radius: 50%; padding: 4px; width: 34px; height: 34px; box-sizing: border-box; }
+  .turn svg { background: var(--accent); color: var(--accent-ink); border-radius: 50%; padding: var(--space-1); width: 34px; height: 34px; box-sizing: border-box; }
   .turn.hollow svg { background: transparent; color: var(--text-3); border: 2px solid var(--text-3); opacity: 0.6; }
   .turn:disabled { cursor: default; }
   .turn:not(:disabled):hover { background: color-mix(in srgb, var(--surface-2) 80%, transparent); }

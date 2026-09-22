@@ -43,8 +43,8 @@
 <style>
   .banner {
     --tone: var(--text-2);
-    display: flex; align-items: flex-start; gap: 10px;
-    padding: 11px 12px 11px 14px; border-radius: var(--radius-sm);
+    display: flex; align-items: flex-start; gap: var(--space-3);
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4); border-radius: var(--radius-sm);
     border: 1px solid color-mix(in srgb, var(--tone) 35%, transparent);
     background: color-mix(in srgb, var(--tone) 9%, var(--surface));
     color: var(--text); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.45;
@@ -54,11 +54,13 @@
   .warning { --tone: color-mix(in srgb, var(--amber) 78%, var(--text)); }
   .success { --tone: var(--accent); }
   .info { --tone: var(--text-3); background: var(--surface-2); border-color: var(--line); }
+  /* 1px is an optical nudge: the icon sits on the first line's cap height. */
   .icon { flex: none; margin-top: 1px; color: var(--tone); }
   .info .icon { color: var(--text-2); }
   .body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .title { margin: 0 0 2px; font-weight: 650; }
   .text :global(a) { color: var(--accent); font-weight: 600; }
-  /* Pulled flush with the banner's padding so it sits in the corner. */
+  /* Pulled flush with the banner's padding so it sits in the corner. Tuned by eye
+     against the close button's own box, so these stay literal. */
   .banner :global(.x) { margin: -3px -4px -3px 0; }
 </style>

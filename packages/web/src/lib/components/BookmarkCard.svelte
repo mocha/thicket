@@ -66,13 +66,13 @@
 
 <style>
   .body { display: flex; gap: var(--space-3); align-items: center; }
-  .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); padding-right: 28px; }
+  .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); padding-right: var(--space-6); }
   @media (hover: hover) { .body:hover h3 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   p { --summary-lines: 2; }
   .saved { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .thumb { flex: none; width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--surface-2); }
   /* The one action sits in the card's top corner, over the body's padding. */
-  :global(.bm .corner) { position: absolute; top: 6px; right: 6px; }
+  :global(.bm .corner) { position: absolute; top: var(--space-2); right: var(--space-2); }
   /* Taking a bookmark away is the one destructive thing here, so it hovers red. */
   :global(.bm button.remove):hover { color: var(--danger); }
 </style>

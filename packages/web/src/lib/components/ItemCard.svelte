@@ -117,7 +117,7 @@
   header {
     display: flex; align-items: center; gap: var(--space-2);
     font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2);
-    padding: 10px var(--space-2) 0 var(--card-pad); min-width: 0;
+    padding: var(--space-3) var(--space-2) 0 var(--card-pad); min-width: 0;
   }
   header.compact { padding-top: var(--space-2); }
   time { color: var(--text-3); white-space: nowrap; }
@@ -129,17 +129,18 @@
     width: calc(100% + var(--card-pad) * 2); margin: 0 calc(var(--card-pad) * -1) var(--space-3); aspect-ratio: 16 / 9; object-fit: cover;
     background: var(--surface-2);
   }
-  footer { margin-top: 10px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  footer { margin-top: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .repeat {
-    display: flex; gap: var(--space-2); align-items: flex-start; margin: -4px var(--card-pad) 14px; padding: var(--space-2) 10px;
+    display: flex; gap: var(--space-2); align-items: flex-start; margin: calc(-1 * var(--space-1)) var(--card-pad) var(--space-4); padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; color: var(--text-2);
     background: color-mix(in srgb, var(--amber) 12%, var(--surface));
   }
+  /* The 1px here and below are optical nudges, not spacing. */
   .repeat svg { flex: none; margin-top: 1px; color: color-mix(in srgb, var(--amber) 78%, var(--text)); }
   .repeat a { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
 
   /* Compact: a fixed height so a page of cards lines up. The picture sits beside the words. */
-  .link.compact { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto; column-gap: var(--space-3); padding: 6px var(--card-pad) 10px; }
+  .link.compact { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto; column-gap: var(--space-3); padding: var(--space-2) var(--card-pad); }
   .link.compact .hero { grid-column: 2; grid-row: 1 / span 3; width: 108px; height: 100%; max-height: 92px; aspect-ratio: auto; margin: 0; border-radius: var(--radius-sm); align-self: start; }
   h2.tight { grid-column: 1; font-size: calc(var(--text-base) * var(--size-headings)); --title-lines: 2; }
   p.tight { grid-column: 1; --summary-gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-reading)); --summary-lines: 2; }

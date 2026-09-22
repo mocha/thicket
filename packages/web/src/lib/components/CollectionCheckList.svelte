@@ -100,15 +100,15 @@
 
 <style>
   .checks { list-style: none; margin: 0; padding: 0; }
-  li label { display: flex; align-items: center; gap: 12px; padding: 11px 4px; border-top: 1px solid var(--line); cursor: pointer; }
+  li label { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-1); border-top: 1px solid var(--line); cursor: pointer; }
   li:first-child label { border-top: 0; }
   input[type='checkbox'] { width: 20px; height: 20px; accent-color: var(--accent); }
   .name { flex: 1; font-weight: 500; }
   .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); transition: color 300ms; }
   .count.flash { color: var(--accent); font-weight: 700; animation: pop 1.2s ease-out; }
   @keyframes pop { 0% { transform: scale(1.4); } 30% { transform: scale(1); } 100% { transform: scale(1); } }
-  .hint { margin: 6px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .new { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .new { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
   .plus { width: 20px; text-align: center; color: var(--accent); font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; font-weight: 600; }
   .new :global(.grow) { flex: 1; min-width: 0; }
 </style>

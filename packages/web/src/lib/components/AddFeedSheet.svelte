@@ -235,37 +235,38 @@
   dialog::backdrop { background: var(--scrim); }
   .sheet {
     position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 16px 16px calc(16px + var(--safe-b)); max-height: 90vh; overflow: hidden;
-    box-shadow: var(--shadow-sheet); display: flex; flex-direction: column; gap: 10px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-b)); max-height: 90vh; overflow: hidden;
+    box-shadow: var(--shadow-sheet); display: flex; flex-direction: column; gap: var(--space-3);
   }
   @media (min-width: 700px) {
     .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 460px; border-radius: var(--radius-lg); max-height: 86vh; }
   }
   header { display: flex; align-items: center; justify-content: space-between; }
   h2 { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }
-  .lede { color: var(--text-2); margin: -6px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
+  /* Pulled up against the title so the two read as one block. */
+    .lede { color: var(--text-2); margin: calc(-1 * var(--space-2)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .result { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .result p { margin: 0 0 6px; }
-  .candidates { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-  .candidates button { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); }
+  .result p { margin: 0 0 var(--space-2); }
+  .candidates { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+  .candidates button { width: 100%; text-align: left; display: flex; flex-direction: column; /* 2px is an optical gap between a name and its address. */ gap: 2px; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); }
   .candidates span { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
-  .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 4px; }
-  .nomatch { margin: 0; padding: 12px 8px; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: 38vh; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 10px; }
+  .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: var(--space-1); }
+  .nomatch { margin: 0; padding: var(--space-3) var(--space-2); color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: 38vh; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 var(--space-3); }
   /* Desktop cap. Must come after the base .scroll rule above: same specificity,
      so source order decides, and the list should top out at ~7 rows and scroll,
      not grow to a third of a tall screen. */
   @media (min-width: 700px) { .scroll { max-height: 300px; } }
   .checks { list-style: none; margin: 0; padding: 0; }
-  .checks label { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-top: 1px solid var(--line); cursor: pointer; }
+  .checks label { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-1); border-top: 1px solid var(--line); cursor: pointer; }
   .checks li:first-child label { border-top: 0; }
   .checks input { width: 20px; height: 20px; accent-color: var(--accent); }
   .name { flex: 1; font-weight: 500; }
   .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .hint { margin: -4px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .new { display: flex; align-items: center; gap: 8px; }
+  .hint { margin: calc(-1 * var(--space-1)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .new { display: flex; align-items: center; gap: var(--space-2); }
   .new :global(.grow) { flex: 1; }
   .plus { width: 20px; text-align: center; color: var(--accent); font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; font-weight: 600; }
-  .follow { margin-top: 6px; padding: 14px; border-radius: var(--radius-md); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
+  .follow { margin-top: var(--space-2); padding: var(--space-4); border-radius: var(--radius-md); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .follow:disabled { opacity: 0.5; }
 </style>

@@ -126,12 +126,13 @@
 </div>
 
 <style>
-  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
-  .box :global(.tabs) { margin-bottom: 16px; }
-  form { display: flex; flex-direction: column; gap: 12px; }
-  .go { margin-top: 2px; padding: 13px; border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); }
+  .box :global(.tabs) { margin-bottom: var(--space-4); }
+  form { display: flex; flex-direction: column; gap: var(--space-3); }
+  /* 2px is an optical nudge that lifts the button off the last field. */
+    .go { margin-top: 2px; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .go:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .note { margin: 12px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .note { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
   .note strong { color: var(--text-2); }
 </style>
