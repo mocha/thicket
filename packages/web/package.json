@@ -8,7 +8,7 @@
     "dev": "pnpm palette && vite dev --host --port 5173",
     "build": "pnpm palette && vite build",
     "preview": "vite preview",
-    "prepare": "pnpm palette && (svelte-kit sync || echo '')",
+    "prepare": "svelte-kit sync || echo ''",
     "check": "pnpm palette && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
