@@ -374,6 +374,8 @@ export type PublicCollectionFeed = {
 export type PublicCollection = {
   id: number; name: string; slug: string; description: string | null; visibility: ShareLevel; createdAt: string | null;
   owner: PublicUser; isMe: boolean; feeds: PublicCollectionFeed[]; children: { id: number; name: string; slug: string; description: string | null; feedCount: number }[];
+  /** For a signed-in visitor: the copy they already made of this collection, if any. Drives the "open your copy" state. */
+  myCopy: { slug: string; name: string } | null;
 };
 export type PublicBookmark = Omit<Bookmark, 'note'> & { myBookmarkId: number | null };
 

@@ -38,12 +38,17 @@
   let loadedKey = $state<string | undefined>(undefined);
   let showFeeds = $state(false);
   let explain = $state<HTMLDialogElement | null>(null);
+  let confirmAgain = $state<HTMLDialogElement | null>(null);
+  // A copy made in this visit, so the button reflects it right away. The server
+  // also reports a copy from an earlier visit as col.myCopy; either counts.
+  let justCopied = $state<{ slug: string; name: string } | null>(null);
+  const existingCopy = $derived(justCopied ?? col?.myCopy ?? null);
 
   $effect(() => {
     const key = `${handle}/${slug}`;
     if (loadedKey === key) return;
     loadedKey = key;
-    col = null; error = null;
+    col = null; error = null; justCopied = null;
     profilesApi.collection(handle, slug).then((c) => { col = c; showFeeds = !c.isMe && c.feeds.length <= 8; }).catch((e) => (error = e instanceof Error ? e.message : String(e)));
   });
   onMount(() => api.event('public_collection_view', { handle, slug }));
@@ -53,6 +58,7 @@
     copying = true;
     try {
       const mine = await profilesApi.copyCollection(handle, slug);
+      justCopied = { slug: mine.slug, name: mine.name };
       api.event('collection_copied', { from: `${handle}/${slug}`, collectionId: mine.id, feeds: mine.feedCount });
       void loadCollections(true);
       showToast(`Copied “${mine.name}” to your collections`, { label: 'Open', run: () => goto(collectionHref(session.user!.handle, mine.slug)) });
@@ -88,7 +94,12 @@
           <AddFeedButton collectionIds={[col!.id]} via="collection_page" />
           <IconButton icon="gear" variant="bordered" size="lg" href={manageCollectionHref(handle, slug)} label="Settings" title="Settings" />
         {:else if session.user}
-          <Button variant="primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</Button>
+          {#if existingCopy}
+            <Button variant="primary" href={collectionHref(session.user.handle, existingCopy.slug)}>Open your copy</Button>
+            <Button onclick={() => confirmAgain?.showModal()} disabled={copying}>{copying ? 'Copying…' : 'Copy again'}</Button>
+          {:else}
+            <Button variant="primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</Button>
+          {/if}
         {:else}
           <Button variant="primary" onclick={() => { api.event('copy_explainer_opened', { handle, slug }); explain?.showModal(); }}>Copy this collection</Button>
         {/if}
@@ -118,6 +129,19 @@
         </section>
       </div>
       <IconButton class="close" icon="close" label="Close" onclick={() => explain?.close()} />
+    </div>
+  </dialog>
+
+  <!-- You already have a copy: making another is fine (you might prune each
+       differently), but say so first so it isn't an accident. -->
+  <dialog bind:this={confirmAgain} onclick={(e) => { if (e.target === confirmAgain) confirmAgain?.close(); }}>
+    <div class="sheet confirm">
+      <h2>Make another copy?</h2>
+      <p>You already have a copy of this collection. Copying again makes a second, separate one — handy if you want to prune each down to different feeds.</p>
+      <div class="confirmbtns">
+        <Button onclick={() => confirmAgain?.close()}>Cancel</Button>
+        <Button variant="primary" disabled={copying} onclick={() => { confirmAgain?.close(); void copy(); }}>Copy again</Button>
+      </div>
     </div>
   </dialog>
 
@@ -177,6 +201,9 @@
   .ways h3 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); }
   .ways p { margin: 0 0 var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .sheet :global(.close) { position: absolute; top: var(--space-3); right: var(--space-3); }
+  @media (min-width: 700px) { .sheet.confirm { width: 460px; } }
+  .confirm p { margin: 0 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .confirmbtns { display: flex; gap: var(--space-2); justify-content: flex-end; }
   .feeds { margin-bottom: var(--space-4); }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .list li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }

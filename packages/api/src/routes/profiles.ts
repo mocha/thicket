@@ -188,10 +188,20 @@ profiles.get("/:handle/collections/:slug", async (c) => {
     select col.id, col.name, col.slug, col.description, ${subtreeFeedCount(sql`col.id`)} as "feedCount"
     from collections col where col.parent_id = ${r.col.id} and ${allowedLevelsSql("col.visibility", r.who)} order by lower(col.name)
   `);
+  // Does this signed-in reader already have a copy of this collection? Every
+  // copy records its source in copied_from_id, so the page can offer "open your
+  // copy" and warn before making a second one. Most recent wins if there are
+  // several.
+  const myCopy = r.viewer && !r.isMe
+    ? (await db.execute<{ slug: string; name: string }>(sql`
+        select slug, name from collections
+        where user_id = ${r.viewer.id} and copied_from_id = ${r.col.id}
+        order by created_at desc limit 1`)).rows[0] ?? null
+    : null;
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
   return c.json({
     id: r.col.id, name: r.col.name, slug: r.col.slug, description: r.col.description, visibility: r.col.visibility, createdAt: iso(r.col.createdAt),
-    owner: publicUser(r.u), isMe: r.isMe,
+    owner: publicUser(r.u), isMe: r.isMe, myCopy,
     feeds: feeds.rows.map((f: any) => ({ ...f, lastItemAt: iso(f.lastItemAt) })),
     children: children.rows,
   });
