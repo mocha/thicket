@@ -22,5 +22,5 @@
   /* The toast is an inverted chip, so the action word uses the toast color the
      theme picked for that ground, not the page accent (which lands on its own
      background here and disappears). */
-  .action { color: var(--toast-accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: calc(var(--text-xs) * var(--size-app)); }
+  .action { color: var(--toast-accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>
