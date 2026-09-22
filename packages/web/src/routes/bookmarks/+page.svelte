@@ -7,6 +7,7 @@
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import Button from '$lib/components/Button.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
+  import Select from '$lib/components/Select.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   let list = $state<Bookmark[]>([]);
@@ -99,10 +100,18 @@
       panel="bookmark-results"
     />
     {#if sources.feeds.length > 1}
-      <select aria-label="Filter by source" value={feed ?? ''} onchange={(e) => { const v = e.currentTarget.value; v ? setFilter('f', Number(v)) : setFilter(null); }}>
-        <option value="">By source…</option>
-        {#each sources.feeds as f (f.feedId)}<option value={f.feedId}>{f.title ?? 'Untitled'} ({f.count})</option>{/each}
-      </select>
+      <Select
+        class="by-source"
+        label="Filter by source"
+        hideLabel
+        size="sm"
+        value={feed ? String(feed) : ''}
+        options={[
+          { value: '', label: 'By source…' },
+          ...sources.feeds.map((f) => ({ value: String(f.feedId), label: `${f.title ?? 'Untitled'} (${f.count})` }))
+        ]}
+        onchange={(e) => { const v = e.currentTarget.value; v ? setFilter('f', Number(v)) : setFilter(null); }}
+      />
     {/if}
   </div>
 {/if}
@@ -149,10 +158,9 @@
   /* The collections get the whole width to slide along; the source menu sits
      on its own line under them, so neither one squeezes the other. */
   .filters { margin-bottom: 12px; }
-  .filters select {
-    margin-top: 8px; padding: 7px 14px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--line);
-    font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; max-width: 100%;
-  }
+  /* Narrow enough to read as a filter rather than a form field, and it never
+     runs past the edge of a phone. */
+  .filters :global(.by-source) { margin-top: var(--space-2); max-width: 280px; }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .empty { text-align: center; padding: 40px 20px; color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 6px; }
