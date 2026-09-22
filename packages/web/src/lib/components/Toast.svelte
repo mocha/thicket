@@ -15,10 +15,12 @@
   .toast {
     position: fixed; left: 50%; bottom: calc(var(--nav-h) + var(--safe-b) + 12px); transform: translateX(-50%);
     display: flex; align-items: center; gap: 16px; max-width: min(92vw, 520px);
-    background: var(--text); color: var(--bg); padding: 12px 16px; border-radius: 12px;
+    background: var(--text); color: var(--bg); padding: 12px 16px; border-radius: var(--radius-sm);
     box-shadow: var(--shadow); font-size: calc(var(--text-base) * var(--size-app)); z-index: 50;
   }
   @media (min-width: 900px) { .toast { bottom: 20px; } }
-  .action { color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: calc(var(--text-xs) * var(--size-app)); }
-  @media (prefers-color-scheme: dark) { .action { color: #a5d9ae; } }
+  /* The toast is an inverted chip, so the action word uses the toast color the
+     theme picked for that ground, not the page accent (which lands on its own
+     background here and disappears). */
+  .action { color: var(--toast-accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>

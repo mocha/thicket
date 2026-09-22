@@ -32,7 +32,7 @@
   .avatar :global(.mono) { grid-area: 1 / 1; }
   .pic {
     grid-area: 1 / 1; position: absolute; inset: 0;
-    width: 100%; height: 100%; border-radius: 30%;
+    width: 100%; height: 100%; border-radius: var(--radius-avatar);
     object-fit: cover; background: var(--surface-2);
   }
 </style>

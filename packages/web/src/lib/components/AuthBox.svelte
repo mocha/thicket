@@ -129,7 +129,7 @@
   .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
   .box :global(.tabs) { margin-bottom: 16px; }
   form { display: flex; flex-direction: column; gap: 12px; }
-  .go { margin-top: 2px; padding: 13px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
+  .go { margin-top: 2px; padding: 13px; border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .go:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .note { margin: 12px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }

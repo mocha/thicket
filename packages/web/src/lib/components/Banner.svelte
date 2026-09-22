@@ -50,8 +50,8 @@
     color: var(--text); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.45;
   }
   .error { --tone: var(--danger); }
-  /* Amber has no theme token yet; mixing it with the text color darkens it on light grounds and lightens it on dark ones. */
-  .warning { --tone: color-mix(in srgb, #c7861a 78%, var(--text)); }
+  /* Mixing amber with the text color darkens it on light grounds and lightens it on dark ones. */
+  .warning { --tone: color-mix(in srgb, var(--amber) 78%, var(--text)); }
   .success { --tone: var(--accent); }
   .info { --tone: var(--text-3); background: var(--surface-2); border-color: var(--line); }
   .icon { flex: none; margin-top: 1px; color: var(--tone); }

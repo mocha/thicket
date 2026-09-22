@@ -19,6 +19,9 @@
   --l-accent: #2f5d3a;
   --l-accent-ink: #f6f1e8;
   --l-danger: #a33b2c;
+  --l-danger-ink: #ffffff;
+  --l-amber: #c7861a;
+  --l-toast-accent: var(--d-accent);
   --l-line: #e2d9c8;
   --l-shadow: 0 1px 2px rgba(30, 20, 0, 0.06), 0 6px 20px -12px rgba(30, 20, 0, 0.25);
 
@@ -31,9 +34,23 @@
   --d-accent: #7fb08a;
   --d-accent-ink: #10190f;
   --d-danger: #e07a6a;
+  --d-danger-ink: #2a0f0a;
+  --d-amber: #e3a53f;
+  --d-toast-accent: var(--l-accent);
   --d-line: #322d22;
   --d-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
 
+  /* Three more colors that every theme sets for itself, alongside the ones above:
+
+     --danger-ink  the lettering on a filled red button. White reads on the
+                   light half's deep red; on dark the red is a pale coral, so
+                   the lettering has to go near-black instead.
+     --amber       the warning color: caution notices and the "posted again"
+                   strip on a card.
+     --toast-accent the action word in a toast. A toast is an inverted chip —
+                   dark card on a light page, light card on a dark page — so
+                   its action word borrows the *other* half's accent, which is
+                   the one built to read on that ground. */
   --bg: var(--l-bg);
   --surface: var(--l-surface);
   --surface-2: var(--l-surface-2);
@@ -43,12 +60,39 @@
   --accent: var(--l-accent);
   --accent-ink: var(--l-accent-ink);
   --danger: var(--l-danger);
+  --danger-ink: var(--l-danger-ink);
+  --amber: var(--l-amber);
+  --toast-accent: var(--l-toast-accent);
   --line: var(--l-line);
   --shadow: var(--l-shadow);
 
-  --radius: 16px;
+  /* Corner ladder. Every rounded corner in the app is one of these.
+     xs     inline code and highlight marks, too small for a bigger curve
+     sm     controls, rows, inputs, small tiles
+     md     dropdown and menu panels, and a few compact cards
+     radius cards, the reader, panels
+     lg     bottom sheets (top corners) and the desktop dialogs they become
+     pill   buttons, chips, tabs
+     avatar the squircle on avatars, monograms and source icons */
+  --radius-xs: 4px;
   --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius: 16px;
+  --radius-lg: 20px;
   --radius-pill: 999px;
+  --radius-avatar: 30%;
+
+  /* One shadow per kind of surface that floats above the page, so a sheet, a
+     menu and a dialog are never each drawn a little differently. The menu
+     shadow carries its own hairline, since a menu panel has no border. */
+  --shadow-sheet: 0 -10px 40px rgba(0, 0, 0, 0.25);
+  --shadow-menu: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--line);
+  --shadow-dialog: 0 20px 60px rgba(0, 0, 0, 0.3);
+  /* One darkness for everything dimmed behind a sheet, dialog or menu. */
+  --scrim: rgba(0, 0, 0, 0.45);
+  /* Hairline around a color swatch: the page's own ink, thinned, so it shows
+     up on a white swatch and a black one alike. */
+  --swatch-border: color-mix(in srgb, var(--text) 25%, transparent);
 
   /* Spacing scale: a 4px ladder. Padding, gaps, and margins pick a step here
      instead of a one-off pixel value, so the whole UI breathes on one grid. */
@@ -88,6 +132,9 @@
   --size-app: 1;
 
   --nav-h: 56px;
+  /* Width of the sidebar on desktop: the nav itself, the account menu that
+     hangs off it, and the page's left margin all measure from this. */
+  --nav-w: 240px;
   /* Width of the page-turn strips in paged layout. */
   --pager-w: 44px;
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -105,6 +152,9 @@
     --accent: var(--d-accent);
     --accent-ink: var(--d-accent-ink);
     --danger: var(--d-danger);
+    --danger-ink: var(--d-danger-ink);
+    --amber: var(--d-amber);
+    --toast-accent: var(--d-toast-accent);
     --line: var(--d-line);
     --shadow: var(--d-shadow);
   }
@@ -120,6 +170,9 @@
   --accent: var(--d-accent);
   --accent-ink: var(--d-accent-ink);
   --danger: var(--d-danger);
+  --danger-ink: var(--d-danger-ink);
+  --amber: var(--d-amber);
+  --toast-accent: var(--d-toast-accent);
   --line: var(--d-line);
   --shadow: var(--d-shadow);
   color-scheme: dark;
@@ -133,51 +186,69 @@
 :root[data-palette='kingfisher'] {
   --l-bg: #eef3f7; --l-surface: #ffffff; --l-surface-2: #e1e9f0; --l-text: #10202e; --l-text-2: #46586a; --l-text-3: #63768b;
   --l-accent: #0b5fa5; --l-accent-ink: #ffffff; --l-danger: #b3261e; --l-line: #d3dde6;
+  --l-danger-ink: #ffffff; --l-amber: #b56a0a; --l-toast-accent: var(--d-accent);
   --l-shadow: 0 1px 2px rgba(10, 30, 60, 0.06), 0 6px 20px -12px rgba(10, 30, 60, 0.28);
   --d-bg: #0d161f; --d-surface: #142030; --d-surface-2: #1c2b3d; --d-text: #e6eef6; --d-text-2: #a4b5c7; --d-text-3: #7a8ea6;
   --d-accent: #5fb3ff; --d-accent-ink: #071527; --d-danger: #ff7b6b; --d-line: #253649;
+  --d-danger-ink: #2a0f0a; --d-amber: #ffb44d; --d-toast-accent: var(--l-accent);
 }
 :root[data-palette='slate'] {
   --l-bg: #eceff2; --l-surface: #f8f9fb; --l-surface-2: #dfe4ea; --l-text: #1f262d; --l-text-2: #525c68; --l-text-3: #6e7885;
   --l-accent: #3f5f7a; --l-accent-ink: #f4f7fa; --l-danger: #a33b3b; --l-line: #cfd6de;
+  --l-danger-ink: #ffffff; --l-amber: #a3751f; --l-toast-accent: var(--d-accent);
   --l-shadow: 0 1px 2px rgba(20, 30, 40, 0.06), 0 6px 20px -12px rgba(20, 30, 40, 0.25);
   --d-bg: #15191e; --d-surface: #1c2229; --d-surface-2: #252d36; --d-text: #dfe5eb; --d-text-2: #a2adb9; --d-text-3: #7b8794;
   --d-accent: #8fb0c9; --d-accent-ink: #0f171f; --d-danger: #e28080; --d-line: #2d3640;
+  --d-danger-ink: #2a0f0a; --d-amber: #d9a85c; --d-toast-accent: var(--l-accent);
 }
 :root[data-palette='ember'] {
   --l-bg: #fbf4ec; --l-surface: #fffaf4; --l-surface-2: #f3e6d6; --l-text: #23170f; --l-text-2: #5f4d3a; --l-text-3: #8a7761;
   --l-accent: #b93c0a; --l-accent-ink: #fff7ef; --l-danger: #9f1d1d; --l-line: #e8d9c6;
+  --l-danger-ink: #ffffff; --l-amber: #9a7605; --l-toast-accent: var(--d-accent);
   --d-bg: #1a120c; --d-surface: #241a12; --d-surface-2: #30241a; --d-text: #f4e9dc; --d-text-2: #c0ad96; --d-text-3: #8c7a63;
   --d-accent: #ff8a4c; --d-accent-ink: #1f0f05; --d-danger: #ff7a6b; --d-line: #3a2c20;
+  --d-danger-ink: #2a0f0a; --d-amber: #f0bb5a; --d-toast-accent: var(--l-accent);
 }
 :root[data-palette='parchment'] {
   --l-bg: #eadfcb; --l-surface: #f2e9d8; --l-surface-2: #e1d4bc; --l-text: #4a3b2a; --l-text-2: #6a5a47; --l-text-3: #7f6f5b;
   --l-accent: #7a5535; --l-accent-ink: #f5ecdc; --l-danger: #8f3f2e; --l-line: #d5c6ab;
+  /* Parchment's own accents are too close in lightness to its text to read on
+     an inverted toast, so this theme names the toast's action color outright. */
+  --l-danger-ink: #ffffff; --l-amber: #8a5f22; --l-toast-accent: #dfcba8;
   --l-shadow: 0 1px 2px rgba(60, 40, 10, 0.05), 0 6px 20px -12px rgba(60, 40, 10, 0.2);
   --d-bg: #26211a; --d-surface: #2d2820; --d-surface-2: #363027; --d-text: #cfc2ad; --d-text-2: #a89b86; --d-text-3: #8a7d68;
   --d-accent: #c09a6b; --d-accent-ink: #211a10; --d-danger: #d0806c; --d-line: #3e372c;
+  --d-danger-ink: #2a0f0a; --d-amber: #c9a266; --d-toast-accent: #5a3a18;
 }
 :root[data-palette='graphite'] {
   --l-bg: #f0f0ef; --l-surface: #fafaf9; --l-surface-2: #e4e4e2; --l-text: #1c1c1c; --l-text-2: #525256; --l-text-3: #6f6f74;
   --l-accent: #465a7c; --l-accent-ink: #f6f7fa; --l-danger: #a63232; --l-line: #d6d6d4;
+  --l-danger-ink: #ffffff; --l-amber: #8f6a1c; --l-toast-accent: var(--d-accent);
   --l-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 6px 20px -12px rgba(0, 0, 0, 0.25);
   --d-bg: #161616; --d-surface: #1e1e1e; --d-surface-2: #282828; --d-text: #e8e8e6; --d-text-2: #adadaa; --d-text-3: #84848a;
   --d-accent: #9db0d0; --d-accent-ink: #101318; --d-danger: #e57f7f; --d-line: #313131;
+  --d-danger-ink: #2a0f0a; --d-amber: #d8ab5a; --d-toast-accent: var(--l-accent);
 }
 :root[data-palette='fog'] {
   --l-bg: #e6e7e6; --l-surface: #ededec; --l-surface-2: #dcdddc; --l-text: #3f4241; --l-text-2: #5c605f; --l-text-3: #6f7372;
   --l-accent: #556a67; --l-accent-ink: #eef1f0; --l-danger: #8e4545; --l-line: #cdcfce;
+  /* Fog is deliberately low contrast, so its accents cannot carry the inverted
+     toast either; its action color is named outright, like parchment's. */
+  --l-danger-ink: #ffffff; --l-amber: #7d6430; --l-toast-accent: #bdcfcb;
   --l-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px -12px rgba(0, 0, 0, 0.16);
   --d-bg: #202322; --d-surface: #272a29; --d-surface-2: #303433; --d-text: #c4c8c6; --d-text-2: #9a9f9d; --d-text-3: #7f8483;
   --d-accent: #8fa6a2; --d-accent-ink: #161918; --d-danger: #cf8383; --d-line: #383c3b;
+  --d-danger-ink: #2a0f0a; --d-amber: #c3a271; --d-toast-accent: #364a47;
 }
 /* High contrast: no tints, no shadows, rules drawn in ink. Accent is one of four
    colour-blind-safe hues (Okabe–Ito, darkened to pass on white). */
 :root[data-palette='contrast'] {
   --l-bg: #ffffff; --l-surface: #ffffff; --l-surface-2: #f2f2f2; --l-text: #000000; --l-text-2: #000000; --l-text-3: #2b2b2b;
   --l-accent: #0050a0; --l-accent-ink: #ffffff; --l-danger: #b00000; --l-line: #000000; --l-shadow: none;
+  --l-danger-ink: #ffffff; --l-amber: #8a5a00; --l-toast-accent: var(--d-accent);
   --d-bg: #000000; --d-surface: #000000; --d-surface-2: #141414; --d-text: #ffffff; --d-text-2: #ffffff; --d-text-3: #d9d9d9;
   --d-accent: #7db8ff; --d-accent-ink: #000000; --d-danger: #ff6b6b; --d-line: #ffffff; --d-shadow: none;
+  --d-danger-ink: #000000; --d-amber: #ffb454; --d-toast-accent: var(--l-accent);
 }
 :root[data-palette='contrast'][data-accent='orange'] { --l-accent: #a24c00; --d-accent: #ffb454; }
 :root[data-palette='contrast'][data-accent='green'] { --l-accent: #006a4e; --d-accent: #4fd1a5; }
@@ -186,8 +257,10 @@
 :root[data-palette='mono'] {
   --l-bg: #ffffff; --l-surface: #ffffff; --l-surface-2: #ffffff; --l-text: #000000; --l-text-2: #000000; --l-text-3: #000000;
   --l-accent: #000000; --l-accent-ink: #ffffff; --l-danger: #000000; --l-line: #000000; --l-shadow: none;
+  --l-danger-ink: #ffffff; --l-amber: #000000; --l-toast-accent: var(--d-accent);
   --d-bg: #000000; --d-surface: #000000; --d-surface-2: #000000; --d-text: #ffffff; --d-text-2: #ffffff; --d-text-3: #ffffff;
   --d-accent: #ffffff; --d-accent-ink: #000000; --d-danger: #ffffff; --d-line: #ffffff; --d-shadow: none;
+  --d-danger-ink: #000000; --d-amber: #ffffff; --d-toast-accent: var(--l-accent);
 }
 /* Cards on the two hard-edged palettes are outlined, since there is no shadow or tint to separate them from the page. */
 :root[data-palette='contrast'], :root[data-palette='mono'] { --card-border: 1px solid var(--line); }

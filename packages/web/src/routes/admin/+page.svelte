@@ -279,7 +279,7 @@
   .top { margin-bottom: 14px; }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
-  code { font-size: calc(var(--text-sm) * var(--size-app)); background: var(--surface-2); padding: 1px 6px; border-radius: 6px; }
+  code { font-size: calc(var(--text-sm) * var(--size-app)); background: var(--surface-2); padding: 1px 6px; border-radius: var(--radius-xs); }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
   h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 10px; display: flex; align-items: baseline; gap: 8px; }
   .help { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
@@ -299,7 +299,7 @@
   .radio small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .mint { display: flex; gap: 8px; }
   .packs { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 6px; }
-  .packs li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg); border: 1px solid transparent; }
+  .packs li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid transparent; }
   .packs li.on { border-color: var(--accent); }
   .packs label { display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer; }
   .packs input { accent-color: var(--accent); }
@@ -307,10 +307,10 @@
   .pk small { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   @media (min-width: 760px) { .packs { grid-template-columns: repeat(2, 1fr); } }
   .invites { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  .invites li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .invites li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); }
   .invites .note { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .invites .exp { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; }
-  .issued { background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid var(--accent); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+  .issued { background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 12px; }
   .issued p { margin: 0 0 6px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .issued code { font-size: calc(var(--text-base) * var(--size-app)); user-select: all; }
   .row { display: flex; gap: 8px; }

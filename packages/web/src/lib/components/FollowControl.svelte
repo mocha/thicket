@@ -116,7 +116,7 @@
 {/if}
 
 <style>
-  .split { display: inline-flex; align-items: stretch; border-radius: 999px; border: 1px solid var(--accent); overflow: hidden; background: var(--surface); color: var(--accent); flex: none; }
+  .split { display: inline-flex; align-items: stretch; border-radius: var(--radius-pill); border: 1px solid var(--accent); overflow: hidden; background: var(--surface); color: var(--accent); flex: none; }
   .split.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
   .split.neutral { border-color: var(--line); color: var(--text-2); }
   .split.neutral .more { border-left-color: var(--line); }
@@ -128,8 +128,8 @@
   .compact .more { padding: 0 6px 0 4px; }
   .panel {
     position: fixed; z-index: 60; width: min(320px, calc(100vw - 16px));
-    background: var(--surface); color: var(--text); border-radius: 14px; padding: 12px 14px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--line);
+    background: var(--surface); color: var(--text); border-radius: var(--radius-md); padding: 12px 14px;
+    box-shadow: var(--shadow-menu);
     max-height: calc(100vh - 16px); display: flex; flex-direction: column;
   }
   /* A long list of collections scrolls inside the panel rather than pushing Unfollow (or the panel) off screen. */
@@ -138,6 +138,6 @@
   /* Inside a sheet the list scrolls on its own so Unfollow stays in reach. */
   .panel.inline :global(.checks) { max-height: 34vh; overflow-y: auto; }
   .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 4px; }
-  .unfollow { width: 100%; margin-top: 10px; padding: 9px; border-radius: 10px; color: var(--danger); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); border: 1px solid var(--line); }
+  .unfollow { width: 100%; margin-top: 10px; padding: 9px; border-radius: var(--radius-sm); color: var(--danger); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); border: 1px solid var(--line); }
   .unfollow:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
 </style>

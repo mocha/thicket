@@ -76,14 +76,14 @@
 
 <style>
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+  dialog::backdrop { background: var(--scrim); }
   .box {
     position: fixed; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column;
-    background: var(--surface); color: var(--text); border-radius: 20px 20px 0 0; max-height: 92vh;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25); border: var(--card-border, 0);
+    background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 92vh;
+    box-shadow: var(--shadow-sheet); border: var(--card-border, 0);
   }
   @media (min-width: 700px) {
-    .box { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(720px, calc(100vw - 48px)); border-radius: 20px; max-height: calc(100vh - 48px); }
+    .box { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(720px, calc(100vw - 48px)); border-radius: var(--radius-lg); max-height: calc(100vh - 48px); }
   }
   header { padding: 20px 20px 0; }
   .eyebrow { margin: 0 0 6px; font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); font-weight: 600; }
@@ -92,7 +92,7 @@
   .body { padding: 16px 20px 4px; overflow-y: auto; min-height: 0; }
   footer { display: flex; align-items: center; gap: 8px; padding: 14px 20px calc(16px + var(--safe-b)); border-top: 1px solid var(--line); margin-top: 12px; }
   .spacer { flex: 1; }
-  footer button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); }
+  footer button { padding: 10px 16px; border-radius: var(--radius-pill); border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); }
   footer button.link { border: 0; padding: 10px 4px; color: var(--accent); }
   footer button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>

@@ -287,6 +287,8 @@
   /* Tabs hidden off an end: that end softens into the page instead of being
      sliced off mid-word, which is the only hint a reader gets that the row
      slides. A row that fits gets no mask at all. */
+  /* Deliberately literal: the #000 stops below are a mask, not a color — opaque
+     means “show the tabs here”, transparent means “fade them out”. */
   .scroll.more-left,
   .scroll.more-right {
     --fade-l: 0px;

@@ -544,7 +544,7 @@
     .filter .label { min-width: 44px; }
     .filter select { flex: 1; }
   }
-  .filter select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .filter select { padding: 6px 8px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   /* Browse: the filters are the list card's header, so the two read as one unit. */
   .browse { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
@@ -565,7 +565,7 @@
   /* Wraps rather than truncates: every part of it is a fact someone is deciding on. */
   .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .desc { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .desc mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .desc mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
   /* Why this row is here: the same numbers the ranking is made of, in words. */
   .why { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); margin: 2px 0 1px; }
   .why strong { font-weight: 700; }
@@ -579,7 +579,7 @@
   .stack :global(> :nth-child(2)) { left: 9px; z-index: 2; }
   .stack :global(> :nth-child(3)) { left: 18px; z-index: 1; }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
-  .follow, .save { flex: none; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
+  .follow, .save { flex: none; padding: 7px 14px; border-radius: var(--radius-pill); border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .follow.on, .save.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
   .follow:disabled, .save:disabled { opacity: 0.6; }
   .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: 18px 0; margin: 0; }

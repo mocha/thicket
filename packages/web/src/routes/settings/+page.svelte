@@ -182,7 +182,7 @@
   .fine { margin: 12px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
   form { display: flex; flex-direction: column; gap: 12px; }
   .row { display: flex; justify-content: flex-end; }
-  button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); }
+  button { padding: 10px 16px; border-radius: var(--radius-pill); border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); }
   button:disabled { opacity: 0.5; }
   fieldset { border: 0; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 10px; }
   .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }

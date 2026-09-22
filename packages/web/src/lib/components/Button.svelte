@@ -98,6 +98,8 @@
     color: var(--accent-ink);
     border-color: var(--accent);
   }
+  /* Deliberately literal: the #000 here is not a color of its own, it is the
+     darkening step that presses the accent and the red down on hover. */
   .btn.primary:hover {
     background: color-mix(in srgb, var(--accent) 84%, #000);
     border-color: color-mix(in srgb, var(--accent) 84%, #000);
@@ -117,12 +119,12 @@
   .btn.danger.solid {
     background: var(--danger);
     border-color: var(--danger);
-    color: #fff;
+    color: var(--danger-ink);
   }
   .btn.danger.solid:hover {
     background: color-mix(in srgb, var(--danger) 84%, #000);
     border-color: color-mix(in srgb, var(--danger) 84%, #000);
-    color: #fff;
+    color: var(--danger-ink);
   }
 
   .btn:disabled,
