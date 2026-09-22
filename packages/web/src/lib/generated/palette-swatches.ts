@@ -1,5 +1,5 @@
 // Generated from app.css by scripts/palette-swatches.mjs — do not edit.
-// This file is regenerated on every install, dev, build, and check (see the
+// This file is regenerated on every dev, build, and check (see the
 // "palette" script in package.json). Edit the colors in app.css instead.
 
 import type { Palette, Accent } from '$lib/display.svelte';
