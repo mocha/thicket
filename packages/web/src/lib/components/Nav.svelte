@@ -313,7 +313,7 @@
     nav:not(.paged) .cols li.child > a { padding-left: 24px; }
     nav:not(.paged) .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* Something new: the name goes bold, the count or dot sits beside it. Bold reads in grayscale where a color would not. */
-    nav:not(.paged) .cols a.new .name { font-weight: 600; color: var(--text); }
+    nav:not(.paged) .cols a.new .name { font-weight: 500; color: var(--text); }
 
     nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 12px; border-radius: 8px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     nav:not(.paged) .cols .new button:hover { background: var(--surface-2); }
