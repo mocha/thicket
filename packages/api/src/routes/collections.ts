@@ -44,6 +44,10 @@ collections.patch("/:id", async (c) => {
   const body = await c.req.json<{ name?: string; description?: string; parentId?: number; visibility?: string }>();
   if (body.parentId !== undefined) {
     if (body.parentId === id) return c.json({ error: "a collection cannot contain itself" }, 400);
+    // The new parent must be one of the caller's own collections. Without this,
+    // a collection could be re-homed under someone else's, appearing on their page.
+    const [parent] = await db.select({ id: schema.collections.id }).from(schema.collections).where(and(eq(schema.collections.id, body.parentId), eq(schema.collections.userId, user.id)));
+    if (!parent) return c.json({ error: "parent not found" }, 404);
     // Cycle check: the new parent must not be a descendant of this collection.
     const desc = await db.execute<{ id: number }>(sql`with recursive t as (select id from collections where id = ${id} union all select c.id from collections c join t on c.parent_id = t.id) select id from t`);
     if (desc.rows.some((r) => Number(r.id) === body.parentId)) return c.json({ error: "cannot move a collection under its own descendant" }, 400);
