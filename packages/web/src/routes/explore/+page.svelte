@@ -225,7 +225,9 @@
   });
 
   function loadMore() {
-    if (searching) void loadSearch();
+    // The "Everything" scope isn't paginated (it shows a fixed top slice per kind),
+    // so its sentinel must not re-run the same page-0 search on every scroll.
+    if (searching) { if (scope !== 'all') void loadSearch(); }
     else if (browseAs === 'feeds') void loadFeeds();
     else if (browseAs === 'collections') void loadCols();
     else void loadUsers();
