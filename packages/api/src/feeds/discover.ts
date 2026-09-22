@@ -38,7 +38,9 @@ export function extractFeedLinks(html: string, baseUrl: string): Candidate[] {
     const rel = attr("rel")?.toLowerCase() ?? "";
     const type = attr("type") ?? "";
     const href = attr("href");
-    if (!href || !rel.split(/\s+/).includes("alternate") || !FEED_TYPES.test(type)) continue;
+    // oEmbed links are also rel="alternate" and their type contains "application/json"
+    // or "text/xml", so they slip past FEED_TYPES; exclude them explicitly.
+    if (!href || !rel.split(/\s+/).includes("alternate") || !FEED_TYPES.test(type) || /\+oembed/i.test(type)) continue;
     try {
       const abs = normalizeFeedUrl(new URL(href, baseUrl).toString());
       if (seen.has(abs)) continue;
