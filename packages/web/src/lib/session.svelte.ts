@@ -65,7 +65,7 @@ setUnauthorizedHandler(() => {
  * page is not public.
  */
 export function isPublicPath(pathname: string): boolean {
-  if (pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname.startsWith('/@')) return true;
+  if (pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname === '/design-system' || pathname.startsWith('/@')) return true;
   // /feeds/:id, /feeds/:id/:slug, and a post under it: /feeds/:id/:slug/:item/:itemslug.
   return /^\/feeds\/\d+(\/(?!settings\/?$)[^/]+(\/\d+(\/[^/]*)?)?)?\/?$/.test(pathname);
 }

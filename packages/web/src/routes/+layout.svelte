@@ -26,6 +26,13 @@
   const path = $derived(page.url.pathname);
   const isPublic = $derived(isPublicPath(path));
   const signedIn = $derived(!!session.user);
+  /**
+   * The design system stands on its own, without the app's nav, reader, or
+   * configurator around it. It shows the pieces the app is built from, so it
+   * shouldn't be wearing the app itself. It needs no account and no data, so it
+   * renders straight away rather than waiting on who's signed in.
+   */
+  const bare = $derived(path === '/design-system');
 
   $effect(() => {
     if (!session.loaded) return;
@@ -40,28 +47,32 @@
 
 <svelte:head><title>thicket</title></svelte:head>
 
-{#if signedIn}
-  <Nav />
-{:else if session.loaded}
-  <header class="anon" class:home={path === '/'}>
-    <a class="brand" href="/"><img src="/icon.svg" alt="" width="24" height="24" /><span>thicket</span></a>
-    {#if path !== '/login' && path !== '/signup' && path !== '/'}
-      <span class="auth"><Button href="/login?next={encodeURIComponent(path)}">Log in</Button><Button variant="primary" href="/signup?next={encodeURIComponent(path)}">Sign up</Button></span>
-    {/if}
-  </header>
-{/if}
-
-<main class:anon={!signedIn} class:home={!signedIn && path === '/'} class:paged={display.layout === 'paged'}>
-  {#if show}{@render children()}
-  {:else if session.unreachable}
-    <div class="unreachable" role="status">
-      <h1>Can’t reach thicket</h1>
-      <p>The server isn’t answering ({session.unreachable}). Retrying…</p>
-    </div>
+{#if bare}
+  <main class="bare">{@render children()}</main>
+{:else}
+  {#if signedIn}
+    <Nav />
+  {:else if session.loaded}
+    <header class="anon" class:home={path === '/'}>
+      <a class="brand" href="/"><img src="/icon.svg" alt="" width="24" height="24" /><span>thicket</span></a>
+      {#if path !== '/login' && path !== '/signup' && path !== '/'}
+        <span class="auth"><Button href="/login?next={encodeURIComponent(path)}">Log in</Button><Button variant="primary" href="/signup?next={encodeURIComponent(path)}">Sign up</Button></span>
+      {/if}
+    </header>
   {/if}
-</main>
-{#if signedIn && addFeed.open}<AddFeedSheet />{/if}
-{#if signedIn}<Reader /><Configurator />{/if}
+
+  <main class:anon={!signedIn} class:home={!signedIn && path === '/'} class:paged={display.layout === 'paged'}>
+    {#if show}{@render children()}
+    {:else if session.unreachable}
+      <div class="unreachable" role="status">
+        <h1>Can’t reach thicket</h1>
+        <p>The server isn’t answering ({session.unreachable}). Retrying…</p>
+      </div>
+    {/if}
+  </main>
+  {#if signedIn && addFeed.open}<AddFeedSheet />{/if}
+  {#if signedIn}<Reader /><Configurator />{/if}
+{/if}
 <Toast />
 
 <style>
@@ -70,6 +81,12 @@
     padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) var(--space-3) calc(var(--nav-h) + var(--safe-b) + var(--space-5));
   }
   main.anon { padding-bottom: calc(var(--space-6) + var(--space-2)); }
+  /* The design system runs on its own, without the app's chrome. A wider column
+     than the reading app uses, so a gallery of swatches and controls has room. */
+  main.bare {
+    max-width: 900px;
+    padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) var(--space-4) calc(var(--space-6) + var(--space-5));
+  }
   /* Paged: room for the page-turn strips down both sides. */
   main.paged { max-width: none; padding-left: calc(var(--pager-w) + var(--space-2)); padding-right: calc(var(--pager-w) + var(--space-2)); }
   /* 80px is how far down the offline notice sits, a layout drop rather than a spacing step. */
@@ -84,7 +101,7 @@
   .auth { display: flex; gap: var(--space-2); align-items: center; }
   @media (min-width: 900px) {
     /* The left margin is column math, not spacing: the sidebar plus half of what's left over. */
-    main:not(.anon):not(.paged) { margin-left: calc(var(--nav-w) + max(24px, (100vw - var(--nav-w) - 640px) / 2)); padding: calc(var(--space-5) + var(--space-1)) var(--space-5) calc(var(--space-6) + var(--space-5)); }
+    main:not(.anon):not(.paged):not(.bare) { margin-left: calc(var(--nav-w) + max(24px, (100vw - var(--nav-w) - 640px) / 2)); padding: calc(var(--space-5) + var(--space-1)) var(--space-5) calc(var(--space-6) + var(--space-5)); }
     main.anon, header.anon { max-width: 680px; }
     main.home, header.anon.home { max-width: 1040px; }
     main.anon { padding: var(--space-5) var(--space-5) calc(var(--space-6) + var(--space-5)); }
