@@ -10,6 +10,8 @@
   import Banner from '$lib/components/Banner.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Button from '$lib/components/Button.svelte';
+  import Field from '$lib/components/Field.svelte';
+  import Input from '$lib/components/Input.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -200,9 +202,15 @@
     <h2>Settings</h2>
 
     <div class="opt">
-      <h3><label for="dname">Display name</label></h3>
       <form onsubmit={(e) => { e.preventDefault(); void saveName(displayName); }}>
-        <input id="dname" type="text" bind:value={displayName} maxlength="120" placeholder={original} disabled={savingName} />
+        <Field
+          label="Display name"
+          hint="Only you see this name. Where feeds are listed to choose from, it shows as “Your name ({original})”."
+        >
+          {#snippet children({ id, describedBy, invalid })}
+            <Input {id} aria-describedby={describedBy} {invalid} bind:value={displayName} maxlength={120} placeholder={original} disabled={savingName} />
+          {/snippet}
+        </Field>
         <div class="row">
           <Button type="submit" variant="primary" disabled={!nameDirty || savingName}>{savingName ? 'Saving…' : 'Save'}</Button>
           {#if feed.displayName}
@@ -210,7 +218,6 @@
           {/if}
         </div>
       </form>
-      <p class="hint">Only you see this name. Where feeds are listed to choose from, it shows as “Your name ({original})”.</p>
     </div>
 
     {#if feed.isYouTube}
@@ -303,9 +310,6 @@
   section > h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 12px; }
   .opt { margin-bottom: 18px; }
   h3 { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; margin: 0 0 8px; }
-  input[type='text'] { width: 100%; font: inherit; font-size: calc(var(--text-base) * var(--size-app)); padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
-  input[type='text']:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  input[type='text']::placeholder { color: var(--text-3); }
   .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   .hint { margin: 8px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
   .hint.inline { margin: 0; }
