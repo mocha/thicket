@@ -72,6 +72,12 @@ packages/web   SvelteKit PWA (Svelte 5 runes). Talks only to /api.
 docs/DEPLOY.md Running an instance: Compose, reverse proxies, hosted platforms.
 ```
 
+The **design system** — the colors, type, spacing, and components the web app
+is built from — is a live page at
+[readthicket.com/design-system](https://readthicket.com/design-system), shown
+with the real components so it never drifts from what ships
+(`packages/web/src/routes/design-system`).
+
 Two shapes are worth knowing before reading the code. **Feeds are global**:
 one row per normalized URL, fetched once however many people follow it, so
 "following" is derived from collection membership rather than a subscriptions
