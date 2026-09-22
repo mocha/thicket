@@ -31,14 +31,15 @@
   dialog::backdrop { background: var(--scrim); }
   .sheet {
     position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 16px 16px calc(16px + var(--safe-b)); max-height: 80vh; overflow: auto;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-b)); max-height: 80vh; overflow: auto;
     box-shadow: var(--shadow-sheet);
   }
   @media (min-width: 700px) {
     .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 420px; border-radius: var(--radius-lg); }
   }
-  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-2); }
   .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
-  h2 { margin: 2px 0 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); overflow-wrap: anywhere; }
-  .close { color: var(--accent); font-weight: 600; padding: 6px 4px; }
+  /* 2px is an optical nudge: the title's cap height lines up with the close link. */
+    h2 { margin: 2px 0 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); overflow-wrap: anywhere; }
+  .close { color: var(--accent); font-weight: 600; padding: var(--space-2) var(--space-1); }
 </style>

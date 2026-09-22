@@ -56,22 +56,22 @@
   dialog::backdrop { background: var(--scrim); }
   .sheet {
     position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 18px 16px calc(16px + var(--safe-b)); max-height: 88vh; overflow: auto;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-b)); max-height: 88vh; overflow: auto;
     box-shadow: var(--shadow-sheet);
   }
   @media (min-width: 700px) {
     .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 420px; border-radius: var(--radius-lg); }
   }
-  header { display: flex; align-items: center; gap: 12px; }
+  header { display: flex; align-items: center; gap: var(--space-3); }
   .who { flex: 1; min-width: 0; }
   h2 { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); line-height: 1.2; overflow-wrap: anywhere; }
   .host { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
   header :global(.close) { align-self: flex-start; }
-  .desc { margin: 12px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-  .stats div { display: flex; flex-direction: column; gap: 2px; }
+  .desc { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: var(--space-4) 0 0; padding: var(--space-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .stats div { display: flex; flex-direction: column; /* 2px is an optical gap between a number and its label. */ gap: 2px; }
   dt { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
   dd { margin: 0; font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
-  footer { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center; }
-  .loading { text-align: center; color: var(--text-3); padding: 30px 0; }
+  footer { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); align-items: center; }
+  .loading { text-align: center; color: var(--text-3); padding: var(--space-6) 0; }
 </style>
