@@ -81,6 +81,10 @@
     -webkit-line-clamp: var(--title-lines, 3);
     line-clamp: var(--title-lines, 3);
     overflow: hidden;
+    /* The clamp clips at the box edge, which sat right on the last line's baseline
+       and sliced the tails of p, g and y. A little room below keeps them whole. */
+    padding-bottom: 0.15em;
+    margin-bottom: -0.15em;
   }
   .card :global(.card-summary) {
     /* Air between the title and the summary; a card can tighten it with --summary-gap. */
