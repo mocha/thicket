@@ -188,11 +188,13 @@ export const collectionsApi = {
 
 /** The import page (api/src/lib/importer.ts). `unsure`: couldn't be checked just now; it is added and retried. */
 export type ImportFeedState = 'ok' | 'failed' | 'unsure' | 'pending';
-export type ImportFeed = { url: string; title: string | null; siteUrl: string | null; state: ImportFeedState; reason: string | null; following: boolean };
+/** `retry`: this verdict could change if we ask again shortly — a timeout or a brief 5xx, never a 429 or a paused host. */
+export type ImportFeed = { url: string; title: string | null; siteUrl: string | null; state: ImportFeedState; reason: string | null; following: boolean; retry: boolean };
 export type ImportGroup = { name: string; feeds: ImportFeed[]; existing: { id: number; name: string; slug: string } | null };
 export type ImportPreview = { title: string | null; source: string | null; groups: ImportGroup[]; emptyFolders: string[]; duplicates: number };
-export type ImportCheck = { url: string; state: ImportFeedState; reason: string | null; title: string | null; finalUrl: string | null };
-export type ImportCommitted = { id: number; name: string; slug: string; created: boolean; added: number; alreadyThere: number };
+export type ImportCheck = { url: string; state: ImportFeedState; reason: string | null; title: string | null; finalUrl: string | null; retry: boolean };
+/** `renamedFrom`: the folder's name in the file, when the new collection had to be numbered past one of mine. */
+export type ImportCommitted = { id: number; name: string; slug: string; renamedFrom: string | null; added: number };
 /** Feeds per check request; the server takes no more. */
 export const IMPORT_CHECK_BATCH = 8;
 

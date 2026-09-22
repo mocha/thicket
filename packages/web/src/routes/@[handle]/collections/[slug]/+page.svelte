@@ -150,7 +150,7 @@
   {#if col.isMe && col.feeds.length === 0}
     <River collection={col.id} emptyTitle="Nothing in here yet" emptyBody="Add feeds to this collection and their posts will show up here." emptyCta="Add a feed to this collection" emptyAction={() => openAddFeed({ collectionIds: [col!.id], via: 'empty_collection' })} />
   {:else}
-    <River collection={col.id} emptyTitle="Nothing yet" emptyBody="No posts have come through from these feeds so far." emptyAction={null} />
+    <River collection={col.id} emptyTitle="Nothing yet" emptyBody="No posts have come through from these feeds so far. If you just created this collection by adding some new feeds, it will take a few minutes for that content to start coming in." emptyAction={null} emptyPoll />
   {/if}
 {/if}
 

@@ -22,11 +22,13 @@
   import VisitorMore from './VisitorMore.svelte';
   import Button from '$lib/components/Button.svelte';
 
-  let { collection = null, feed = null, showSource = true, emptyTitle = 'Nothing here yet', emptyBody = 'thicket shows the posts of sites you follow, newest first, with nothing in between. Add a site by its address and its posts start arriving here, or look through Explore to see what other people here read.', emptyHref = null, emptyCta = 'Add a feed', emptyAction = () => openAddFeed({ via: 'empty_river' }) }: {
+  let { collection = null, feed = null, showSource = true, emptyTitle = 'Nothing here yet', emptyBody = 'thicket shows the posts of sites you follow, newest first, with nothing in between. Add a site by its address and its posts start arriving here, or look through Explore to see what other people here read.', emptyHref = null, emptyCta = 'Add a feed', emptyAction = () => openAddFeed({ via: 'empty_river' }), emptyPoll = false }: {
     collection?: number | null; feed?: number | null; showSource?: boolean;
     emptyTitle?: string; emptyBody?: string; emptyHref?: string | null; emptyCta?: string;
     /** null = no call to action. Default opens the Add sheet. */
     emptyAction?: (() => void) | null;
+    /** Look again while this list is empty: for feeds just added, whose first fetch is still to come. */
+    emptyPoll?: boolean;
   } = $props();
 
   let items = $state<RiverItem[]>([]);
@@ -85,6 +87,29 @@
       loading = false;
     }
   }
+
+  /**
+   * Feeds that were just added have not been fetched yet, so the list they are
+   * in opens empty and fills a minute or two later. While that is the case,
+   * look again rather than making someone reload the page: the scheduler ticks
+   * every 15 seconds, so a minute is soon enough to feel live and rare enough
+   * to be free. Stops the moment anything arrives, pauses while the tab is in
+   * the background, and gives up after POLL_FOR — a list still empty by then
+   * is not waiting on a first fetch, it is empty.
+   */
+  const POLL_MS = 60_000;
+  const POLL_FOR = 10 * 60_000;
+  let pollUntil = 0;
+  $effect(() => {
+    if (!emptyPoll || error || items.length) return;
+    if (!pollUntil) pollUntil = Date.now() + POLL_FOR;
+    if (Date.now() > pollUntil) return;
+    const id = setInterval(() => {
+      if (loading || document.visibilityState !== 'visible') return;
+      void loadMore(true);
+    }, POLL_MS);
+    return () => clearInterval(id);
+  });
 
   export function reload() {
     items = []; cursor = null; done = false; hidden = 0; cappedAt = null; pageIndex = 0; anchorAtOpen = null; newAtOpen = ''; caught = false;

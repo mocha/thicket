@@ -7,7 +7,7 @@
  *    what can be told about each feed without fetching it.
  * 2. `checkFeeds`: fetch the ones thicket has never seen, a few at a time, so
  *    the review can say which will work and why the rest won't.
- * 3. `commitImport`: make (or add to) one top-level collection per chosen group.
+ * 3. `commitImport`: make one new top-level collection per chosen group.
  *
  * **Folders become collections, side by side. Never sub-collections** (decided
  * 2026-09-21): nesting is kept for a later, larger plan. A folder inside a
@@ -15,11 +15,17 @@
  * the other importer, the one that copies a thicket collection whole and keeps
  * its shape; this one is for arriving from somewhere else.
  *
+ * **An import always makes new collections** (decided 2026-09-22, revising the
+ * day before): a group whose name is already one of mine is numbered rather
+ * than merged into — "Videos", then "Videos 1", then "Videos 2". Importing the
+ * same file twice therefore gives a second set, which is visible and easy to
+ * delete, rather than silently folding into what is there.
+ *
  * The file is sent twice, once to read and once as the chosen groups, and
  * nothing is stored in between: a review that is abandoned leaves no trace,
  * and in particular no feed rows, which the scheduler would start fetching.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { parseOpml } from "feedsmith";
 import { db, schema } from "../db/client.js";
 import { httpGet } from "../feeds/http.js";
@@ -43,12 +49,21 @@ export const CHECK_BATCH = 8;
  * a feed over a bad minute. `pending`: not checked yet.
  */
 export type FeedState = "ok" | "failed" | "unsure" | "pending";
+/**
+ * A verdict, and whether trying again in a moment could change it. `retry` is
+ * for the review page, which has a person waiting and can afford another go:
+ * true for the troubles that pass on their own (a timeout, a site briefly
+ * 500ing), false when the site told us to wait — a 429, or a host already
+ * paused. Asking those again inside a minute is the rudeness the politeness
+ * layer exists to prevent, and would only earn the same answer.
+ */
+type Verdict = { state: FeedState; reason: string; retry: boolean };
 /** `following`: already in one of my collections, so importing it changes nothing but where it is filed. */
-export type ImportFeed = { url: string; title: string | null; siteUrl: string | null; state: FeedState; reason: string | null; following: boolean };
+export type ImportFeed = { url: string; title: string | null; siteUrl: string | null; state: FeedState; reason: string | null; following: boolean; retry: boolean };
 export type ImportGroup = {
   name: string;
   feeds: ImportFeed[];
-  /** A collection of mine this group would add to rather than make, because its name is taken by it. */
+  /** A collection of mine already holding this name, so the new one will be numbered beside it. */
   existing: { id: number; name: string; slug: string } | null;
 };
 export type ImportPreview = { title: string | null; source: string | null; groups: ImportGroup[]; emptyFolders: string[]; duplicates: number };
@@ -89,22 +104,24 @@ function knownDead(url: string): string | null {
 }
 
 /** The sentence for a status code, for someone who has never seen one. */
-function reasonForStatus(status: number): { state: FeedState; reason: string } {
-  if (status === 404 || status === 410) return { state: "failed", reason: `The site says this feed no longer exists (${status}).` };
-  if (status === 401 || status === 403) return { state: "failed", reason: `The site doesn’t let feed readers in (${status}).` };
-  if (status === 429) return { state: "unsure", reason: "The site asked us to slow down. It’s added anyway and will be tried again." };
-  if (status >= 500) return { state: "unsure", reason: `The site is having trouble right now (${status}). It’s added anyway and will be tried again.` };
-  return { state: "failed", reason: `The site answered with an error (${status}).` };
+function reasonForStatus(status: number): Verdict {
+  if (status === 404 || status === 410) return { state: "failed", reason: `The site says this feed no longer exists (${status}).`, retry: false };
+  if (status === 401 || status === 403) return { state: "failed", reason: `The site doesn’t let feed readers in (${status}).`, retry: false };
+  // Asked to slow down: the host is paused now, so another go would be refused before it left the building.
+  if (status === 429) return { state: "unsure", reason: "The site asked us to slow down. It’s added anyway and will be tried again.", retry: false };
+  if (status >= 500) return { state: "unsure", reason: `The site is having trouble right now (${status}). It’s added anyway and will be tried again.`, retry: true };
+  return { state: "failed", reason: `The site answered with an error (${status}).`, retry: false };
 }
 
-function reasonForError(err: unknown): { state: FeedState; reason: string } {
-  if (err instanceof HostCoolingDown) return { state: "unsure", reason: "The site is busy, so this wasn’t checked. It’s added anyway and will be tried again." };
+function reasonForError(err: unknown): Verdict {
+  if (err instanceof HostCoolingDown) return { state: "unsure", reason: "The site is busy, so this wasn’t checked. It’s added anyway and will be tried again.", retry: false };
   const msg = String((err as { cause?: { code?: string } })?.cause?.code ?? (err instanceof Error ? err.message : err));
-  if (/ENOTFOUND|EAI_AGAIN/.test(msg)) return { state: "failed", reason: "That site’s address doesn’t exist any more." };
-  if (/timeout|TimeoutError|aborted/i.test(msg)) return { state: "unsure", reason: "The site didn’t answer in time. It’s added anyway and will be tried again." };
-  if (/too large/.test(msg)) return { state: "failed", reason: "The feed is too large to read." };
-  if (/CERT|SSL|TLS/i.test(msg)) return { state: "failed", reason: "The site’s security certificate is broken." };
-  return { state: "failed", reason: "We couldn’t reach the site." };
+  if (/ENOTFOUND|EAI_AGAIN/.test(msg)) return { state: "failed", reason: "That site’s address doesn’t exist any more.", retry: false };
+  // The one that is usually us, not them: a slow minute on this connection looks exactly like this.
+  if (/timeout|TimeoutError|aborted/i.test(msg)) return { state: "unsure", reason: "The site didn’t answer in time. It’s added anyway and will be tried again.", retry: true };
+  if (/too large/.test(msg)) return { state: "failed", reason: "The feed is too large to read.", retry: false };
+  if (/CERT|SSL|TLS/i.test(msg)) return { state: "failed", reason: "The site’s security certificate is broken.", retry: false };
+  return { state: "failed", reason: "We couldn’t reach the site.", retry: false };
 }
 
 /**
@@ -138,7 +155,7 @@ export async function readImport(userId: number, text: string): Promise<ImportPr
     byName.set(group, feeds);
     if (feeds.has(url)) { duplicates++; return; }
     const name = (o.title ?? o.text ?? "").trim() || null;
-    feeds.set(url, { url, title: name, siteUrl: o.htmlUrl?.trim() || null, state: dead ? "failed" : "pending", reason: dead, following: false });
+    feeds.set(url, { url, title: name, siteUrl: o.htmlUrl?.trim() || null, state: dead ? "failed" : "pending", reason: dead, following: false, retry: false });
   };
   const walk = (outlines: Outline[] | undefined, path: string[]) => {
     for (const o of outlines ?? []) {
@@ -173,11 +190,11 @@ export async function readImport(userId: number, text: string): Promise<ImportPr
     f.title = row.title ?? f.title;
     f.siteUrl = row.siteUrl ?? f.siteUrl;
     // A feed thicket has been failing to fetch for a while is reported as such; one bad fetch is not a verdict.
-    if (row.consecutiveFailures >= 3) Object.assign(f, row.lastStatus && row.lastStatus >= 400 ? reasonForStatus(row.lastStatus) : { state: "unsure" as FeedState, reason: "Thicket has had trouble reaching this lately. It’s added anyway and will keep trying." });
+    if (row.consecutiveFailures >= 3) Object.assign(f, row.lastStatus && row.lastStatus >= 400 ? reasonForStatus(row.lastStatus) : { state: "unsure" as FeedState, reason: "Thicket has had trouble reaching this lately. It’s added anyway and will keep trying.", retry: true });
     else f.state = "ok";
   }
 
-  // Groups whose name is already one of my collections add to it, which also makes importing the same file twice harmless.
+  // Groups whose name is already one of my collections are flagged, so the review can say the new one will be numbered.
   const mine = await db.select({ id: schema.collections.id, name: schema.collections.name, slug: schema.collections.slug })
     .from(schema.collections).where(eq(schema.collections.userId, userId));
   const bySlug = new Map(mine.map((c) => [c.slug, c]));
@@ -192,23 +209,23 @@ export async function readImport(userId: number, text: string): Promise<ImportPr
  * A page instead of a feed is forgiven if it names exactly one feed, which is
  * what a site that moved its feed usually leaves behind.
  */
-export async function checkFeeds(urls: string[]): Promise<{ url: string; state: FeedState; reason: string | null; title: string | null; finalUrl: string | null }[]> {
+export async function checkFeeds(urls: string[]): Promise<{ url: string; state: FeedState; reason: string | null; title: string | null; finalUrl: string | null; retry: boolean }[]> {
   return Promise.all(urls.map(async (url) => {
     const dead = knownDead(url);
-    if (dead) return { url, state: "failed" as FeedState, reason: dead, title: null, finalUrl: null };
+    if (dead) return { url, state: "failed" as FeedState, reason: dead, title: null, finalUrl: null, retry: false };
     try {
       let res = await httpGet(url);
       if (res.status >= 400) return { url, ...reasonForStatus(res.status), title: null, finalUrl: null };
       let parsed = tryParse(res.body, res.finalUrl);
       if (!parsed) {
         const links = /<html[\s>]|<!doctype html/i.test(res.body.slice(0, 2000)) ? extractFeedLinks(res.body, res.finalUrl) : [];
-        if (links.length !== 1) return { url, state: "failed" as FeedState, reason: links.length ? "This is a web page with several feeds, not a feed. Add the one you want from inside thicket." : "This address is a web page, not a feed.", title: null, finalUrl: null };
+        if (links.length !== 1) return { url, state: "failed" as FeedState, reason: links.length ? "This is a web page with several feeds, not a feed. Add the one you want from inside thicket." : "This address is a web page, not a feed.", title: null, finalUrl: null, retry: false };
         res = await httpGet(links[0].url);
         parsed = res.status < 400 ? tryParse(res.body, res.finalUrl) : null;
-        if (!parsed) return { url, state: "failed" as FeedState, reason: "This address is a web page, not a feed.", title: null, finalUrl: null };
+        if (!parsed) return { url, state: "failed" as FeedState, reason: "This address is a web page, not a feed.", title: null, finalUrl: null, retry: false };
       }
       const finalUrl = normalizeFeedUrl(res.finalUrl);
-      return { url, state: "ok" as FeedState, reason: null, title: parsed.title ?? null, finalUrl: finalUrl === url ? null : finalUrl };
+      return { url, state: "ok" as FeedState, reason: null, title: parsed.title ?? null, finalUrl: finalUrl === url ? null : finalUrl, retry: false };
     } catch (err) {
       return { url, ...reasonForError(err), title: null, finalUrl: null };
     }
@@ -220,36 +237,50 @@ function tryParse(body: string, url: string) {
 }
 
 export type CommitGroup = { name: string; feeds: { url: string; title?: string | null }[] };
-export type CommitResult = { collections: { id: number; name: string; slug: string; created: boolean; added: number; alreadyThere: number }[] };
+export type CommitResult = { collections: { id: number; name: string; slug: string; renamedFrom: string | null; added: number }[] };
 
 /**
- * Make the chosen groups into collections: a new top-level collection each, or
- * the one of mine that already has the name. Feeds are registered without
- * fetching; the scheduler picks them up within the minute. The feeds the
- * review said won't work are not sent, and are refused here anyway.
+ * The name this group's collection gets: the one asked for, or it with a number
+ * after it when that name is taken — "Videos", "Videos 1", "Videos 2". `taken`
+ * is every slug of mine, and grows as the import goes, so two groups in one
+ * file that want the same name do not collide with each other either.
+ */
+function freeName(base: string, taken: Set<string>): string {
+  let name = base;
+  for (let n = 1; taken.has(slugify(name)); n++) name = `${base} ${n}`.slice(0, 200);
+  return name;
+}
+
+/**
+ * Make the chosen groups into collections: a new top-level collection each,
+ * numbered past any name of mine it would clash with. Feeds are registered
+ * without fetching; the scheduler picks them up within the minute. The feeds
+ * the review said won't work are not sent, and are refused here anyway.
  */
 export async function commitImport(user: { id: number; rootCollectionId: number }, groups: CommitGroup[]): Promise<CommitResult> {
   const total = groups.reduce((n, g) => n + (g.feeds?.length ?? 0), 0);
   if (total > MAX_IMPORT_FEEDS) throw new ImportError(`That is more than ${MAX_IMPORT_FEEDS} feeds at once.`);
+  // A collection with nothing in it is not worth making. The review already
+  // refuses to keep such a group; this is the same rule where it is enforceable.
+  const usable = groups.filter((g) => (g.feeds ?? []).some((f) => isHttpUrl(f.url) && !knownDead(f.url)));
+  if (!usable.length) throw new ImportError("None of those folders has a feed that can be added.");
+  const taken = new Set((await db.select({ slug: schema.collections.slug }).from(schema.collections).where(eq(schema.collections.userId, user.id))).map((r) => r.slug));
   const out: CommitResult["collections"] = [];
-  for (const g of groups) {
-    const name = g.name?.trim().slice(0, 200);
-    if (!name) throw new ImportError("Every collection needs a name.");
+  for (const g of usable) {
+    const asked = g.name?.trim().slice(0, 200);
+    if (!asked) throw new ImportError("Every collection needs a name.");
     const feeds = (g.feeds ?? []).filter((f) => isHttpUrl(f.url) && !knownDead(f.url));
-    let [col] = await db.select().from(schema.collections).where(and(eq(schema.collections.userId, user.id), eq(schema.collections.slug, slugify(name))));
-    const created = !col;
-    if (!col) [col] = await db.insert(schema.collections).values({ userId: user.id, parentId: user.rootCollectionId, name, slug: await uniqueCollectionSlug(user.id, name) }).returning();
-    const before = new Set((await db.select({ feedId: schema.collectionFeeds.feedId }).from(schema.collectionFeeds).where(eq(schema.collectionFeeds.collectionId, col.id))).map((r) => r.feedId));
-    let added = 0, alreadyThere = 0;
+    const name = freeName(asked, taken);
+    const [col] = await db.insert(schema.collections).values({ userId: user.id, parentId: user.rootCollectionId, name, slug: await uniqueCollectionSlug(user.id, name) }).returning();
+    taken.add(col.slug);
+    let added = 0;
     for (const f of feeds) {
       const feed = await ensureFeedLazy(f.url);
       if (!feed.title && f.title?.trim()) await db.update(schema.feeds).set({ title: f.title.trim() }).where(eq(schema.feeds.id, feed.id));
-      if (before.has(feed.id)) { alreadyThere++; continue; }
       await addFeedToCollection(col.id, feed.id);
-      before.add(feed.id);
       added++;
     }
-    out.push({ id: col.id, name: col.name, slug: col.slug, created, added, alreadyThere });
+    out.push({ id: col.id, name: col.name, slug: col.slug, renamedFrom: col.name === asked ? null : asked, added });
   }
   return { collections: out };
 }

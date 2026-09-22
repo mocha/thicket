@@ -2,6 +2,7 @@
   import { importApi, api, ApiError, IMPORT_CHECK_BATCH, type ImportPreview, type ImportFeed, type ImportCommitted } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
+  import { showToast } from '$lib/toast.svelte';
 
   /**
    * Bringing feeds in from another reader (api/src/lib/importer.ts). Three
@@ -27,6 +28,8 @@
   let checked = $state(0);
   let toCheck = $state(0);
   let checking = $state(false);
+  /** How many feeds are in a second (or third) attempt, for the progress line. 0 = first pass. */
+  let retrying = $state(0);
   let committed = $state<ImportCommitted[]>([]);
   /** Which reading the checks belong to, so starting over stops the old ones landing on the new list. */
   let run = 0;
@@ -36,13 +39,67 @@
   const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
 
   $effect(() => { void loadCollections(); });
-  /** Worked out here, not taken from the server, so a renamed folder says at once whether it now lands in a collection I already have. */
-  const existingBySlug = $derived(new Map(collectionStore.list.filter((c) => c.parentId !== null).map((c) => [c.slug, c])));
-  const existingFor = (g: Group) => existingBySlug.get(slugify(g.name)) ?? null;
+  /**
+   * What each kept group will actually be called. An import always makes new
+   * collections, so a name I already have is numbered past rather than merged
+   * into: "Videos", "Videos 1", "Videos 2". Worked out here rather than taken
+   * from the server, so renaming a folder says at once what it will become;
+   * the server applies the same rule and has the last word.
+   */
+  $effect(() => {
+    for (const g of groups) if (g.keep && settled(g) && !canKeep(g)) g.keep = false;
+  });
+
+  /**
+   * Turning one back on is refused while nothing in it works, and says which
+   * kind of nothing: a folder of dead addresses is the reader's history, but a
+   * folder that is all "couldn't check" usually means the connection here is
+   * bad, not that the feeds are — and that is worth saying out loud, because
+   * the two look identical on the page.
+   */
+  function toggleKeep(g: Group, e: Event) {
+    const el = e.currentTarget as HTMLInputElement;
+    if (el.checked && !canKeep(g)) {
+      el.checked = false;
+      const name = g.name.trim() || 'this folder';
+      showToast(!settled(g)
+        ? `Still checking the feeds in “${name}” — give it a moment.`
+        : g.feeds.some((f) => f.state === 'unsure')
+          ? `None of the feeds in “${name}” could be checked just now, which usually means the connection here is having trouble rather than the sites.`
+          : `Nothing in “${name}” can be added, so there’s no collection to make.`);
+      return;
+    }
+    g.keep = el.checked;
+  }
+
+  const finalNames = $derived.by(() => {
+    const taken = new Set(collectionStore.list.filter((c) => c.parentId !== null).map((c) => c.slug));
+    const out = new Map<number, string>();
+    groups.forEach((g, i) => {
+      const base = g.name.trim();
+      if (!g.keep || !base) return;
+      let name = base;
+      for (let n = 1; taken.has(slugify(name)); n++) name = `${base} ${n}`;
+      taken.add(slugify(name));
+      out.set(i, name);
+    });
+    return out;
+  });
 
   const ready = (g: Group) => g.feeds.filter((f) => f.state !== 'failed');
   const refused = (g: Group) => g.feeds.filter((f) => f.state === 'failed');
-  const kept = $derived(groups.filter((g) => g.keep && g.name.trim()));
+  /**
+   * A collection is only worth making if something in it is known to work: a
+   * feed that checked out, or one I already follow. Feeds that couldn't be
+   * checked ride along with the ones that did, but they can't be the whole
+   * reason for a collection — that is how a folder of dead addresses used to
+   * become an empty collection.
+   */
+  const good = (g: Group) => g.feeds.filter((f) => f.state === 'ok');
+  /** Every feed in the group has been checked, so its verdict is final. */
+  const settled = (g: Group) => !g.feeds.some((f) => f.state === 'pending');
+  const canKeep = (g: Group) => good(g).length > 0;
+  const kept = $derived(groups.filter((g) => g.keep && g.name.trim() && canKeep(g)));
   const keptFeeds = $derived(new Set(kept.flatMap((g) => ready(g).map((f) => f.url))).size);
   const totalFeeds = $derived(new Set(groups.flatMap((g) => g.feeds.map((f) => f.url))).size);
 
@@ -75,40 +132,78 @@
   }
 
   /**
-   * Check every feed thicket hasn’t seen, in small batches. The server keeps to
+   * One pass over a list of addresses, in small batches. The server keeps to
    * one request per site at a time; this keeps a few batches in flight, so a
    * thousand-feed file costs a few minutes of patience rather than a burst.
    */
-  async function checkAll() {
-    const mine = ++run;
-    const pending = [...new Set(groups.flatMap((g) => g.feeds.filter((f) => f.state === 'pending').map((f) => f.url)))];
-    toCheck = pending.length; checked = 0;
-    if (!pending.length) return;
-    checking = true;
+  async function pass(urls: string[], mine: number) {
+    toCheck = urls.length; checked = 0;
     const batches: string[][] = [];
-    for (let i = 0; i < pending.length; i += IMPORT_CHECK_BATCH) batches.push(pending.slice(i, i + IMPORT_CHECK_BATCH));
+    for (let i = 0; i < urls.length; i += IMPORT_CHECK_BATCH) batches.push(urls.slice(i, i + IMPORT_CHECK_BATCH));
     // A few batches in flight, so one slow site doesn't hold up the rest. The server still takes turns per site.
     const lane = async () => {
       for (let b = batches.shift(); b && mine === run; b = batches.shift()) {
         const { results } = await importApi.check(b);
         if (mine !== run) return;
         for (const r of results) {
-          apply(r.url, { state: r.state, reason: r.reason, ...(r.title ? { title: r.title } : {}) });
+          apply(r.url, { state: r.state, reason: r.reason, retry: r.retry, ...(r.title ? { title: r.title } : {}) });
           // The feed has moved and left a redirect behind: follow it at its new address.
           if (r.finalUrl) apply(r.url, { url: r.finalUrl });
         }
         checked += results.length;
       }
     };
+    await Promise.all([lane(), lane(), lane()]);
+  }
+
+  /**
+   * Trouble that passes on its own gets another go before the review settles.
+   * Worth doing here and not only in the scheduler, because a folder is only
+   * creatable once something in it is known to work: a connection that stumbles
+   * for ten seconds would otherwise block the whole import behind feeds that
+   * are perfectly fine. Only verdicts the server marked `retry` come back —
+   * never a 429 or a paused host, which asked us to wait and meant it.
+   *
+   * The waits are short because the fault is usually a passing one on this end,
+   * and bounded because a review that keeps someone waiting has stopped being
+   * a review. The politeness layer still spaces every request per site.
+   */
+  const RETRY_WAITS_MS = [4000, 12000];
+
+  async function retryPass(mine: number, wait: number) {
+    const again = [...new Set(groups.flatMap((g) => g.feeds.filter((f) => f.state === 'unsure' && f.retry).map((f) => f.url)))];
+    if (!again.length) return false;
+    retrying = again.length;
+    await new Promise((r) => setTimeout(r, wait));
+    if (mine !== run) return false;
+    // Back to "checking" while they are in flight, so a folder doesn't settle —
+    // and turn its own checkbox off — on a verdict we are in the middle of redoing.
+    for (const url of again) apply(url, { state: 'pending', reason: null });
+    await pass(again, mine);
+    retrying = 0;
+    return true;
+  }
+
+  /** Check every feed thicket hasn't seen, then give the passing troubles another go. */
+  async function checkAll() {
+    const mine = ++run;
+    const pending = [...new Set(groups.flatMap((g) => g.feeds.filter((f) => f.state === 'pending').map((f) => f.url)))];
+    toCheck = pending.length; checked = 0;
+    if (!pending.length && !groups.some((g) => g.feeds.some((f) => f.state === 'unsure' && f.retry))) return;
+    checking = true;
     try {
-      await Promise.all([lane(), lane(), lane()]);
+      if (pending.length) await pass(pending, mine);
+      for (const wait of RETRY_WAITS_MS) {
+        if (mine !== run) return;
+        if (!(await retryPass(mine, wait))) break;
+      }
     } catch (e) {
       if (mine !== run) return;
       // Stopped early (usually: far too much checking in an hour). What wasn't checked is added anyway, and the scheduler finds out.
       const why = e instanceof ApiError ? e.message : 'Checking stopped.';
-      for (const g of groups) for (const f of g.feeds) if (f.state === 'pending') Object.assign(f, { state: 'unsure', reason: `Not checked (${why}) It’s added anyway and will be tried.` });
+      for (const g of groups) for (const f of g.feeds) if (f.state === 'pending') Object.assign(f, { state: 'unsure', reason: `Not checked (${why}) It’s added anyway and will be tried.`, retry: false });
     } finally {
-      if (mine === run) checking = false;
+      if (mine === run) { checking = false; retrying = 0; }
     }
   }
 
@@ -131,6 +226,7 @@
   function startOver() {
     run++;
     step = 'choose'; preview = null; groups = []; error = null; link = ''; committed = [];
+    checking = false; retrying = 0; toCheck = 0; checked = 0;
   }
 
   const label = (f: ImportFeed) => f.title?.trim() || host(f.url);
@@ -179,21 +275,29 @@
   {#if checking || toCheck}
     <div class="progress" aria-live="polite">
       <div class="bar"><span style="width: {toCheck ? Math.round((checked / toCheck) * 100) : 100}%"></span></div>
-      <span>{checking ? `Checking feeds… ${checked} of ${toCheck}` : `Checked ${toCheck} ${toCheck === 1 ? 'feed' : 'feeds'} thicket hadn’t seen before.`}</span>
+      <span>
+        {#if retrying}Trying {retrying} {retrying === 1 ? 'feed' : 'feeds'} again that didn’t answer… {checked} of {toCheck}
+        {:else if checking}Checking feeds… {checked} of {toCheck}
+        {:else}Checked {toCheck} {toCheck === 1 ? 'feed' : 'feeds'} thicket hadn’t seen before.{/if}
+      </span>
     </div>
   {/if}
 
   {#each groups as g, gi (gi)}
     {@const ok = ready(g)}
     {@const bad = refused(g)}
-    {@const into = existingFor(g)}
+    {@const renamed = g.keep && !!g.name.trim() && finalNames.get(gi) !== g.name.trim()}
+    {@const blocked = settled(g) && !canKeep(g)}
     <section class="card group" class:off={!g.keep}>
       <div class="ghead">
-        <label class="keep"><input type="checkbox" bind:checked={g.keep} aria-label="Bring in {g.name}" /></label>
+        <label class="keep">
+          <input type="checkbox" checked={g.keep} onchange={(e) => toggleKeep(g, e)} />
+          <span>Create this collection</span>
+        </label>
         <div class="gname">
           <input class="name" bind:value={g.name} disabled={!g.keep} aria-label="Collection name" />
           <small>
-            {#if into}Adds to your collection <strong>{into.name}</strong>{:else}New collection{/if}
+            {#if blocked}{g.feeds.some((f) => f.state === 'unsure') ? 'None of these could be checked' : 'Nothing here can be added'}{:else if renamed}Created as <strong>{finalNames.get(gi)}</strong>, beside the <strong>{g.name.trim()}</strong> you already have{:else}New collection{/if}
             · {ok.length} to add{#if bad.length} · {bad.length} can’t be added{/if}
           </small>
         </div>
@@ -207,7 +311,7 @@
                 <span class="fname">{label(f)}<small>{host(f.url)}</small></span>
                 {#if f.state === 'pending'}<span class="tag wait">Checking…</span>
                 {:else if f.state === 'unsure'}<span class="tag unsure" title={f.reason ?? ''}>Will retry</span>
-                {:else if f.following}<span class="tag">Following</span>
+                {:else if f.following}<span class="tag">Already Following</span>
                 {:else}<span class="tag good">Ready</span>{/if}
               </li>
               {#if f.state === 'unsure' && f.reason}<li class="why">{f.reason}</li>{/if}
@@ -250,8 +354,8 @@
     <ul class="feeds">
       {#each committed as c (c.id)}
         <li>
-          <a class="fname" href="/@{session.user?.handle}/collections/{c.slug}">{c.name}<small>{c.created ? 'New collection' : 'Added to your collection'}</small></a>
-          <span class="count">{c.added} added{#if c.alreadyThere} · {c.alreadyThere} already there{/if}</span>
+          <a class="fname" href="/@{session.user?.handle}/collections/{c.slug}">{c.name}<small>{c.renamedFrom ? `Beside your existing “${c.renamedFrom}”` : 'New collection'}</small></a>
+          <span class="count">{c.added} added</span>
         </li>
       {/each}
     </ul>
@@ -284,8 +388,9 @@
   .bar span { display: block; height: 100%; background: var(--accent); transition: width 200ms ease; }
 
   .group.off { opacity: 0.6; }
-  .ghead { display: flex; gap: 12px; align-items: flex-start; }
-  .keep input { width: 20px; height: 20px; margin-top: 8px; accent-color: var(--accent); }
+  .ghead { display: flex; flex-direction: column; gap: 10px; }
+  .keep { display: flex; align-items: center; gap: 8px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); cursor: pointer; }
+  .keep input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
   .gname { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
   .name { font-size: calc(18px * var(--size-app)); font-weight: 700; padding: 6px 8px; margin-left: -8px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--text); font-family: inherit; width: 100%; }
   .name:hover:not(:disabled) { border-color: var(--line); }
