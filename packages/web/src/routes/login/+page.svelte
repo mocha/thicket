@@ -61,13 +61,13 @@
 </section>
 
 <style>
-  .auth { max-width: 380px; margin: 40px auto 0; }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 20px; }
-  form { display: flex; flex-direction: column; gap: 14px; }
-  button { margin-top: 4px; padding: 13px; border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
+  .auth { max-width: 380px; margin: calc(var(--space-6) + var(--space-2)) auto 0; }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-5); }
+  form { display: flex; flex-direction: column; gap: var(--space-4); }
+  button { margin-top: var(--space-1); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   button:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .alt { margin: 22px 0 0; color: var(--text-2); }
+  .alt { margin: var(--space-5) 0 0; color: var(--text-2); }
   .alt a { color: var(--accent); font-weight: 600; }
-  .hint { margin: 8px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
 </style>

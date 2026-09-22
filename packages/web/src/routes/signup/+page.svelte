@@ -113,17 +113,17 @@
 </section>
 
 <style>
-  .auth { max-width: 380px; margin: 40px auto 0; }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 6px; }
-  .lede { color: var(--text-2); margin: 0 0 20px; }
-  form { display: flex; flex-direction: column; gap: 16px; }
-  button { margin-top: 4px; padding: 13px; border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
+  .auth { max-width: 380px; margin: calc(var(--space-6) + var(--space-2)) auto 0; }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
+  .lede { color: var(--text-2); margin: 0 0 var(--space-5); }
+  form { display: flex; flex-direction: column; gap: var(--space-4); }
+  button { margin-top: var(--space-1); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   button:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .alt { margin: 22px 0 0; color: var(--text-2); }
-  .what { margin: 28px 0 0; padding-top: 18px; border-top: 1px solid var(--line); }
-  .what h2 { font-family: var(--font-headings); font-size: calc(var(--text-base) * var(--size-headings)); margin: 0 0 7px; }
-  .what p { margin: 0 0 9px; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; }
+  .alt { margin: var(--space-5) 0 0; color: var(--text-2); }
+  .what { margin: calc(var(--space-5) + var(--space-1)) 0 0; padding-top: var(--space-4); border-top: 1px solid var(--line); }
+  .what h2 { font-family: var(--font-headings); font-size: calc(var(--text-base) * var(--size-headings)); margin: 0 0 var(--space-2); }
+  .what p { margin: 0 0 var(--space-2); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; }
   .what p:last-child { margin-bottom: 0; }
   .alt a { color: var(--accent); font-weight: 600; }
 </style>

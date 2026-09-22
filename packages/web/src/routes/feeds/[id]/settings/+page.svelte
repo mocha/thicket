@@ -302,41 +302,42 @@
 {/if}
 
 <style>
-  .back { display: inline-flex; align-items: center; gap: 4px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); padding: 6px 0; margin-bottom: 8px; }
-  .top { margin-bottom: 6px; }
+  .back { display: inline-flex; align-items: center; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); padding: var(--space-2) 0; margin-bottom: var(--space-2); }
+  .top { margin-bottom: var(--space-2); }
   .pre { margin: 0; font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 2px 0 0; overflow-wrap: anywhere; }
-  hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
-  section > h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 12px; }
-  .opt { margin-bottom: 18px; }
-  h3 { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; margin: 0 0 8px; }
-  .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .hint { margin: 8px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 2px 0 0; /* 2px is an optical nudge: the title sits on the label's line. */ overflow-wrap: anywhere; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-4) 0; }
+  section > h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 var(--space-3); }
+  .opt { margin-bottom: var(--space-4); }
+  h3 { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; margin: 0 0 var(--space-2); }
+  .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
+  .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
   .hint.inline { margin: 0; }
-  .radios { display: flex; flex-direction: column; gap: 8px; }
-  .radios label { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
+  .radios { display: flex; flex-direction: column; gap: var(--space-2); }
+  .radios label { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
   .radios label:has(input:checked) { border-color: var(--accent); }
-  .radios input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .radios input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 4px 14px 12px; margin-bottom: 12px; }
-  .admin { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-1) var(--space-4) var(--space-3); margin-bottom: var(--space-3); }
+  .admin { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; }
   .admin > h2 { margin: 0; }
-  dialog.remove { max-width: 440px; padding: 22px 22px 18px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: var(--shadow-dialog); }
+  dialog.remove { max-width: 440px; padding: var(--space-5) var(--space-5) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: var(--shadow-dialog); }
   dialog.remove::backdrop { background: var(--scrim); }
-  dialog.remove h2 { margin: 0 0 10px; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }
-  dialog.remove p { margin: 0 0 16px; line-height: 1.5; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  dialog.remove .actions { display: flex; justify-content: flex-end; gap: 8px; }
-  .diag { display: flex; flex-direction: column; gap: 12px; }
+  dialog.remove h2 { margin: 0 0 var(--space-3); font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }
+  dialog.remove p { margin: 0 0 var(--space-4); line-height: 1.5; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  dialog.remove .actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+  .diag { display: flex; flex-direction: column; gap: var(--space-3); }
   .diag > h2 { margin: 0; }
   .diag .row { margin-top: 0; }
-  .facts summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; list-style: none; }
+  .facts summary { display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; list-style: none; }
   .facts summary::-webkit-details-marker { display: none; }
   .facts summary svg { transition: transform 150ms ease; color: var(--text-3); }
   .facts[open] summary svg { transform: rotate(180deg); }
-  .facts ul { margin: 12px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .facts ul { margin: var(--space-3) 0 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .facts li { overflow-wrap: anywhere; }
   .facts strong { color: var(--text); font-weight: 600; }
   .facts .none { color: var(--text-3); }
-  .status { text-align: center; color: var(--text-3); padding: 24px 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .status { text-align: center; color: var(--text-3); padding: var(--space-5) 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>
