@@ -16,6 +16,7 @@
   import Badge from '$lib/components/Badge.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
+  import Textarea from '$lib/components/Textarea.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
@@ -288,9 +289,21 @@
     <div class="names">
       {#if editing}
         <div class="edit">
-          <label><span>Display name</span><input type="text" bind:value={dname} maxlength="60" placeholder={profile.handle} /></label>
-          <label><span>About you</span><textarea bind:value={dbio} rows="3" maxlength="500" placeholder="A line or two. What you read, what you make."></textarea></label>
-          <label><span>Homepage</span><input type="url" inputmode="url" bind:value={dhome} placeholder="https://" /></label>
+          <Field label="Display name">
+            {#snippet children({ id, describedBy, invalid })}
+              <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={dname} maxlength={60} placeholder={profile!.handle} />
+            {/snippet}
+          </Field>
+          <Field label="About you">
+            {#snippet children({ id, describedBy, invalid })}
+              <Textarea {id} aria-describedby={describedBy} {invalid} inset bind:value={dbio} rows={3} maxlength={500} placeholder="A line or two. What you read, what you make." />
+            {/snippet}
+          </Field>
+          <Field label="Homepage">
+            {#snippet children({ id, describedBy, invalid })}
+              <Input {id} aria-describedby={describedBy} {invalid} inset type="url" inputmode="url" autocomplete="url" bind:value={dhome} placeholder="https://" />
+            {/snippet}
+          </Field>
           <div class="editrow">
             <Button onclick={() => (editing = false)} disabled={savingProfile}>Cancel</Button>
             <Button variant="primary" onclick={saveEdit} disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save'}</Button>
@@ -555,9 +568,6 @@
 
   /* Editing name, bio and homepage right in the header. */
   .edit { display: flex; flex-direction: column; gap: 10px; }
-  .edit label { display: flex; flex-direction: column; gap: 5px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .edit input, .edit textarea { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); font-family: inherit; resize: vertical; }
-  .edit input:focus, .edit textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .editrow { display: flex; justify-content: flex-end; gap: 8px; }
 
   section { margin-bottom: 22px; }

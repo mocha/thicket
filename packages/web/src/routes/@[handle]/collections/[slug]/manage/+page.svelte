@@ -12,6 +12,9 @@
   import Icon from '$lib/components/Icon.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
+  import Field from '$lib/components/Field.svelte';
+  import Textarea from '$lib/components/Textarea.svelte';
+  import { modality } from '$lib/focus.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -58,6 +61,10 @@
   let renaming = $state(false);
   let name = $state('');
   let savingName = $state(false);
+  /* This one field stays hand-built, because it stands in for the page title
+     and has to be that big. It borrows the shared field's focus manners, so
+     clicking into it colors the edge and only tabbing draws the ring. */
+  let renameByKeyboard = $state(false);
   async function rename() {
     if (!col || savingName) return;
     const next = name.trim();
@@ -258,7 +265,7 @@
       {#if renaming}
         <form class="rename" onsubmit={(e) => { e.preventDefault(); void rename(); }}>
           <!-- svelte-ignore a11y_autofocus -->
-          <input type="text" bind:value={name} autofocus maxlength="60" aria-label="Collection name" disabled={savingName} onkeydown={(e) => { if (e.key === 'Escape') { renaming = false; name = col?.name ?? ''; } }} />
+          <input type="text" bind:value={name} autofocus maxlength="60" aria-label="Collection name" disabled={savingName} class:kb={renameByKeyboard} onfocus={() => (renameByKeyboard = modality.keyboard)} onblur={() => (renameByKeyboard = false)} onkeydown={(e) => { if (e.key === 'Escape') { renaming = false; name = col?.name ?? ''; } }} />
           <div class="row">
             <Button type="submit" variant="primary" disabled={savingName || !name.trim()}>{savingName ? 'Saving…' : 'Save'}</Button>
             <Button onclick={() => { renaming = false; name = col?.name ?? ''; }} disabled={savingName}>Cancel</Button>
@@ -285,15 +292,30 @@
 
   <hr />
   <section class="opt">
-    <h2><label for="desc">Description</label></h2>
+    <h2>Description</h2>
     <form onsubmit={(e) => { e.preventDefault(); void saveDescription(); }}>
-      <div class="descbox">
-        <textarea id="desc" rows="5" bind:value={description} maxlength="300" placeholder="What’s in here, in a line or two." oninput={descChanged} onblur={descBlur}></textarea>
-        {#if descSaved}<span class="saved" aria-live="polite">Saved</span>{/if}
-      </div>
-      <div class="row">
-        <span class="counter" class:near={description.length > 260}>{description.length}/300</span>
-      </div>
+      <!-- The heading above says "Description" already, so the field keeps its
+           name for screen readers and doesn't draw it a second time. -->
+      <Field label="Description" hideLabel>
+        {#snippet children({ id, describedBy, invalid })}
+          <div class="descbox">
+            <Textarea
+              {id}
+              aria-describedby={describedBy}
+              {invalid}
+              bind:value={description}
+              rows={5}
+              resize="none"
+              maxlength={300}
+              counter
+              placeholder="What’s in here, in a line or two."
+              oninput={descChanged}
+              onblur={descBlur}
+            />
+            {#if descSaved}<span class="saved" aria-live="polite">Saved</span>{/if}
+          </div>
+        {/snippet}
+      </Field>
     </form>
   </section>
 
@@ -443,7 +465,10 @@
   .titlerow { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
   .rename { flex: 1; }
   .rename { margin-top: 4px; }
-  .rename input { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); font-weight: 600; width: 100%; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+  .rename input { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); font-weight: 600; width: 100%; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); transition: border-color 0.12s ease; }
+  /* Same manners as every other field: quiet edge however you got here, the ring only for someone tabbing. */
+  .rename input:focus { outline: none; border-color: var(--accent); }
+  .rename input.kb:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
   .opt { margin-bottom: 18px; }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
@@ -455,20 +480,17 @@
   /* Side by side once there is room for three; stacked on a phone, where they would be three slivers. */
   @media (min-width: 620px) { .vis { display: grid; grid-template-columns: repeat(3, 1fr); align-items: stretch; } }
   .descbox { position: relative; }
-  /* A fixed box tall enough for the full 300 characters; a reserved strip at the bottom keeps typed text clear of the "Saved" note. */
-  .descbox textarea { padding-bottom: 30px; resize: none; }
-  .saved { position: absolute; right: 12px; bottom: 9px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); background: var(--surface); padding: 1px 6px; border-radius: 6px; pointer-events: none; }
+  /* "Saved" flashes on the line under the box, at the opposite end from the
+     character count, so it never covers what you typed and never nudges the
+     text as it comes and goes. */
+  .saved { position: absolute; left: 0; bottom: 0; font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); pointer-events: none; }
   .radios label { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
   .vis label { gap: 8px; }
   .radios label:has(input:checked) { border-color: var(--accent); }
   .radios input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  textarea { width: 100%; font: inherit; font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.4; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); resize: vertical; }
-  textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-  .counter { margin-left: auto; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
-  .counter.near { color: var(--danger); }
   .feedhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
   .feedhead h2 { margin: 0; }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }

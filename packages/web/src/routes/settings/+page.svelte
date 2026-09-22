@@ -6,6 +6,8 @@
   import ThemePicker from '$lib/components/display/ThemePicker.svelte';
   import FontTable from '$lib/components/display/FontTable.svelte';
   import { APPEARANCE_ART, READING_ART, LAYOUT_ART, FRESH_ART } from '$lib/components/display/art';
+  import Field from '$lib/components/Field.svelte';
+  import Input from '$lib/components/Input.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   /**
@@ -32,7 +34,11 @@
 
   let current = $state('');
   let next = $state('');
-  let pwError = $state<string | null>(null);
+  /* The server says which of the two boxes is wrong — a mistyped current
+     password, or a new one that's too short — so the message lands on that
+     box. Anything else (the network, say) is about neither, so it sits under
+     the pair. */
+  let pwError = $state<{ message: string; field?: string } | null>(null);
   let pwBusy = $state(false);
   async function changePassword() {
     if (pwBusy) return;
@@ -42,7 +48,7 @@
       current = ''; next = '';
       showToast('Password changed. Other devices were signed out.');
     } catch (e) {
-      pwError = e instanceof ApiError ? e.message : String(e);
+      pwError = e instanceof ApiError ? { message: e.message, field: e.field } : { message: e instanceof Error ? e.message : String(e) };
     } finally {
       pwBusy = false;
     }
@@ -143,9 +149,17 @@
 <section class="card">
   <h2>Change password</h2>
   <form onsubmit={(e) => { e.preventDefault(); void changePassword(); }}>
-    <label><span>Current password</span><input type="password" bind:value={current} autocomplete="current-password" required /></label>
-    <label><span>New password</span><input type="password" bind:value={next} autocomplete="new-password" required minlength="8" /></label>
-    {#if pwError}<p class="bad" role="alert">{pwError}</p>{/if}
+    <Field label="Current password" error={pwError?.field === 'current' ? pwError.message : null}>
+      {#snippet children({ id, describedBy, invalid })}
+        <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={current} autocomplete="current-password" required />
+      {/snippet}
+    </Field>
+    <Field label="New password" hint="At least 8 characters." error={pwError?.field === 'next' ? pwError.message : null}>
+      {#snippet children({ id, describedBy, invalid })}
+        <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={next} autocomplete="new-password" required minlength={8} />
+      {/snippet}
+    </Field>
+    {#if pwError && !pwError.field}<p class="bad" role="alert">{pwError.message}</p>{/if}
     <div class="row"><button type="submit" disabled={pwBusy || !current || next.length < 8}>{pwBusy ? 'Changing…' : 'Change password'}</button></div>
   </form>
 </section>
@@ -167,15 +181,16 @@
   .help { margin: 0 0 12px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
   .fine { margin: 12px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
   form { display: flex; flex-direction: column; gap: 12px; }
-  label { display: flex; flex-direction: column; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  input[type='password'] { padding: 11px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); font-family: inherit; }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .row { display: flex; justify-content: flex-end; }
   button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); }
   button:disabled { opacity: 0.5; }
   fieldset { border: 0; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 10px; }
-  .radio, .switch { flex-direction: row; align-items: flex-start; gap: 12px; font-weight: 400; color: var(--text); cursor: pointer; }
+  .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
   .radio input, .switch input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  /* The ring these used to borrow from the password boxes, now said outright.
+     A tick box or a dial isn't typed into, so the browser only calls it
+     keyboard focus when you tabbed to it — no special handling needed. */
+  .radio input:focus-visible, .switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
   .radio small, .switch small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }

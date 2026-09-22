@@ -8,7 +8,14 @@
    *
    * `counter` shows how much room is left, warms up as you near the limit, and
    * turns red once you are over it. Being over also tells screen readers the
-   * box is wrong, so a form can refuse to send on the same condition.
+   * box is wrong, so a form can refuse to send on the same condition. The
+   * count is read out with the box, so someone using a screen reader hears how
+   * much room is left without hunting for it.
+   *
+   * `limit` is the number the counter counts against when it differs from the
+   * hard stop — a note that stops accepting text a little past its limit still
+   * counts against the limit, so you can see how far over you are instead of
+   * silently hitting a wall.
    */
   interface Props {
     value: string;
@@ -16,7 +23,9 @@
     /** Whether the reader can drag it taller. Vertical by default. */
     resize?: 'vertical' | 'none';
     maxlength?: number;
-    /** Show "so far / allowed" under the box. Needs maxlength. */
+    /** What the counter counts against, when that isn't the hard stop. */
+    limit?: number;
+    /** Show "so far / allowed" under the box. Needs a limit or a maxlength. */
     counter?: boolean;
     invalid?: boolean;
     disabled?: boolean;
@@ -38,6 +47,7 @@
     rows = 3,
     resize = 'vertical',
     maxlength,
+    limit,
     counter = false,
     invalid = false,
     disabled = false,
@@ -48,14 +58,26 @@
     onblur,
     class: klass = '',
     style,
+    'aria-describedby': describedBy,
     ...rest
   }: Props = $props();
 
-  const over = $derived(!!maxlength && value.length > maxlength);
+  /* The number shown and judged against: the limit when there is one, the hard
+     stop otherwise. */
+  const cap = $derived(limit ?? maxlength);
+  const over = $derived(!!cap && value.length > cap);
   /* "Nearly there" starts with a tenth of the allowance left. */
-  const near = $derived(!!maxlength && !over && value.length > maxlength * 0.9);
-  const showCounter = $derived(counter && !!maxlength);
+  const near = $derived(!!cap && !over && value.length > cap * 0.9);
+  const showCounter = $derived(counter && !!cap);
   const wrong = $derived(invalid || over);
+
+  /* The count is part of what describes the box, alongside anything the caller
+     already pointed at — a hint or an error from Field. */
+  const uid = $props.id();
+  const counterId = `${uid}-count`;
+  const described = $derived(
+    [describedBy, showCounter ? counterId : null].filter(Boolean).join(' ') || undefined
+  );
 
   let byKeyboard = $state(false);
 
@@ -82,6 +104,7 @@
       {maxlength}
       {disabled}
       aria-invalid={wrong ? 'true' : undefined}
+      aria-describedby={described}
       style:resize
       {...rest}
       oninput={typed}
@@ -90,7 +113,7 @@
     ></textarea>
   </div>
   {#if showCounter}
-    <span class="counter" class:near class:over>{value.length}/{maxlength}</span>
+    <span class="counter" id={counterId} class:near class:over>{value.length}/{cap}</span>
   {/if}
 </div>
 
