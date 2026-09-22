@@ -10,7 +10,7 @@
   import { feedListName } from '$lib/feedname';
   import { audienceTag } from '$lib/visibility';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
-  import FollowButton from '$lib/components/FollowButton.svelte';
+  import FollowControl from '$lib/components/FollowControl.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
@@ -132,7 +132,7 @@
               <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · {relativeTime(f.lastItemAt)}{/if} · {f.followerCount} {f.followerCount === 1 ? 'follower' : 'followers'}</div>
             </div>
             {#if session.user}
-              <FollowButton feedId={f.id} ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} compact />
+              <FollowControl feedId={f.id} ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} compact />
             {/if}
           </li>
         {/each}
