@@ -27,10 +27,10 @@
 </div>
 
 <style>
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--space-2); }
   button {
-    display: flex; flex-direction: column; align-items: stretch; gap: 8px; text-align: left;
-    padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); text-align: left;
+    padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--bg); color: var(--text);
   }
   button:hover { border-color: var(--text-3); }
   button.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }

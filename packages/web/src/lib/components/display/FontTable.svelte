@@ -49,11 +49,12 @@
 
 <style>
   /* Side by side only where there is room for it; the settings column is not that wide, a dialog can be. */
-  .fonts { container-type: inline-size; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .fonts { container-type: inline-size; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
   @container (min-width: 720px) { .fonts { grid-template-columns: minmax(0, 1fr) 220px; align-items: start; } }
   .rows { display: flex; flex-direction: column; }
-  .row { display: grid; grid-template-columns: minmax(84px, 1fr) auto auto; align-items: center; gap: 8px 10px; padding: 9px 0; }
+  .row { display: grid; grid-template-columns: minmax(84px, 1fr) auto auto; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-2) 0; }
   .row + .row { border-top: 1px solid var(--line); }
+  /* 2px is an optical gap between the role name and its note, not spacing. */
   .who { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); min-width: 0; }
   .who small { font-weight: 400; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.3; }
   /* The face row sits at the right-hand end, and each option is set in the
@@ -78,10 +79,12 @@
   }
 
   /* The preview is set in the live tokens, so it is not a mock-up: it is the app. */
-  .preview { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 22px 14px 14px; border-radius: var(--radius-sm); background: var(--bg); border: 1px dashed var(--text-3); }
-  .tag { position: absolute; top: -9px; left: 12px; padding: 1px 8px; border-radius: var(--radius-pill); background: var(--surface); border: 1px dashed var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); }
+  .preview { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: var(--space-5) var(--space-4) var(--space-4); border-radius: var(--radius-sm); background: var(--bg); border: 1px dashed var(--text-3); }
+  /* top: -9px straddles the tag on the dashed border, sized to the tag's own height, not the spacing scale.
+     1px of its padding is the same kind of optical nudge. */
+  .tag { position: absolute; top: -9px; left: var(--space-3); padding: 1px var(--space-2); border-radius: var(--radius-pill); background: var(--surface); border: 1px dashed var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); }
   .preview p { margin: 0; }
   .h { font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.01em; }
   .t { font-family: var(--font-reading); font-size: calc(var(--text-sm) * var(--size-reading)); line-height: 1.45; color: var(--text-2); }
-  .btn { font-family: var(--font); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; padding: 7px 13px; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); }
+  .btn { font-family: var(--font); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); }
 </style>
