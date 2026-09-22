@@ -523,57 +523,60 @@
 {/if}
 
 <style>
-  .who { display: flex; gap: 16px; align-items: flex-start; margin: 8px 0 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .who { display: flex; gap: var(--space-4); align-items: flex-start; margin: var(--space-2) 0 var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); }
   .names { flex: 1; min-width: 0; }
   /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 2px is an optical nudge under the name, not a spacing step. */
   .handle { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
   .site { color: var(--accent); font-weight: 600; }
-  .bio { margin: 10px 0 0; color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); white-space: pre-line; }
+  .bio { margin: var(--space-3) 0 0; color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); white-space: pre-line; }
   /* The avatar as a button: a camera badge in the corner says it's changeable. */
   .photobtn { flex: none; position: relative; padding: 0; border-radius: var(--radius-avatar); line-height: 0; }
+  /* The camera badge hangs 3px off the avatar's corner: an optical overlap, not a spacing step. */
   .photobtn .camera { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 2px var(--surface); }
   .photobtn:hover { opacity: 0.92; }
   .photobtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .ownerctrls { flex: none; display: flex; align-items: center; gap: 8px; }
+  .ownerctrls { flex: none; display: flex; align-items: center; gap: var(--space-2); }
   /* The avatar's tap menu: hangs off the avatar, opening down and to the left. */
   .photomenu { position: relative; flex: none; }
-  .menupanel { position: absolute; top: calc(100% + 8px); left: 0; z-index: 60; min-width: 200px; max-width: calc(100vw - 16px); background: var(--surface); border-radius: var(--radius-md); padding: 6px; box-shadow: var(--shadow-menu); display: flex; flex-direction: column; }
-  .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
+  .menupanel { position: absolute; top: calc(100% + var(--space-2)); left: 0; z-index: 60; min-width: 200px; max-width: calc(100vw - 16px); background: var(--surface); border-radius: var(--radius-md); padding: var(--space-2); box-shadow: var(--shadow-menu); display: flex; flex-direction: column; }
+  .mi { display: block; width: 100%; text-align: left; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
   .mi:hover { background: var(--surface-2); }
   .mi.danger { color: var(--danger); }
   /* Edit: a quiet pencil, the same at every width. */
 
   /* Owner only: a muted one-line reminder in a soft box at the very top of the page. */
-  .ownerbar { margin: 0 0 18px; padding: 12px 16px; border-radius: var(--radius-sm); background: var(--surface-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); text-align: center; }
+  .ownerbar { margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--surface-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); text-align: center; }
 
   /* Every section's content sits in a card — the same surface + shadow the
      lists always used. The audience control rides at the top in a header bar. */
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .pad { padding: 16px; }
+  .pad { padding: var(--space-4); }
   /* A tinted control strip, not a list row: the background sets it apart from
      the white rows below, and the label sits right beside its buttons. */
-  .cardhead { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface-2); }
+  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-2) var(--space-4); background: var(--surface-2); }
   .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
   .cardhead :global(.cg) { flex: none; width: min(320px, 100%); }
 
   /* Visibility: the label and its explanation on the left, the switch on the right. */
-  .visrow { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .visrow { display: flex; align-items: flex-start; gap: var(--space-3); flex-wrap: wrap; }
   .vislabel { flex: 1; min-width: 12ch; }
   .publabel { display: block; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.25; }
+  /* 2px is an optical nudge under the label, not a spacing step. */
   .hint { margin: 2px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
 
   /* The public/private switch sits at the right-hand end of its row. */
   .visrow :global(.vis) { margin-left: auto; flex: none; }
 
   /* Editing name, bio and homepage right in the header. */
-  .edit { display: flex; flex-direction: column; gap: 10px; }
-  .editrow { display: flex; justify-content: flex-end; gap: 8px; }
+  .edit { display: flex; flex-direction: column; gap: var(--space-3); }
+  .editrow { display: flex; justify-content: flex-end; gap: var(--space-2); }
 
-  section { margin-bottom: 22px; }
-  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 12px; display: flex; align-items: baseline; gap: 8px; line-height: 1.25; }
+  section { margin-bottom: var(--space-5); }
+  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); display: flex; align-items: baseline; gap: var(--space-2); line-height: 1.25; }
   .list { list-style: none; margin: 0; padding: 0; }
-  li a { display: flex; align-items: center; gap: 12px; padding: 14px 16px 14px calc(16px + var(--indent, 0px)); border-top: 1px solid var(--line); }
+  li a { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-3) calc(var(--space-4) + var(--indent, 0px)); border-top: 1px solid var(--line); }
   /* A sub-collection is indented and its name sits quieter than its parent's, so the tree reads at a glance. */
   .nested .name { font-weight: 500; color: var(--text-2); }
   li:first-child a { border-top: 0; }
@@ -584,17 +587,17 @@
   .desc { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
-  .add { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); text-align: left; }
+  .add { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); text-align: left; }
   li:first-child .add { border-top: 0; }
   .plus { font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; width: 14px; }
-  .new form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
+  .new form { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .new form :global(.grow) { flex: 1; min-width: 0; }
-  .status { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: 8px 0; margin: 0; }
+  .status { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
   .status a { color: var(--accent); font-weight: 600; }
-  .notes { display: flex; flex-direction: column; gap: var(--space-3); margin: 4px 0 0; padding: 0; list-style: none; }
-  .all { display: block; width: fit-content; margin: 12px 0 0 auto; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .empty { text-align: center; padding: 50px 20px; color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .notes { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-1) 0 0; padding: 0; list-style: none; }
+  .all { display: block; width: fit-content; margin: var(--space-3) 0 0 auto; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
   .empty p { margin: 0; }
-  .join { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: 30px; }
+  .join { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: var(--space-6); }
   .join a { color: var(--accent); font-weight: 600; }
 </style>
