@@ -159,12 +159,11 @@ river.get("/", async (c) => {
   const visible = all.filter((r) => !r.blocked);
   const page = visible.slice(0, limit);
   const more = all.length > limit;
-  // The cursor must be the last row actually returned, not all[limit - 1]: a
-  // blocked row inside the window would otherwise leave the cursor newer than the
-  // last visible item shown, so the next page (before=cursor) repeats items. If
-  // the whole window was blocked, page on from the oldest fetched row so we still
-  // make progress toward visible items further down.
-  const last = more ? (page.length ? page[page.length - 1] : all[all.length - 1]) : null;
+  // If one visible row was held back for the next page, stop at the last row we
+  // returned. Otherwise every visible row in this window was returned, so move
+  // past the oldest fetched row as well; that avoids fetching and counting the
+  // same blocked tail again on the next page.
+  const last = more ? (visible.length > limit ? page[page.length - 1] : all[all.length - 1]) : null;
   const nextCursor = last ? `${new Date(last.publishedAt).toISOString()}|${last.id}` : null;
   return c.json({
     items: page.map(({ blocked, ...r }) => ({ ...r, publishedAt: new Date(r.publishedAt).toISOString() })),
