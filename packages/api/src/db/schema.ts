@@ -17,8 +17,9 @@
  */
 import {
   pgTable, bigserial, bigint, text, timestamp, integer, boolean, jsonb,
-  primaryKey, uniqueIndex, index, pgEnum, customType,
+  primaryKey, uniqueIndex, index, pgEnum, customType, type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const feedKind = pgEnum("feed_kind", ["rss", "atom", "json", "rdf", "unknown"]);
 
@@ -74,7 +75,10 @@ export const users = pgTable("users", {
   /** The first account on an instance is the admin; admins can promote others later. */
   isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [
+  /** Trigram GIN for fuzzy handle search (drizzle/0007). */
+  index("users_handle_trgm_idx").using("gin", t.handle.op("gin_trgm_ops")),
+]);
 
 /**
  * Instance-wide settings an admin can change at runtime, as one JSON row per
@@ -140,9 +144,15 @@ export const feeds = pgTable("feeds", {
 }, (t) => [
   uniqueIndex("feeds_url_uq").on(t.url),
   index("feeds_next_fetch_idx").on(t.nextFetchAt),
+  /** Trigram GIN for fuzzy title/description search (drizzle/0007). */
+  index("feeds_title_trgm_idx").using("gin", t.title.op("gin_trgm_ops")),
+  index("feeds_description_trgm_idx").using("gin", t.description.op("gin_trgm_ops")),
 ]);
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
+
+/** Postgres full-text search vector. Drizzle has no built-in type for it. */
+const tsvector = customType<{ data: string; driverData: string }>({ dataType: () => "tsvector" });
 
 /**
  * Cached site icons, one per feed, only for feeds whose icon passed the
@@ -203,12 +213,24 @@ export const items = pgTable("items", {
   imageUrl: text("image_url"),
   publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+  /**
+   * Weighted full-text vector over title/summary/(tag-stripped, capped) content,
+   * generated in the database. Drives search (routes/search.ts). Created in
+   * drizzle/0007_search_index.sql; declared here so schema.ts matches the DB.
+   */
+  search: tsvector("search").generatedAlwaysAs(
+    sql`setweight(to_tsvector('english', coalesce("title", '')), 'A') || setweight(to_tsvector('english', coalesce("summary", '')), 'B') || setweight(to_tsvector('english', regexp_replace(left(coalesce("content", ''), 120000), '<[^>]*>', ' ', 'g')), 'C')`,
+  ),
 }, (t) => [
   uniqueIndex("items_feed_dedupe_uq").on(t.feedId, t.dedupeKey),
   index("items_published_idx").on(t.publishedAt),
   /** Covers the river's per-feed merge (routes/river.ts): feed_id to seek,
    *  published_at + id to order, and id in the index so the scan needs no heap. */
   index("items_feed_published_id_idx").on(t.feedId, t.publishedAt.desc(), t.id.desc()),
+  /** Full-text GIN over the generated `search` column (drizzle/0007). */
+  index("items_search_idx").using("gin", t.search),
+  /** Repeat detection's expression index (drizzle/0011); mirrors titleKey() in feeds/repeats.ts. */
+  index("items_feed_titlekey_idx").on(t.feedId, sql`lower(regexp_replace(title, '[^[:alnum:]]+', '', 'g'))`),
 ]);
 
 /**
@@ -229,8 +251,12 @@ export const itemRepeats = pgTable("item_repeats", {
 export const collections = pgTable("collections", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
-  /** null = root. Exactly one root per user, created with the user. */
-  parentId: bigint("parent_id", { mode: "number" }),
+  /**
+   * null = root. Exactly one root per user, created with the user. Self-referential
+   * FK: deleting a collection cascades to its sub-tree, which keeps the one-root-per-user
+   * invariant (set null would promote orphaned children to extra roots).
+   */
+  parentId: bigint("parent_id", { mode: "number" }).references((): AnyPgColumn => collections.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   slug: text("slug").notNull(),
   description: text("description"),
@@ -248,6 +274,8 @@ export const collections = pgTable("collections", {
   /** One address per collection: /@handle/collections/:slug resolves to exactly one row. */
   uniqueIndex("collections_user_slug_uq").on(t.userId, t.slug),
   index("collections_user_idx").on(t.userId),
+  /** Trigram GIN for fuzzy collection-name search (drizzle/0007). */
+  index("collections_name_trgm_idx").using("gin", t.name.op("gin_trgm_ops")),
 ]);
 
 export const collectionFeeds = pgTable("collection_feeds", {

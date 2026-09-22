@@ -71,8 +71,14 @@ collections.delete("/:id", async (c) => {
   if (id === user.rootCollectionId) return c.json({ error: "cannot delete the root collection" }, 400);
   const [row] = await db.select().from(schema.collections).where(and(eq(schema.collections.id, id), eq(schema.collections.userId, user.id)));
   if (!row) return c.json({ error: "not found" }, 404);
-  await db.update(schema.collections).set({ parentId: row.parentId }).where(eq(schema.collections.parentId, id));
-  await db.delete(schema.collections).where(eq(schema.collections.id, id));
+  // Re-home children to this collection's parent, then delete — in one transaction,
+  // so a crash between the two can't leave children pointing at a collection that's
+  // gone. (The parent_id FK cascades on delete; reparenting first is what keeps the
+  // sub-tree rather than deleting it.)
+  await db.transaction(async (tx) => {
+    await tx.update(schema.collections).set({ parentId: row.parentId }).where(eq(schema.collections.parentId, id));
+    await tx.delete(schema.collections).where(eq(schema.collections.id, id));
+  });
   return c.json({ deleted: id });
 });
 
