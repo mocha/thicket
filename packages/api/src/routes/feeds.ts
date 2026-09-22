@@ -244,8 +244,13 @@ feeds.post("/:id/restore", async (c) => {
   const user = currentUser(c);
   const feedId = Number(c.req.param("id"));
   const body = await c.req.json<{ collectionIds?: number[] }>().catch(() => ({ collectionIds: [] as number[] }));
-  const ids = body.collectionIds?.length ? body.collectionIds : [await defaultCollectionFor(user)];
-  await db.insert(schema.collectionFeeds).values(ids.map((collectionId) => ({ collectionId, feedId }))).onConflictDoNothing();
+  const requested = body.collectionIds?.length ? body.collectionIds : [await defaultCollectionFor(user)];
+  // Only the caller's own non-root collections are valid targets. Without this,
+  // anyone could restore a feed into someone else's collection by passing its id.
+  const mine = await db.select({ id: schema.collections.id, parentId: schema.collections.parentId }).from(schema.collections).where(eq(schema.collections.userId, user.id));
+  const named = new Set(mine.filter((m) => m.parentId !== null).map((m) => m.id));
+  const ids = [...new Set(requested)].filter((id) => named.has(id));
+  if (ids.length) await db.insert(schema.collectionFeeds).values(ids.map((collectionId) => ({ collectionId, feedId }))).onConflictDoNothing();
   return c.json({ feedId, collectionIds: ids });
 });
 
