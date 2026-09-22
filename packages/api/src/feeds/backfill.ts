@@ -41,6 +41,7 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { httpGet } from "./http.js";
+import { HostCoolingDown } from "./hosts.js";
 import { parseFeedDocument, type ParsedFeed } from "./parse.js";
 import { storeItems } from "./refresh.js";
 
@@ -53,12 +54,23 @@ export const MAX_BACKFILL_DAYS = 180; // 6 months: the far end of what was asked
 const REDDIT_RETRY_DELAYS_MS = [5_000, 20_000, 45_000];
 const GENERIC_MAX_PAGES = 6;
 
-/** GET with 429 retried on backoff. Returns null only once every retry has also 429'd. */
+/**
+ * GET with 429 retried on backoff. Returns null (or the last 429) once retries
+ * are exhausted. A 429 also makes the host-politeness layer pause the whole host
+ * (feeds/hosts.ts) for longer than these short delays, so the next attempt would
+ * throw HostCoolingDown instead of fetching; catch that and stop, so the caller
+ * reports the rate-limit as a result rather than letting backfill throw.
+ */
 async function fetchWithBackoff(url: string, delaysMs: number[], extra: Record<string, string> = {}) {
   let res;
   for (const delay of delaysMs) {
     await new Promise((r) => setTimeout(r, delay));
-    res = await httpGet(url, extra);
+    try {
+      res = await httpGet(url, extra);
+    } catch (e) {
+      if (e instanceof HostCoolingDown) break;
+      throw e;
+    }
     if (res.status !== 429) return res;
   }
   return res ?? null;
