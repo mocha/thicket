@@ -19,7 +19,7 @@ export function relativeTime(iso: string, now = Date.now()): string {
  */
 export function longAgo(iso: string, now = Date.now()): string {
   const s = Math.max(0, (now - new Date(iso).getTime()) / 1000);
-  const units: [number, string][] = [[60, 'second'], [60, 'minute'], [24, 'hour'], [7, 'day'], [4.35, 'week'], [12, 'month']];
+  const units: [number, string][] = [[60, 'minute'], [60, 'hour'], [24, 'day'], [7, 'week'], [4.35, 'month'], [12, 'year']];
   let v = s;
   let name = 'second';
   for (const [step, next] of units) {
