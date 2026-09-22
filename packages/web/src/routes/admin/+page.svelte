@@ -14,6 +14,8 @@
   import Avatar from '$lib/components/Avatar.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import Button from '$lib/components/Button.svelte';
+  import Field from '$lib/components/Field.svelte';
+  import Input from '$lib/components/Input.svelte';
 
   /**
    * "last active 23h ago" while relativeTime is still giving a relative form
@@ -162,7 +164,11 @@
   <section class="card">
     <h2>This instance</h2>
     <form class="inline" onsubmit={(e) => { e.preventDefault(); void saveName(); }}>
-      <label><span>Name</span><input type="text" bind:value={name} maxlength="60" placeholder={instance.url.replace(/^https?:\/\//, '')} /></label>
+      <Field label="Name" class="grow">
+        {#snippet children({ id, describedBy, invalid })}
+          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={name} maxlength={60} placeholder={instance!.url.replace(/^https?:\/\//, '')} />
+        {/snippet}
+      </Field>
       <Button type="submit" size="sm" disabled={name.trim() === instance.name}>Save</Button>
     </form>
     <fieldset>
@@ -181,7 +187,11 @@
   <section class="card">
     <h2>Invite links</h2>
     <form class="mint" onsubmit={(e) => { e.preventDefault(); void mint(); }}>
-      <input type="text" bind:value={inviteNote} placeholder="Who is this for? (optional note)" maxlength="120" />
+      <Field label="Who is this invite for?" hideLabel class="grow">
+        {#snippet children({ id, describedBy, invalid })}
+          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={inviteNote} placeholder="Who is this for? (optional note)" maxlength={120} />
+        {/snippet}
+      </Field>
       <Button type="submit" variant="primary" size="sm" disabled={minting}>{minting ? 'Creating…' : 'New invite link'}</Button>
     </form>
     {#if openInvites.length}
@@ -274,18 +284,20 @@
   h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 10px; display: flex; align-items: baseline; gap: 8px; }
   .help { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .inline { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 14px; }
-  .inline label { flex: 1; display: flex; flex-direction: column; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  input[type='text'] { padding: 10px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); font-family: inherit; }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  /* The field takes the room the button beside it doesn't. */
+  .inline :global(.grow), .mint :global(.grow) { flex: 1; min-width: 0; }
   fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
   fieldset + fieldset { margin-top: 18px; }
   legend { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); padding: 0; margin-bottom: 6px; }
   .radio { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
   .radio input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  /* The ring these used to borrow from the instance-name box, now said
+     outright. A dial isn't typed into, so it only counts as keyboard focus
+     when you actually tabbed to it. */
+  .radio input:focus-visible, .packs input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .radio span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .radio small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .mint { display: flex; gap: 8px; }
-  .mint input { flex: 1; min-width: 0; }
   .packs { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 6px; }
   .packs li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg); border: 1px solid transparent; }
   .packs li.on { border-color: var(--accent); }
