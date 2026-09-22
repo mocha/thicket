@@ -165,6 +165,12 @@
   </form>
 </section>
 
+<section class="card">
+  <h2>Bring your feeds in</h2>
+  <p class="help">Coming from Feedly or another reader? Export your subscriptions as an OPML file there, and bring them in here. Each folder becomes a collection.</p>
+  <div class="row"><Button href="/import">Import from OPML</Button></div>
+</section>
+
 {#if me.isAdmin}
   <section class="card admin">
     <h2>Admin</h2>

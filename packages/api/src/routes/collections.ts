@@ -158,7 +158,7 @@ collections.delete("/:id/feeds/:feedId", async (c) => {
 
 import { exportCollectionOpml, importOpml } from "../lib/opml.js";
 import { addFeedToCollection } from "../lib/subscribe.js";
-import { httpGet } from "../feeds/http.js";
+import { ImportError, fetchOpml } from "../lib/importer.js";
 import { parseOpml } from "feedsmith";
 
 /** One collection with its feeds (direct members only) and its children. */
@@ -206,33 +206,14 @@ collections.get("/:id/opml", async (c) => {
 collections.post("/import-url", async (c) => {
   const user = currentUser(c);
   const body = await c.req.json<{ url?: string; name?: string }>().catch(() => ({} as { url?: string; name?: string }));
-  let target: URL;
-  try {
-    target = new URL((body.url ?? "").trim());
-    if (!/^https?:$/.test(target.protocol)) throw new Error();
-  } catch {
-    return c.json({ error: "Paste an http(s) URL." }, 400);
-  }
-  // A thicket collection page → its OPML endpoint. Works for any instance since the URL shape is the protocol.
-  const m = target.pathname.match(/^\/@([^/]+)\/collections\/([^/?#]+)\/?$/);
-  if (m) target = new URL(`/api/profiles/${m[1]}/collections/${m[2]}/opml`, target.origin);
-
   let text: string;
   try {
-    let res = await httpGet(target.toString(), { accept: "text/x-opml, application/xml, text/xml, text/html;q=0.8, */*;q=0.5" });
-    if (res.status >= 400) return c.json({ error: `That URL answered ${res.status}.` }, 502);
-    text = res.body ?? "";
-    if (/<html[\s>]|<!doctype html/i.test(text.slice(0, 2000))) {
-      const link = [...text.slice(0, 200_000).matchAll(/<link\b[^>]*>/gi)].map((x) => x[0]).find((t) => /type\s*=\s*["']text\/x-opml["']/i.test(t));
-      const href = link && /\bhref\s*=\s*["']([^"']+)["']/i.exec(link)?.[1];
-      if (!href) return c.json({ error: "That page doesn’t offer a collection to copy." }, 400);
-      res = await httpGet(new URL(href, res.finalUrl ?? target).toString(), { accept: "text/x-opml, application/xml, text/xml" });
-      if (res.status >= 400) return c.json({ error: `The collection file answered ${res.status}.` }, 502);
-      text = res.body ?? "";
-    }
+    text = await fetchOpml(body.url ?? "");
   } catch (err) {
-    return c.json({ error: `Couldn’t reach that: ${err instanceof Error ? err.message : err}` }, 502);
+    if (err instanceof ImportError) return c.json({ error: err.message }, 400);
+    throw err;
   }
+  const target = new URL((body.url ?? "").trim());
 
   let title: string | null = null;
   try {
