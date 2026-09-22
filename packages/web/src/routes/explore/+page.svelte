@@ -518,33 +518,34 @@
 <div bind:this={sentinel} aria-hidden="true"></div>
 
 <style>
-  .top { margin-bottom: 12px; }
-  .titlerow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .top { margin-bottom: var(--space-3); }
+  .titlerow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; min-width: 0; }
   /* text-wrap: pretty keeps a lone last word from stranding on its own line. */
+  /* 2px is an optical nudge under the title, not a spacing step. */
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 62ch; text-wrap: pretty; }
   /* On a phone the subtitle drops its "all in one search" tail to stay one tidy line. */
   @media (max-width: 560px) { .sub .tail { display: none; } }
-  .pane { margin-bottom: 8px; }
-  .head { margin-bottom: 20px; }
-  .pane :global(.scopes) { margin-bottom: 4px; }
-  h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0; display: flex; align-items: baseline; gap: 8px; }
+  .pane { margin-bottom: var(--space-2); }
+  .head { margin-bottom: var(--space-5); }
+  .pane :global(.scopes) { margin-bottom: var(--space-1); }
+  h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0; display: flex; align-items: baseline; gap: var(--space-2); }
   /* The per-view explainer: the caption above the filters, saying what this
      view is before its controls. A small accent-tinted icon sets it apart from
      the plain text below; the icon's left edge lines up with the filter labels. */
   /* Icon flows inline with the text so it always rides beside the first word —
      centered together, and never pinned to the edge when the text fills the line. */
-  .blurb { margin: 8px 0 16px; color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); text-align: center; text-wrap: pretty; }
+  .blurb { margin: var(--space-2) 0 var(--space-4); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); text-align: center; text-wrap: pretty; }
   .blurb span { font-weight: 600; }
-  .blurb-i { display: inline-block; vertical-align: -3px; margin-right: 6px; color: var(--accent); }
+  .blurb-i { display: inline-block; vertical-align: -3px; margin-right: var(--space-2); color: var(--accent); }
   /* Browsing, the filters and list are one card; the caption leads it, inset to
-     match the card's 12px padding. */
-  .browse .blurb { margin: 0; padding: 20px 12px 8px; }
-  .group { margin-bottom: 22px; }
-  .group h2 { margin-bottom: 8px; }
+     match the card's side padding. */
+  .browse .blurb { margin: 0; padding: var(--space-5) var(--space-3) var(--space-2); }
+  .group { margin-bottom: var(--space-5); }
+  .group h2 { margin-bottom: var(--space-2); }
   /* Beats .link’s inherited size below: “See all” is a small action, not part of the heading. */
   h2 .all { margin-left: auto; font-family: var(--font); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 4px; }
+  .filters { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; margin-bottom: var(--space-1); }
   /* Each filter reads as one line — its name, then the dropdown beside it —
      instead of the stack a labelled field normally makes. */
   .filters :global(.filter) { flex-direction: row; align-items: center; gap: var(--space-1); }
@@ -558,9 +559,9 @@
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   /* Browse: the filters are the list card's header, so the two read as one unit. */
   .browse { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .browse .filters { margin: 0; padding: 12px 12px 4px; }
+  .browse .filters { margin: 0; padding: var(--space-3) var(--space-3) var(--space-1); }
   .browse .list { background: none; box-shadow: none; border-radius: 0; }
-  li { display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 12px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3); border-top: 1px solid var(--line); flex-wrap: wrap; }
   /* On a phone the Follow control would squeeze the description into a column
      four words wide, so it drops to its own line and the text gets the row. */
   @media (max-width: 560px) {
@@ -568,15 +569,17 @@
     li > :global(.split) { margin-left: auto; }
   }
   li:first-child { border-top: 0; }
-  .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
+  .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .handle { font-weight: 400; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-left: 4px; }
+  .handle { font-weight: 400; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-left: var(--space-1); }
   /* Wraps rather than truncates: every part of it is a fact someone is deciding on. */
   .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .desc { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .desc { font-size: calc(var(--text-sm) * var(--size-app)); /* The 2px and 3px here are optical nudges around the description, not spacing steps. */ color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  /* 1px around a highlighted word is optical: the tint hugs the letters. */
   .desc mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
   /* Why this row is here: the same numbers the ranking is made of, in words. */
+  /* 2px and 1px are optical nudges around this line, not spacing steps. */
   .why { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); margin: 2px 0 1px; }
   .why strong { font-weight: 700; }
   .why.muted { color: var(--text-3); }
@@ -584,17 +587,18 @@
   .net-n { color: var(--accent); font-weight: 600; }
   .bad { color: var(--danger); }
   .stack { display: inline-flex; flex: none; width: 40px; height: 40px; position: relative; }
+  /* The overlapped avatars are placed, not spaced: 9px centers them in the 40px box and steps each one across. */
   .stack :global(> *) { position: absolute; top: 9px; }
   .stack :global(> :nth-child(1)) { left: 0; z-index: 3; }
   .stack :global(> :nth-child(2)) { left: 9px; z-index: 2; }
   .stack :global(> :nth-child(3)) { left: 18px; z-index: 1; }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
-  .follow, .save { flex: none; padding: 7px 14px; border-radius: var(--radius-pill); border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
+  .follow, .save { flex: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .follow.on, .save.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
   .follow:disabled, .save:disabled { opacity: 0.6; }
-  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: 18px 0; margin: 0; }
+  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
   .status.error { color: var(--danger); }
-  .empty { text-align: center; color: var(--text-2); padding: 34px 16px; font-size: calc(var(--text-base) * var(--size-app)); }
+  .empty { text-align: center; color: var(--text-2); padding: calc(var(--space-6) + var(--space-1)) var(--space-4); font-size: calc(var(--text-base) * var(--size-app)); }
   .empty p { margin: 0 auto; max-width: 480px; }
   .link { color: var(--accent); font-weight: 600; font-size: inherit; }
 </style>
