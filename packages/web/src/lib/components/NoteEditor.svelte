@@ -93,6 +93,6 @@
 </form>
 
 <style>
-  .editor { border-top: 1px solid var(--line); padding: 10px 16px 12px; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
-  .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .editor { border-top: 1px solid var(--line); padding: var(--space-3) var(--space-4); background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+  .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
 </style>
