@@ -167,6 +167,7 @@
     align-items: center;
     justify-content: center;
     gap: var(--space-1);
+    /* -1px is a hairline: the buttons share one border. */
     margin-left: -1px;
     padding: var(--space-2) var(--space-4);
     background: var(--surface);

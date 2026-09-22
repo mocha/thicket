@@ -63,6 +63,7 @@
 
   .pill {
     display: inline-block;
+    /* 2px vertical is an optical value, not spacing: the pill hugs its text. */
     padding: 2px var(--space-2);
     border-radius: var(--radius-pill);
     font-size: calc(var(--text-sm) * var(--size-app));

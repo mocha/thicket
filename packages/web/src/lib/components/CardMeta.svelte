@@ -64,7 +64,7 @@
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
-    padding: var(--space-1) 6px var(--space-1) 0;
+    padding: var(--space-1) var(--space-2) var(--space-1) 0;
     border-radius: var(--radius-sm);
     text-align: left;
   }

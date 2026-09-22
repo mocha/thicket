@@ -274,8 +274,8 @@
   .scroll {
     /* The padding is the room the lifted tab's shadow needs; the matching
        negative margin takes it back off the layout. */
-    padding: 6px 0;
-    margin: -6px 0;
+    padding: var(--space-2) 0;
+    margin: calc(-1 * var(--space-2)) 0;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
@@ -319,6 +319,7 @@
     display: inline-flex;
     /* Fills the row when the tabs are short, grows past it when they aren't. */
     min-width: 100%;
+    /* 2px is an optical hairline between pills, not spacing. */
     gap: 2px;
     padding: var(--space-1);
     border-radius: var(--radius-pill);

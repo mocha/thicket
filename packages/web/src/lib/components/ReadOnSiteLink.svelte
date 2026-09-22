@@ -18,7 +18,7 @@
   .out {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     padding: var(--space-3) calc(var(--space-4) + var(--space-1));
     border-radius: var(--radius-pill);
     background: var(--accent);
