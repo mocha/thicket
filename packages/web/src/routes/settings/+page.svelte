@@ -8,6 +8,7 @@
   import { APPEARANCE_ART, READING_ART, LAYOUT_ART, FRESH_ART } from '$lib/components/display/art';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
+  import Button from '$lib/components/Button.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   /**
@@ -160,7 +161,7 @@
       {/snippet}
     </Field>
     {#if pwError && !pwError.field}<p class="bad" role="alert">{pwError.message}</p>{/if}
-    <div class="row"><button type="submit" disabled={pwBusy || !current || next.length < 8}>{pwBusy ? 'Changing…' : 'Change password'}</button></div>
+    <div class="row"><Button type="submit" disabled={pwBusy || !current || next.length < 8} loading={pwBusy}>{pwBusy ? 'Changing…' : 'Change password'}</Button></div>
   </form>
 </section>
 
@@ -182,8 +183,6 @@
   .fine { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
   form { display: flex; flex-direction: column; gap: var(--space-3); }
   .row { display: flex; justify-content: flex-end; }
-  button { padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); }
-  button:disabled { opacity: 0.5; }
   fieldset { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
   .radio input, .switch input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
