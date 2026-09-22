@@ -178,6 +178,11 @@ export async function findUserByHandle(handle: string) {
   return user ?? null;
 }
 
+/** Remove a user and everything that cascades from it (collections, sessions, ...). */
+export async function deleteUser(userId: number): Promise<void> {
+  await db.delete(schema.users).where(eq(schema.users.id, userId));
+}
+
 /** The collection a brand-new account starts with. Also the rescue name when someone deletes their last one. */
 /** The root is never rendered and never addressed. A leading double dash is
  * something slugify() cannot produce, so no name anyone types can collide. */

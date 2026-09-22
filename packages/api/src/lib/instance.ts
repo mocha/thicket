@@ -90,8 +90,15 @@ export async function findUsableInvite(code: string) {
   if (row.expiresAt && row.expiresAt.getTime() < Date.now()) return null;
   return row;
 }
-export async function consumeInvite(code: string, userId: number): Promise<void> {
-  await db.update(schema.invites).set({ usedBy: userId, usedAt: new Date() }).where(eq(schema.invites.code, code));
+/**
+ * Claim an invite for a user. Atomic and single-winner: the `used_by is null`
+ * guard means that if two signups race on the same code, exactly one UPDATE
+ * touches the row and the other gets zero rows back. Returns whether this caller
+ * won the claim.
+ */
+export async function consumeInvite(code: string, userId: number): Promise<boolean> {
+  const rows = await db.update(schema.invites).set({ usedBy: userId, usedAt: new Date() }).where(and(eq(schema.invites.code, code), isNull(schema.invites.usedBy))).returning();
+  return rows.length > 0;
 }
 export async function revokeInvite(code: string): Promise<boolean> {
   const rows = await db.delete(schema.invites).where(and(eq(schema.invites.code, code), isNull(schema.invites.usedBy))).returning();
