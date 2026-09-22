@@ -7,7 +7,7 @@ import { isShareLevel, type ShareLevel } from "../lib/visibility.js";
 import { eq } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import {
-  createSession, destroySession, destroyAllSessions, createUser, currentUser, findUserByHandle,
+  createSession, destroySession, destroyAllSessions, createUser, deleteUser, currentUser, findUserByHandle,
   handleProblem, hashPassword, normalizeHandle, verifyPassword, trackingEnabled,
 } from "../lib/auth.js";
 import { consumeInvite, findUsableInvite, publicStatus, signupPolicy } from "../lib/instance.js";
@@ -45,7 +45,13 @@ auth.post("/signup", async (c) => {
   if (!body.password || body.password.length < MIN_PASSWORD) return c.json({ error: `Use at least ${MIN_PASSWORD} characters.`, field: "password" }, 400);
   if (await findUserByHandle(handle)) return c.json({ error: "That handle is taken.", field: "handle" }, 409);
   const user = await createUser({ handle, password: body.password, displayName: body.displayName });
-  if (invite) await consumeInvite(invite.code, user.id);
+  // Claim the invite atomically. If two signups raced on the same code, only one
+  // wins; the loser undoes its just-created account (no session exists yet) so an
+  // invite can never yield two accounts.
+  if (invite && !(await consumeInvite(invite.code, user.id))) {
+    await deleteUser(user.id);
+    return c.json({ error: "That invite isn’t valid any more.", field: "inviteCode" }, 403);
+  }
   await createSession(c, user.id);
   return c.json(await me(user.id), 201);
 });
