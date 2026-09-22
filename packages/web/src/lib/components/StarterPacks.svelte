@@ -79,20 +79,21 @@
 
 <style>
   .packs { margin: 0; }
-  h2 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 4px; }
-  .lede { margin: 0 0 16px; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); max-width: 60ch; }
-  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  h2 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-1); }
+  .lede { margin: 0 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); max-width: 60ch; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
   li { display: flex; flex-direction: column; }
-  .card { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; flex: 1; }
+  .card { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-4); flex: 1; }
   .card:hover { border-color: var(--accent); }
-  .icons { display: flex; gap: 5px; margin-bottom: 9px; min-height: 26px; }
+  .icons { display: flex; gap: var(--space-1); margin-bottom: var(--space-2); min-height: 26px; }
   .name { font-weight: 700; font-size: calc(var(--text-base) * var(--size-app)); }
+  /* 2px is an optical nudge under the name, not a spacing step. */
   .meta { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: 2px; }
-  .desc { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: 7px; }
-  .take { margin-top: 8px; padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .desc { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: var(--space-2); }
+  .take { margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .take:hover:not(:disabled) { border-color: var(--accent); }
   .take:disabled { opacity: 0.55; color: var(--text-3); }
-  .from { margin: 14px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; max-width: 62ch; }
+  .from { margin: var(--space-4) 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; max-width: 62ch; }
   .from a { color: var(--accent); font-weight: 600; }
   .compact h2 { font-size: calc(var(--text-xl) * var(--size-app)); }
   .compact .desc { display: none; }
