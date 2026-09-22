@@ -259,7 +259,7 @@
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
   li { flex: 1; min-width: 0; }
   li > a, li.you > .tab {
-    display: flex; width: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    display: flex; width: 100%; flex-direction: column; align-items: center; /* 2px is an optical gap between a tab's icon and its label. */ gap: 2px;
     /* Held at 11px until Notes and Bookmarks merge into one tab; with five tabs this moves to --text-xs. */
     height: 100%; font-size: calc(11px * var(--size-app)); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
   }
@@ -267,60 +267,61 @@
   .mono { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; }
   /* "What's new": a dot on a tab, a count in the sidebar. */
   .ic { position: relative; display: grid; place-items: center; }
-  /* Pinned to the corner of a tab's icon; the dot itself is a Badge. */
+  /* Pinned to the corner of a tab's icon; the dot itself is a Badge. The offsets
+     are optical, set against the icon's own shape rather than the spacing scale. */
   .ic :global(.pin) { position: absolute; top: -1px; right: -5px; }
   /* Sitting inline before a collection's name, where it needs no ring to lift it. */
-  nav :global(.inrow) { box-shadow: none; margin-right: 4px; }
+  nav :global(.inrow) { box-shadow: none; margin-right: var(--space-1); }
   li.you > .tab[aria-expanded='true'] .mono { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   /* Desktop: the sidebar. */
   @media (min-width: 900px) {
     nav:not(.paged) {
-      top: 0; bottom: auto; right: auto; width: var(--nav-w); height: 100vh; height: 100dvh; padding: 20px 12px 0; overflow: hidden;
+      top: 0; bottom: auto; right: auto; width: var(--nav-w); height: 100vh; height: 100dvh; padding: var(--space-5) var(--space-3) 0; overflow: hidden;
       display: flex; flex-direction: column;
       border-top: 0; border-right: 1px solid var(--line); background: var(--bg); backdrop-filter: none;
     }
-    nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: 10px; font-weight: 700; font-size: calc(var(--text-xl) * var(--size-app)); padding: 6px 10px 22px; letter-spacing: -0.01em; }
+    nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-3); font-weight: 700; font-size: calc(var(--text-xl) * var(--size-app)); padding: var(--space-1) var(--space-3) var(--space-5); letter-spacing: -0.01em; }
     nav:not(.paged) .long { display: inline; }
     nav:not(.paged) .shortl, nav:not(.paged) li.mobile-only { display: none; }
     /* The only scrolling part, so the account block below it never drifts up into the list. */
-    nav:not(.paged) ul { flex-direction: column; height: auto; gap: 2px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    nav:not(.paged) ul { flex-direction: column; height: auto; /* 2px is an optical hairline between rows, not spacing. */ gap: 2px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     nav:not(.paged) li { flex: none; }
-    nav:not(.paged) li > a { flex-direction: row; justify-content: flex-start; gap: 12px; padding: 10px 12px; border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); white-space: normal; }
+    nav:not(.paged) li > a { flex-direction: row; justify-content: flex-start; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); white-space: normal; }
     nav:not(.paged) li > a:hover { background: var(--surface-2); }
     nav:not(.paged) li > a[aria-current='page'] { background: var(--surface-2); color: var(--text); font-weight: 600; }
-    nav:not(.paged) li.admin { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+    nav:not(.paged) li.admin { display: block; margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 
-    nav:not(.paged) li.collections { display: block; margin: 2px 0 8px; }
+    nav:not(.paged) li.collections { display: block; margin: var(--space-1) 0 var(--space-2); }
     /* "My collections": a header you can click to fold the list away. Looks like a row, reads like a heading. */
-    nav:not(.paged) .heading { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); text-align: left; }
+    nav:not(.paged) .heading { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); text-align: left; }
     nav:not(.paged) .heading:hover { background: var(--surface-2); }
     nav:not(.paged) .groupcaret { flex: none; margin-left: auto; display: flex; color: var(--text-3); }
     /* The filter box draws itself; the row only holds it off the list below. */
-    nav:not(.paged) .cols .filterrow { margin-bottom: 3px; }
-    nav:not(.paged) .cols .nomatch { padding: 7px 12px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+    nav:not(.paged) .cols .filterrow { margin-bottom: var(--space-1); }
+    nav:not(.paged) .cols .nomatch { padding: var(--space-2) var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
     /* The Everything row is a normal-height row: undo the full-height stretch the bottom-bar tabs use. */
     nav:not(.paged) .readall { height: auto; }
     /* It carries the whole stream's "what's new" count, pushed to the row's end. */
     nav:not(.paged) .readall :global(.tail) { margin-left: auto; }
-    nav:not(.paged) .cols { display: flex; flex-direction: column; gap: 1px; padding-left: 36px; height: auto; }
-    nav:not(.paged) .cols li > a { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+    nav:not(.paged) .cols { display: flex; flex-direction: column; /* 1px is a hairline between child rows. */ gap: 1px; /* Lines the child rows up under a parent's label: the row's own padding plus its icon column. */ padding-left: calc(var(--space-5) + var(--space-3)); height: auto; }
+    nav:not(.paged) .cols li > a { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
     /* A parent: the name is the link, the caret beside it opens the group. Children sit indented under it. */
-    nav:not(.paged) .cols li.parent { display: flex; align-items: center; gap: 2px; }
+    nav:not(.paged) .cols li.parent { display: flex; align-items: center; /* 2px is an optical gap: the caret tucks against the name. */ gap: 2px; }
     nav:not(.paged) .cols li.parent > a { flex: 1; min-width: 0; }
     nav:not(.paged) .cols .caret { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: var(--radius-sm); color: var(--text-3); }
     nav:not(.paged) .cols .caret:hover { background: var(--surface-2); color: var(--text); }
-    nav:not(.paged) .cols li.child > a { padding-left: 24px; }
+    nav:not(.paged) .cols li.child > a { padding-left: var(--space-5); }
     nav:not(.paged) .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* Something new: the name goes bold, the count or dot sits beside it. Bold reads in grayscale where a color would not. */
     nav:not(.paged) .cols a.new .name { font-weight: 500; color: var(--text); }
 
-    nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 12px; border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
+    nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: var(--space-2); width: 100%; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     nav:not(.paged) .cols .new button:hover { background: var(--surface-2); }
     nav:not(.paged) .plus { font-size: calc(var(--text-base) * var(--size-app)); line-height: 1; width: 10px; }
 
-    nav:not(.paged) .account { display: flex; flex: none; align-items: center; gap: 4px; padding: 12px 0 16px; border-top: 1px solid var(--line); background: var(--bg); }
-    nav:not(.paged) .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm); text-align: left; }
+    nav:not(.paged) .account { display: flex; flex: none; align-items: center; gap: var(--space-1); padding: var(--space-3) 0 var(--space-4); border-top: 1px solid var(--line); background: var(--bg); }
+    nav:not(.paged) .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); text-align: left; }
     nav:not(.paged) .who:hover { background: var(--surface-2); }
     nav:not(.paged) .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
     nav:not(.paged) .dn { font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
