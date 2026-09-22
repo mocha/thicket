@@ -163,6 +163,25 @@ export const feedIcons = pgTable("feed_icons", {
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("feed_icons_hash_idx").on(t.hash)]);
 
+/**
+ * A person's profile picture, one per user. Twin of feed_icons: the image
+ * bytes live in Postgres, not on a disk or a bucket, so the one-volume backup
+ * still captures everything. Served from /api/users/:handle/avatar. What lands
+ * here is already cropped to a square and re-encoded to a small WebP on upload
+ * (see routes/users.ts), so rows stay a few KB. Users without a row render a
+ * monogram, exactly as feeds without an icon do.
+ */
+export const userAvatars = pgTable("user_avatars", {
+  userId: bigint("user_id", { mode: "number" }).primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  contentType: text("content_type").notNull(),
+  width: integer("width"),
+  bytes: bytea("bytes").notNull(),
+  /** sha256 of bytes, for the ETag and to skip rewriting an identical image. */
+  hash: text("hash").notNull(),
+  /** Bumped on every change; the UI hangs a ?v= off it so a new picture shows at once. */
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const items = pgTable("items", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   feedId: bigint("feed_id", { mode: "number" }).notNull().references(() => feeds.id, { onDelete: "cascade" }),

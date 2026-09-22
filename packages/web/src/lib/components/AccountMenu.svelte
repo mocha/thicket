@@ -14,7 +14,8 @@
   import { authApi, profileHref } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
-  import Monogram from './Monogram.svelte';
+  import Avatar from './Avatar.svelte';
+  import Icon from './Icon.svelte';
 
   let { anchor, onclose }: { anchor: HTMLElement | null; onclose: () => void } = $props();
 
@@ -23,6 +24,8 @@
   let sheet = $state(false);
   let pos = $state<{ top: number; left: number }>({ top: 0, left: 0 });
 
+  // The panel's width in numbers, for the arithmetic that keeps it on screen.
+  // Keep it in step with --nav-w in app.css, which draws the panel itself.
   const WIDTH = 240;
   function place() {
     if (!anchor) return;
@@ -80,7 +83,7 @@
   >
     {#if sheet}
       <div class="who">
-        <Monogram name={me.displayName ?? me.handle} size={40} />
+        <Avatar handle={me.handle} name={me.displayName ?? me.handle} size={40} v={me.avatarUpdatedAt} />
         <span class="names"><span class="dn">{me.displayName ?? me.handle}</span><span class="h">@{me.handle}</span></span>
       </div>
     {/if}
@@ -89,7 +92,7 @@
       <span>My profile</span>
     </a>
     <a role="menuitem" href="/settings" onclick={onclose}>
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
+      <Icon name="gear" size={20} />
       <span>Settings</span>
     </a>
     <button type="button" role="menuitem" class="out" onclick={logout}>
@@ -100,25 +103,25 @@
 {/if}
 
 <style>
-  .scrim { position: fixed; inset: 0; z-index: 59; background: rgba(0, 0, 0, 0.4); }
+  .scrim { position: fixed; inset: 0; z-index: 59; background: var(--scrim); }
   .panel {
-    position: fixed; z-index: 60; width: 240px; max-width: calc(100vw - 16px);
-    background: var(--surface); color: var(--text); border-radius: 14px; padding: 6px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--line);
+    position: fixed; z-index: 60; width: var(--nav-w); max-width: calc(100vw - 16px);
+    background: var(--surface); color: var(--text); border-radius: var(--radius-md); padding: var(--space-2);
+    box-shadow: var(--shadow-menu);
     display: flex; flex-direction: column;
   }
   .panel.sheet {
     top: auto; left: 0; right: 0; bottom: 0; width: auto; max-width: none;
-    border-radius: 20px 20px 0 0; padding: 12px 12px calc(12px + var(--safe-b));
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-3) var(--space-3) calc(var(--space-3) + var(--safe-b));
+    box-shadow: var(--shadow-sheet);
   }
-  .who { display: flex; align-items: center; gap: 12px; padding: 8px 10px 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+  .who { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3) var(--space-3); border-bottom: 1px solid var(--line); margin-bottom: var(--space-2); }
   .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
-  .dn { font-weight: 600; font-size: calc(15px * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .h { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dn { font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .h { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .panel a, .panel button {
-    display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 10px; border-radius: 10px;
-    font-size: calc(15px * var(--size-app)); font-weight: 600; color: var(--text-2); text-align: left;
+    display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3); border-radius: var(--radius-sm);
+    font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text-2); text-align: left;
   }
   .panel a:hover, .panel button:hover { background: var(--surface-2); }
   .panel svg { flex: none; color: var(--text-3); }

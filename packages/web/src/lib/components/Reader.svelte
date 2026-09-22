@@ -12,10 +12,12 @@
   import { closeReader, reader, readerClosed } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
   import SourceIcon from './SourceIcon.svelte';
+  import IconButton from './IconButton.svelte';
   import ItemActions from './ItemActions.svelte';
   import NoteEditor from './NoteEditor.svelte';
   import NoteBlock from './NoteBlock.svelte';
   import Pager from './Pager.svelte';
+  import ReadOnSiteLink from './ReadOnSiteLink.svelte';
   import { display } from '$lib/display.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
@@ -110,7 +112,7 @@
     closeReader();
   }
   /** Escape closes the dialog natively when modal; keep history in step. Non-modal (paged) gets no cancel event, so listen for the key. */
-  function cancelled(e: Event) { e.preventDefault(); close(); }
+  function canceled(e: Event) { e.preventDefault(); close(); }
   function keys(e: KeyboardEvent) { if (paged && item && e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); close(); } }
 
   function noteButton() {
@@ -124,7 +126,7 @@
 
 <svelte:window onkeydown={keys} />
 
-<dialog bind:this={dialog} class:paged onclose={() => closeReader()} oncancel={cancelled} onclick={(e) => { if (e.target === dialog) close(); }} aria-label={item?.title ?? 'Post'}>
+<dialog bind:this={dialog} class:paged onclose={() => closeReader()} oncancel={canceled} onclick={(e) => { if (e.target === dialog) close(); }} aria-label={item?.title ?? 'Post'}>
   {#if item}
     <article class="reader">
       <header bind:this={head}>
@@ -132,9 +134,7 @@
         <time datetime={item.publishedAt}>{relativeTime(item.publishedAt)}</time>
         <span class="spacer"></span>
         <ItemActions {item} noteOpen={editing} onnote={noteButton} via="reader" />
-        <button class="close" onclick={close} aria-label="Close">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-        </button>
+        <IconButton icon="close" label="Close" iconSize={20} onclick={close} />
       </header>
 
       <div class="scroll" class:paged bind:this={scroller}>
@@ -170,7 +170,7 @@
                 {#if content.typicalLength !== null && content.typicalLength < 1000}This site only sends a preview of its posts.{:else}This looks like a preview, not the whole post.{/if}
               </p>
             {/if}
-            <a class="out" {href} target="_blank" rel="noopener" onclick={outbound}>{isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : 'Read on original site'} <span aria-hidden="true">↗</span></a>
+            <ReadOnSiteLink {href} label={isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : undefined} onclick={outbound} />
           </footer>
 
           {#if item.myNote && !editing}<NoteBlock note={item.myNote} mine onedit={() => (editing = true)} />{/if}
@@ -187,36 +187,33 @@
 
 <style>
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+  dialog::backdrop { background: var(--scrim); }
   .reader {
     position: fixed; inset: 0; display: flex; flex-direction: column;
     background: var(--surface); color: var(--text);
   }
   @media (min-width: 760px) {
-    .reader { inset: 24px auto 24px 50%; transform: translateX(-50%); width: min(760px, calc(100vw - 48px)); border-radius: var(--radius); box-shadow: var(--shadow); border: var(--card-border, 0); overflow: hidden; }
+    .reader { inset: var(--space-5) auto var(--space-5) 50%; transform: translateX(-50%); width: min(760px, calc(100vw - 48px)); border-radius: var(--radius); box-shadow: var(--shadow); border: var(--card-border, 0); overflow: hidden; }
   }
   header {
-    display: flex; align-items: center; gap: 8px; flex: none;
-    padding: 10px 8px 8px 16px; border-bottom: 1px solid var(--line); font-size: calc(13px * var(--size-app)); color: var(--text-2); min-width: 0;
+    display: flex; align-items: center; gap: var(--space-2); flex: none;
+    padding: var(--space-3) var(--space-2) var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); min-width: 0;
   }
-  .source { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .source { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
   .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   header time { color: var(--text-3); white-space: nowrap; }
   .spacer { flex: 1; }
-  .close { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--text-2); flex: none; margin-left: 4px; }
-  .close:hover { background: var(--surface-2); color: var(--text); }
-  .close:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
   .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-  .page { max-width: 680px; margin: 0 auto; padding: 20px 16px calc(24px + var(--safe-b)); }
-  h1 { margin: 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(27px * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
-  .byline { margin: 10px 0 0; font-size: calc(14px * var(--size-app)); color: var(--text-3); display: flex; gap: 6px; flex-wrap: wrap; }
-  .hero { width: 100%; border-radius: var(--radius-sm); margin-top: 18px; background: var(--surface-2); }
-  .teaser { font-family: var(--font-reading); font-size: calc(17px * var(--size-reading)); color: var(--text-2); margin: 18px 0 0; }
-  .loading, .nobody { margin: 20px 0 0; color: var(--text-3); font-size: calc(15px * var(--size-app)); }
+  .page { max-width: 680px; margin: 0 auto; padding: var(--space-5) var(--space-4) calc(var(--space-5) + var(--safe-b)); }
+  h1 { margin: 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
+  .byline { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .hero { width: 100%; border-radius: var(--radius-sm); margin-top: var(--space-4); background: var(--surface-2); }
+  .teaser { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: var(--space-4) 0 0; }
+  .loading, .nobody { margin: var(--space-5) 0 0; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
 
   /* The article. Publisher HTML, sanitized to a known set of tags, set in the reading face. */
-  .body { margin-top: 20px; font-family: var(--font-reading); font-size: calc(17px * var(--size-reading)); line-height: 1.6; color: var(--text); overflow-wrap: anywhere; }
+  .body { margin-top: var(--space-5); font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text); overflow-wrap: anywhere; }
   .body :global(p), .body :global(ul), .body :global(ol), .body :global(blockquote), .body :global(pre), .body :global(table), .body :global(figure), .body :global(details), .body :global(hr) { margin: 0 0 1em; }
   .body :global(h2), .body :global(h3), .body :global(h4), .body :global(h5), .body :global(h6) { font-family: var(--font-headings); line-height: 1.25; margin: 1.5em 0 0.5em; letter-spacing: -0.01em; }
   .body :global(h2) { font-size: 1.35em; } .body :global(h3) { font-size: 1.18em; } .body :global(h4), .body :global(h5), .body :global(h6) { font-size: 1em; }
@@ -226,34 +223,32 @@
   .body :global(figure) { margin-left: 0; margin-right: 0; }
   .body :global(figcaption) { font-size: 0.85em; color: var(--text-3); text-align: center; margin-top: 0.3em; }
   .body :global(blockquote) { border-left: 3px solid var(--line); padding-left: 1em; color: var(--text-2); }
-  .body :global(pre) { overflow-x: auto; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--surface-2); font-size: 0.85em; line-height: 1.5; }
+  .body :global(pre) { overflow-x: auto; padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 0.85em; line-height: 1.5; }
   .body :global(code) { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
-  .body :global(:not(pre) > code) { background: var(--surface-2); padding: 0.1em 0.35em; border-radius: 5px; }
+  .body :global(:not(pre) > code) { background: var(--surface-2); padding: 0.1em 0.35em; border-radius: var(--radius-xs); }
   .body :global(table) { display: block; overflow-x: auto; border-collapse: collapse; font-size: 0.9em; }
-  .body :global(th), .body :global(td) { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+  .body :global(th), .body :global(td) { border: 1px solid var(--line); padding: var(--space-2); text-align: left; vertical-align: top; }
   .body :global(hr) { border: 0; border-top: 1px solid var(--line); }
   .body :global(sup) { font-size: 0.75em; }
   .body :global(mark) { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; }
   /* An embedded player, replaced on the server by a link to it. */
-  .body :global(a[data-embed]) { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 22px 16px; margin: 0 0 1em; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px dashed var(--line); font-weight: 600; text-decoration: none; }
+  .body :global(a[data-embed]) { display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-5) var(--space-4); margin: 0 0 1em; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px dashed var(--line); font-weight: 600; text-decoration: none; }
   .body :global(a[data-embed])::before { content: '▶'; font-size: 0.85em; }
 
-  footer { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-  .partial { margin: 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
-  .out { display: inline-flex; align-items: center; gap: 6px; padding: 12px 20px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(15px * var(--size-app)); }
-  .out:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  footer + :global(.note) { margin-top: 18px; }
+  footer { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+  .partial { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  footer + :global(.note) { margin-top: var(--space-4); }
 
   /* Paged: the sheet is as tall as the frame and flows into columns one frame wide; the transform picks the column. Nothing scrolls. */
   .scroll.paged { overflow: hidden; margin: 0 var(--pager-w); }
-  .scroll.paged .page { column-gap: 24px; column-fill: auto; max-width: none; padding: 16px 12px; box-sizing: border-box; }
+  .scroll.paged .page { column-gap: var(--space-5); column-fill: auto; max-width: none; padding: var(--space-4) var(--space-3); box-sizing: border-box; }
   .scroll.paged h1, .scroll.paged .byline, .scroll.paged .hero, .scroll.paged footer, .scroll.paged :global(.note) { break-inside: avoid; }
   .scroll.paged .body :global(img), .scroll.paged .hero { max-height: 55vh; width: auto; max-width: 100%; margin-left: auto; margin-right: auto; break-inside: avoid; }
   .scroll.paged .body :global(p), .scroll.paged .body :global(li) { orphans: 2; widows: 2; }
   .scroll.paged .body :global(figure), .scroll.paged .body :global(pre), .scroll.paged .body :global(blockquote), .scroll.paged .body :global(table) { break-inside: avoid; }
-  .pagenum { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: calc(12px * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; z-index: 31; pointer-events: none; }
+  .pagenum { position: absolute; left: 50%; bottom: var(--space-2); transform: translateX(-50%); font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; z-index: 31; pointer-events: none; }
   /* Paged: the reader is a fixed sheet above the bottom bar (which stays clickable, since the dialog is not modal), full width at every size. */
   dialog.paged { position: fixed; top: 0; left: 0; right: 0; bottom: calc(var(--nav-h) + var(--safe-b)); width: auto; height: auto; max-height: none; z-index: 35; background: var(--surface); }
   dialog.paged .reader { position: absolute; inset: 0; transform: none; width: auto; border-radius: 0; box-shadow: none; border: 0; }
-  dialog.paged .pagenum { bottom: 4px; }
+  dialog.paged .pagenum { bottom: var(--space-1); }
 </style>

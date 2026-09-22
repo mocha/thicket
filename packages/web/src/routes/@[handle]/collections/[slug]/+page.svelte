@@ -10,8 +10,12 @@
   import { feedListName } from '$lib/feedname';
   import { audienceTag } from '$lib/visibility';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
-  import FollowButton from '$lib/components/FollowButton.svelte';
+  import FollowControl from '$lib/components/FollowControl.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
+  import Icon from '$lib/components/Icon.svelte';
+  import IconButton from '$lib/components/IconButton.svelte';
+  import Button from '$lib/components/Button.svelte';
+  import Badge from '$lib/components/Badge.svelte';
   import River from '$lib/components/River.svelte';
   import { showToast } from '$lib/toast.svelte';
 
@@ -71,8 +75,6 @@
   <link rel="alternate" type="text/x-opml" title={col?.name ?? 'Collection'} href={opml} />
 </svelte:head>
 
-<nav class="crumbs"><a href={profileHref(handle)}>@{handle}</a> <span aria-hidden="true">›</span></nav>
-
 {#if error}
   <div class="empty"><h1>Not here</h1><p>{error === 'not found' ? 'This collection doesn’t exist or isn’t shared.' : error}</p></div>
 {:else if !col}
@@ -84,18 +86,17 @@
       <div class="actions">
         {#if col.isMe}
           <AddFeedButton collectionIds={[col!.id]} via="collection_page" />
-          <a class="btn" href={manageCollectionHref(handle, slug)}>Settings</a>
+          <IconButton icon="gear" variant="bordered" size="lg" href={manageCollectionHref(handle, slug)} label="Settings" title="Settings" />
         {:else if session.user}
-          <button class="btn primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</button>
+          <Button variant="primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</Button>
         {:else}
-          <button class="btn primary" onclick={() => { api.event('copy_explainer_opened', { handle, slug }); explain?.showModal(); }}>Copy this collection</button>
+          <Button variant="primary" onclick={() => { api.event('copy_explainer_opened', { handle, slug }); explain?.showModal(); }}>Copy this collection</Button>
         {/if}
       </div>
     </div>
+    {#if col.description}<p class="desc">{col.description}</p>{/if}
     <p class="sub">
-      {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> · {/if}<button class="reveal" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style:transform={showFeeds ? 'rotate(180deg)' : 'none'}><path d="M6 9l6 6 6-6" /></svg></button>
-      {#if col.description} · {col.description}{/if}
-      {#if col.isMe && audienceTag(col.visibility)} · <span class="tag">{audienceTag(col.visibility)}</span>{/if}
+      {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> ·&nbsp;{/if}{#if col.isMe && audienceTag(col.visibility)}<Badge class="beforetext">{audienceTag(col.visibility)}</Badge>·&nbsp;{/if}<button class="reveal" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<Icon name="caret" size={14} stroke={2.4} dir={showFeeds ? 'down' : 'right'} /></button>
     </p>
   </header>
 
@@ -107,16 +108,16 @@
         <section>
           <h3>New here?</h3>
           <p>Make an account on this thicket. You’ll land right back here, and the copy is one tap.</p>
-          <a class="btn primary" href="/signup?next={encodeURIComponent(page.url.pathname)}">Create an account</a>
-          <a class="btn" href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a>
+          <Button variant="primary" href="/signup?next={encodeURIComponent(page.url.pathname)}">Create an account</Button>
+          <Button href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</Button>
         </section>
         <section>
           <h3>On another thicket?</h3>
           <p>Copying a collection between thickets by link is on its way. Keep this page’s link; it’s what you’ll paste.</p>
-          <button class="btn" onclick={copyLink}>Copy link</button>
+          <Button onclick={copyLink}>Copy link</Button>
         </section>
       </div>
-      <button class="close" onclick={() => explain?.close()} aria-label="Close">×</button>
+      <IconButton class="close" icon="close" label="Close" onclick={() => explain?.close()} />
     </div>
   </dialog>
 
@@ -131,7 +132,7 @@
               <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · {relativeTime(f.lastItemAt)}{/if} · {f.followerCount} {f.followerCount === 1 ? 'follower' : 'followers'}</div>
             </div>
             {#if session.user}
-              <FollowButton feedId={f.id} ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} compact />
+              <FollowControl feedId={f.id} ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} compact />
             {/if}
           </li>
         {/each}
@@ -154,45 +155,41 @@
 {/if}
 
 <style>
-  .crumbs { font-size: calc(13px * var(--size-app)); color: var(--text-3); margin-bottom: 4px; }
-  .crumbs a { color: var(--accent); font-weight: 600; }
-  .top { margin-bottom: 16px; }
-  .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1; }
-  .sub { margin: 4px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
+  .top { margin-bottom: var(--space-4); }
+  .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1; }
+  .desc { margin: var(--space-2) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); overflow-wrap: anywhere; }
+  .sub { margin: var(--space-1) 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
-  .reveal { display: inline-flex; align-items: center; gap: 3px; font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
-  .reveal svg { transition: transform 150ms ease; }
-  .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
-  .actions { flex: none; display: flex; gap: 8px; align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
-  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); white-space: nowrap; }
-  .btn:hover { background: var(--surface-2); color: var(--text); }
-  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  .btn:disabled { opacity: 0.6; }
+  /* The pill sits in a line of text, so it carries its own gap to the separator after it. */
+  .sub :global(.beforetext) { margin-right: var(--space-2); }
+  .reveal { display: inline-flex; align-items: center; gap: var(--space-1); font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
+  /* 2px of top padding is an optical nudge: the buttons sit on the title's line. */
+  .actions { flex: none; display: flex; gap: var(--space-2); align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
-  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: 20px 20px 0 0; padding: 20px 18px calc(18px + var(--safe-b)); box-shadow: 0 -10px 40px rgba(0,0,0,0.25); }
-  @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 560px; border-radius: 20px; } }
-  .sheet h2 { font-family: var(--font-headings); font-size: calc(22px * var(--size-headings)); margin: 0 0 14px; }
-  .ways { display: grid; gap: 12px; }
+  dialog::backdrop { background: var(--scrim); }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-5) var(--space-4) calc(var(--space-4) + var(--safe-b)); box-shadow: var(--shadow-sheet); }
+  @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 560px; border-radius: var(--radius-lg); } }
+  .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-4); }
+  .ways { display: grid; gap: var(--space-3); }
   @media (min-width: 700px) { .ways { grid-template-columns: 1fr 1fr; } }
-  .ways section { background: var(--bg); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-  .ways h3 { margin: 0; font-size: calc(15px * var(--size-app)); }
-  .ways p { margin: 0 0 4px; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
-  .close { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; font-size: calc(22px * var(--size-app)); color: var(--text-3); }
-  .feeds { margin-bottom: 18px; }
+  .ways section { background: var(--bg); border-radius: var(--radius-md); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+  .ways h3 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); }
+  .ways p { margin: 0 0 var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .sheet :global(.close) { position: absolute; top: var(--space-3); right: var(--space-3); }
+  .feeds { margin-bottom: var(--space-4); }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .list li { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--line); }
+  .list li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .list li:first-child { border-top: 0; }
   .children li { padding: 0; }
-  .children a { display: flex; align-items: center; gap: 12px; padding: 14px 16px; width: 100%; }
+  .children a { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); width: 100%; }
   .children .name { flex: 1; font-weight: 600; }
   .meta { flex: 1; min-width: 0; }
   .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sub2 { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .count, .chev { color: var(--text-3); font-size: calc(13px * var(--size-app)); }
-  .chev { font-size: calc(20px * var(--size-app)); }
-  .status { text-align: center; color: var(--text-3); padding: 30px 0; }
-  .empty { text-align: center; padding: 50px 20px; color: var(--text-2); }
-  .empty h1 { font-size: calc(24px * var(--size-app)); margin-bottom: 6px; }
+  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .count, .chev { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .chev { font-size: calc(var(--text-xl) * var(--size-app)); }
+  .status { text-align: center; color: var(--text-3); padding: var(--space-6) 0; }
+  .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
+  .empty h1 { font-size: calc(var(--text-2xl) * var(--size-app)); margin-bottom: var(--space-2); }
 </style>

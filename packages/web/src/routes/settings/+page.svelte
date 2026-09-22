@@ -6,6 +6,9 @@
   import ThemePicker from '$lib/components/display/ThemePicker.svelte';
   import FontTable from '$lib/components/display/FontTable.svelte';
   import { APPEARANCE_ART, READING_ART, LAYOUT_ART, FRESH_ART } from '$lib/components/display/art';
+  import Field from '$lib/components/Field.svelte';
+  import Input from '$lib/components/Input.svelte';
+  import Button from '$lib/components/Button.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   /**
@@ -32,7 +35,11 @@
 
   let current = $state('');
   let next = $state('');
-  let pwError = $state<string | null>(null);
+  /* The server says which of the two boxes is wrong — a mistyped current
+     password, or a new one that's too short — so the message lands on that
+     box. Anything else (the network, say) is about neither, so it sits under
+     the pair. */
+  let pwError = $state<{ message: string; field?: string } | null>(null);
   let pwBusy = $state(false);
   async function changePassword() {
     if (pwBusy) return;
@@ -42,7 +49,7 @@
       current = ''; next = '';
       showToast('Password changed. Other devices were signed out.');
     } catch (e) {
-      pwError = e instanceof ApiError ? e.message : String(e);
+      pwError = e instanceof ApiError ? { message: e.message, field: e.field } : { message: e instanceof Error ? e.message : String(e) };
     } finally {
       pwBusy = false;
     }
@@ -143,17 +150,25 @@
 <section class="card">
   <h2>Change password</h2>
   <form onsubmit={(e) => { e.preventDefault(); void changePassword(); }}>
-    <label><span>Current password</span><input type="password" bind:value={current} autocomplete="current-password" required /></label>
-    <label><span>New password</span><input type="password" bind:value={next} autocomplete="new-password" required minlength="8" /></label>
-    {#if pwError}<p class="bad" role="alert">{pwError}</p>{/if}
-    <div class="row"><button type="submit" disabled={pwBusy || !current || next.length < 8}>{pwBusy ? 'Changing…' : 'Change password'}</button></div>
+    <Field label="Current password" error={pwError?.field === 'current' ? pwError.message : null}>
+      {#snippet children({ id, describedBy, invalid })}
+        <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={current} autocomplete="current-password" required />
+      {/snippet}
+    </Field>
+    <Field label="New password" hint="At least 8 characters." error={pwError?.field === 'next' ? pwError.message : null}>
+      {#snippet children({ id, describedBy, invalid })}
+        <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={next} autocomplete="new-password" required minlength={8} />
+      {/snippet}
+    </Field>
+    {#if pwError && !pwError.field}<p class="bad" role="alert">{pwError.message}</p>{/if}
+    <div class="row"><Button type="submit" disabled={pwBusy || !current || next.length < 8} loading={pwBusy}>{pwBusy ? 'Changing…' : 'Change password'}</Button></div>
   </form>
 </section>
 
 <section class="card">
   <h2>Bring your feeds in</h2>
   <p class="help">Coming from Feedly or another reader? Export your subscriptions as an OPML file there, and bring them in here. Each folder becomes a collection.</p>
-  <div class="row"><a class="linkbtn" href="/import">Import from OPML</a></div>
+  <div class="row"><Button href="/import">Import from OPML</Button></div>
 </section>
 
 {#if me.isAdmin}
@@ -164,27 +179,26 @@
 {/if}
 
 <style>
-  .top { margin-bottom: 14px; }
-  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; }
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
-  h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
-  /* When a description follows the header, pull it up tight; the 12px gap then sits under the description. */
-  h2 + .help { margin-top: -8px; }
-  .help { margin: 0 0 12px; font-size: calc(14px * var(--size-app)); color: var(--text-3); line-height: 1.4; }
-  .fine { margin: 12px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
-  form { display: flex; flex-direction: column; gap: 12px; }
-  label { display: flex; flex-direction: column; gap: 6px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  input[type='password'] { padding: 11px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); font-family: inherit; }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .top { margin-bottom: var(--space-4); }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
+  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
+  /* When a description follows the header, pull it up tight; the header's gap then sits under the description. */
+  h2 + .help { margin-top: calc(-1 * var(--space-2)); }
+  .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .fine { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
+  form { display: flex; flex-direction: column; gap: var(--space-3); }
   .row { display: flex; justify-content: flex-end; }
-  button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text-2); background: var(--surface); }
-  button:disabled { opacity: 0.5; }
-  .linkbtn { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text-2); background: var(--surface); }
-  fieldset { border: 0; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 10px; }
-  .radio, .switch { flex-direction: row; align-items: flex-start; gap: 12px; font-weight: 400; color: var(--text); cursor: pointer; }
-  .radio input, .switch input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  fieldset { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; gap: var(--space-3); }
+  .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
+  .radio input, .switch input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  /* The ring these used to borrow from the password boxes, now said outright.
+     A tick box or a dial isn't typed into, so the browser only calls it
+     keyboard focus when you tabbed to it — no special handling needed. */
+  .radio input:focus-visible, .switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
-  .radio small, .switch small { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
-  .bad { color: var(--danger); margin: 0; font-size: calc(14px * var(--size-app)); }
+  .radio small, .switch small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .admin .help a { color: var(--accent); font-weight: 600; }
 </style>

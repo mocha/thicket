@@ -15,6 +15,7 @@
   import { session, setMe } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
   import VisitorMore from './VisitorMore.svelte';
+  import Badge from './Badge.svelte';
 
   let { handle, isMe }: { handle: string; isMe: boolean } = $props();
 
@@ -106,8 +107,7 @@
               </div>
               <p class="what">
                 Added {plural(e.payload.count, 'feed')} to
-                <a href={publicCollectionHref(handle, e.payload.collection.slug)}>{e.payload.collection.name}</a>
-                {#if isMe && audienceTag(e.payload.collection.visibility)}<span class="tag">{audienceTag(e.payload.collection.visibility)}</span>{/if}
+                <a href={publicCollectionHref(handle, e.payload.collection.slug)}>{e.payload.collection.name}</a>{#if isMe && audienceTag(e.payload.collection.visibility)}<Badge class="aftertext">{audienceTag(e.payload.collection.visibility)}</Badge>{/if}
               </p>
               <span class="when">{relativeTime(e.at)}</span>
             </div>
@@ -124,8 +124,7 @@
                   from <a href="/@{e.payload.copiedFrom.handle}">@{e.payload.copiedFrom.handle}</a>
                 {:else}
                   Made a collection, <a href={publicCollectionHref(handle, e.payload.slug)}>{e.payload.name}</a>
-                {/if}
-                {#if isMe && audienceTag(e.payload.visibility)}<span class="tag">{audienceTag(e.payload.visibility)}</span>{/if}
+                {/if}{#if isMe && audienceTag(e.payload.visibility)}<Badge class="aftertext">{audienceTag(e.payload.visibility)}</Badge>{/if}
               </p>
               <span class="when">{relativeTime(e.at)}</span>
             </div>
@@ -162,34 +161,37 @@
 </section>
 
 <style>
-  section { margin-bottom: 22px; }
-  h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
+  section { margin-bottom: var(--space-5); }
+  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .cardhead { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface-2); }
-  .ctrl-label { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
-  .cardhead :global(.seg) { flex: none; width: min(320px, 100%); }
-  .pad { padding: 16px; }
-  .foot { padding: 12px 16px; border-top: 1px solid var(--line); }
-  .status { color: var(--text-3); font-size: calc(14px * var(--size-app)); margin: 0; }
+  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--surface-2); }
+  .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
+  .cardhead :global(.cg) { flex: none; width: min(320px, 100%); }
+  .pad { padding: var(--space-4); }
+  .foot { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
+  .status { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin: 0; }
   .acts { list-style: none; margin: 0; padding: 0; }
-  li { padding: 12px 16px; border-top: 1px solid var(--line); }
+  li { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   li:first-child { border-top: 0; }
-  .row { display: flex; align-items: center; gap: 10px; }
+  .row { display: flex; align-items: center; gap: var(--space-3); }
   .icons { display: flex; flex: none; }
-  /* Overlapped, so a burst of feeds reads as one object rather than a row of them. */
+  /* Overlapped, so a burst of feeds reads as one object rather than a row of them.
+     The pull is set against the icon's own width, so it stays a literal. */
   .icons > :global(*:not(:first-child)) { margin-left: -7px; }
-  .glyph { flex: none; width: 20px; text-align: center; color: var(--text-3); font-size: calc(15px * var(--size-app)); }
-  .what { flex: 1; min-width: 0; margin: 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .glyph { flex: none; width: 20px; text-align: center; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
+  .what { flex: 1; min-width: 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .what a { color: var(--text); font-weight: 600; }
-  .src { color: var(--text-3); font-size: calc(13px * var(--size-app)); }
+  .src { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .src::before { content: ' · '; }
-  .when { flex: none; font-size: calc(12px * var(--size-app)); color: var(--text-3); }
-  .names { display: flex; gap: 5px; margin: 4px 0 0 30px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .when { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  /* Indented to line up under the row's text: the glyph column plus the row's gap. */
+  .names { display: flex; gap: var(--space-1); margin: var(--space-1) 0 0 var(--space-6); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .trunc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rest { flex: none; }
   .rest::before { content: '· '; }
-  blockquote { margin: 6px 0 0 30px; padding-left: 10px; border-left: 2px solid var(--line); font-size: calc(14px * var(--size-app)); color: var(--text-2); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-  .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
-  .more { display: block; width: 100%; text-align: center; color: var(--accent); font-weight: 600; font-size: calc(14px * var(--size-app)); }
+  blockquote { margin: var(--space-2) 0 0 var(--space-6); padding-left: var(--space-3); border-left: 2px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  /* A pill riding after a link, mid-sentence, needs its own gap. */
+  .what :global(.aftertext) { margin-left: var(--space-2); }
+  .more { display: block; width: 100%; text-align: center; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .more:disabled { opacity: 0.6; }
 </style>

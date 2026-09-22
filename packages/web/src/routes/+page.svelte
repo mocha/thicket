@@ -45,12 +45,13 @@
 {/if}
 
 <style>
-  .top { margin-bottom: 28px; }
-  .titlerow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; min-width: 0; }
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); max-width: 62ch; }
-  .start { display: flex; flex-direction: column; gap: 22px; margin-top: 22px; }
-  .own { margin: 0; padding-top: 18px; border-top: 1px solid var(--line); color: var(--text-2); font-size: calc(15px * var(--size-app)); max-width: 62ch; line-height: 1.5; }
+  .top { margin-bottom: calc(var(--space-5) + var(--space-1)); }
+  .titlerow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; min-width: 0; }
+  /* 2px is an optical nudge under the title, not a spacing step. */
+  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 62ch; }
+  .start { display: flex; flex-direction: column; gap: var(--space-5); margin-top: var(--space-5); }
+  .own { margin: 0; padding-top: var(--space-4); border-top: 1px solid var(--line); color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); max-width: 62ch; line-height: 1.5; }
   .own button { color: var(--accent); font-weight: 600; font: inherit; font-weight: 600; }
   .own button:hover { text-decoration: underline; }
 </style>

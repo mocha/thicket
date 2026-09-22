@@ -4,11 +4,12 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite dev --host --port 5173",
-    "build": "vite build",
+    "palette": "node scripts/palette-swatches.mjs",
+    "dev": "pnpm palette && vite dev --host --port 5173",
+    "build": "pnpm palette && vite build",
     "preview": "vite preview",
-    "prepare": "svelte-kit sync || echo ''",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+    "prepare": "pnpm palette && (svelte-kit sync || echo '')",
+    "check": "pnpm palette && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.10",
@@ -18,5 +19,8 @@
     "svelte-check": "^4.6.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.16"
+  },
+  "dependencies": {
+    "svelte-easy-crop": "^5.0.1"
   }
 }

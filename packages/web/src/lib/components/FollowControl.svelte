@@ -1,6 +1,8 @@
 <script lang="ts">
   /**
-   * The one control for "my relationship to this feed". A split button:
+   * The follow control: the one place to see and change "my relationship to
+   * this feed". A split button — a main half naming the state, a caret half
+   * opening the filing menu:
    *   not following            → [ Follow | ▾ ]
    *   following, 1 collection  → [ In Tech News | ▾ ]
    *   following, N collections → [ In N collections | ▾ ]
@@ -21,6 +23,7 @@
   import { api } from '$lib/api';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import CollectionCheckList from './CollectionCheckList.svelte';
+  import Icon from './Icon.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   let { feedId, ids = $bindable(), name = 'this feed', compact = false, inline = false, mainLabel, onmain, onchange }: {
@@ -98,7 +101,7 @@
     <button class="main" onclick={toggle} aria-expanded={open}>{label}</button>
   {/if}
   <button class="more" onclick={toggle} aria-expanded={open} aria-label="More options for {name}">
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+    <Icon name="caret" dir="down" size={16} stroke={2.2} />
   </button>
 </div>
 
@@ -113,28 +116,28 @@
 {/if}
 
 <style>
-  .split { display: inline-flex; align-items: stretch; border-radius: 999px; border: 1px solid var(--accent); overflow: hidden; background: var(--surface); color: var(--accent); flex: none; }
+  .split { display: inline-flex; align-items: stretch; border-radius: var(--radius-pill); border: 1px solid var(--accent); overflow: hidden; background: var(--surface); color: var(--accent); flex: none; }
   .split.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
   .split.neutral { border-color: var(--line); color: var(--text-2); }
   .split.neutral .more { border-left-color: var(--line); }
   /* A collection name can be long; the button gives it room, then ellipsis. */
-  .main { padding: 8px 12px 8px 14px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: inherit; white-space: nowrap; max-width: 20ch; overflow: hidden; text-overflow: ellipsis; }
-  .more { padding: 0 8px 0 6px; border-left: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); display: grid; place-items: center; color: inherit; }
+  .main { padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: inherit; white-space: nowrap; max-width: 20ch; overflow: hidden; text-overflow: ellipsis; }
+  .more { padding: 0 var(--space-2); border-left: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); display: grid; place-items: center; color: inherit; }
   .main:hover, .more:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-  .compact .main { padding: 6px 10px 6px 12px; font-size: calc(13px * var(--size-app)); }
-  .compact .more { padding: 0 6px 0 4px; }
+  .compact .main { padding: var(--space-1) var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .compact .more { padding: 0 var(--space-1); }
   .panel {
     position: fixed; z-index: 60; width: min(320px, calc(100vw - 16px));
-    background: var(--surface); color: var(--text); border-radius: 14px; padding: 12px 14px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--line);
+    background: var(--surface); color: var(--text); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+    box-shadow: var(--shadow-menu);
     max-height: calc(100vh - 16px); display: flex; flex-direction: column;
   }
   /* A long list of collections scrolls inside the panel rather than pushing Unfollow (or the panel) off screen. */
   .panel:not(.inline) :global(.checks) { overflow-y: auto; min-height: 0; max-height: 50vh; }
-  .panel.inline { position: static; width: 100%; flex-basis: 100%; order: 10; box-shadow: none; border: 1px solid var(--line); padding: 10px 12px; }
+  .panel.inline { position: static; width: 100%; flex-basis: 100%; order: 10; box-shadow: none; border: 1px solid var(--line); padding: var(--space-3); }
   /* Inside a sheet the list scrolls on its own so Unfollow stays in reach. */
   .panel.inline :global(.checks) { max-height: 34vh; overflow-y: auto; }
-  .eyebrow { font-size: calc(11px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 4px; }
-  .unfollow { width: 100%; margin-top: 10px; padding: 9px; border-radius: 10px; color: var(--danger); font-weight: 600; font-size: calc(14px * var(--size-app)); border: 1px solid var(--line); }
+  .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: var(--space-1); }
+  .unfollow { width: 100%; margin-top: var(--space-3); padding: var(--space-2); border-radius: var(--radius-sm); color: var(--danger); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); border: 1px solid var(--line); }
   .unfollow:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
 </style>

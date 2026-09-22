@@ -23,6 +23,7 @@
   import ItemActions from '$lib/components/ItemActions.svelte';
   import NoteEditor from '$lib/components/NoteEditor.svelte';
   import NoteBlock from '$lib/components/NoteBlock.svelte';
+  import ReadOnSiteLink from '$lib/components/ReadOnSiteLink.svelte';
 
   const itemId = $derived(Number(page.params.item));
   let item = $state<RiverItem | null>(null);
@@ -109,7 +110,7 @@
     {#if item.summary && item.summary !== item.title}<p class="summary">{item.summary}</p>{/if}
 
     <footer>
-      <a class="out" {href} target="_blank" rel="noopener" onclick={outbound}>{isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : 'Read on original site'} <span aria-hidden="true">↗</span></a>
+      <ReadOnSiteLink {href} label={isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : undefined} onclick={outbound} />
       {#if !session.user}
         <p class="note">Posts are read here by people with an account on this instance. <a href="/login">Sign in</a> to read it without leaving, or follow {source} to get what they publish next.</p>
       {/if}
@@ -134,29 +135,27 @@
 {/if}
 
 <style>
-  .crumbs { font-size: calc(13px * var(--size-app)); color: var(--text-3); margin: 0 0 12px; }
+  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); margin: 0 0 var(--space-3); }
   .crumbs a { color: var(--text-2); }
   .crumbs a:hover { color: var(--text); }
 
   .post { max-width: 680px; }
-  header { display: flex; align-items: center; gap: 8px; font-size: calc(13px * var(--size-app)); color: var(--text-2); min-width: 0; }
-  .who { display: flex; align-items: center; gap: 8px; min-width: 0; color: inherit; }
+  header { display: flex; align-items: center; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); min-width: 0; }
+  .who { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: inherit; }
   .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dot { color: var(--text-3); }
   header time { color: var(--text-3); white-space: nowrap; }
   .spacer { flex: 1; }
 
-  h1 { margin: 14px 0 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(27px * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
-  .byline { margin: 10px 0 0; font-size: calc(14px * var(--size-app)); color: var(--text-3); display: flex; gap: 6px; flex-wrap: wrap; }
-  .hero { width: 100%; border-radius: var(--radius-sm); margin-top: 18px; background: var(--surface-2); }
-  .summary { font-family: var(--font-reading); font-size: calc(17px * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: 18px 0 0; }
+  h1 { margin: var(--space-4) 0 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
+  .byline { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .hero { width: 100%; border-radius: var(--radius-sm); margin-top: var(--space-4); background: var(--surface-2); }
+  .summary { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: var(--space-4) 0 0; }
 
-  footer { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
-  .out { display: inline-flex; align-items: center; gap: 6px; padding: 12px 20px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(15px * var(--size-app)); }
-  .out:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .note { margin: 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); line-height: 1.5; }
+  footer { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); }
+  .note { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.5; }
   .note a { color: var(--accent); }
 
-  .empty { color: var(--text-3); font-size: calc(15px * var(--size-app)); }
+  .empty { color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
   .empty a { color: var(--accent); }
 </style>

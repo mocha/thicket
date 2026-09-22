@@ -59,7 +59,8 @@ admin.get("/users", async (c) => {
   await requireAdmin(c);
   const rows = await db.execute(sql`
     select u.id, u.handle, u.display_name as "displayName", u.is_admin as "isAdmin", u.profile_visibility as "profileVisibility",
-           u.created_at as "createdAt", (select max(s.last_seen_at) from sessions s where s.user_id = u.id) as "lastSeenAt",
+           u.created_at as "createdAt", (select ua.updated_at from user_avatars ua where ua.user_id = u.id) as "avatarUpdatedAt",
+           (select max(s.last_seen_at) from sessions s where s.user_id = u.id) as "lastSeenAt",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = u.id) as following,
            (select count(*)::int from collections col where col.user_id = u.id and col.parent_id is not null) as collections,
            (select count(*)::int from bookmarks b where b.user_id = u.id) as bookmarks,

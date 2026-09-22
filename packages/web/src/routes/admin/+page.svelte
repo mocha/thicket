@@ -11,7 +11,22 @@
   import type { StarterCandidate } from '$lib/api';
   import { relativeTime } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
-  import Monogram from '$lib/components/Monogram.svelte';
+  import Avatar from '$lib/components/Avatar.svelte';
+  import Badge from '$lib/components/Badge.svelte';
+  import Button from '$lib/components/Button.svelte';
+  import Field from '$lib/components/Field.svelte';
+  import Input from '$lib/components/Input.svelte';
+
+  /**
+   * "last active 23h ago" while relativeTime is still giving a relative form
+   * (just now / 5m / 3h / 2d); once it falls back to an absolute date ("Aug
+   * 12"), "ago" stops making sense, so we drop it: "last active Aug 12".
+   */
+  function lastActive(iso: string): string {
+    const r = relativeTime(iso);
+    if (r === 'just now' || /^\d+[mhd]$/.test(r)) return `last active ${r}${r === 'just now' ? '' : ' ago'}`;
+    return `last active ${r}`;
+  }
 
   const me = $derived(session.user);
   let instance = $state<(InstanceStatus & { signupsStored: SignupPolicy | null }) | null>(null);
@@ -149,8 +164,12 @@
   <section class="card">
     <h2>This instance</h2>
     <form class="inline" onsubmit={(e) => { e.preventDefault(); void saveName(); }}>
-      <label><span>Name</span><input type="text" bind:value={name} maxlength="60" placeholder={instance.url.replace(/^https?:\/\//, '')} /></label>
-      <button type="submit" disabled={name.trim() === instance.name}>Save</button>
+      <Field label="Name" class="grow">
+        {#snippet children({ id, describedBy, invalid })}
+          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={name} maxlength={60} placeholder={instance!.url.replace(/^https?:\/\//, '')} />
+        {/snippet}
+      </Field>
+      <Button type="submit" size="sm" disabled={name.trim() === instance.name}>Save</Button>
     </form>
     <fieldset>
       <legend>Who can sign up</legend>
@@ -168,8 +187,12 @@
   <section class="card">
     <h2>Invite links</h2>
     <form class="mint" onsubmit={(e) => { e.preventDefault(); void mint(); }}>
-      <input type="text" bind:value={inviteNote} placeholder="Who is this for? (optional note)" maxlength="120" />
-      <button type="submit" class="primary" disabled={minting}>{minting ? 'Creating…' : 'New invite link'}</button>
+      <Field label="Who is this invite for?" hideLabel class="grow">
+        {#snippet children({ id, describedBy, invalid })}
+          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={inviteNote} placeholder="Who is this for? (optional note)" maxlength={120} />
+        {/snippet}
+      </Field>
+      <Button type="submit" variant="primary" size="sm" disabled={minting}>{minting ? 'Creating…' : 'New invite link'}</Button>
     </form>
     {#if openInvites.length}
       <ul class="invites">
@@ -177,8 +200,8 @@
           <li>
             <span class="note">{inv.note ?? 'Invite'}</span>
             <span class="exp">{inv.expiresAt ? `expires ${new Date(inv.expiresAt).toLocaleDateString()}` : ''}</span>
-            <button onclick={() => copyInvite(inv)}>Copy link</button>
-            <button class="danger" onclick={() => revoke(inv)}>Revoke</button>
+            <Button size="sm" onclick={() => copyInvite(inv)}>Copy link</Button>
+            <Button variant="danger" size="sm" onclick={() => revoke(inv)}>Revoke</Button>
           </li>
         {/each}
       </ul>
@@ -219,35 +242,29 @@
   </section>
 
   <section class="card">
-    <h2>Accounts <span class="n">{users.length}</span></h2>
+    <h2>Accounts <Badge>{users.length}</Badge></h2>
     {#if issued}
       <div class="issued" role="status">
         <p><strong>Temporary password for @{issued.handle}:</strong> <code>{issued.password}</code></p>
         <p class="help">Pass it on however you like. It won’t be shown again; they should change it in Settings.</p>
-        <div class="row"><button onclick={copyIssued}>Copy</button><button onclick={() => (issued = null)}>Done</button></div>
+        <div class="row"><Button size="sm" onclick={copyIssued}>Copy</Button><Button size="sm" onclick={() => (issued = null)}>Done</Button></div>
       </div>
     {/if}
     <ul class="users">
       {#each users as u (u.id)}
         <li class:busy={busyId === u.id}>
-          <Monogram name={u.displayName ?? u.handle} size={36} />
+          <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={36} v={u.avatarUpdatedAt} />
           <div class="who">
-            <a class="handle" href={profileHref(u.handle)}>{u.displayName ?? u.handle}<span class="h"> @{u.handle}</span></a>
-            <div class="facts">
-              {#if u.isAdmin}<span class="tag">Admin</span>{/if}
-              {#if u.profileVisibility === 'private'}<span class="tag">Private</span>{/if}
-              {u.following} {u.following === 1 ? 'feed' : 'feeds'} · {u.collections} {u.collections === 1 ? 'collection' : 'collections'} · {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'}
-              · joined {relativeTime(u.createdAt)}{#if u.invitedBy} via @{u.invitedBy}{/if}
-              {#if u.lastSeenAt} · seen {relativeTime(u.lastSeenAt)}{/if}
+            <div class="line">
+              <a class="name" href={profileHref(u.handle)}>{u.displayName ?? u.handle}</a><span class="handle">{' · '}@{u.handle}{#if u.isAdmin}{' · '}<Badge>Admin</Badge>{/if}{#if u.profileVisibility === 'private'}{' · '}<Badge>Private</Badge>{/if}{#if u.id === me?.id}{' · '}<Badge>You</Badge>{/if}</span>
             </div>
-          </div>
-          <div class="acts">
+            <div class="facts">{u.following} {u.following === 1 ? 'feed' : 'feeds'} · {u.collections} {u.collections === 1 ? 'collection' : 'collections'} · {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'} · joined {relativeTime(u.createdAt)}{#if u.invitedBy}{' via @'}{u.invitedBy}{/if}{#if u.lastSeenAt}{' · '}{lastActive(u.lastSeenAt)}{/if}</div>
             {#if u.id !== me?.id}
-              <button onclick={() => setAdmin(u, !u.isAdmin)} disabled={busyId === u.id}>{u.isAdmin ? 'Remove admin' : 'Make admin'}</button>
-              <button onclick={() => resetPassword(u)} disabled={busyId === u.id}>Reset password</button>
-              <button class="danger" onclick={() => remove(u)} disabled={busyId === u.id}>Delete</button>
-            {:else}
-              <span class="you">You</span>
+              <div class="acts">
+                <Button size="sm" onclick={() => setAdmin(u, !u.isAdmin)} disabled={busyId === u.id}>{u.isAdmin ? 'Remove admin' : 'Make admin'}</Button>
+                <Button size="sm" onclick={() => resetPassword(u)} disabled={busyId === u.id}>Reset password</Button>
+                <Button variant="danger" size="sm" onclick={() => remove(u)} disabled={busyId === u.id}>Delete</Button>
+              </div>
             {/if}
           </div>
         </li>
@@ -259,59 +276,59 @@
 {/if}
 
 <style>
-  .top { margin-bottom: 14px; }
-  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; }
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
-  code { font-size: calc(12px * var(--size-app)); background: var(--surface-2); padding: 1px 6px; border-radius: 6px; }
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
-  h2 { font-size: calc(16px * var(--size-app)); margin: 0 0 10px; display: flex; align-items: baseline; gap: 8px; }
-  h2 .n { font-size: calc(13px * var(--size-app)); color: var(--text-3); font-weight: 400; }
-  .help { margin: 0; font-size: calc(14px * var(--size-app)); color: var(--text-3); }
-  .inline { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 14px; }
-  .inline label { flex: 1; display: flex; flex-direction: column; gap: 6px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  input[type='text'] { padding: 10px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(15px * var(--size-app)); font-family: inherit; }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  button { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(13px * var(--size-app)); color: var(--text-2); background: var(--surface); white-space: nowrap; }
-  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  button.danger { color: var(--danger); }
-  button:disabled { opacity: 0.5; }
-  fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
-  fieldset + fieldset { margin-top: 18px; }
-  legend { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); padding: 0; margin-bottom: 6px; }
-  .radio { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
-  .radio input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
-  .radio span { display: flex; flex-direction: column; gap: 2px; font-size: calc(14px * var(--size-app)); }
-  .radio small { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
-  .mint { display: flex; gap: 8px; }
-  .mint input { flex: 1; min-width: 0; }
-  .packs { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 6px; }
-  .packs li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg); border: 1px solid transparent; }
+  .top { margin-bottom: var(--space-4); }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
+  /* 2px is an optical nudge under the title, not a spacing step. */
+  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  code { font-size: calc(var(--text-sm) * var(--size-app)); /* 1px vertical is optical: an inline code chip stays on the text's line. */ background: var(--surface-2); padding: 1px var(--space-2); border-radius: var(--radius-xs); }
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
+  h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 var(--space-3); display: flex; align-items: baseline; gap: var(--space-2); }
+  .help { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .inline { display: flex; gap: var(--space-2); align-items: flex-end; margin-bottom: var(--space-4); }
+  /* The field takes the room the button beside it doesn't. */
+  .inline :global(.grow), .mint :global(.grow) { flex: 1; min-width: 0; }
+  fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+  fieldset + fieldset { margin-top: var(--space-4); }
+  legend { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); padding: 0; margin-bottom: var(--space-2); }
+  .radio { display: flex; align-items: flex-start; gap: var(--space-3); cursor: pointer; }
+  .radio input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  /* The ring these used to borrow from the instance-name box, now said
+     outright. A dial isn't typed into, so it only counts as keyboard focus
+     when you actually tabbed to it. */
+  .radio input:focus-visible, .packs input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  /* 2px between a choice and its explanation is optical, not a spacing step. */
+  .radio span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .radio small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .mint { display: flex; gap: var(--space-2); }
+  .packs { list-style: none; margin: var(--space-3) 0; padding: 0; display: grid; gap: var(--space-2); }
+  .packs li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); border: 1px solid transparent; }
   .packs li.on { border-color: var(--accent); }
-  .packs label { display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer; }
+  .packs label { display: flex; align-items: center; gap: var(--space-2); flex: 1; cursor: pointer; }
   .packs input { accent-color: var(--accent); }
   .pk { display: flex; flex-direction: column; }
-  .pk small { color: var(--text-3); font-size: calc(12.5px * var(--size-app)); }
+  .pk small { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   @media (min-width: 760px) { .packs { grid-template-columns: repeat(2, 1fr); } }
-  .invites { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  .invites li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg); font-size: calc(14px * var(--size-app)); }
+  .invites { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+  .invites li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); }
   .invites .note { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .invites .exp { font-size: calc(12px * var(--size-app)); color: var(--text-3); white-space: nowrap; }
-  .invites button { padding: 6px 10px; }
-  .issued { background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid var(--accent); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
-  .issued p { margin: 0 0 6px; font-size: calc(14px * var(--size-app)); }
-  .issued code { font-size: calc(16px * var(--size-app)); user-select: all; }
-  .row { display: flex; gap: 8px; }
+  .invites .exp { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; }
+  .issued { background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); }
+  .issued p { margin: 0 0 var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .issued code { font-size: calc(var(--text-base) * var(--size-app)); user-select: all; }
+  .row { display: flex; gap: var(--space-2); }
   .users { list-style: none; margin: 0; padding: 0; }
-  .users li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
-  .users li:first-child { border-top: 0; padding-top: 4px; }
+  .users li { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
+  .users li:first-child { border-top: 0; padding-top: var(--space-1); }
   .users li.busy { opacity: 0.6; }
-  .who { flex: 1; min-width: 200px; }
-  .handle { font-weight: 600; }
-  .handle .h { color: var(--text-3); font-weight: 400; font-size: calc(13px * var(--size-app)); }
-  .facts { font-size: calc(13px * var(--size-app)); color: var(--text-3); margin-top: 2px; }
-  .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; margin-right: 4px; }
-  .acts { display: flex; gap: 6px; flex-wrap: wrap; }
-  .acts button { padding: 6px 10px; }
-  .you { font-size: calc(13px * var(--size-app)); color: var(--text-3); padding: 6px 4px; }
-  .status { text-align: center; color: var(--text-3); padding: 30px 0; }
+  /* Two or three stacked rows, all aligned under the name (not the avatar):
+     name + handle + badges, then the account facts, then the actions —
+     skipped entirely on your own row, where the "You" badge on row one
+     already says there is nothing to act on. */
+  .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+  .line { line-height: 1.4; }
+  .name { font-weight: 600; }
+  .handle { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .facts { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .acts { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-1); }
+  .status { text-align: center; color: var(--text-3); padding: var(--space-6) 0; }
 </style>

@@ -10,7 +10,9 @@
 <style>
   .mono {
     display: inline-grid; place-items: center; flex: none;
-    width: var(--s); height: var(--s); border-radius: 30%;
+    width: var(--s); height: var(--s); border-radius: var(--radius-avatar);
+    /* Deliberately literal: the ground here is a hue picked from the person’s name, not a
+       palette color, so the initials are white on every theme. */
     background: hsl(var(--h) 35% 45%); color: #fff;
     font-size: calc(var(--s) * 0.55); font-weight: 700; line-height: 1;
   }

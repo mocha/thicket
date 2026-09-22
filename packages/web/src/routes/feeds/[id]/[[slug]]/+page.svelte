@@ -8,7 +8,8 @@
   import { feedOrigin, longAgo } from '$lib/time';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import River from '$lib/components/River.svelte';
-  import FollowButton from '$lib/components/FollowButton.svelte';
+  import FollowControl from '$lib/components/FollowControl.svelte';
+  import IconButton from '$lib/components/IconButton.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -57,8 +58,8 @@
         <h1>{feedName(feed)}</h1>
         {#if session.user}
           <div class="actions">
-            <FollowButton feedId={feed.id} bind:ids name={feedName(feed)} onchange={() => void loadFeed()} />
-            <a class="btn" href="/feeds/{feed.id}/settings">Settings</a>
+            <FollowControl feedId={feed.id} bind:ids name={feedName(feed)} onchange={() => void loadFeed()} />
+            <IconButton icon="gear" variant="bordered" size="lg" href="/feeds/{feed.id}/settings" label="Settings" title="Settings" />
           </div>
         {/if}
       </div>
@@ -100,22 +101,24 @@
 </div>
 
 <style>
-  .crumbs { font-size: calc(13px * var(--size-app)); color: var(--text-3); margin-bottom: 8px; }
+  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); margin-bottom: var(--space-2); }
   .crumbs a { color: var(--accent); font-weight: 600; }
-  .profile { display: flex; gap: 14px; align-items: flex-start; }
+  .profile { display: flex; gap: var(--space-4); align-items: flex-start; }
   .who { flex: 1; min-width: 0; }
   /* The title takes what room it needs; the buttons sit to its right and drop underneath when the row runs out. */
-  .titlerow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 12px; }
-  h1 { flex: 1 1 14ch; min-width: 0; font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
-  .actions { display: flex; gap: 8px; align-items: center; flex: none; }
-  .host { display: inline-block; margin-top: 2px; font-size: calc(14px * var(--size-app)); color: var(--accent); font-weight: 600; }
-  .desc { margin: 8px 0 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px 8px; margin: 16px 0 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .titlerow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-2) var(--space-3); }
+  h1 { flex: 1 1 14ch; min-width: 0; font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
+  .actions { display: flex; gap: var(--space-2); align-items: center; flex: none; }
+  /* 2px is an optical nudge under the title, not a spacing step. */
+  .host { display: inline-block; margin-top: 2px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
+  .desc { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  /* 132px is the narrowest column that keeps the longest label, "Users following", on one line. */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: var(--space-3) var(--space-2); margin: var(--space-4) 0 0; padding: var(--space-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  /* 2px between a label and its number is optical, not a spacing step. */
   .stats div { display: flex; flex-direction: column; gap: 2px; }
-  dt { font-size: calc(11px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
-  dd { margin: 0; font-weight: 600; font-size: calc(15px * var(--size-app)); }
-  .banners { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
-  .river { margin-top: 14px; }
-  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 18px 0; margin: 0; }
+  dt { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+  dd { margin: 0; font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
+  .banners { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }
+  .river { margin-top: var(--space-4); }
+  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
 </style>

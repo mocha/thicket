@@ -94,31 +94,31 @@
 </footer>
 
 <style>
-  .hero { display: grid; gap: 28px; padding: 20px 0 8px; }
-  h1 { font-family: var(--font-headings); font-size: clamp(34px, 5vw, 52px); line-height: 1.08; margin: 0 0 16px; letter-spacing: -0.015em; }
-  .sub { font-size: clamp(18px, 2.2vw, 22px); color: var(--text); margin: 0 0 14px; line-height: 1.35; }
-  .body { color: var(--text-2); margin: 0; font-size: calc(16px * var(--size-app)); max-width: 46ch; }
+  .hero { display: grid; gap: var(--space-6); padding: var(--space-5) 0 var(--space-2); }
+  h1 { font-family: var(--font-headings); font-size: clamp(34px, 5vw, 52px); line-height: 1.08; margin: 0 0 var(--space-4); letter-spacing: -0.015em; }
+  .sub { font-size: clamp(18px, 2.2vw, 22px); color: var(--text); margin: 0 0 var(--space-4); line-height: 1.35; }
+  .body { color: var(--text-2); margin: 0; font-size: calc(var(--text-base) * var(--size-app)); max-width: 46ch; }
   .auth { align-self: start; }
-  hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: calc(var(--space-6) + var(--space-1)) 0; }
   .longer p { font-family: var(--font-headings); font-size: clamp(19px, 2.4vw, 24px); line-height: 1.45; margin: 0; max-width: 64ch; }
-  h2 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0 0 16px; }
-  .features ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
-  .features li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
-  .features svg { color: var(--accent); margin-bottom: 10px; }
-  .features h3 { margin: 0 0 6px; font-size: calc(17px * var(--size-app)); }
-  .features p { margin: 0; color: var(--text-2); font-size: calc(15px * var(--size-app)); line-height: 1.45; }
-  .fine { margin: 18px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
-  .apart ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; }
-  .apart h3 { font-family: var(--font-headings); margin: 0 0 5px; font-size: calc(18px * var(--size-headings)); }
-  .apart p { margin: 0; color: var(--text-2); font-size: calc(15px * var(--size-app)); line-height: 1.5; }
-  footer { margin: 44px 0 0; padding-top: 20px; border-top: 1px solid var(--line); color: var(--text-3); font-size: calc(14px * var(--size-app)); }
+  h2 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-4); }
+  .features ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+  .features li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-4); }
+  .features svg { color: var(--accent); margin-bottom: var(--space-3); }
+  .features h3 { margin: 0 0 var(--space-2); font-size: calc(var(--text-base) * var(--size-headings)); font-weight: 700; }
+  .features p { margin: 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.45; }
+  .fine { margin: var(--space-4) 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .apart ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-5); }
+  .apart h3 { font-family: var(--font-headings); margin: 0 0 var(--space-1); font-size: calc(var(--text-base) * var(--size-headings)); font-weight: 700; }
+  .apart p { margin: 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.5; }
+  footer { margin: calc(var(--space-6) + var(--space-3)) 0 0; padding-top: var(--space-5); border-top: 1px solid var(--line); color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   footer p { margin: 0; max-width: 70ch; }
   footer a { color: var(--accent); font-weight: 600; }
   @media (min-width: 820px) {
-    .hero { grid-template-columns: 2fr 1fr; align-items: center; gap: 48px; padding: 36px 0 16px; }
+    .hero { grid-template-columns: 2fr 1fr; align-items: center; gap: calc(var(--space-6) + var(--space-4)); padding: calc(var(--space-6) + var(--space-1)) 0 var(--space-4); }
     .features ul { grid-template-columns: repeat(3, 1fr); }
     .features li:nth-child(4), .features li:nth-child(5) { grid-column: span 1; }
-    .apart ul { grid-template-columns: repeat(2, 1fr); gap: 24px 36px; }
+    .apart ul { grid-template-columns: repeat(2, 1fr); gap: var(--space-5) calc(var(--space-6) + var(--space-1)); }
   }
   @media (min-width: 820px) and (max-width: 1099px) { .features ul { grid-template-columns: repeat(2, 1fr); } }
 </style>

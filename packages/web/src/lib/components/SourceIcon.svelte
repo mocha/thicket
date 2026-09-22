@@ -26,7 +26,9 @@
 
 <style>
   .icon {
-    width: var(--s); height: var(--s); flex: none; border-radius: 30%; object-fit: cover;
+    width: var(--s); height: var(--s); flex: none; border-radius: var(--radius-avatar); object-fit: cover;
+    /* Deliberately literal: a hairline drawn inside the icon so a pale favicon still has an edge.
+       It has to be the same faint black on every theme, so it is not a palette color. */
     background: var(--surface-2); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
   }
 </style>

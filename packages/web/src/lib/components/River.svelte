@@ -20,6 +20,7 @@
   import { marks, loadMarks, anchorFor, advance, begin, recount, countText } from '$lib/marks.svelte';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import VisitorMore from './VisitorMore.svelte';
+  import Button from '$lib/components/Button.svelte';
 
   let { collection = null, feed = null, showSource = true, emptyTitle = 'Nothing here yet', emptyBody = 'thicket shows the posts of sites you follow, newest first, with nothing in between. Add a site by its address and its posts start arriving here, or look through Explore to see what other people here read.', emptyHref = null, emptyCta = 'Add a feed', emptyAction = () => openAddFeed({ via: 'empty_river' }) }: {
     collection?: number | null; feed?: number | null; showSource?: boolean;
@@ -239,8 +240,8 @@
         <h2>{emptyTitle}</h2>
         <p>{emptyBody}</p>
         <div class="ctas">
-          {#if emptyHref}<a class="cta" href={emptyHref}>{emptyCta}</a>{:else if emptyAction}<button type="button" class="cta" onclick={emptyAction}>{emptyCta}</button>{/if}
-          {#if collection === null && feed === null}<a class="cta ghost" href="/explore">Explore feeds</a>{/if}
+          {#if emptyHref}<Button variant="primary" size="lg" href={emptyHref}>{emptyCta}</Button>{:else if emptyAction}<Button variant="primary" size="lg" onclick={emptyAction}>{emptyCta}</Button>{/if}
+          {#if collection === null && feed === null}<Button size="lg" href="/explore">Explore feeds</Button>{/if}
         </div>
       </div>
     {/if}
@@ -274,8 +275,8 @@
         <h2>{emptyTitle}</h2>
         <p>{emptyBody}</p>
         <div class="ctas">
-          {#if emptyHref}<a class="cta" href={emptyHref}>{emptyCta}</a>{:else if emptyAction}<button type="button" class="cta" onclick={emptyAction}>{emptyCta}</button>{/if}
-          {#if collection === null && feed === null}<a class="cta ghost" href="/explore">Explore feeds</a>{/if}
+          {#if emptyHref}<Button variant="primary" size="lg" href={emptyHref}>{emptyCta}</Button>{:else if emptyAction}<Button variant="primary" size="lg" onclick={emptyAction}>{emptyCta}</Button>{/if}
+          {#if collection === null && feed === null}<Button size="lg" href="/explore">Explore feeds</Button>{/if}
         </div>
       </div>
     {/if}
@@ -287,33 +288,32 @@
 {/if}
 
 <style>
-  .river { display: flex; flex-direction: column; gap: 14px; }
-  .day { display: flex; flex-direction: column; gap: 14px; }
+  .river { display: flex; flex-direction: column; gap: var(--space-3); }
+  .day { display: flex; flex-direction: column; gap: var(--space-3); }
   /* Sticky within its own day, so the next day's heading pushes it away instead of piling on. Bleeds into main's side padding so card shadows don't peek past it. */
-  .dayhead { position: sticky; top: 0; z-index: 5; margin: 0 -12px; padding: 10px 12px 6px; font-size: calc(15px * var(--size-app)); font-weight: 600; color: var(--text-2); background: var(--bg); }
-  .dayhead::after { content: ''; position: absolute; left: 0; right: 0; bottom: -8px; height: 8px; background: linear-gradient(var(--bg), transparent); pointer-events: none; }
-  @media (min-width: 900px) { .dayhead { margin: 0 -24px; padding-left: 24px; padding-right: 24px; } }
-  .empty { text-align: center; padding: 50px 20px; color: var(--text-2); }
-  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(24px * var(--size-headings)); margin: 0 0 8px; }
+  .dayhead { position: sticky; top: 0; z-index: 5; margin: 0 calc(-1 * var(--space-3)); padding: var(--space-3) var(--space-3) var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text-2); background: var(--bg); }
+  .dayhead::after { content: ''; position: absolute; left: 0; right: 0; bottom: calc(-1 * var(--space-2)); height: 8px; background: linear-gradient(var(--bg), transparent); pointer-events: none; }
+  @media (min-width: 900px) { .dayhead { margin: 0 calc(-1 * var(--space-5)); padding-left: var(--space-5); padding-right: var(--space-5); } }
+  .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
+  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
   .empty p { margin: 0 auto; max-width: 440px; }
-  .ctas { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
-  .cta { display: inline-block; background: var(--accent); color: var(--accent-ink); padding: 12px 20px; border-radius: 999px; font-weight: 600; }
-  .cta.ghost { background: var(--surface); color: var(--text-2); border: 1px solid var(--line); }
-  .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 18px 0; margin: 0; }
+  .ctas { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; margin-top: var(--space-4); }
+  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
   .status.error { color: var(--danger); }
   .sentinel { height: 1px; }
 
   /* Paged: a fixed frame, nothing scrolls, nothing moves. */
   .river.paged { gap: 0; overflow: hidden; }
-  /* "What's new": the line where the new posts end. Two colours only and no motion, so it reads on e-ink. */
-  .divider { display: flex; align-items: center; gap: 12px; margin: 2px 0; color: var(--text-2); font-size: calc(13px * var(--size-app)); font-weight: 600; }
+  /* "What's new": the line where the new posts end. Two colors only and no motion, so it reads on e-ink. */
+  /* 2px is an optical nudge so the rule sits between two cards, not against one. */
+  .divider { display: flex; align-items: center; gap: var(--space-3); margin: 2px 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .divider::before, .divider::after { content: ''; flex: 1; border-top: 2px solid var(--accent); }
   .divider span { flex: none; }
-  .newn { color: var(--accent); font-weight: 700; margin-left: 10px; }
+  .newn { color: var(--accent); font-weight: 700; margin-left: var(--space-3); }
   .newn button, .newtop button { font: inherit; font-weight: 600; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-  .newtop { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -4px 0 -2px; font-size: calc(13px * var(--size-app)); color: var(--text-2); font-weight: 600; }
-  .pagehead { display: flex; align-items: baseline; justify-content: space-between; height: 34px; padding: 6px 2px 0; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
+  .newtop { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: calc(-1 * var(--space-1)) 0 -2px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); font-weight: 600; }
+  .pagehead { display: flex; align-items: baseline; justify-content: space-between; height: 34px; padding: var(--space-2) 2px 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .pagehead .when { font-weight: 600; }
-  .pagehead .n { font-size: calc(13px * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .pagehead .n { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
   .grid { display: grid; align-content: start; }
 </style>

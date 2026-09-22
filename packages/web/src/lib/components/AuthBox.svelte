@@ -9,6 +9,9 @@
   import { goto } from '$app/navigation';
   import { api, authApi, ApiError, type InstanceStatus } from '$lib/api';
   import { setMe } from '$lib/session.svelte';
+  import Tabs from './Tabs.svelte';
+  import Field from './Field.svelte';
+  import Input from './Input.svelte';
 
   let { initial = 'signup' }: { initial?: 'signup' | 'login' } = $props();
   // svelte-ignore state_referenced_locally
@@ -25,6 +28,10 @@
   const needsInvite = $derived(status?.signups === 'invite');
   const closed = $derived(status?.signups === 'closed');
   const canSignup = $derived(handleOk && password.length >= 8 && (!needsInvite || inviteCode.trim().length > 0));
+  const TABS = $derived([
+    { value: 'signup', label: 'Create account', disabled: closed },
+    { value: 'login', label: 'Log in' }
+  ]);
 
   onMount(() => {
     authApi.status().then((s) => { status = s; if (s.signups === 'closed') mode = 'login'; }).catch(() => (status = { name: 'thicket', url: '', signups: 'open', visitorLimit: true }));
@@ -50,63 +57,82 @@
 </script>
 
 <div class="box">
-  <div class="tabs" role="tablist">
-    <button role="tab" aria-selected={mode === 'signup'} class:on={mode === 'signup'} onclick={() => { mode = 'signup'; error = null; }} disabled={closed}>Create account</button>
-    <button role="tab" aria-selected={mode === 'login'} class:on={mode === 'login'} onclick={() => { mode = 'login'; error = null; }}>Log in</button>
-  </div>
+  <Tabs
+    class="tabs"
+    tabs={TABS}
+    value={mode}
+    onchange={(v) => { mode = v as 'signup' | 'login'; error = null; }}
+    label="Create an account or log in"
+    panel="auth-panel"
+    fill
+  />
 
-  {#if mode === 'signup' && closed}
-    <p class="note">Sign-ups are closed on this instance. If you have an account, log in.</p>
-  {:else}
-    <form onsubmit={(e) => { e.preventDefault(); void submit(); }}>
-      {#if mode === 'signup' && needsInvite}
-        <label class:err={error?.field === 'inviteCode'}>
-          <span>Invite code</span>
-          <input type="text" bind:value={inviteCode} autocapitalize="off" spellcheck="false" placeholder="From the person who invited you" required />
-        </label>
-      {/if}
-      <label class:err={error?.field === 'handle'}>
-        <span>Handle</span>
-        <span class="at"><span aria-hidden="true">@</span><input type="text" bind:value={handle} autocomplete="username" autocapitalize="off" spellcheck="false" required placeholder="you" /></span>
-        {#if mode === 'signup'}<small>Your page will be /@{handleClean || 'you'}</small>{/if}
-      </label>
-      <label class:err={error?.field === 'password'}>
-        <span>Password</span>
-        <input type="password" bind:value={password} autocomplete={mode === 'signup' ? 'new-password' : 'current-password'} required minlength={mode === 'signup' ? 8 : undefined} />
-        {#if mode === 'signup'}<small>At least 8 characters.</small>{/if}
-      </label>
-      {#if error}<p class="bad" role="alert">{error.message}</p>{/if}
-      <button type="submit" class="go" disabled={busy || (mode === 'signup' ? !canSignup : !handleClean || !password)}>
-        {busy ? (mode === 'signup' ? 'Creating…' : 'Logging in…') : mode === 'signup' ? 'Create account' : 'Log in'}
-      </button>
-    </form>
-    {#if mode === 'signup'}
-      <p class="note">{#if needsInvite}This instance is invite-only.{:else}A handle and a password. Everything else is optional.{/if}{#if status?.name}{' '}You’re joining <strong>{status.name}</strong>.{/if}</p>
+  <div id="auth-panel" role="tabpanel">
+    {#if mode === 'signup' && closed}
+      <p class="note">Sign-ups are closed on this instance. If you have an account, log in.</p>
     {:else}
-      <p class="note">Forgot your password? There’s no email here: ask whoever runs this instance to reset it.</p>
+      <form onsubmit={(e) => { e.preventDefault(); void submit(); }}>
+        {#if mode === 'signup' && needsInvite}
+          <Field label="Invite code" error={error?.field === 'inviteCode' ? error.message : null}>
+            {#snippet children({ id, describedBy, invalid })}
+              <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={inviteCode} autocapitalize="off" spellcheck="false" placeholder="From the person who invited you" required />
+            {/snippet}
+          </Field>
+        {/if}
+        <Field
+          label="Handle"
+          hint={mode === 'signup' ? `Your page will be /@${handleClean || 'you'}` : undefined}
+          error={error?.field === 'handle' ? error.message : null}
+        >
+          {#snippet children({ id, describedBy, invalid })}
+            <Input
+              {id}
+              aria-describedby={describedBy}
+              {invalid}
+              inset
+              bind:value={handle}
+              autocomplete="username"
+              autocapitalize="off"
+              spellcheck="false"
+              required
+              placeholder="you"
+              style="--field-gap: var(--space-1)"
+            >
+              {#snippet leading()}<span aria-hidden="true">@</span>{/snippet}
+            </Input>
+          {/snippet}
+        </Field>
+        <Field
+          label="Password"
+          hint={mode === 'signup' ? 'At least 8 characters.' : undefined}
+          error={error?.field === 'password' ? error.message : null}
+        >
+          {#snippet children({ id, describedBy, invalid })}
+            <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={password} autocomplete={mode === 'signup' ? 'new-password' : 'current-password'} required minlength={mode === 'signup' ? 8 : undefined} />
+          {/snippet}
+        </Field>
+        {#if error && !error.field}<p class="bad" role="alert">{error.message}</p>{/if}
+        <button type="submit" class="go" disabled={busy || (mode === 'signup' ? !canSignup : !handleClean || !password)}>
+          {busy ? (mode === 'signup' ? 'Creating…' : 'Logging in…') : mode === 'signup' ? 'Create account' : 'Log in'}
+        </button>
+      </form>
+      {#if mode === 'signup'}
+        <p class="note">{#if needsInvite}This instance is invite-only.{:else}A handle and a password. Everything else is optional.{/if}{#if status?.name}{' '}You’re joining <strong>{status.name}</strong>.{/if}</p>
+      {:else}
+        <p class="note">Forgot your password? There’s no email here: ask whoever runs this instance to reset it.</p>
+      {/if}
     {/if}
-  {/if}
+  </div>
 </div>
 
 <style>
-  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
-  .tabs { display: flex; gap: 4px; background: var(--surface-2); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
-  .tabs button { flex: 1; padding: 9px; border-radius: 9px; font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
-  .tabs button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
-  .tabs button:disabled { opacity: 0.4; }
-  form { display: flex; flex-direction: column; gap: 12px; }
-  label { display: flex; flex-direction: column; gap: 5px; font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  small { font-weight: 400; color: var(--text-3); }
-  input { padding: 11px 13px; border-radius: 11px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); width: 100%; }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .at { display: flex; align-items: center; border-radius: 11px; border: 1px solid var(--line); background: var(--bg); padding-left: 12px; color: var(--text-3); font-size: calc(16px * var(--size-app)); }
-  .at input { border: 0; padding-left: 2px; background: transparent; }
-  .at:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .at input:focus { outline: none; }
-  .err input, .err .at { border-color: var(--danger); }
-  .go { margin-top: 2px; padding: 13px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(16px * var(--size-app)); }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); }
+  .box :global(.tabs) { margin-bottom: var(--space-4); }
+  form { display: flex; flex-direction: column; gap: var(--space-3); }
+  /* 2px is an optical nudge that lifts the button off the last field. */
+    .go { margin-top: 2px; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .go:disabled { opacity: 0.5; }
-  .bad { color: var(--danger); margin: 0; font-size: calc(14px * var(--size-app)); }
-  .note { margin: 12px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .note { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
   .note strong { color: var(--text-2); }
 </style>

@@ -5,9 +5,18 @@
   import { session, setMe } from '$lib/session.svelte';
   import { hostOf } from '$lib/time';
   import Monogram from '$lib/components/Monogram.svelte';
+  import Avatar from '$lib/components/Avatar.svelte';
+  import AvatarCropDialog from '$lib/components/AvatarCropDialog.svelte';
   import ActivityList from '$lib/components/ActivityList.svelte';
   import SectionAudience from '$lib/components/SectionAudience.svelte';
+  import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import NoteCard from '$lib/components/NoteCard.svelte';
+  import IconButton from '$lib/components/IconButton.svelte';
+  import Button from '$lib/components/Button.svelte';
+  import Badge from '$lib/components/Badge.svelte';
+  import Field from '$lib/components/Field.svelte';
+  import Input from '$lib/components/Input.svelte';
+  import Textarea from '$lib/components/Textarea.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
@@ -129,6 +138,10 @@
    */
   const su = $derived(session.user);
   const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
+  const VISIBILITY = [
+    { value: 'public', label: 'Anyone' },
+    { value: 'private', label: 'Only me' }
+  ];
 
   // The name/bio/homepage block: one "Edit profile" button turns it into a
   // small form that saves all three together, then settles back into text.
@@ -167,6 +180,61 @@
     }
   }
 
+  // Profile picture: pick a file, frame it in the cropper, upload. On success
+  // both the signed-in user and this page's copy learn the new timestamp, so
+  // the new picture shows everywhere at once.
+  let fileInput = $state<HTMLInputElement | null>(null);
+  let pendingFile = $state<File | null>(null);
+  let removingAvatar = $state(false);
+  function pickPhoto() { fileInput?.click(); }
+
+  // Tapping your avatar. With a photo, both actions (change, remove) live in a
+  // small menu hung off the avatar; with no photo there's only one thing to do,
+  // so we skip the menu and open the file picker straight away.
+  let photoMenuOpen = $state(false);
+  let photoMenuAnchor = $state<HTMLElement | null>(null);
+  let photoMenuPanel = $state<HTMLElement | null>(null);
+  function onPhotoClick() {
+    if (profile && !profile.private && profile.avatarUpdatedAt) photoMenuOpen = !photoMenuOpen;
+    else pickPhoto();
+  }
+  $effect(() => {
+    if (!photoMenuOpen) return;
+    const onDoc = (e: MouseEvent) => { if (!photoMenuPanel?.contains(e.target as Node) && !photoMenuAnchor?.contains(e.target as Node)) photoMenuOpen = false; };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') photoMenuOpen = false; };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  });
+  function onFilePicked(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const f = input.files?.[0] ?? null;
+    input.value = ''; // let the same file be picked again after a cancel
+    if (f) pendingFile = f;
+  }
+  function onAvatarSaved(avatarUpdatedAt: string) {
+    if (session.user) setMe({ ...session.user, avatarUpdatedAt });
+    if (profile && !profile.private) profile.avatarUpdatedAt = avatarUpdatedAt;
+    pendingFile = null;
+    api.event('avatar_changed', { action: 'set' });
+    showToast('Profile picture updated');
+  }
+  async function removePhoto() {
+    if (removingAvatar) return;
+    removingAvatar = true;
+    try {
+      await authApi.removeAvatar();
+      if (session.user) setMe({ ...session.user, avatarUpdatedAt: null });
+      if (profile && !profile.private) profile.avatarUpdatedAt = null;
+      api.event('avatar_changed', { action: 'remove' });
+      showToast('Profile picture removed');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    } finally {
+      removingAvatar = false;
+    }
+  }
+
   // The public/private switch and each section's "who sees this": every one
   // saves the moment it's picked, the way the old settings toggles did.
   async function save(patch: Parameters<typeof authApi.update>[0], label: string) {
@@ -197,16 +265,48 @@
     <p class="ownerbar">This is your <strong>public profile</strong>. Depending on your settings, it's what everyone else sees.</p>
   {/if}
   <header class="who">
-    <Monogram name={profile.displayName ?? profile.handle} size={56} />
+    {#if profile.isMe}
+      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" bind:this={fileInput} onchange={onFilePicked} hidden />
+      <div class="photomenu" bind:this={photoMenuAnchor}>
+        <button type="button" class="photobtn" onclick={onPhotoClick} aria-haspopup={profile.avatarUpdatedAt ? 'menu' : undefined} aria-expanded={profile.avatarUpdatedAt ? photoMenuOpen : undefined} aria-label={profile.avatarUpdatedAt ? 'Profile picture options' : 'Add a profile picture'} title={profile.avatarUpdatedAt ? 'Profile picture options' : 'Add a profile picture'}>
+          <Avatar handle={profile.handle} name={profile.displayName ?? profile.handle} size={56} v={profile.avatarUpdatedAt} />
+          <span class="camera" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+          </span>
+        </button>
+        {#if photoMenuOpen}
+          <div class="menupanel" role="menu" aria-label="Profile picture" bind:this={photoMenuPanel}>
+            <button type="button" class="mi" role="menuitem" onclick={() => { photoMenuOpen = false; pickPhoto(); }}>Change photo</button>
+            {#if profile.avatarUpdatedAt}
+              <button type="button" class="mi danger" role="menuitem" onclick={() => { photoMenuOpen = false; void removePhoto(); }}>Remove photo</button>
+            {/if}
+          </div>
+        {/if}
+      </div>
+    {:else}
+      <Avatar handle={profile.handle} name={profile.displayName ?? profile.handle} size={56} v={profile.avatarUpdatedAt} />
+    {/if}
     <div class="names">
       {#if editing}
         <div class="edit">
-          <label><span>Display name</span><input type="text" bind:value={dname} maxlength="60" placeholder={profile.handle} /></label>
-          <label><span>About you</span><textarea bind:value={dbio} rows="3" maxlength="500" placeholder="A line or two. What you read, what you make."></textarea></label>
-          <label><span>Homepage</span><input type="url" inputmode="url" bind:value={dhome} placeholder="https://" /></label>
+          <Field label="Display name">
+            {#snippet children({ id, describedBy, invalid })}
+              <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={dname} maxlength={60} placeholder={profile!.handle} />
+            {/snippet}
+          </Field>
+          <Field label="About you">
+            {#snippet children({ id, describedBy, invalid })}
+              <Textarea {id} aria-describedby={describedBy} {invalid} inset bind:value={dbio} rows={3} maxlength={500} placeholder="A line or two. What you read, what you make." />
+            {/snippet}
+          </Field>
+          <Field label="Homepage">
+            {#snippet children({ id, describedBy, invalid })}
+              <Input {id} aria-describedby={describedBy} {invalid} inset type="url" inputmode="url" autocomplete="url" bind:value={dhome} placeholder="https://" />
+            {/snippet}
+          </Field>
           <div class="editrow">
-            <button type="button" class="ghost" onclick={() => (editing = false)} disabled={savingProfile}>Cancel</button>
-            <button type="button" class="save" onclick={saveEdit} disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save'}</button>
+            <Button onclick={() => (editing = false)} disabled={savingProfile}>Cancel</Button>
+            <Button variant="primary" onclick={saveEdit} disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save'}</Button>
           </div>
         </div>
       {:else}
@@ -217,16 +317,20 @@
     </div>
     {#if profile.isMe}
       {#if !editing}
-        <button type="button" class="iconbtn" onclick={startEdit} aria-label="Edit profile" title="Edit profile">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>
-        </button>
+        <div class="ownerctrls">
+          <IconButton icon="pencil" variant="bordered" size="lg" onclick={startEdit} label="Edit profile" title="Edit profile" />
+        </div>
       {/if}
     {:else if session.user}
-      <button class="btn" class:following={profile.people.isFollowing} onclick={toggleFollow} disabled={followBusy} aria-pressed={profile.people.isFollowing}>{profile.people.isFollowing ? 'Following' : 'Follow'}</button>
+      <Button onclick={toggleFollow} disabled={followBusy} aria-pressed={profile.people.isFollowing} style="flex: none">{profile.people.isFollowing ? 'Following' : 'Follow'}</Button>
     {:else}
-      <a class="btn" href="/login?next={encodeURIComponent(page.url.pathname)}">Follow</a>
+      <Button href="/login?next={encodeURIComponent(page.url.pathname)}" style="flex: none">Follow</Button>
     {/if}
   </header>
+
+  {#if profile.isMe && pendingFile}
+    <AvatarCropDialog file={pendingFile} onclose={() => (pendingFile = null)} onsaved={onAvatarSaved} />
+  {/if}
 
   {#if profile.isMe && su}
     <section>
@@ -237,10 +341,13 @@
             <span class="publabel">Who can see this page</span>
             <p class="hint">{su.profileVisibility === 'private' ? 'Hidden so only you can see this page. You still count toward feed follower numbers, but no one can tell it’s you.' : 'Anyone can open it and see the parts you share below.'}</p>
           </div>
-          <div class="seg two" role="radiogroup" aria-label="Who can see this page">
-            <button type="button" role="radio" aria-checked={su.profileVisibility === 'public'} class:on={su.profileVisibility === 'public'} onclick={() => save({ profileVisibility: 'public' }, 'Profile is public')}>Anyone</button>
-            <button type="button" role="radio" aria-checked={su.profileVisibility === 'private'} class:on={su.profileVisibility === 'private'} onclick={() => save({ profileVisibility: 'private' }, 'Profile is private')}>Only me</button>
-          </div>
+          <ChoiceGroup
+            class="vis"
+            options={VISIBILITY}
+            value={su.profileVisibility}
+            label="Who can see this page"
+            onchange={(v) => save({ profileVisibility: v as 'public' | 'private' }, v === 'public' ? 'Profile is public' : 'Profile is private')}
+          />
         </div>
       </div>
     </section>
@@ -248,7 +355,7 @@
 
   {#if profile.collections}
     <section>
-      <h2>Collections <span class="n">{profile.collections.length}</span></h2>
+      <h2>Collections <Badge>{profile.collections.length}</Badge></h2>
       <div class="card">
         {#if profile.isMe && su && su.profileVisibility !== 'private'}
           <div class="cardhead">
@@ -263,10 +370,10 @@
           <li class:nested={depth > 0}>
             <a href={publicCollectionHref(handle, c.slug)} style:--indent="{depth * 18}px">
               <div class="meta2">
-                <span class="name">{c.name}{#if isMe && audienceTag(c.visibility)} <span class="tag">{audienceTag(c.visibility)}</span>{/if}</span>
+                <span class="name">{c.name}{#if isMe && audienceTag(c.visibility)}<Badge class="aftertext">{audienceTag(c.visibility)}</Badge>{/if}</span>
                 {#if c.description}<span class="desc">{c.description}</span>{/if}
               </div>
-              {#if isMe && display.fresh && countText(marks.byId[c.id])}<span class="fresh">{countText(marks.byId[c.id])} new</span>{/if}
+              {#if isMe && display.fresh && countText(marks.byId[c.id])}<Badge tone="accent">{countText(marks.byId[c.id])} new</Badge>{/if}
               <span class="count">{c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'}</span>
               <span class="chev" aria-hidden="true">›</span>
             </a>
@@ -283,8 +390,25 @@
             <li class="new">
               {#if creating}
                 <form onsubmit={(e) => { e.preventDefault(); void createCollection(); }}>
-                  <input bind:this={newInput} type="text" bind:value={newName} placeholder="Name it, e.g. News" maxlength="60" disabled={newBusy} aria-label="New collection name" onkeydown={(e) => { if (e.key === 'Escape') creating = false; }} />
-                  <button type="submit" disabled={newBusy || !newName.trim()}>{newBusy ? 'Creating…' : 'Create'}</button>
+                  <Field label="New collection name" hideLabel class="grow">
+                    {#snippet children({ id })}
+                      <Input
+                        {id}
+                        bind:element={newInput}
+                        variant="create"
+                        inset
+                        bind:value={newName}
+                        placeholder="Name it, e.g. News"
+                        maxlength="60"
+                        disabled={newBusy}
+                        onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') creating = false; }}
+                      >
+                        {#snippet trailing()}
+                          <Button type="submit" variant="primary" disabled={newBusy || !newName.trim()}>{newBusy ? 'Creating…' : 'Create'}</Button>
+                        {/snippet}
+                      </Input>
+                    {/snippet}
+                  </Field>
                 </form>
               {:else}
                 <button class="add" onclick={() => { creating = true; queueMicrotask(() => newInput?.focus()); }}><span class="plus" aria-hidden="true">+</span> New collection</button>
@@ -304,7 +428,7 @@
 
   {#if profile.notes && (profile.notes.count > 0 || profile.isMe)}
     <section>
-      <h2>Notes <span class="n">{profile.notes.count}</span></h2>
+      <h2>Notes <Badge>{profile.notes.count}</Badge></h2>
       {#if profile.isMe}
         {#if su && su.profileVisibility !== 'private'}
           <div class="card">
@@ -341,7 +465,7 @@
 
   {#if profile.bookmarks}
     <section>
-      <h2>Bookmarks <span class="n">{profile.bookmarks.count}</span></h2>
+      <h2>Bookmarks <Badge>{profile.bookmarks.count}</Badge></h2>
       <div class="card">
         {#if profile.isMe && su && su.profileVisibility !== 'private'}
           <div class="cardhead">
@@ -372,7 +496,7 @@
 
   {#if profile.isMe || (following !== null && following.length > 0)}
     <section>
-      <h2>Following {#if following}<span class="n">{following.length}</span>{/if}</h2>
+      <h2>Following {#if following}<Badge>{following.length}</Badge>{/if}</h2>
       <div class="card">
         {#if following === null}
           <div class="pad"><p class="status">Loading…</p></div>
@@ -382,7 +506,7 @@
           <ul class="list">
             {#each following as p (p.handle)}
               <li><a href="/@{p.handle}">
-                <Monogram name={p.displayName ?? p.handle} size={34} />
+                <Avatar handle={p.handle} name={p.displayName ?? p.handle} size={34} v={p.avatarUpdatedAt} />
                 <div class="meta2"><span class="name">{p.displayName ?? p.handle}</span><span class="desc">@{p.handle}</span></div>
                 <span class="chev" aria-hidden="true">›</span>
               </a></li>
@@ -399,84 +523,81 @@
 {/if}
 
 <style>
-  .who { display: flex; gap: 16px; align-items: flex-start; margin: 8px 0 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .who { display: flex; gap: var(--space-4); align-items: flex-start; margin: var(--space-2) 0 var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); }
   .names { flex: 1; min-width: 0; }
   /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
-  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 0; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .handle { margin: 2px 0 0; color: var(--text-3); font-size: calc(15px * var(--size-app)); }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 2px is an optical nudge under the name, not a spacing step. */
+  .handle { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
   .site { color: var(--accent); font-weight: 600; }
-  .bio { margin: 10px 0 0; color: var(--text); font-size: calc(15px * var(--size-app)); white-space: pre-line; }
-  .btn { flex: none; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  .bio { margin: var(--space-3) 0 0; color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); white-space: pre-line; }
+  /* The avatar as a button: a camera badge in the corner says it's changeable. */
+  .photobtn { flex: none; position: relative; padding: 0; border-radius: var(--radius-avatar); line-height: 0; }
+  /* The camera badge hangs 3px off the avatar's corner: an optical overlap, not a spacing step. */
+  .photobtn .camera { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 2px var(--surface); }
+  .photobtn:hover { opacity: 0.92; }
+  .photobtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ownerctrls { flex: none; display: flex; align-items: center; gap: var(--space-2); }
+  /* The avatar's tap menu: hangs off the avatar, opening down and to the left. */
+  .photomenu { position: relative; flex: none; }
+  .menupanel { position: absolute; top: calc(100% + var(--space-2)); left: 0; z-index: 60; min-width: 200px; max-width: calc(100vw - 16px); background: var(--surface); border-radius: var(--radius-md); padding: var(--space-2); box-shadow: var(--shadow-menu); display: flex; flex-direction: column; }
+  .mi { display: block; width: 100%; text-align: left; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
+  .mi:hover { background: var(--surface-2); }
+  .mi.danger { color: var(--danger); }
   /* Edit: a quiet pencil, the same at every width. */
-  .iconbtn { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--text-3); }
-  .iconbtn:hover { background: var(--surface-2); color: var(--text); }
 
   /* Owner only: a muted one-line reminder in a soft box at the very top of the page. */
-  .ownerbar { margin: 0 0 18px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); font-size: calc(13px * var(--size-app)); color: var(--text-3); text-align: center; }
+  .ownerbar { margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--surface-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); text-align: center; }
 
   /* Every section's content sits in a card — the same surface + shadow the
      lists always used. The audience control rides at the top in a header bar. */
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .pad { padding: 16px; }
+  .pad { padding: var(--space-4); }
   /* A tinted control strip, not a list row: the background sets it apart from
      the white rows below, and the label sits right beside its buttons. */
-  .cardhead { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface-2); }
-  .ctrl-label { font-size: calc(13px * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
-  .cardhead :global(.seg) { flex: none; width: min(320px, 100%); }
+  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-2) var(--space-4); background: var(--surface-2); }
+  .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
+  .cardhead :global(.cg) { flex: none; width: min(320px, 100%); }
 
   /* Visibility: the label and its explanation on the left, the switch on the right. */
-  .visrow { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .visrow { display: flex; align-items: flex-start; gap: var(--space-3); flex-wrap: wrap; }
   .vislabel { flex: 1; min-width: 12ch; }
-  .publabel { display: block; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.25; }
-  .hint { margin: 2px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .publabel { display: block; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.25; }
+  /* 2px is an optical nudge under the label, not a spacing step. */
+  .hint { margin: 2px 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
 
-  /* The public/private switch on this page; the section controls reuse SectionAudience. */
-  .seg { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  .seg.two { margin-left: auto; flex: none; }
-  .seg button { padding: 7px 14px; font-size: calc(12.5px * var(--size-app)); font-weight: 600; color: var(--text-3); background: var(--surface); border-left: 1px solid var(--line); white-space: nowrap; }
-  .seg button:first-child { border-left: 0; }
-  .seg button.on { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+  /* The public/private switch sits at the right-hand end of its row. */
+  .visrow :global(.vis) { margin-left: auto; flex: none; }
 
   /* Editing name, bio and homepage right in the header. */
-  .edit { display: flex; flex-direction: column; gap: 10px; }
-  .edit label { display: flex; flex-direction: column; gap: 5px; font-size: calc(12px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .edit input, .edit textarea { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(15px * var(--size-app)); font-family: inherit; resize: vertical; }
-  .edit input:focus, .edit textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .editrow { display: flex; justify-content: flex-end; gap: 8px; }
-  .editrow button { padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: calc(14px * var(--size-app)); }
-  .editrow .ghost { border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
-  .editrow .save { background: var(--accent); color: var(--accent-ink); }
-  .editrow button:disabled { opacity: 0.5; }
+  .edit { display: flex; flex-direction: column; gap: var(--space-3); }
+  .editrow { display: flex; justify-content: flex-end; gap: var(--space-2); }
 
-  section { margin-bottom: 22px; }
-  h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; display: flex; align-items: baseline; gap: 8px; line-height: 1.25; }
-  /* A count badge, not floating text: a quiet neutral pill. (Accessibility contrast pass to come.) */
-  .n { font-size: calc(12px * var(--size-app)); font-weight: 600; color: var(--text-2); background: var(--surface-2); border-radius: 999px; padding: 1px 8px; font-variant-numeric: tabular-nums; }
+  section { margin-bottom: var(--space-5); }
+  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); display: flex; align-items: baseline; gap: var(--space-2); line-height: 1.25; }
   .list { list-style: none; margin: 0; padding: 0; }
-  li a { display: flex; align-items: center; gap: 12px; padding: 14px 16px 14px calc(16px + var(--indent, 0px)); border-top: 1px solid var(--line); }
+  li a { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-3) calc(var(--space-4) + var(--indent, 0px)); border-top: 1px solid var(--line); }
   /* A sub-collection is indented and its name sits quieter than its parent's, so the tree reads at a glance. */
   .nested .name { font-weight: 500; color: var(--text-2); }
   li:first-child a { border-top: 0; }
   .meta2 { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tag { font-size: calc(11px * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; vertical-align: middle; margin-left: 4px; }
-  .desc { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .count { font-size: calc(13px * var(--size-app)); color: var(--text-3); white-space: nowrap; }
-  .fresh { flex: none; font-size: calc(11.5px * var(--size-app)); font-weight: 700; line-height: 1.5; padding: 0 7px; border-radius: 999px; color: var(--accent-ink); background: var(--accent); white-space: nowrap; }
-  .chev { color: var(--text-3); font-size: calc(20px * var(--size-app)); }
-  .add { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(15px * var(--size-app)); text-align: left; }
+  /* A pill riding after a name needs its own gap: the words beside it are text, not a flex row. */
+  .name :global(.aftertext) { margin-left: var(--space-2); }
+  .desc { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; }
+  .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
+  .add { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); text-align: left; }
   li:first-child .add { border-top: 0; }
-  .plus { font-size: calc(20px * var(--size-app)); line-height: 1; width: 14px; }
-  .new form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
-  .new input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--accent); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); }
-  .new form button { padding: 0 16px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-  .new form button:disabled { opacity: 0.5; }
-  .status { color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 8px 0; margin: 0; }
+  .plus { font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; width: 14px; }
+  .new form { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
+  .new form :global(.grow) { flex: 1; min-width: 0; }
+  .status { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
   .status a { color: var(--accent); font-weight: 600; }
-  .notes { display: flex; flex-direction: column; gap: 14px; margin: 4px 0 0; padding: 0; list-style: none; }
-  .all { display: block; width: fit-content; margin: 12px 0 0 auto; color: var(--accent); font-weight: 600; font-size: calc(14px * var(--size-app)); }
-  .empty { text-align: center; padding: 50px 20px; color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .notes { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-1) 0 0; padding: 0; list-style: none; }
+  .all { display: block; width: fit-content; margin: var(--space-3) 0 0 auto; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
   .empty p { margin: 0; }
-  .join { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); margin-top: 30px; }
+  .join { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: var(--space-6); }
   .join a { color: var(--accent); font-weight: 600; }
 </style>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { openAddFeed } from '$lib/addfeed.svelte';
+  import Button from '$lib/components/Button.svelte';
 
   /** The primary "Add new feed" call to action. One button, one look, wherever
       it appears. `via` names the place it was pressed, for analytics; pass
@@ -7,18 +8,33 @@
   let { via, collectionIds }: { via: string; collectionIds?: number[] } = $props();
 </script>
 
-<button class="btn" type="button" onclick={() => openAddFeed(collectionIds ? { via, collectionIds } : { via })}>
-  <span aria-hidden="true">+</span> Add new feed
-</button>
+<span class="add-feed-cta">
+  <Button variant="primary" size="sm" onclick={() => openAddFeed(collectionIds ? { via, collectionIds } : { via })}>
+    <span class="plus" aria-hidden="true">+</span> Add new feed
+  </Button>
+</span>
 
 <style>
-  .btn { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 999px; border: 1px solid transparent; background: var(--accent); color: var(--accent-ink); font-size: calc(14px * var(--size-app)); font-weight: 600; white-space: nowrap; }
-  .btn:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
-  .btn span { font-size: calc(18px * var(--size-app)); line-height: 1; }
-  /* On a phone it steps down to a compact secondary action so it doesn't
-     outweigh the page title. */
+  /* The wrapper only exists so this one call to action can carry its own
+     responsive tweak; display:contents keeps it out of the layout, so the
+     button stays the flex child it was. */
+  .add-feed-cta {
+    display: contents;
+  }
+  .add-feed-cta :global(.btn) {
+    flex: none;
+  }
+  .plus {
+    font-size: 1.3em;
+    line-height: 1;
+  }
+  /* On a phone it tightens up so it doesn't outweigh the page title. */
   @media (max-width: 560px) {
-    .btn { padding: 6px 12px; gap: 5px; font-size: calc(11.5px * var(--size-app)); }
-    .btn span { font-size: calc(13px * var(--size-app)); }
+    .add-feed-cta :global(.btn) {
+      padding: var(--space-1) var(--space-3);
+    }
+    .plus {
+      font-size: 1.15em;
+    }
   }
 </style>

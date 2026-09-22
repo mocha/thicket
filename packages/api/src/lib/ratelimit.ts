@@ -11,7 +11,7 @@
  * CDN it can arrive as the router's address, or the CDN's, so every user
  * shares one bucket — `/api/health` reports what actually turned up, which is
  * worth checking on a new deployment. Password guessing targets an account,
- * so the per-handle window is the real defence and is unaffected by any of
+ * so the per-handle window is the real defense and is unaffected by any of
  * that; the per-address window is a looser backstop against handle
  * enumeration and sign-up floods, sized so a whole household behind one
  * address is not locked out by one person's typos.

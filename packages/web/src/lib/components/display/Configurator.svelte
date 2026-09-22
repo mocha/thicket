@@ -14,6 +14,7 @@
   import Tiles from './Tiles.svelte';
   import FontTable from './FontTable.svelte';
   import { APPEARANCE_ART, READING_ART } from './art';
+  import Button from '$lib/components/Button.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let open = $state(false);
@@ -62,11 +63,11 @@
       <footer>
         <button type="button" class="link" onclick={() => finish('advanced')}>Advanced options</button>
         <span class="spacer"></span>
-        {#if step > 0}<button type="button" onclick={() => step--}>Back</button>{/if}
+        {#if step > 0}<Button onclick={() => step--}>Back</Button>{/if}
         {#if step < STEPS.length - 1}
-          <button type="button" class="primary" onclick={() => step++}>Next</button>
+          <Button variant="primary" onclick={() => step++}>Next</Button>
         {:else}
-          <button type="button" class="primary" onclick={() => finish('done')}>Start reading</button>
+          <Button variant="primary" onclick={() => finish('done')}>Start reading</Button>
         {/if}
       </footer>
     </div>
@@ -75,24 +76,23 @@
 
 <style>
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+  dialog::backdrop { background: var(--scrim); }
   .box {
     position: fixed; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column;
-    background: var(--surface); color: var(--text); border-radius: 20px 20px 0 0; max-height: 92vh;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25); border: var(--card-border, 0);
+    background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 92vh;
+    box-shadow: var(--shadow-sheet); border: var(--card-border, 0);
   }
   @media (min-width: 700px) {
-    .box { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(720px, calc(100vw - 48px)); border-radius: 20px; max-height: calc(100vh - 48px); }
+    .box { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(720px, calc(100vw - 48px)); border-radius: var(--radius-lg); max-height: calc(100vh - 48px); }
   }
-  header { padding: 20px 20px 0; }
-  .eyebrow { margin: 0 0 6px; font-size: calc(12px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); font-weight: 600; }
-  h2 { margin: 0; font-family: var(--font-headings); font-size: calc(24px * var(--size-headings)); line-height: 1.2; }
-  .lead { margin: 6px 0 0; color: var(--text-2); font-size: calc(14.5px * var(--size-app)); max-width: 56ch; }
-  .body { padding: 16px 20px 4px; overflow-y: auto; min-height: 0; }
-  footer { display: flex; align-items: center; gap: 8px; padding: 14px 20px calc(16px + var(--safe-b)); border-top: 1px solid var(--line); margin-top: 12px; }
+  header { padding: var(--space-5) var(--space-5) 0; }
+  .eyebrow { margin: 0 0 var(--space-1); font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); font-weight: 600; }
+  h2 { margin: 0; font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; }
+  .lead { margin: var(--space-1) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 56ch; }
+  .body { padding: var(--space-4) var(--space-5) var(--space-1); overflow-y: auto; min-height: 0; }
+  footer { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-4) var(--space-5) calc(var(--space-4) + var(--safe-b)); border-top: 1px solid var(--line); margin-top: var(--space-3); }
   .spacer { flex: 1; }
-  footer button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(14px * var(--size-app)); color: var(--text-2); background: var(--surface); }
-  footer button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  footer button.link { border: 0; padding: 10px 4px; color: var(--accent); }
+  footer button { padding: var(--space-3) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); }
+  footer button.link { border: 0; padding: var(--space-3) var(--space-1); color: var(--accent); }
   footer button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>

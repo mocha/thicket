@@ -9,6 +9,7 @@
   import Reader from '$lib/components/Reader.svelte';
   import Configurator from '$lib/components/display/Configurator.svelte';
   import { addFeed } from '$lib/addfeed.svelte';
+  import Button from '$lib/components/Button.svelte';
   import { session, loadMe, isPublicPath } from '$lib/session.svelte';
   import { display, loadDisplay } from '$lib/display.svelte';
   import { watchMarks } from '$lib/marks.svelte';
@@ -45,7 +46,7 @@
   <header class="anon" class:home={path === '/'}>
     <a class="brand" href="/"><img src="/icon.svg" alt="" width="24" height="24" /><span>thicket</span></a>
     {#if path !== '/login' && path !== '/signup' && path !== '/'}
-      <span class="auth"><a href="/login?next={encodeURIComponent(path)}">Log in</a><a class="primary" href="/signup?next={encodeURIComponent(path)}">Sign up</a></span>
+      <span class="auth"><Button href="/login?next={encodeURIComponent(path)}">Log in</Button><Button variant="primary" href="/signup?next={encodeURIComponent(path)}">Sign up</Button></span>
     {/if}
   </header>
 {/if}
@@ -66,27 +67,27 @@
 <style>
   main {
     max-width: 640px; margin: 0 auto;
-    padding: calc(env(safe-area-inset-top, 0px) + 20px) 12px calc(var(--nav-h) + var(--safe-b) + 24px);
+    padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) var(--space-3) calc(var(--nav-h) + var(--safe-b) + var(--space-5));
   }
-  main.anon { padding-bottom: 40px; }
+  main.anon { padding-bottom: calc(var(--space-6) + var(--space-2)); }
   /* Paged: room for the page-turn strips down both sides. */
-  main.paged { max-width: none; padding-left: calc(var(--pager-w) + 8px); padding-right: calc(var(--pager-w) + 8px); }
-  .unreachable { text-align: center; padding: 80px 20px; color: var(--text-2); }
-  .unreachable h1 { font-family: var(--font-headings); font-size: calc(24px * var(--size-headings)); margin: 0 0 8px; color: var(--text); }
+  main.paged { max-width: none; padding-left: calc(var(--pager-w) + var(--space-2)); padding-right: calc(var(--pager-w) + var(--space-2)); }
+  /* 80px is how far down the offline notice sits, a layout drop rather than a spacing step. */
+  .unreachable { text-align: center; padding: 80px var(--space-5); color: var(--text-2); }
+  .unreachable h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-2); color: var(--text); }
   .unreachable p { margin: 0; }
   header.anon {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    max-width: 640px; margin: 0 auto; padding: 14px 12px 4px;
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+    max-width: 640px; margin: 0 auto; padding: var(--space-4) var(--space-3) var(--space-1);
   }
-  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: calc(18px * var(--size-app)); letter-spacing: -0.01em; }
-  .auth { display: flex; gap: 8px; align-items: center; }
-  .auth a { font-size: calc(14px * var(--size-app)); font-weight: 600; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--text-2); }
-  .auth a.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .brand { display: flex; align-items: center; gap: var(--space-2); font-weight: 700; font-size: calc(var(--text-xl) * var(--size-app)); letter-spacing: -0.01em; }
+  .auth { display: flex; gap: var(--space-2); align-items: center; }
   @media (min-width: 900px) {
-    main:not(.anon):not(.paged) { margin-left: calc(240px + max(24px, (100vw - 240px - 640px) / 2)); padding: 28px 24px 60px; }
+    /* The left margin is column math, not spacing: the sidebar plus half of what's left over. */
+    main:not(.anon):not(.paged) { margin-left: calc(var(--nav-w) + max(24px, (100vw - var(--nav-w) - 640px) / 2)); padding: calc(var(--space-5) + var(--space-1)) var(--space-5) calc(var(--space-6) + var(--space-5)); }
     main.anon, header.anon { max-width: 680px; }
     main.home, header.anon.home { max-width: 1040px; }
-    main.anon { padding: 20px 24px 60px; }
-    header.anon { padding: 20px 24px 0; }
+    main.anon { padding: var(--space-5) var(--space-5) calc(var(--space-6) + var(--space-5)); }
+    header.anon { padding: var(--space-5) var(--space-5) 0; }
   }
 </style>

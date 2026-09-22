@@ -1,12 +1,13 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import IconButton from './IconButton.svelte';
 
   /**
    * An inline notice inside a page: something went wrong, or something is
-   * worth knowing before you read on. The tone sets the colour and the icon:
+   * worth knowing before you read on. The tone sets the color and the icon:
    *   error   red     something failed
    *   warning amber   something needs attention soon
-   *   info    grey    context, nothing wrong
+   *   info    gray    context, nothing wrong
    *   success green   something worked
    * A dismissible banner shows ✕ and calls `ondismiss`. Remembering the
    * dismissal is the caller's job, because only the caller knows what should
@@ -35,31 +36,31 @@
     {#if children}<div class="text">{@render children()}</div>{/if}
   </div>
   {#if dismissible}
-    <button class="x" onclick={() => ondismiss?.()} aria-label="Dismiss">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
-    </button>
+    <IconButton class="x" icon="close" size="sm" label="Dismiss" onclick={() => ondismiss?.()} />
   {/if}
 </div>
 
 <style>
   .banner {
     --tone: var(--text-2);
-    display: flex; align-items: flex-start; gap: 10px;
-    padding: 11px 12px 11px 14px; border-radius: var(--radius-sm);
+    display: flex; align-items: flex-start; gap: var(--space-3);
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4); border-radius: var(--radius-sm);
     border: 1px solid color-mix(in srgb, var(--tone) 35%, transparent);
     background: color-mix(in srgb, var(--tone) 9%, var(--surface));
-    color: var(--text); font-size: calc(14px * var(--size-app)); line-height: 1.45;
+    color: var(--text); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.45;
   }
   .error { --tone: var(--danger); }
-  /* Amber has no theme token yet; mixing it with the text colour darkens it on light grounds and lightens it on dark ones. */
-  .warning { --tone: color-mix(in srgb, #c7861a 78%, var(--text)); }
+  /* Mixing amber with the text color darkens it on light grounds and lightens it on dark ones. */
+  .warning { --tone: color-mix(in srgb, var(--amber) 78%, var(--text)); }
   .success { --tone: var(--accent); }
   .info { --tone: var(--text-3); background: var(--surface-2); border-color: var(--line); }
+  /* 1px is an optical nudge: the icon sits on the first line's cap height. */
   .icon { flex: none; margin-top: 1px; color: var(--tone); }
   .info .icon { color: var(--text-2); }
   .body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .title { margin: 0 0 2px; font-weight: 650; }
   .text :global(a) { color: var(--accent); font-weight: 600; }
-  .x { flex: none; display: grid; place-items: center; width: 26px; height: 26px; margin: -3px -4px -3px 0; border-radius: 999px; color: var(--text-3); }
-  .x:hover { background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); }
+  /* Pulled flush with the banner's padding so it sits in the corner. Tuned by eye
+     against the close button's own box, so these stay literal. */
+  .banner :global(.x) { margin: -3px -4px -3px 0; }
 </style>

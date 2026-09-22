@@ -2,9 +2,10 @@
   /**
    * Add a feed, in a sheet you can flick away. Top to bottom, in the order you
    * decide things: the address, which of your collections it goes in, then
-   * Follow. Every feed lives in a collection, so one is always ticked: the one
-   * the sheet was opened from, or your first. Success lands on the feed's own
-   * page. Nothing is saved until Follow, so closing is a true cancel.
+   * Follow. Opened from a collection, that one is ticked; opened from
+   * Everything, none is — and if you leave it that way, Follow drops the feed
+   * in your default collection. Success lands on the feed's own page. Nothing
+   * is saved until Follow, so closing is a true cancel.
    */
   import { tick } from 'svelte';
   import { goto } from '$app/navigation';
@@ -14,6 +15,10 @@
   import { collectionStore, defaultCollection, loadCollections, namedCollections } from '$lib/collections.svelte';
   import { hostOf } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
+  import IconButton from './IconButton.svelte';
+  import Button from './Button.svelte';
+  import Field from './Field.svelte';
+  import Input from './Input.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let input = $state<HTMLInputElement | null>(null);
@@ -21,11 +26,23 @@
   let url = $state('');
   let ids = $state<number[]>([]);
   let newName = $state('');
+  let filter = $state('');
   let creating = $state(false);
   let busy = $state(false);
   let outcome = $state<SubscribeOutcome | null>(null);
   /** Set while we leave for the feed page, so closing the sheet doesn't also send /add home. */
   let landing = false;
+
+  /* Both ways this can go wrong are about the address, so they belong under
+     the address box. "More than one feed here" isn't a failure and stays a
+     list further down. */
+  const urlError = $derived(
+    outcome && 'error' in outcome
+      ? `Couldn’t reach that: ${outcome.error}`
+      : outcome?.status === 'none'
+        ? `No feed found at ${hostOf(outcome.pageUrl)}. Try the site’s blog or news section.`
+        : null
+  );
 
   // Each open() resets the form from the options it was opened with.
   $effect(() => {
@@ -33,16 +50,19 @@
     const o = addFeed.opts;
     url = o.url ?? '';
     ids = [...(o.collectionIds ?? [])];
-    newName = ''; outcome = null; busy = false; landing = false;
-    // Opened from a collection, it goes there; opened from anywhere else, it goes
-    // where a bare Follow would put it. Either way the sheet shows the answer.
+    newName = ''; filter = ''; outcome = null; busy = false; landing = false;
+    // Opened from a collection, that one starts ticked. Opened from Everything,
+    // nothing is ticked — leave it and Follow drops the feed in your default
+    // collection, which the hint below spells out.
     void loadCollections().then(async (s) => {
       ids = ids.filter((id) => id !== s.rootId);
-      if (!ids.length) { const d = defaultCollection(); if (d) ids = [d.id]; }
-      // The list scrolls and is alphabetical, so the ticked one is often below
-      // the fold. Bring it up: where this is going should never be off screen.
+      // The list scrolls and is alphabetical, so a ticked one is often below
+      // the fold. Opened from a collection, center that ticked row so where the
+      // feed is going is plainly in view, not clipped to an edge. (Opened from
+      // Everything nothing is ticked, so this is a no-op and the list starts at
+      // the top.)
       await tick();
-      list?.querySelector('input:checked')?.closest('li')?.scrollIntoView({ block: 'nearest' });
+      list?.querySelector('input:checked')?.closest('li')?.scrollIntoView({ block: 'center' });
     });
     dialog?.showModal();
     if (o.autoSubmit && url) void submit(url);
@@ -54,6 +74,15 @@
   }
 
   const nameOf = (id: number) => namedCollections().find((c) => c.id === id)?.name ?? 'a collection';
+
+  // With a lot of collections the list becomes a scroll, so offer a filter —
+  // but only once there are enough to bother, so short lists stay clean. It
+  // narrows to names that contain what you type, ignoring case.
+  const showFilter = $derived(namedCollections().length > 6);
+  const visibleCollections = $derived.by(() => {
+    const q = filter.trim().toLowerCase();
+    return q ? namedCollections().filter((c) => c.name.toLowerCase().includes(q)) : namedCollections();
+  });
 
   async function createCollection() {
     const name = newName.trim();
@@ -106,16 +135,31 @@
   <form class="sheet" onsubmit={(e) => { e.preventDefault(); void submit(); }}>
     <header>
       <h2>Add a feed</h2>
-      <button type="button" class="close" onclick={() => dialog?.close()} aria-label="Close">×</button>
+      <IconButton icon="close" label="Close" onclick={() => dialog?.close()} />
     </header>
-    <p class="lede">Paste the address of a site, a blog, a YouTube channel or video, a subreddit, or a feed. thicket finds the feed.</p>
-    <input bind:this={input} bind:value={url} type="url" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="example.com" required disabled={busy} />
+    <p class="lede">Enter the address of a site, blog, subreddit, or YouTube channel or video, and thicket finds the feed for you. You can also enter the feed itself.</p>
+    <Field label="Address" hideLabel error={urlError}>
+      {#snippet children({ id, describedBy, invalid })}
+        <Input
+          {id}
+          aria-describedby={describedBy}
+          {invalid}
+          bind:element={input}
+          bind:value={url}
+          inset
+          type="url"
+          inputmode="url"
+          autocapitalize="off"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="example.com"
+          required
+          disabled={busy}
+        />
+      {/snippet}
+    </Field>
 
-    {#if outcome && 'error' in outcome}
-      <p class="result bad">Couldn’t reach that: {outcome.error}</p>
-    {:else if outcome?.status === 'none'}
-      <p class="result bad">No feed found at {hostOf(outcome.pageUrl)}. Try the site’s blog or news section.</p>
-    {:else if outcome?.status === 'choose'}
+    {#if outcome && !('error' in outcome) && outcome.status === 'choose'}
       <div class="result">
         <p>There’s more than one way to follow this. Which one?</p>
         <ul class="candidates">
@@ -127,9 +171,25 @@
     {/if}
 
     <div class="eyebrow">Put it in a collection</div>
+    {#if showFilter}
+      <Field label="Filter collections" hideLabel>
+        {#snippet children({ id })}
+          <Input
+            {id}
+            variant="search"
+            size="sm"
+            inset
+            bind:value={filter}
+            placeholder="Filter collections…"
+            disabled={busy}
+            onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') e.preventDefault(); else if (e.key === 'Escape') filter = ''; }}
+          />
+        {/snippet}
+      </Field>
+    {/if}
     <div class="scroll" bind:this={list}>
     <ul class="checks">
-      {#each namedCollections() as c (c.id)}
+      {#each visibleCollections as c (c.id)}
         <li>
           <label>
             <input type="checkbox" checked={ids.includes(c.id)} onchange={() => toggle(c.id)} disabled={busy} />
@@ -139,13 +199,30 @@
         </li>
       {/each}
     </ul>
+    {#if filter.trim() && !visibleCollections.length}
+      <p class="nomatch">No collections match “{filter.trim()}”. Start one below.</p>
+    {/if}
     </div>
     <p class="hint">{#if !namedCollections().length}No collections yet — one will be made for this feed.{:else if ids.length === 1}It goes in {nameOf(ids[0])}. Tick more if it belongs in several.{:else if ids.length}It goes in {ids.length} of your collections.{:else}Pick one, or it goes in {defaultCollection()?.name ?? 'your first collection'}.{/if}</p>
     {#if collectionStore.loaded}
       <div class="new">
         <span class="plus" aria-hidden="true">+</span>
-        <input type="text" placeholder="Start a new collection…" bind:value={newName} disabled={creating} onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void createCollection(); } }} />
-        <button type="button" onclick={createCollection} disabled={creating || !newName.trim()}>Create</button>
+        <Field label="New collection name" hideLabel class="grow">
+          {#snippet children({ id })}
+            <Input
+              {id}
+              variant="create"
+              bind:value={newName}
+              placeholder="Start a new collection…"
+              disabled={creating}
+              onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); void createCollection(); } }}
+            >
+              {#snippet trailing()}
+                <Button variant="primary" onclick={createCollection} disabled={creating || !newName.trim()}>Create</Button>
+              {/snippet}
+            </Input>
+          {/snippet}
+        </Field>
       </div>
     {/if}
 
@@ -155,44 +232,41 @@
 
 <style>
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+  dialog::backdrop { background: var(--scrim); }
   .sheet {
     position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text);
-    border-radius: 20px 20px 0 0; padding: 16px 16px calc(16px + var(--safe-b)); max-height: 90vh; overflow: hidden;
-    box-shadow: 0 -10px 40px rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 10px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-b)); max-height: 90vh; overflow: hidden;
+    box-shadow: var(--shadow-sheet); display: flex; flex-direction: column; gap: var(--space-3);
   }
   @media (min-width: 700px) {
-    .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 460px; border-radius: 20px; max-height: 86vh; }
-    .scroll { max-height: 300px; }
+    .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 460px; border-radius: var(--radius-lg); max-height: 86vh; }
   }
   header { display: flex; align-items: center; justify-content: space-between; }
-  h2 { margin: 0; font-size: calc(22px * var(--size-headings)); font-family: var(--font-headings); }
-  .close { width: 32px; height: 32px; border-radius: 50%; font-size: calc(22px * var(--size-app)); color: var(--text-3); }
-  .lede { color: var(--text-2); margin: -6px 0 0; font-size: calc(14px * var(--size-app)); }
-  input[type='url'] { padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: calc(16px * var(--size-app)); width: 100%; }
-  input[type='url']:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .result { margin: 0; color: var(--text-2); font-size: calc(14px * var(--size-app)); }
-  .result p { margin: 0 0 6px; }
-  .bad { color: var(--danger); }
-  .candidates { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-  .candidates button { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); }
-  .candidates span { font-size: calc(12px * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
-  .eyebrow { font-size: calc(11px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 4px; }
-  .scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: 38vh; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; }
+  h2 { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }
+  /* Pulled up against the title so the two read as one block. */
+    .lede { color: var(--text-2); margin: calc(-1 * var(--space-2)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .result { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .result p { margin: 0 0 var(--space-2); }
+  .candidates { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+  .candidates button { width: 100%; text-align: left; display: flex; flex-direction: column; /* 2px is an optical gap between a name and its address. */ gap: 2px; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); }
+  .candidates span { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
+  .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: var(--space-1); }
+  .nomatch { margin: 0; padding: var(--space-3) var(--space-2); color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: 38vh; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 var(--space-3); }
+  /* Desktop cap. Must come after the base .scroll rule above: same specificity,
+     so source order decides, and the list should top out at ~7 rows and scroll,
+     not grow to a third of a tall screen. */
+  @media (min-width: 700px) { .scroll { max-height: 300px; } }
   .checks { list-style: none; margin: 0; padding: 0; }
-  .checks label { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-top: 1px solid var(--line); cursor: pointer; }
+  .checks label { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-1); border-top: 1px solid var(--line); cursor: pointer; }
   .checks li:first-child label { border-top: 0; }
   .checks input { width: 20px; height: 20px; accent-color: var(--accent); }
   .name { flex: 1; font-weight: 500; }
-  .count { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
-  .hint { margin: -4px 0 0; font-size: calc(12px * var(--size-app)); color: var(--text-3); }
-  .new { display: flex; align-items: center; gap: 8px; }
-  .plus { width: 20px; text-align: center; color: var(--accent); font-size: calc(20px * var(--size-app)); line-height: 1; font-weight: 600; }
-  .new input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--accent); background: var(--surface); color: var(--text); font-size: calc(15px * var(--size-app)); }
-  .new input::placeholder { color: var(--accent); opacity: 0.85; }
-  .new input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-style: solid; }
-  .new button { padding: 10px 14px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-  .new button:disabled { opacity: 0.35; }
-  .follow { margin-top: 6px; padding: 14px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(16px * var(--size-app)); }
+  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .hint { margin: calc(-1 * var(--space-1)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .new { display: flex; align-items: center; gap: var(--space-2); }
+  .new :global(.grow) { flex: 1; }
+  .plus { width: 20px; text-align: center; color: var(--accent); font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; font-weight: 600; }
+  .follow { margin-top: var(--space-2); padding: var(--space-4); border-radius: var(--radius-md); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .follow:disabled { opacity: 0.5; }
 </style>

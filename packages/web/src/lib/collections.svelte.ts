@@ -41,6 +41,17 @@ export function defaultCollection(): Collection | null {
   return namedCollections().reduce<Collection | null>((best, c) => (!best || c.id < best.id ? c : best), null);
 }
 
+/**
+ * NOTE — sub-collections are on hold (2026-09-20, per Patrick). The data model,
+ * the API and these helpers all support a parent/child tree, and the sidebar
+ * and profile can display two levels of it, but we are deliberately NOT
+ * surfacing sub-collections in the product yet: there is no UI to create one,
+ * and we shouldn't add one until Product decides whether the feature is wanted
+ * or needed. Until then, don't build create/move-into affordances or lean on
+ * nesting in new UI. (Matching note at the collections create endpoint in the
+ * API.)
+ */
+
 /** The collections that sit directly under the root: what the sidebar lists first. */
 export function topLevelCollections(): Collection[] {
   return collectionStore.list.filter((c) => c.parentId !== null && c.parentId === collectionStore.rootId);

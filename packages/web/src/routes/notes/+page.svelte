@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { api, notesApi, type RiverItem } from '$lib/api';
   import NoteCard from '$lib/components/NoteCard.svelte';
+  import Button from '$lib/components/Button.svelte';
 
   /**
    * My Notes: every post I have left a note on, newest note first, shown as
@@ -67,7 +68,7 @@
     </svg>
     <h2>No notes yet</h2>
     <p>Every post has a note icon next to its bookmark. Press it, write what you thought, and it stays with the post: in All my feeds, in any collection it appears in, and here. Markdown works. One note per post, edit it any time. Depending on your settings, people who follow you can read your notes and you can read theirs.</p>
-    <div class="ctas"><a class="cta" href="/">Go to All my feeds</a><a class="cta ghost" href="/settings">Note settings</a></div>
+    <div class="ctas"><Button variant="primary" size="lg" href="/">Go to All my feeds</Button><Button size="lg" href="/settings">Note settings</Button></div>
   </div>
 {:else}
   <ul class="list">
@@ -81,17 +82,16 @@
 {/if}
 
 <style>
-  .top { margin-bottom: 14px; }
-  h1 { font-family: var(--font-headings); font-size: calc(26px * var(--size-headings)); margin: 0; }
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(14px * var(--size-app)); }
-  .list { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; }
-  .status { text-align: center; color: var(--text-3); font-size: calc(14px * var(--size-app)); padding: 18px 0; margin: 0; }
+  .top { margin-bottom: var(--space-4); }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
+  /* 2px is an optical nudge under the title, not a spacing step. */
+  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .list { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; }
+  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
   .status.error { color: var(--danger); }
-  .empty { text-align: center; padding: 40px 20px; color: var(--text-2); }
-  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(22px * var(--size-headings)); margin: 0 0 6px; }
-  .empty p { margin: 0 auto; max-width: 460px; font-size: calc(15px * var(--size-app)); }
-  .illo { display: block; margin: 0 auto 16px; max-width: 100%; }
-  .ctas { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
-  .cta { display: inline-block; background: var(--accent); color: var(--accent-ink); padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: calc(14px * var(--size-app)); }
-  .cta.ghost { background: var(--surface); color: var(--text-2); border: 1px solid var(--line); }
+  .empty { text-align: center; padding: calc(var(--space-6) + var(--space-2)) var(--space-5); color: var(--text-2); }
+  .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
+  .empty p { margin: 0 auto; max-width: 460px; font-size: calc(var(--text-base) * var(--size-app)); }
+  .illo { display: block; margin: 0 auto var(--space-4); max-width: 100%; }
+  .ctas { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; margin-top: var(--space-4); }
 </style>

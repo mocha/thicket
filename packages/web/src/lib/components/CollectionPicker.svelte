@@ -28,17 +28,18 @@
 
 <style>
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+  dialog::backdrop { background: var(--scrim); }
   .sheet {
     position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text);
-    border-radius: 20px 20px 0 0; padding: 16px 16px calc(16px + var(--safe-b)); max-height: 80vh; overflow: auto;
-    box-shadow: 0 -10px 40px rgba(0,0,0,0.25);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-b)); max-height: 80vh; overflow: auto;
+    box-shadow: var(--shadow-sheet);
   }
   @media (min-width: 700px) {
-    .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 420px; border-radius: 20px; }
+    .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 420px; border-radius: var(--radius-lg); }
   }
-  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-  .eyebrow { font-size: calc(12px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
-  h2 { margin: 2px 0 0; font-size: calc(18px * var(--size-headings)); font-family: var(--font-headings); overflow-wrap: anywhere; }
-  .close { color: var(--accent); font-weight: 600; padding: 6px 4px; }
+  header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-2); }
+  .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+  /* 2px is an optical nudge: the title's cap height lines up with the close link. */
+    h2 { margin: 2px 0 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); overflow-wrap: anywhere; }
+  .close { color: var(--accent); font-weight: 600; padding: var(--space-2) var(--space-1); }
 </style>

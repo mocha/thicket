@@ -8,6 +8,10 @@
   import { loadCollections } from '$lib/collections.svelte';
   import CollectionCheckList from '$lib/components/CollectionCheckList.svelte';
   import Banner from '$lib/components/Banner.svelte';
+  import Icon from '$lib/components/Icon.svelte';
+  import Button from '$lib/components/Button.svelte';
+  import Field from '$lib/components/Field.svelte';
+  import Input from '$lib/components/Input.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -184,7 +188,7 @@
 
 {#if feed}
   <a class="back" href={feedHref(feed)}>
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+    <Icon name="back" size={16} stroke={2.4} />
     Back to feed
   </a>
 
@@ -198,17 +202,22 @@
     <h2>Settings</h2>
 
     <div class="opt">
-      <h3><label for="dname">Display name</label></h3>
       <form onsubmit={(e) => { e.preventDefault(); void saveName(displayName); }}>
-        <input id="dname" type="text" bind:value={displayName} maxlength="120" placeholder={original} disabled={savingName} />
+        <Field
+          label="Display name"
+          hint="Only you see this name. Where feeds are listed to choose from, it shows as “Your name ({original})”."
+        >
+          {#snippet children({ id, describedBy, invalid })}
+            <Input {id} aria-describedby={describedBy} {invalid} bind:value={displayName} maxlength={120} placeholder={original} disabled={savingName} />
+          {/snippet}
+        </Field>
         <div class="row">
-          <button type="submit" class="btn primary" disabled={!nameDirty || savingName}>{savingName ? 'Saving…' : 'Save'}</button>
+          <Button type="submit" variant="primary" disabled={!nameDirty || savingName}>{savingName ? 'Saving…' : 'Save'}</Button>
           {#if feed.displayName}
-            <button type="button" class="btn" onclick={() => saveName('')} disabled={savingName}>Use “{original}”</button>
+            <Button onclick={() => saveName('')} disabled={savingName}>Use “{original}”</Button>
           {/if}
         </div>
       </form>
-      <p class="hint">Only you see this name. Where feeds are listed to choose from, it shows as “Your name ({original})”.</p>
     </div>
 
     {#if feed.isYouTube}
@@ -237,7 +246,7 @@
     <div class="card">
       <CollectionCheckList feedId={feed.id} bind:ids name={feedName(feed)} />
     </div>
-    <button class="btn danger" onclick={removeFromAll} disabled={ids.length === 0}>Remove from all collections</button>
+    <Button variant="danger" onclick={removeFromAll} disabled={ids.length === 0}>Remove from all collections</Button>
   </section>
 
   <hr />
@@ -247,7 +256,7 @@
       <Banner tone="error">Last fetch failed: {feed.lastError ?? `HTTP ${feed.lastStatus}`}</Banner>
     {/if}
     <div class="row">
-      <button class="btn" onclick={refresh} disabled={refreshing}>{refreshing ? 'Fetching…' : 'Refresh now'}</button>
+      <Button onclick={refresh} disabled={refreshing}>{refreshing ? 'Fetching…' : 'Refresh now'}</Button>
       <span class="hint inline">{feed.lastFetchedAt ? `Last checked ${relativeTime(feed.lastFetchedAt)}` : 'Not fetched yet'}</span>
     </div>
     {#if refreshNote}
@@ -272,7 +281,7 @@
     <section class="admin">
       <h2>Admin</h2>
       <p class="hint">Feeds are shared. Removing this one takes it away from everyone on this instance: its posts, the notes on them, and its place in every collection. Bookmarks keep their address. Use it for spam, abuse, or a feed that should never have been indexed.</p>
-      <button class="btn danger" onclick={askRemove}>Remove this feed from thicket</button>
+      <Button variant="danger" onclick={askRemove}>Remove this feed from thicket</Button>
     </section>
 
     <dialog bind:this={removeDialog} class="remove" onclick={(e) => { if (e.target === removeDialog) removeDialog?.close(); }} aria-labelledby="remove-title">
@@ -283,8 +292,8 @@
         <p class="hint">Counting what this would take with it…</p>
       {/if}
       <div class="actions">
-        <button class="btn" onclick={() => removeDialog?.close()}>Keep it</button>
-        <button class="btn danger solid" onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</button>
+        <Button onclick={() => removeDialog?.close()}>Keep it</Button>
+        <Button variant="danger" solid onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</Button>
       </div>
     </dialog>
   {/if}
@@ -293,49 +302,42 @@
 {/if}
 
 <style>
-  .back { display: inline-flex; align-items: center; gap: 4px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--accent); padding: 6px 0; margin-bottom: 8px; }
-  .top { margin-bottom: 6px; }
-  .pre { margin: 0; font-size: calc(12px * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
-  h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 2px 0 0; overflow-wrap: anywhere; }
-  hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
-  section > h2 { font-size: calc(15px * var(--size-app)); margin: 0 0 12px; }
-  .opt { margin-bottom: 18px; }
-  h3 { font-size: calc(14px * var(--size-app)); font-weight: 600; margin: 0 0 8px; }
-  input[type='text'] { width: 100%; font: inherit; font-size: calc(15px * var(--size-app)); padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
-  input[type='text']:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  input[type='text']::placeholder { color: var(--text-3); }
-  .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .hint { margin: 8px 0 0; font-size: calc(13px * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
+  .back { display: inline-flex; align-items: center; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); padding: var(--space-2) 0; margin-bottom: var(--space-2); }
+  .top { margin-bottom: var(--space-2); }
+  .pre { margin: 0; font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 2px 0 0; /* 2px is an optical nudge: the title sits on the label's line. */ overflow-wrap: anywhere; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-4) 0; }
+  section > h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 var(--space-3); }
+  .opt { margin-bottom: var(--space-4); }
+  h3 { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; margin: 0 0 var(--space-2); }
+  .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
+  .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
   .hint.inline { margin: 0; }
-  .radios { display: flex; flex-direction: column; gap: 8px; }
-  .radios label { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
+  .radios { display: flex; flex-direction: column; gap: var(--space-2); }
+  .radios label { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
   .radios label:has(input:checked) { border-color: var(--accent); }
-  .radios input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
-  .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(14px * var(--size-app)); }
-  .radios small { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 4px 14px 12px; margin-bottom: 12px; }
-  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
-  .btn:disabled { opacity: 0.5; }
-  .btn.danger.solid { background: var(--danger); color: #fff; border-color: var(--danger); }
-  .admin { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+  .radios input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  /* 2px between a choice and its explanation is optical, not a spacing step. */
+  .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-1) var(--space-4) var(--space-3); margin-bottom: var(--space-3); }
+  .admin { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; }
   .admin > h2 { margin: 0; }
-  dialog.remove { max-width: 440px; padding: 22px 22px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); }
-  dialog.remove::backdrop { background: rgba(0, 0, 0, 0.45); }
-  dialog.remove h2 { margin: 0 0 10px; font-size: calc(18px * var(--size-headings)); font-family: var(--font-headings); }
-  dialog.remove p { margin: 0 0 16px; line-height: 1.5; font-size: calc(14px * var(--size-app)); color: var(--text-2); }
-  dialog.remove .actions { display: flex; justify-content: flex-end; gap: 8px; }
-  .diag { display: flex; flex-direction: column; gap: 12px; }
+  dialog.remove { max-width: 440px; padding: var(--space-5) var(--space-5) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: var(--shadow-dialog); }
+  dialog.remove::backdrop { background: var(--scrim); }
+  dialog.remove h2 { margin: 0 0 var(--space-3); font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }
+  dialog.remove p { margin: 0 0 var(--space-4); line-height: 1.5; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  dialog.remove .actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+  .diag { display: flex; flex-direction: column; gap: var(--space-3); }
   .diag > h2 { margin: 0; }
   .diag .row { margin-top: 0; }
-  .facts summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: calc(15px * var(--size-app)); font-weight: 600; list-style: none; }
+  .facts summary { display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; list-style: none; }
   .facts summary::-webkit-details-marker { display: none; }
   .facts summary svg { transition: transform 150ms ease; color: var(--text-3); }
   .facts[open] summary svg { transform: rotate(180deg); }
-  .facts ul { margin: 12px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: calc(13px * var(--size-app)); color: var(--text-2); }
+  .facts ul { margin: var(--space-3) 0 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .facts li { overflow-wrap: anywhere; }
   .facts strong { color: var(--text); font-weight: 600; }
   .facts .none { color: var(--text-3); }
-  .status { text-align: center; color: var(--text-3); padding: 24px 0; margin: 0; font-size: calc(14px * var(--size-app)); }
+  .status { text-align: center; color: var(--text-3); padding: var(--space-5) 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>
