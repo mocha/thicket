@@ -292,7 +292,9 @@
     nav:not(.paged) li > a[aria-current='page'] { background: var(--surface-2); color: var(--text); font-weight: 600; }
     nav:not(.paged) li.admin { display: block; margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 
-    nav:not(.paged) li.collections { display: block; margin: var(--space-1) 0 var(--space-2); }
+    nav:not(.paged) li.collections { display: block; }
+    /* Breathing room under the expanded list only; collapsed, the row spaces like its neighbors. */
+    nav:not(.paged) li.collections .cols { margin-bottom: var(--space-2); }
     /* "My collections": a header you can click to fold the list away. Looks like a row, reads like a heading. */
     nav:not(.paged) .heading { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); text-align: left; }
     nav:not(.paged) .heading:hover { background: var(--surface-2); }
