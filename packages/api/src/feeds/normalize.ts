@@ -26,7 +26,11 @@ export function normalizeFeedUrl(input: string): string {
   u.search = "";
   for (const [k, v] of params) u.searchParams.append(k, v);
   if (u.pathname === "/") u.pathname = "";
-  return u.toString().replace(/\/$/, u.pathname === "" ? "" : "/").replace(/\/\?/, "?");
+  // Drop the root's lone slash before a query (example.com/?x -> example.com?x),
+  // but only at the root: a non-root path keeps its trailing slash, which can
+  // matter for feeds and is part of the unique key. Anchor to the origin so a
+  // path like /blog/?feed=rss is left intact.
+  return u.toString().replace(/\/$/, u.pathname === "" ? "" : "/").replace(/^(https?:\/\/[^/?#]+)\/\?/, "$1?");
 }
 
 export function isHttpUrl(s: string): boolean {
