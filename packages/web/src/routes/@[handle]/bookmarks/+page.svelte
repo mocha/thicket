@@ -41,11 +41,11 @@
 
   /** Save (or unsave) a copy into my own bookmarks. */
   async function toggle(b: PublicBookmark) {
+    const removedId = b.myBookmarkId;
     try {
-      if (b.myBookmarkId) {
-        const id = b.myBookmarkId;
+      if (removedId) {
         b.myBookmarkId = null;
-        await bookmarksApi.remove(id);
+        await bookmarksApi.remove(removedId);
         api.event('bookmark_removed', { via: 'public_bookmarks' });
       } else {
         const mine = await bookmarksApi.saveFrom(b.id);
@@ -54,6 +54,8 @@
         showToast('Saved to your bookmarks');
       }
     } catch (e) {
+      // The remove was optimistic; put the bookmark back if the request failed.
+      if (removedId) b.myBookmarkId = removedId;
       showToast(e instanceof Error ? e.message : String(e));
     }
   }

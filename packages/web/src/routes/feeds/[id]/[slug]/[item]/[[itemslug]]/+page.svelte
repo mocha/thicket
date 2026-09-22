@@ -40,16 +40,20 @@
   const isVideo = $derived(/(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/.test(hostOf(href)));
 
   async function load() {
+    // Capture the id we're fetching: itemId is reactive and moves on when the
+    // reader navigates, so comparing loadedId to itemId after the await always
+    // matched. Compare against this snapshot to drop a stale, out-of-order response.
+    const reqId = itemId;
     try {
-      const got = await itemsApi.get(itemId);
-      if (loadedId !== itemId) return;
+      const got = await itemsApi.get(reqId);
+      if (reqId !== itemId) return;
       item = got;
       myNote = got.myNote ?? null;
       // The ids resolve; the slugs are for people. Correct them in place either way.
       if (readsInline()) openReaderHere(got);
       else if (page.url.pathname !== itemHref(got)) replaceState(itemHref(got) + page.url.search, page.state);
     } catch (e) {
-      if (loadedId === itemId) error = e instanceof Error ? e.message : String(e);
+      if (reqId === itemId) error = e instanceof Error ? e.message : String(e);
     }
   }
 

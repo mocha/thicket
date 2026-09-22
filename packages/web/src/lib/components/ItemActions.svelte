@@ -16,11 +16,11 @@
   async function toggleBookmark() {
     if (saving) return;
     saving = true;
+    const removedId = item.bookmarkId;
     try {
-      if (item.bookmarkId) {
-        const id = item.bookmarkId;
+      if (removedId) {
         item.bookmarkId = null;
-        await bookmarksApi.remove(id);
+        await bookmarksApi.remove(removedId);
         api.event('bookmark_removed', { itemId: item.id, via });
       } else {
         const b = await bookmarksApi.saveItem(item.id);
@@ -29,6 +29,8 @@
         showToast('Saved to Bookmarks');
       }
     } catch (err) {
+      // The remove was optimistic; put the bookmark back if the request failed.
+      if (removedId) item.bookmarkId = removedId;
       showToast(err instanceof Error ? err.message : String(err));
     } finally {
       saving = false;
