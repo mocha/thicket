@@ -55,8 +55,8 @@
   .body :global(p:last-child), .body :global(ul:last-child), .body :global(ol:last-child), .body :global(blockquote:last-child), .body :global(pre:last-child) { margin-bottom: 0; }
   .body :global(ul), .body :global(ol) { margin: 0 0 6px; padding-left: 22px; }
   .body :global(blockquote) { margin: 0 0 6px; padding-left: 10px; border-left: 3px solid var(--line); color: var(--text-2); }
-  .body :global(code) { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
-  .body :global(pre) { margin: 0 0 6px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; overflow-x: auto; }
+  .body :global(code) { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; background: var(--surface-2); padding: 1px 5px; border-radius: var(--radius-xs); }
+  .body :global(pre) { margin: 0 0 6px; padding: 8px 10px; background: var(--surface-2); border-radius: var(--radius-sm); overflow-x: auto; }
   .body :global(pre code) { background: none; padding: 0; }
   .body :global(a) { color: var(--accent); font-weight: 600; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); }
   .more { margin-top: 4px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-3); }

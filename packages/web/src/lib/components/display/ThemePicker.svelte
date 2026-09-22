@@ -55,13 +55,15 @@
 <style>
   .palettes { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
   .palettes button {
-    display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 12px;
+    display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: var(--radius-sm);
     border: 1px solid var(--line); background: var(--bg); color: var(--text); text-align: left;
   }
   .palettes button:hover { border-color: var(--text-3); }
   .palettes button.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   .palettes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .sw { display: block; aspect-ratio: 5 / 3; border-radius: 8px; background: var(--sw-bg); padding: 7px 8px 0; overflow: hidden; border: 1px solid rgba(128, 128, 128, 0.18); }
+  .sw { display: block; aspect-ratio: 5 / 3; border-radius: var(--radius-sm); background: var(--sw-bg); padding: 7px 8px 0; overflow: hidden; border: 1px solid var(--swatch-border); }
+  /* Deliberately literal below: this is a tiny drawing of a page inside the swatch,
+     not real UI, so its corners and its lift are sized to the drawing. */
   .card { display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 6px 7px; border-radius: 5px 5px 0 0; background: var(--sw-surface); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
   .hard .card { box-shadow: none; border: 1px solid var(--sw-text); border-bottom: 0; }
   .t { display: block; height: 3px; border-radius: 2px; background: var(--sw-text); opacity: 0.85; }

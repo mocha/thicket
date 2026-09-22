@@ -322,8 +322,8 @@
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 4px 14px 12px; margin-bottom: 12px; }
   .admin { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
   .admin > h2 { margin: 0; }
-  dialog.remove { max-width: 440px; padding: 22px 22px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); }
-  dialog.remove::backdrop { background: rgba(0, 0, 0, 0.45); }
+  dialog.remove { max-width: 440px; padding: 22px 22px 18px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: var(--shadow-dialog); }
+  dialog.remove::backdrop { background: var(--scrim); }
   dialog.remove h2 { margin: 0 0 10px; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }
   dialog.remove p { margin: 0 0 16px; line-height: 1.5; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   dialog.remove .actions { display: flex; justify-content: flex-end; gap: 8px; }

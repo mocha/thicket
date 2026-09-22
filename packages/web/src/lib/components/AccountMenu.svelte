@@ -24,6 +24,8 @@
   let sheet = $state(false);
   let pos = $state<{ top: number; left: number }>({ top: 0, left: 0 });
 
+  // The panel's width in numbers, for the arithmetic that keeps it on screen.
+  // Keep it in step with --nav-w in app.css, which draws the panel itself.
   const WIDTH = 240;
   function place() {
     if (!anchor) return;
@@ -101,24 +103,24 @@
 {/if}
 
 <style>
-  .scrim { position: fixed; inset: 0; z-index: 59; background: rgba(0, 0, 0, 0.4); }
+  .scrim { position: fixed; inset: 0; z-index: 59; background: var(--scrim); }
   .panel {
-    position: fixed; z-index: 60; width: 240px; max-width: calc(100vw - 16px);
-    background: var(--surface); color: var(--text); border-radius: 14px; padding: 6px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--line);
+    position: fixed; z-index: 60; width: var(--nav-w); max-width: calc(100vw - 16px);
+    background: var(--surface); color: var(--text); border-radius: var(--radius-md); padding: 6px;
+    box-shadow: var(--shadow-menu);
     display: flex; flex-direction: column;
   }
   .panel.sheet {
     top: auto; left: 0; right: 0; bottom: 0; width: auto; max-width: none;
-    border-radius: 20px 20px 0 0; padding: 12px 12px calc(12px + var(--safe-b));
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 12px 12px calc(12px + var(--safe-b));
+    box-shadow: var(--shadow-sheet);
   }
   .who { display: flex; align-items: center; gap: 12px; padding: 8px 10px 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
   .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
   .dn { font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .h { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .panel a, .panel button {
-    display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 10px; border-radius: 10px;
+    display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 10px; border-radius: var(--radius-sm);
     font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text-2); text-align: left;
   }
   .panel a:hover, .panel button:hover { background: var(--surface-2); }

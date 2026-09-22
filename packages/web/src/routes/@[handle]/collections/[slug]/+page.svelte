@@ -166,13 +166,13 @@
   .reveal { display: inline-flex; align-items: center; gap: 3px; font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
   .actions { flex: none; display: flex; gap: 8px; align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
-  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: 20px 20px 0 0; padding: 20px 18px calc(18px + var(--safe-b)); box-shadow: 0 -10px 40px rgba(0,0,0,0.25); }
-  @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 560px; border-radius: 20px; } }
+  dialog::backdrop { background: var(--scrim); }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 20px 18px calc(18px + var(--safe-b)); box-shadow: var(--shadow-sheet); }
+  @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 560px; border-radius: var(--radius-lg); } }
   .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 14px; }
   .ways { display: grid; gap: 12px; }
   @media (min-width: 700px) { .ways { grid-template-columns: 1fr 1fr; } }
-  .ways section { background: var(--bg); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .ways section { background: var(--bg); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
   .ways h3 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); }
   .ways p { margin: 0 0 4px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .sheet :global(.close) { position: absolute; top: 10px; right: 10px; }

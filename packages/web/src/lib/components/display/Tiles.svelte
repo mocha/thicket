@@ -30,12 +30,12 @@
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
   button {
     display: flex; flex-direction: column; align-items: stretch; gap: 8px; text-align: left;
-    padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text);
+    padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--bg); color: var(--text);
   }
   button:hover { border-color: var(--text-3); }
   button.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .art { display: block; aspect-ratio: 5 / 3; border-radius: 8px; overflow: hidden; background: var(--surface-2); }
+  .art { display: block; aspect-ratio: 5 / 3; border-radius: var(--radius-sm); overflow: hidden; background: var(--surface-2); }
   .art :global(svg) { display: block; width: 100%; height: 100%; }
   .label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .on .label { color: var(--accent); }

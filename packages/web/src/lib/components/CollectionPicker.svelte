@@ -28,14 +28,14 @@
 
 <style>
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+  dialog::backdrop { background: var(--scrim); }
   .sheet {
     position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text);
-    border-radius: 20px 20px 0 0; padding: 16px 16px calc(16px + var(--safe-b)); max-height: 80vh; overflow: auto;
-    box-shadow: 0 -10px 40px rgba(0,0,0,0.25);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 16px 16px calc(16px + var(--safe-b)); max-height: 80vh; overflow: auto;
+    box-shadow: var(--shadow-sheet);
   }
   @media (min-width: 700px) {
-    .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 420px; border-radius: 20px; }
+    .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 420px; border-radius: var(--radius-lg); }
   }
   header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
   .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }

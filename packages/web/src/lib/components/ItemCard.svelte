@@ -133,9 +133,9 @@
   .repeat {
     display: flex; gap: var(--space-2); align-items: flex-start; margin: -4px var(--card-pad) 14px; padding: var(--space-2) 10px;
     border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; color: var(--text-2);
-    background: color-mix(in srgb, #c7861a 12%, var(--surface));
+    background: color-mix(in srgb, var(--amber) 12%, var(--surface));
   }
-  .repeat svg { flex: none; margin-top: 1px; color: color-mix(in srgb, #c7861a 78%, var(--text)); }
+  .repeat svg { flex: none; margin-top: 1px; color: color-mix(in srgb, var(--amber) 78%, var(--text)); }
   .repeat a { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
 
   /* Compact: a fixed height so a page of cards lines up. The picture sits beside the words. */

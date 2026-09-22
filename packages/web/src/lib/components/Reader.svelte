@@ -186,7 +186,7 @@
 
 <style>
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+  dialog::backdrop { background: var(--scrim); }
   .reader {
     position: fixed; inset: 0; display: flex; flex-direction: column;
     background: var(--surface); color: var(--text);
@@ -224,7 +224,7 @@
   .body :global(blockquote) { border-left: 3px solid var(--line); padding-left: 1em; color: var(--text-2); }
   .body :global(pre) { overflow-x: auto; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--surface-2); font-size: 0.85em; line-height: 1.5; }
   .body :global(code) { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
-  .body :global(:not(pre) > code) { background: var(--surface-2); padding: 0.1em 0.35em; border-radius: 5px; }
+  .body :global(:not(pre) > code) { background: var(--surface-2); padding: 0.1em 0.35em; border-radius: var(--radius-xs); }
   .body :global(table) { display: block; overflow-x: auto; border-collapse: collapse; font-size: 0.9em; }
   .body :global(th), .body :global(td) { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
   .body :global(hr) { border: 0; border-top: 1px solid var(--line); }

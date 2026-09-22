@@ -117,7 +117,7 @@
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 6px; }
   .lede { color: var(--text-2); margin: 0 0 20px; }
   form { display: flex; flex-direction: column; gap: 16px; }
-  button { margin-top: 4px; padding: 13px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
+  button { margin-top: 4px; padding: 13px; border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   button:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .alt { margin: 22px 0 0; color: var(--text-2); }

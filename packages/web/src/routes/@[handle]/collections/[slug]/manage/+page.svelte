@@ -443,19 +443,19 @@
 
 <style>
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
-  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: 20px 20px 0 0; padding: 20px 18px calc(18px + var(--safe-b)); box-shadow: 0 -10px 40px rgba(0,0,0,0.25); max-height: 88vh; overflow: auto; }
-  @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 520px; border-radius: 20px; } }
+  dialog::backdrop { background: var(--scrim); }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 20px 18px calc(18px + var(--safe-b)); box-shadow: var(--shadow-sheet); max-height: 88vh; overflow: auto; }
+  @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 520px; border-radius: var(--radius-lg); } }
   .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 10px; overflow-wrap: anywhere; }
   .sheet p { margin: 0 0 10px; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
   .reveal { display: inline-flex; align-items: center; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); margin-bottom: 8px; }
-  .orphans { list-style: none; margin: 0 0 8px; padding: 0; border: 1px solid var(--line); border-radius: 12px; max-height: 40vh; overflow-y: auto; }
+  .orphans { list-style: none; margin: 0 0 8px; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); max-height: 40vh; overflow-y: auto; }
   .orphans li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
   .orphans li:first-child { border-top: 0; }
   .oname { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hint { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .pick { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 12px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .pick select { font: inherit; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 400; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+  .pick select { font: inherit; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 400; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); }
   .pick select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .sheet .row { margin-top: 14px; }
   .back { display: inline-flex; align-items: center; gap: 4px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); padding: 6px 0; margin-bottom: 8px; }
@@ -465,7 +465,7 @@
   .titlerow { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
   .rename { flex: 1; }
   .rename { margin-top: 4px; }
-  .rename input { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); font-weight: 600; width: 100%; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); transition: border-color 0.12s ease; }
+  .rename input { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); font-weight: 600; width: 100%; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); transition: border-color 0.12s ease; }
   /* Same manners as every other field: quiet edge however you got here, the ring only for someone tabbing. */
   .rename input:focus { outline: none; border-color: var(--accent); }
   .rename input.kb:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -503,13 +503,13 @@
   .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bad { color: var(--danger); }
-  .chip { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line); }
+  .chip { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); padding: 7px 11px; border-radius: var(--radius-pill); border: 1px solid var(--line); }
   .count, .chev { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .chev { font-size: calc(var(--text-xl) * var(--size-app)); }
   .menu { position: relative; flex: none; }
   /* Hangs below the button, right-aligned, from its spot in the header. */
-  .menupanel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 60; min-width: 244px; background: var(--surface); border-radius: 14px; padding: 6px; box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 0 1px var(--line); display: flex; flex-direction: column; }
-  .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
+  .menupanel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 60; min-width: 244px; background: var(--surface); border-radius: var(--radius-md); padding: 6px; box-shadow: var(--shadow-menu); display: flex; flex-direction: column; }
+  .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
   .mi:hover { background: var(--surface-2); }
   .mi.danger { color: var(--danger); }
   .status { text-align: center; color: var(--text-3); padding: 24px 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }

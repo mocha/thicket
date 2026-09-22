@@ -82,7 +82,7 @@
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: calc(var(--text-xl) * var(--size-app)); letter-spacing: -0.01em; }
   .auth { display: flex; gap: 8px; align-items: center; }
   @media (min-width: 900px) {
-    main:not(.anon):not(.paged) { margin-left: calc(240px + max(24px, (100vw - 240px - 640px) / 2)); padding: 28px 24px 60px; }
+    main:not(.anon):not(.paged) { margin-left: calc(var(--nav-w) + max(24px, (100vw - var(--nav-w) - 640px) / 2)); padding: 28px 24px 60px; }
     main.anon, header.anon { max-width: 680px; }
     main.home, header.anon.home { max-width: 1040px; }
     main.anon { padding: 20px 24px 60px; }

@@ -105,23 +105,23 @@
 </div>
 
 <style>
-  .scrim { position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, 0.5); }
+  .scrim { position: fixed; inset: 0; z-index: 70; background: var(--scrim); }
   .panel {
     position: fixed; z-index: 71; left: 50%; top: 50%; transform: translate(-50%, -50%);
     width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto;
-    background: var(--surface); color: var(--text); border-radius: 18px; padding: 18px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--line);
+    background: var(--surface); color: var(--text); border-radius: var(--radius); padding: 18px;
+    box-shadow: var(--shadow-dialog), 0 0 0 1px var(--line);
   }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 6px; }
   .help { margin: 0 0 14px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
   /* The cropper fills this box; it needs an explicit height to lay itself out. */
-  .stage { position: relative; width: 100%; height: 300px; border-radius: 14px; overflow: hidden; background: var(--bg); }
+  .stage { position: relative; width: 100%; height: 300px; border-radius: var(--radius-md); overflow: hidden; background: var(--bg); }
   .status { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: 0 16px; text-align: center; }
   .zoom { display: flex; align-items: center; gap: 12px; margin: 14px 0 4px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .zoom input { flex: 1; accent-color: var(--accent); }
   .row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
-  button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
+  button { padding: 10px 16px; border-radius: var(--radius-pill); border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .ghost { color: var(--text-2); background: var(--surface); }
-  .save { color: #fff; background: var(--accent); border-color: transparent; }
+  .save { color: var(--accent-ink); background: var(--accent); border-color: transparent; }
   button:disabled { opacity: 0.5; }
 </style>

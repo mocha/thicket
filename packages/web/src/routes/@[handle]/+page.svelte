@@ -531,21 +531,21 @@
   .site { color: var(--accent); font-weight: 600; }
   .bio { margin: 10px 0 0; color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); white-space: pre-line; }
   /* The avatar as a button: a camera badge in the corner says it's changeable. */
-  .photobtn { flex: none; position: relative; padding: 0; border-radius: 30%; line-height: 0; }
-  .photobtn .camera { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--accent); color: #fff; box-shadow: 0 0 0 2px var(--surface); }
+  .photobtn { flex: none; position: relative; padding: 0; border-radius: var(--radius-avatar); line-height: 0; }
+  .photobtn .camera { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 2px var(--surface); }
   .photobtn:hover { opacity: 0.92; }
   .photobtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .ownerctrls { flex: none; display: flex; align-items: center; gap: 8px; }
   /* The avatar's tap menu: hangs off the avatar, opening down and to the left. */
   .photomenu { position: relative; flex: none; }
-  .menupanel { position: absolute; top: calc(100% + 8px); left: 0; z-index: 60; min-width: 200px; max-width: calc(100vw - 16px); background: var(--surface); border-radius: 14px; padding: 6px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--line); display: flex; flex-direction: column; }
-  .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
+  .menupanel { position: absolute; top: calc(100% + 8px); left: 0; z-index: 60; min-width: 200px; max-width: calc(100vw - 16px); background: var(--surface); border-radius: var(--radius-md); padding: 6px; box-shadow: var(--shadow-menu); display: flex; flex-direction: column; }
+  .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
   .mi:hover { background: var(--surface-2); }
   .mi.danger { color: var(--danger); }
   /* Edit: a quiet pencil, the same at every width. */
 
   /* Owner only: a muted one-line reminder in a soft box at the very top of the page. */
-  .ownerbar { margin: 0 0 18px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); text-align: center; }
+  .ownerbar { margin: 0 0 18px; padding: 12px 16px; border-radius: var(--radius-sm); background: var(--surface-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); text-align: center; }
 
   /* Every section's content sits in a card — the same surface + shadow the
      lists always used. The audience control rides at the top in a header bar. */
