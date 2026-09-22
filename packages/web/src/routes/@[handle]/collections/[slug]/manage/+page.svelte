@@ -14,6 +14,7 @@
   import Button from '$lib/components/Button.svelte';
   import Field from '$lib/components/Field.svelte';
   import Textarea from '$lib/components/Textarea.svelte';
+  import Select from '$lib/components/Select.svelte';
   import { modality } from '$lib/focus.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
@@ -188,7 +189,9 @@
    * sub-collections move with them; this one is deleted. A modal, like delete, that says what will happen first.
    */
   let mergeEl = $state<HTMLDialogElement | null>(null);
-  let mergeInto = $state<number | null>(null);
+  /* The dropdown hands back the id as text, so that's how it's kept; empty
+     means nothing has been chosen yet. */
+  let mergeInto = $state('');
   let merging = $state(false);
   /** Every collection of mine this one could go into: not itself, not the root, not one of its own sub-collections. */
   const mergeTargets = $derived.by(() => {
@@ -201,9 +204,9 @@
     }
     return collectionStore.list.filter((c) => c.parentId !== null && !inside.has(c.id)).sort((a, b) => a.name.localeCompare(b.name));
   });
-  const mergeTarget = $derived(mergeTargets.find((c) => c.id === mergeInto) ?? null);
+  const mergeTarget = $derived(mergeTargets.find((c) => String(c.id) === mergeInto) ?? null);
   function askMerge() {
-    mergeInto = null;
+    mergeInto = '';
     void loadCollections(true);
     mergeEl?.showModal();
   }
@@ -382,13 +385,19 @@
       {#if mergeTargets.length === 0}
         <p>You don’t have another collection to merge this one into.</p>
       {:else}
-        <label class="pick">
-          <span>Merge into</span>
-          <select bind:value={mergeInto} disabled={merging}>
-            <option value={null} disabled>Choose a collection…</option>
-            {#each mergeTargets as c (c.id)}<option value={c.id}>{c.name} ({c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'})</option>{/each}
-          </select>
-        </label>
+        <Select
+          class="pick"
+          label="Merge into"
+          bind:value={mergeInto}
+          disabled={merging}
+          options={[
+            { value: '', label: 'Choose a collection…', disabled: true },
+            ...mergeTargets.map((c) => ({
+              value: String(c.id),
+              label: `${c.name} (${c.feedCount} ${c.feedCount === 1 ? 'feed' : 'feeds'})`
+            }))
+          ]}
+        />
         {#if mergeTarget}
           <p>“{mergeTarget.name}” keeps its name, description and visibility, and gains every feed from “{col.name}” it doesn’t already have.{#if col.children.length} {col.children.length === 1 ? 'The sub-collection moves' : `The ${col.children.length} sub-collections move`} into it too.{/if}</p>
           <p>Then “{col.name}” is deleted, and links to it stop working. Nothing stops being followed.</p>
@@ -454,9 +463,7 @@
   .orphans li:first-child { border-top: 0; }
   .oname { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hint { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .pick { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 12px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .pick select { font: inherit; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 400; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); }
-  .pick select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .sheet :global(.pick) { margin: 4px 0 12px; }
   .sheet .row { margin-top: 14px; }
   .back { display: inline-flex; align-items: center; gap: 4px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); padding: 6px 0; margin-bottom: 8px; }
   .top { margin-bottom: 6px; }

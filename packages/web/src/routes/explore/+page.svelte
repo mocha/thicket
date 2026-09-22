@@ -14,6 +14,7 @@
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
+  import Select from '$lib/components/Select.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FollowControl from '$lib/components/FollowControl.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
@@ -311,32 +312,42 @@
 {#snippet filterBar()}
   <p class="blurb">{@render scopeIcon(scope)}<span>{noOrphan(SCOPE_BLURB[scope])}</span></p>
   <div class="filters">
-    <label class="filter" title={followsAnyone === false ? 'Follow someone first' : ''}>
-      <span class="label">Show</span>
-      <select value={narrowToNetwork ? 'following' : ''}
-              disabled={browseAs === 'users'}
-              onchange={(e) => setParams({ by: e.currentTarget.value === 'following' ? 'following' : null })}>
-        <option value="">Everyone</option>
-        <option value="following" disabled={followsAnyone === false}>People I follow</option>
-      </select>
-    </label>
+    <Select
+      class="filter"
+      label="Show"
+      size="sm"
+      title={followsAnyone === false ? 'Follow someone first' : ''}
+      value={narrowToNetwork ? 'following' : ''}
+      disabled={browseAs === 'users'}
+      options={[
+        { value: '', label: 'Everyone' },
+        { value: 'following', label: 'People I follow', disabled: followsAnyone === false }
+      ]}
+      onchange={(e) => setParams({ by: e.currentTarget.value === 'following' ? 'following' : null })}
+    />
     {#if !searching && browseAs === 'feeds'}
-      <label class="filter">
-        <span class="label">Added</span>
-        <select value={since ?? ''} onchange={(e) => setParams({ since: e.currentTarget.value || null })}>
-          <option value="">any time</option>
-          <option value="24h">24 hours</option>
-          <option value="week">week</option>
-          <option value="month">month</option>
-          <option value="year">year</option>
-        </select>
-      </label>
-      <label class="filter">
-        <span class="label">Sort</span>
-        <select value={sort} onchange={(e) => setParams({ sort: e.currentTarget.value === 'recent' ? null : e.currentTarget.value })}>
-          {#each sorts as s (s.id)}<option value={s.id}>{s.label}</option>{/each}
-        </select>
-      </label>
+      <Select
+        class="filter"
+        label="Added"
+        size="sm"
+        value={since ?? ''}
+        options={[
+          { value: '', label: 'any time' },
+          { value: '24h', label: '24 hours' },
+          { value: 'week', label: 'week' },
+          { value: 'month', label: 'month' },
+          { value: 'year', label: 'year' }
+        ]}
+        onchange={(e) => setParams({ since: e.currentTarget.value || null })}
+      />
+      <Select
+        class="filter"
+        label="Sort"
+        size="sm"
+        value={sort}
+        options={sorts.map((s) => ({ value: s.id, label: s.label }))}
+        onchange={(e) => setParams({ sort: e.currentTarget.value === 'recent' ? null : e.currentTarget.value })}
+      />
     {/if}
   </div>
 {/snippet}
@@ -534,17 +545,16 @@
   /* Beats .link’s inherited size below: “See all” is a small action, not part of the heading. */
   h2 .all { margin-left: auto; font-family: var(--font); font-size: calc(var(--text-sm) * var(--size-app)); }
   .filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 4px; }
-  .filter { display: inline-flex; align-items: center; gap: 4px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .label { white-space: nowrap; }
+  /* Each filter reads as one line — its name, then the dropdown beside it —
+     instead of the stack a labelled field normally makes. */
+  .filters :global(.filter) { flex-direction: row; align-items: center; gap: var(--space-1); }
+  .filters :global(.filter) > :global(label) { white-space: nowrap; font-weight: 400; }
   /* Narrow screens: the filters stack full-width into a tidy little form
      instead of wrapping into an orphaned control. */
   @media (max-width: 600px) {
     .filters { flex-direction: column; align-items: stretch; }
-    .filter { gap: 8px; }
-    .filter .label { min-width: 44px; }
-    .filter select { flex: 1; }
+    .filters :global(.filter) { flex-direction: column; align-items: stretch; }
   }
-  .filter select { padding: 6px 8px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   /* Browse: the filters are the list card's header, so the two read as one unit. */
   .browse { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
