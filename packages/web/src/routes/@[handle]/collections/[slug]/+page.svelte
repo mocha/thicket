@@ -21,7 +21,7 @@
 
   /**
    * A collection, mine or anyone's, at its one address. The owner reads it
-   * here too (Settings is one level down), so the URL in the bar is always
+   * here too (Manage is one level down), so the URL in the bar is always
    * the shareable one. The owner's two actions are named rather than hidden
    * behind a kebab: add something to this collection, or change the collection
    * itself. For visitors there is one action:
@@ -92,7 +92,7 @@
       <div class="actions">
         {#if col.isMe}
           <AddFeedButton collectionIds={[col!.id]} via="collection_page" />
-          <IconButton icon="gear" variant="bordered" size="lg" href={manageCollectionHref(handle, slug)} label="Settings" title="Settings" />
+          <IconButton icon="gear" variant="bordered" size="lg" href={manageCollectionHref(handle, slug)} label="Manage" title="Manage" />
         {:else if session.user}
           {#if existingCopy}
             <Button variant="primary" href={collectionHref(session.user.handle, existingCopy.slug)}>Open your copy</Button>
