@@ -453,37 +453,37 @@
 <style>
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
   dialog::backdrop { background: var(--scrim); }
-  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 20px 18px calc(18px + var(--safe-b)); box-shadow: var(--shadow-sheet); max-height: 88vh; overflow: auto; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-5) var(--space-4) calc(var(--space-4) + var(--safe-b)); box-shadow: var(--shadow-sheet); max-height: 88vh; overflow: auto; }
   @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 520px; border-radius: var(--radius-lg); } }
-  .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 10px; overflow-wrap: anywhere; }
-  .sheet p { margin: 0 0 10px; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
-  .reveal { display: inline-flex; align-items: center; gap: 6px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); margin-bottom: 8px; }
-  .orphans { list-style: none; margin: 0 0 8px; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); max-height: 40vh; overflow-y: auto; }
-  .orphans li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-3); overflow-wrap: anywhere; }
+  .sheet p { margin: 0 0 var(--space-3); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
+  .reveal { display: inline-flex; align-items: center; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); margin-bottom: var(--space-2); }
+  .orphans { list-style: none; margin: 0 0 var(--space-2); padding: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); max-height: 40vh; overflow-y: auto; }
+  .orphans li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
   .orphans li:first-child { border-top: 0; }
   .oname { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hint { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .sheet :global(.pick) { margin: 4px 0 12px; }
-  .sheet .row { margin-top: 14px; }
-  .back { display: inline-flex; align-items: center; gap: 4px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); padding: 6px 0; margin-bottom: 8px; }
-  .top { margin-bottom: 6px; }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 2px 0 0; overflow-wrap: anywhere; }
-  .titlebar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  .titlerow { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+  .sheet :global(.pick) { margin: var(--space-1) 0 var(--space-3); }
+  .sheet .row { margin-top: var(--space-4); }
+  .back { display: inline-flex; align-items: center; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); padding: var(--space-2) 0; margin-bottom: var(--space-2); }
+  .top { margin-bottom: var(--space-2); }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 2px 0 0; /* 2px is an optical nudge: the title sits on the back link's line. */ overflow-wrap: anywhere; }
+  .titlebar { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+  .titlerow { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
   .rename { flex: 1; }
-  .rename { margin-top: 4px; }
-  .rename input { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); font-weight: 600; width: 100%; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); transition: border-color 0.12s ease; }
+  .rename { margin-top: var(--space-1); }
+  .rename input { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); font-weight: 600; width: 100%; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); transition: border-color 0.12s ease; }
   /* Same manners as every other field: quiet edge however you got here, the ring only for someone tabbing. */
   .rename input:focus { outline: none; border-color: var(--accent); }
   .rename input.kb:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
-  .opt { margin-bottom: 18px; }
-  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
-  h3 { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin: 16px 0 6px; }
-  .info { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-4) 0; }
+  .opt { margin-bottom: var(--space-4); }
+  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
+  h3 { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin: var(--space-4) 0 var(--space-2); }
+  .info { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); }
   .info a { color: var(--accent); font-weight: 600; }
-  .subtle { margin: -4px 0 10px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .radios { display: flex; flex-direction: column; gap: 8px; }
+  .subtle { margin: calc(-1 * var(--space-1)) 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .radios { display: flex; flex-direction: column; gap: var(--space-2); }
   /* Side by side once there is room for three; stacked on a phone, where they would be three slivers. */
   @media (min-width: 620px) { .vis { display: grid; grid-template-columns: repeat(3, 1fr); align-items: stretch; } }
   .descbox { position: relative; }
@@ -491,33 +491,34 @@
      character count, so it never covers what you typed and never nudges the
      text as it comes and goes. */
   .saved { position: absolute; left: 0; bottom: 0; font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); pointer-events: none; }
-  .radios label { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
-  .vis label { gap: 8px; }
+  .radios label { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
+  .vis label { gap: var(--space-2); }
   .radios label:has(input:checked) { border-color: var(--accent); }
-  .radios input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .radios input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-  .feedhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
+  .feedhead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
   .feedhead h2 { margin: 0; }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .list li { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--line); }
+  .list li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .list li:first-child { border-top: 0; }
   .children li { padding: 0; }
-  .children a { display: flex; align-items: center; gap: 12px; padding: 14px 16px; width: 100%; }
+  .children a { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); width: 100%; }
   .children .name { flex: 1; font-weight: 600; }
   .meta { flex: 1; min-width: 0; }
   .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bad { color: var(--danger); }
-  .chip { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); padding: 7px 11px; border-radius: var(--radius-pill); border: 1px solid var(--line); }
+  .chip { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-pill); border: 1px solid var(--line); }
   .count, .chev { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .chev { font-size: calc(var(--text-xl) * var(--size-app)); }
   .menu { position: relative; flex: none; }
   /* Hangs below the button, right-aligned, from its spot in the header. */
-  .menupanel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 60; min-width: 244px; background: var(--surface); border-radius: var(--radius-md); padding: 6px; box-shadow: var(--shadow-menu); display: flex; flex-direction: column; }
-  .mi { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
+  .menupanel { position: absolute; top: calc(100% + var(--space-2)); right: 0; z-index: 60; min-width: 244px; background: var(--surface); border-radius: var(--radius-md); padding: var(--space-2); box-shadow: var(--shadow-menu); display: flex; flex-direction: column; }
+  .mi { display: block; width: 100%; text-align: left; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
   .mi:hover { background: var(--surface-2); }
   .mi.danger { color: var(--danger); }
-  .status { text-align: center; color: var(--text-3); padding: 24px 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .status { text-align: center; color: var(--text-3); padding: var(--space-5) 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>

@@ -155,40 +155,41 @@
 {/if}
 
 <style>
-  .top { margin-bottom: 16px; }
-  .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .top { margin-bottom: var(--space-4); }
+  .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1; }
-  .desc { margin: 6px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); overflow-wrap: anywhere; }
-  .sub { margin: 4px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .desc { margin: var(--space-2) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); overflow-wrap: anywhere; }
+  .sub { margin: var(--space-1) 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
   /* The pill sits in a line of text, so it carries its own gap to the separator after it. */
   .sub :global(.beforetext) { margin-right: var(--space-2); }
-  .reveal { display: inline-flex; align-items: center; gap: 3px; font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
-  .actions { flex: none; display: flex; gap: 8px; align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
+  .reveal { display: inline-flex; align-items: center; gap: var(--space-1); font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
+  /* 2px of top padding is an optical nudge: the buttons sit on the title's line. */
+  .actions { flex: none; display: flex; gap: var(--space-2); align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
   dialog::backdrop { background: var(--scrim); }
-  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 20px 18px calc(18px + var(--safe-b)); box-shadow: var(--shadow-sheet); }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-5) var(--space-4) calc(var(--space-4) + var(--safe-b)); box-shadow: var(--shadow-sheet); }
   @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 560px; border-radius: var(--radius-lg); } }
-  .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 14px; }
-  .ways { display: grid; gap: 12px; }
+  .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-4); }
+  .ways { display: grid; gap: var(--space-3); }
   @media (min-width: 700px) { .ways { grid-template-columns: 1fr 1fr; } }
-  .ways section { background: var(--bg); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .ways section { background: var(--bg); border-radius: var(--radius-md); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
   .ways h3 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); }
-  .ways p { margin: 0 0 4px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .sheet :global(.close) { position: absolute; top: 10px; right: 10px; }
-  .feeds { margin-bottom: 18px; }
+  .ways p { margin: 0 0 var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .sheet :global(.close) { position: absolute; top: var(--space-3); right: var(--space-3); }
+  .feeds { margin-bottom: var(--space-4); }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .list li { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--line); }
+  .list li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .list li:first-child { border-top: 0; }
   .children li { padding: 0; }
-  .children a { display: flex; align-items: center; gap: 12px; padding: 14px 16px; width: 100%; }
+  .children a { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); width: 100%; }
   .children .name { flex: 1; font-weight: 600; }
   .meta { flex: 1; min-width: 0; }
   .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .count, .chev { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .chev { font-size: calc(var(--text-xl) * var(--size-app)); }
-  .status { text-align: center; color: var(--text-3); padding: 30px 0; }
-  .empty { text-align: center; padding: 50px 20px; color: var(--text-2); }
-  .empty h1 { font-size: calc(var(--text-2xl) * var(--size-app)); margin-bottom: 6px; }
+  .status { text-align: center; color: var(--text-3); padding: var(--space-6) 0; }
+  .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
+  .empty h1 { font-size: calc(var(--text-2xl) * var(--size-app)); margin-bottom: var(--space-2); }
 </style>
