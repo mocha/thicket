@@ -17,6 +17,7 @@
   import NoteEditor from './NoteEditor.svelte';
   import NoteBlock from './NoteBlock.svelte';
   import Pager from './Pager.svelte';
+  import ReadOnSiteLink from './ReadOnSiteLink.svelte';
   import { display } from '$lib/display.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
@@ -169,7 +170,7 @@
                 {#if content.typicalLength !== null && content.typicalLength < 1000}This site only sends a preview of its posts.{:else}This looks like a preview, not the whole post.{/if}
               </p>
             {/if}
-            <a class="out" {href} target="_blank" rel="noopener" onclick={outbound}>{isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : 'Read on original site'} <span aria-hidden="true">↗</span></a>
+            <ReadOnSiteLink {href} label={isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : undefined} onclick={outbound} />
           </footer>
 
           {#if item.myNote && !editing}<NoteBlock note={item.myNote} mine onedit={() => (editing = true)} />{/if}
@@ -236,8 +237,6 @@
 
   footer { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
   .partial { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .out { display: inline-flex; align-items: center; gap: 6px; padding: 12px 20px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
-  .out:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   footer + :global(.note) { margin-top: 18px; }
 
   /* Paged: the sheet is as tall as the frame and flows into columns one frame wide; the transform picks the column. Nothing scrolls. */
