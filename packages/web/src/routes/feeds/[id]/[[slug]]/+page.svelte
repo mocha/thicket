@@ -8,7 +8,7 @@
   import { feedOrigin, longAgo } from '$lib/time';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import River from '$lib/components/River.svelte';
-  import FollowButton from '$lib/components/FollowButton.svelte';
+  import FollowControl from '$lib/components/FollowControl.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import { session } from '$lib/session.svelte';
@@ -58,7 +58,7 @@
         <h1>{feedName(feed)}</h1>
         {#if session.user}
           <div class="actions">
-            <FollowButton feedId={feed.id} bind:ids name={feedName(feed)} onchange={() => void loadFeed()} />
+            <FollowControl feedId={feed.id} bind:ids name={feedName(feed)} onchange={() => void loadFeed()} />
             <IconButton icon="gear" variant="bordered" size="lg" href="/feeds/{feed.id}/settings" label="Settings" title="Settings" />
           </div>
         {/if}

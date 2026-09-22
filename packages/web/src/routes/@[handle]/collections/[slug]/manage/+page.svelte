@@ -8,7 +8,7 @@
   import { feedListName } from '$lib/feedname';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
-  import FollowButton from '$lib/components/FollowButton.svelte';
+  import FollowControl from '$lib/components/FollowControl.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
@@ -357,7 +357,7 @@
               <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · last post {relativeTime(f.lastItemAt)}{/if}{#if f.consecutiveFailures > 0} · <span class="bad">failing</span>{/if}</div>
             </div>
             {#if memberships[f.id]}
-              <FollowButton feedId={f.id} ids={memberships[f.id]} name={f.title ?? hostOf(f.url)} compact mainLabel="Remove from {col.name}" onmain={() => removeFeed(f)}
+              <FollowControl feedId={f.id} ids={memberships[f.id]} name={f.title ?? hostOf(f.url)} compact mainLabel="Remove from {col.name}" onmain={() => removeFeed(f)}
                 onchange={(next) => { memberships[f.id] = next; if (!next.includes(col!.id)) void load(); void loadCollections(true); }} />
             {:else}
               <button class="chip" onclick={() => removeFeed(f)} aria-label="Remove {f.title ?? hostOf(f.url)}">Remove from {col.name}</button>

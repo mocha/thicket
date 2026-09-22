@@ -23,6 +23,7 @@
   import ItemActions from '$lib/components/ItemActions.svelte';
   import NoteEditor from '$lib/components/NoteEditor.svelte';
   import NoteBlock from '$lib/components/NoteBlock.svelte';
+  import ReadOnSiteLink from '$lib/components/ReadOnSiteLink.svelte';
 
   const itemId = $derived(Number(page.params.item));
   let item = $state<RiverItem | null>(null);
@@ -109,7 +110,7 @@
     {#if item.summary && item.summary !== item.title}<p class="summary">{item.summary}</p>{/if}
 
     <footer>
-      <a class="out" {href} target="_blank" rel="noopener" onclick={outbound}>{isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : 'Read on original site'} <span aria-hidden="true">↗</span></a>
+      <ReadOnSiteLink {href} label={isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : undefined} onclick={outbound} />
       {#if !session.user}
         <p class="note">Posts are read here by people with an account on this instance. <a href="/login">Sign in</a> to read it without leaving, or follow {source} to get what they publish next.</p>
       {/if}
@@ -152,8 +153,6 @@
   .summary { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: 18px 0 0; }
 
   footer { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
-  .out { display: inline-flex; align-items: center; gap: 6px; padding: 12px 20px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
-  .out:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .note { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.5; }
   .note a { color: var(--accent); }
 

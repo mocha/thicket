@@ -15,7 +15,7 @@
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
-  import FollowButton from '$lib/components/FollowButton.svelte';
+  import FollowControl from '$lib/components/FollowControl.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
   import Badge from '$lib/components/Badge.svelte';
@@ -367,7 +367,7 @@
         </span>
       </div>
     </a>
-    <FollowButton feedId={f.id} bind:ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} compact onchange={() => void api.feed(f.id).then((u) => Object.assign(f, u))} />
+    <FollowControl feedId={f.id} bind:ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} compact onchange={() => void api.feed(f.id).then((u) => Object.assign(f, u))} />
   </li>
 {/snippet}
 

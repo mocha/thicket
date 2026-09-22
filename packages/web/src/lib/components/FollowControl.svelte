@@ -1,6 +1,8 @@
 <script lang="ts">
   /**
-   * The one control for "my relationship to this feed". A split button:
+   * The follow control: the one place to see and change "my relationship to
+   * this feed". A split button — a main half naming the state, a caret half
+   * opening the filing menu:
    *   not following            → [ Follow | ▾ ]
    *   following, 1 collection  → [ In Tech News | ▾ ]
    *   following, N collections → [ In N collections | ▾ ]
