@@ -326,11 +326,11 @@
     <h2>Collection visibility</h2>
     <p class="subtle">Who should be able to see this collection?</p>
     {#if profilePrivate}
-      <p class="info">Your profile is set to private, so your collections aren’t displayed anywhere. <a href="/settings">Change that in Settings.</a></p>
+      <p class="info">Your profile is set to private, so your collections aren’t displayed anywhere. Change that <a href={profileHref(handle)}>on your profile</a>; the collection audience picker appears once your profile is visible.</p>
     {:else if collectionsHidden}
-      <p class="info">Your profile doesn’t show collections to anyone right now, so this setting has no effect until it does. <a href="/settings">Change that in Settings.</a></p>
+      <p class="info">Your profile doesn’t show collections to anyone right now, so this setting has no effect until it does. Change that <a href={profileHref(handle)}>on your profile</a>.</p>
     {:else}
-      {#if collectionsFriendsOnly}<p class="info">Your collections are shown only to the people you follow. Public here means public to them. <a href="/settings">Change that in Settings.</a></p>{/if}
+      {#if collectionsFriendsOnly}<p class="info">Your collections are shown only to the people you follow. Public here means public to them. Change that <a href={profileHref(handle)}>on your profile</a>.</p>{/if}
       <div class="radios vis" role="radiogroup" aria-label="Collection visibility">
         {#each VISIBILITIES as v (v.value)}
           <label>
