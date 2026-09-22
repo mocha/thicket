@@ -70,11 +70,25 @@ export function stripHtml(html: string): string {
     .trim();
 }
 
+/**
+ * True when every bit of visible text lives inside a link, so stripping the
+ * markup would leave only the link's own words. Hacker News hands each post a
+ * description that is a single link reading "Comments" pointing at the thread;
+ * "Read more" and a bare "Permalink" have the same shape. None of these
+ * describes the post, so we treat them as no summary at all rather than show
+ * the word to the reader. A description with any text of its own outside a
+ * link keeps that text.
+ */
+export function isLinkOnly(html: string): boolean {
+  return stripHtml(html.replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, " ")) === "";
+}
+
 function summarize(...candidates: Array<string | undefined | null>): string | null {
   for (const c of candidates) {
     if (!c) continue;
     const text = stripHtml(c);
     if (!text) continue;
+    if (isLinkOnly(c)) continue;
     return text.length > SUMMARY_LEN ? text.slice(0, SUMMARY_LEN - 1).trimEnd() + "…" : text;
   }
   return null;
