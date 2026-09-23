@@ -83,11 +83,11 @@
     {/if}
   </a>
 
-  {#if item.linkUrl && item.linkLabel && !compact}
+  {#if item.linkUrl && item.linkLabel}
     <!-- The feed's whole description was a link elsewhere (e.g. Hacker News's
          discussion thread). It lives outside the body's link, since a link can't
          nest inside another. -->
-    <a class="card-extralink" href={item.linkUrl} target="_blank" rel="noopener">{item.linkLabel} →</a>
+    <a class="card-extralink" class:compact href={item.linkUrl} target="_blank" rel="noopener">{item.linkLabel} →</a>
   {/if}
 
   {#if compact && (myNote || others.length)}
@@ -138,6 +138,8 @@
   }
   footer { margin-top: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .card-extralink { display: inline-block; margin: calc(-1 * var(--space-2)) var(--card-pad) var(--card-pad); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
+  /* Compact cards fill a fixed frame; the link sits at the bottom edge with no negative pull. */
+  .card-extralink.compact { margin: 0 var(--card-pad) var(--space-2); }
   @media (hover: hover) { .card-extralink:hover { text-decoration: underline; text-underline-offset: 3px; } }
   .repeat {
     display: flex; gap: var(--space-2); align-items: flex-start; margin: calc(-1 * var(--space-1)) var(--card-pad) var(--space-4); padding: var(--space-2) var(--space-3);
