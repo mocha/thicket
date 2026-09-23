@@ -3,7 +3,7 @@
   import { page } from '$app/state';
   import { api, authApi, profilesApi, publicCollectionHref, type Profile, type ProfileCollection, type PublicBookmark, type PublicUser, type RiverItem, type ShareLevel } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
-  import { hostOf } from '$lib/time';
+  import { hostOf, webHref } from '$lib/time';
   import Monogram from '$lib/components/Monogram.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import AvatarCropDialog from '$lib/components/AvatarCropDialog.svelte';
@@ -480,7 +480,7 @@
         {:else}
           <ul class="list">
             {#each recentBookmarks as b (b.id)}
-              <li><a href={b.url} target="_blank" rel="noopener">
+              <li><a href={webHref(b.url) ?? '#'} target="_blank" rel="noopener">
                 <div class="meta2"><span class="name">{b.title ?? b.url}</span><span class="desc">{b.siteTitle ?? hostOf(b.url)}</span></div>
                 <span class="chev" aria-hidden="true">↗</span>
               </a></li>

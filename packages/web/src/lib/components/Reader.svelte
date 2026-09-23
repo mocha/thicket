@@ -8,7 +8,7 @@
    */
   import { page } from '$app/state';
   import { api, itemsApi, type ItemContent, type Note } from '$lib/api';
-  import { hostOf, relativeTime } from '$lib/time';
+  import { hostOf, relativeTime, webHref } from '$lib/time';
   import { closeReader, reader, readerClosed } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
   import SourceIcon from './SourceIcon.svelte';
@@ -63,7 +63,7 @@
 
   const item = $derived(reader.item);
   const source = $derived(item ? item.feedTitle ?? hostOf(item.siteUrl ?? item.url) : '');
-  const href = $derived(item?.url ?? item?.siteUrl ?? '#');
+  const href = $derived(webHref(item?.url) ?? webHref(item?.siteUrl) ?? '#');
   const others = $derived(item?.notes ?? []);
   /** A video post is watched, not read. */
   const isVideo = $derived(/(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/.test(hostOf(href)));

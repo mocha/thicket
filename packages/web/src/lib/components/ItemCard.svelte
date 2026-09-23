@@ -2,7 +2,7 @@
   import { noOrphan } from '$lib/orphans';
   import type { Note, RiverItem } from '$lib/api';
   import { api } from '$lib/api';
-  import { relativeTime, hostOf } from '$lib/time';
+  import { relativeTime, hostOf, webHref } from '$lib/time';
   import { session } from '$lib/session.svelte';
   import Card from './Card.svelte';
   import CardMeta from './CardMeta.svelte';
@@ -70,7 +70,7 @@
       <ItemActions {item} noteOpen={editing} onnote={noteButton} via="card" />
     {/if}
   </header>
-  <a class="link" class:compact href={item.url ?? item.siteUrl ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
+  <a class="link" class:compact href={webHref(item.url) ?? webHref(item.siteUrl) ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
     {#if item.imageUrl && !imgFailed}
       <img class="hero" src={item.imageUrl} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror={() => (imgFailed = true)} />
     {/if}
@@ -83,11 +83,11 @@
     {/if}
   </a>
 
-  {#if item.linkUrl && item.linkLabel}
+  {#if webHref(item.linkUrl) && item.linkLabel}
     <!-- The feed's whole description was a link elsewhere (e.g. Hacker News's
          discussion thread). It lives outside the body's link, since a link can't
          nest inside another. -->
-    <a class="card-extralink" class:compact href={item.linkUrl} target="_blank" rel="noopener">{item.linkLabel} →</a>
+    <a class="card-extralink" class:compact href={webHref(item.linkUrl)} target="_blank" rel="noopener">{item.linkLabel} →</a>
   {/if}
 
   {#if compact && (myNote || others.length)}
@@ -97,7 +97,7 @@
   {#if item.repeatOf?.length && !compact}
     <div class="repeat">
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></svg>
-      <span>This post appears to be a repeat of earlier {item.repeatOf.length === 1 ? 'post' : 'posts'} from {#each item.repeatOf as r, i (r.id)}{i > 0 ? ', ' : ''}<a href={r.url ?? item.siteUrl ?? '#'} target="_blank" rel="noopener" title={r.title ?? ''}>{new Date(r.publishedAt).toLocaleDateString('sv-SE')}</a>{/each}.</span>
+      <span>This post appears to be a repeat of earlier {item.repeatOf.length === 1 ? 'post' : 'posts'} from {#each item.repeatOf as r, i (r.id)}{i > 0 ? ', ' : ''}<a href={webHref(r.url) ?? webHref(item.siteUrl) ?? '#'} target="_blank" rel="noopener" title={r.title ?? ''}>{new Date(r.publishedAt).toLocaleDateString('sv-SE')}</a>{/each}.</span>
     </div>
   {/if}
 

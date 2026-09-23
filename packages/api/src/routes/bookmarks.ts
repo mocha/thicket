@@ -8,6 +8,7 @@ import { Hono } from "hono";
 import { and, eq, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
+import { isHttpUrl } from "../feeds/normalize.js";
 
 export const bookmarks = new Hono();
 
@@ -96,7 +97,10 @@ bookmarks.post("/", async (c) => {
     if (!it.url) return c.json({ error: "item has no link to save" }, 400);
     values = { userId: user.id, itemId: it.id, feedId: it.feedId, url: it.url, title: it.title, summary: it.summary, imageUrl: it.imageUrl, siteTitle: row.feedTitle, author: it.author, publishedAt: new Date(it.publishedAt as unknown as string), note: body.note ?? null };
   } else if (body.url) {
-    values = { userId: user.id, url: body.url.trim(), title: body.title ?? null, note: body.note ?? null };
+    // A bookmark is a clickable card others may see, so only ever a web address.
+    const url = body.url.trim();
+    if (!isHttpUrl(url)) return c.json({ error: "only http(s) URLs" }, 400);
+    values = { userId: user.id, url, title: body.title ?? null, note: body.note ?? null };
   } else {
     return c.json({ error: "itemId or url is required" }, 400);
   }
