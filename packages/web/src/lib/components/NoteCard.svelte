@@ -43,6 +43,10 @@
     </div>
     {#if item.imageUrl && !imgFailed}<img class="thumb" src={item.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onerror={() => (imgFailed = true)} />{/if}
   </a>
+  {#if item.linkUrl && item.linkLabel}
+    <!-- The source post's discussion-style link (e.g. Hacker News's "Comments"), outside the body's own link. -->
+    <a class="card-extralink" href={item.linkUrl} target="_blank" rel="noopener">{item.linkLabel} →</a>
+  {/if}
   {#if editing}
     <NoteEditor itemId={item.id} note={item.myNote} onsaved={saved} ondeleted={() => { item.myNote = null; editing = false; }} oncancel={() => (editing = false)} />
   {:else if item.myNote}
@@ -58,5 +62,7 @@
   .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
   @media (hover: hover) { .body:hover h3 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   p { --summary-lines: 2; }
+  .card-extralink { display: inline-block; margin: calc(-1 * var(--space-2)) var(--card-pad) var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
+  @media (hover: hover) { .card-extralink:hover { text-decoration: underline; text-underline-offset: 3px; } }
   .thumb { flex: none; width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--surface-2); }
 </style>

@@ -7,6 +7,8 @@ export type RiverItem = {
   /** The feed's slug, so a card can write the post's address without another fetch. */
   feedSlug: string;
   url: string | null; title: string | null; author: string | null; summary: string | null;
+  /** When the whole feed description was just a link elsewhere (e.g. Hacker News's "Comments"), that link and its words, to show in place of a summary. */
+  linkUrl: string | null; linkLabel: string | null;
   imageUrl: string | null; publishedAt: string; hasIcon: boolean; bookmarkId: number | null;
   myNote: Note | null;
   /** Other people's notes the viewer is allowed to see, newest first. */
@@ -217,6 +219,8 @@ export const importApi = {
 
 export type Bookmark = {
   id: number; itemId: number | null; feedId: number | null; url: string; title: string | null; summary: string | null;
+  /** The source post's discussion-style link (e.g. Hacker News's "Comments"), read live from the item, if it still exists. */
+  linkUrl: string | null; linkLabel: string | null;
   imageUrl: string | null; siteTitle: string | null; author: string | null; publishedAt: string | null; note: string | null;
   savedAt: string; hasIcon: boolean;
 };

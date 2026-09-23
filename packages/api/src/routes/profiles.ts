@@ -276,8 +276,9 @@ profiles.get("/:handle/bookmarks", async (c) => {
     select b.id, b.item_id as "itemId", b.feed_id as "feedId", b.url, b.title, b.summary, b.image_url as "imageUrl",
            b.site_title as "siteTitle", b.author, b.published_at as "publishedAt", b.saved_at as "savedAt",
            exists(select 1 from feed_icons fi where fi.feed_id = b.feed_id and not fi.generic) as "hasIcon",
-           (select mine.id from bookmarks mine where mine.user_id = ${viewerId} and mine.url = b.url limit 1) as "myBookmarkId"
-    from bookmarks b where b.user_id = ${u.id} ${cursor}
+           (select mine.id from bookmarks mine where mine.user_id = ${viewerId} and mine.url = b.url limit 1) as "myBookmarkId",
+           i.link_url as "linkUrl", i.link_label as "linkLabel"
+    from bookmarks b left join items i on i.id = b.item_id where b.user_id = ${u.id} ${cursor}
     order by b.saved_at desc, b.id desc limit ${limit + 1}
   `);
   const all = rows.rows as any[];
@@ -331,7 +332,7 @@ profiles.get("/:handle/notes", async (c) => {
   const viewerId = viewer?.id ?? -1;
   const rows = await db.execute<any>(sql`
     select i.id, i.feed_id as "feedId", f.title as "feedTitle", f.site_url as "siteUrl", ${feedSlugSql} as "feedSlug",
-           i.url, i.title, i.author, i.summary, i.image_url as "imageUrl", i.published_at as "publishedAt",
+           i.url, i.title, i.author, i.summary, i.link_url as "linkUrl", i.link_label as "linkLabel", i.image_url as "imageUrl", i.published_at as "publishedAt",
            exists(select 1 from feed_icons fi where fi.feed_id = i.feed_id and not fi.generic) as "hasIcon",
            (select bm.id from bookmarks bm where bm.user_id = ${viewerId} and bm.item_id = i.id limit 1) as "bookmarkId",
            theirs.id as "noteId", theirs.created_at as "notedAt",

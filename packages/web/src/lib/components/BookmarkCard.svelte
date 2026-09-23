@@ -55,6 +55,10 @@
     </div>
     {#if b.imageUrl}<img class="thumb" src={b.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onerror={(e) => ((e.currentTarget as HTMLImageElement).hidden = true)} />{/if}
   </a>
+  {#if b.linkUrl && b.linkLabel}
+    <!-- The source post's discussion-style link (e.g. Hacker News's "Comments"), outside the body's own link. -->
+    <a class="card-extralink" href={b.linkUrl} target="_blank" rel="noopener">{b.linkLabel} →</a>
+  {/if}
   {#if action}
     {#if action.kind === 'remove'}
       <IconButton class="corner remove" icon="close" onclick={action.run} label={action.label} title={action.title ?? action.label} />
@@ -70,6 +74,8 @@
   @media (hover: hover) { .body:hover h3 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   p { --summary-lines: 2; }
   .saved { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .card-extralink { display: inline-block; margin-top: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
+  @media (hover: hover) { .card-extralink:hover { text-decoration: underline; text-underline-offset: 3px; } }
   .thumb { flex: none; width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--surface-2); }
   /* The one action sits in the card's top corner, over the body's padding. */
   :global(.bm .corner) { position: absolute; top: var(--space-2); right: var(--space-2); }

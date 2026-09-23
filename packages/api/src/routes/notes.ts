@@ -24,7 +24,7 @@ notes.get("/", async (c) => {
   }
   const rows = await db.execute<any>(sql`
     select i.id, i.feed_id as "feedId", f.title as "feedTitle", f.site_url as "siteUrl", ${feedSlugSql} as "feedSlug",
-           i.url, i.title, i.author, i.summary, i.image_url as "imageUrl", i.published_at as "publishedAt",
+           i.url, i.title, i.author, i.summary, i.link_url as "linkUrl", i.link_label as "linkLabel", i.image_url as "imageUrl", i.published_at as "publishedAt",
            exists(select 1 from feed_icons fi where fi.feed_id = i.feed_id and not fi.generic) as "hasIcon",
            (select bm.id from bookmarks bm where bm.user_id = ${user.id} and bm.item_id = i.id limit 1) as "bookmarkId",
            mine.id as "noteId", mine.created_at as "notedAt",
