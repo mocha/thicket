@@ -1,15 +1,17 @@
 /**
- * Give an account a handful of notes so the profile's Notes section has
+ * Give an account a handful of notes so the profile's Bookmarks section has
  * something to show. Notes attach to posts that already exist, so run the
  * feed seed first (`pnpm seed`) and let a few items arrive.
  *
  *   pnpm --filter @thicket/api tsx --env-file=../../.env src/scripts/seed-notes.ts [handle]
  *
- * Default handle: christielenn, else the first user. Idempotent: a note the
- * account already has on a post is left alone (unique on user + item).
+ * Default handle: christielenn, else the first user. A note is part of a
+ * bookmark, so each noted post is saved too. Idempotent: a post the account
+ * already has a note on is left alone.
  */
 import { db, pool, schema } from "../db/client.js";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { snapshotOfItem } from "../lib/bookmarks.js";
 
 const handle = process.argv[2] ?? "christielenn";
 
@@ -44,18 +46,24 @@ async function main() {
   for (let i = 0; i < items.length && i < NOTES.length; i++) {
     const note = NOTES[i];
     const at = new Date(Date.now() - note.daysAgo * 86_400_000);
+    const snap = await snapshotOfItem(account.id, items[i].id);
+    if (!snap) continue;
     const res = await db
-      .insert(schema.notes)
-      .values({ userId: account.id, itemId: items[i].id, body: note.body, createdAt: at, updatedAt: at })
-      .onConflictDoNothing()
-      .returning({ id: schema.notes.id });
+      .insert(schema.bookmarks)
+      .values({ ...snap, savedAt: at, note: note.body, noteCreatedAt: at, noteUpdatedAt: at })
+      .onConflictDoUpdate({
+        target: [schema.bookmarks.userId, schema.bookmarks.url],
+        set: { note: note.body, noteCreatedAt: at, noteUpdatedAt: at },
+        setWhere: sql`${schema.bookmarks.note} is null`,
+      })
+      .returning({ id: schema.bookmarks.id });
     if (res.length) added++;
   }
 
   const [{ total }] = await db
     .select({ total: sql<number>`count(*)::int` })
-    .from(schema.notes)
-    .where(eq(schema.notes.userId, account.id));
+    .from(schema.bookmarks)
+    .where(and(eq(schema.bookmarks.userId, account.id), isNotNull(schema.bookmarks.note)));
   console.log(`@${account.handle}: added ${added} note(s); ${total} total now.`);
 }
 

@@ -2,6 +2,7 @@
   import { noOrphan } from '$lib/orphans';
   import type { Note, RiverItem } from '$lib/api';
   import { api } from '$lib/api';
+  import { noteToast } from '$lib/saves';
   import { relativeTime, hostOf, webHref } from '$lib/time';
   import { session } from '$lib/session.svelte';
   import Card from './Card.svelte';
@@ -104,7 +105,7 @@
   {#if !compact}
     {#if editing}
       <NoteEditor itemId={item.id} note={myNote}
-      onsaved={(n) => { myNote = n; editing = false; showToast(item.myNote ? 'Note updated' : 'Note saved'); item.myNote = n; }}
+      onsaved={(n) => { myNote = n; editing = false; showToast(noteToast(item)); item.myNote = n; item.bookmarkId = n.bookmarkId; }}
       ondeleted={() => { myNote = null; editing = false; item.myNote = null; }}
       oncancel={() => (editing = false)} />
     {:else if myNote}

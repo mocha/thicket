@@ -17,7 +17,8 @@
   /**
    * The sidebar, top to bottom: Everything (the whole stream, its own item
    * now), then "Collections" — a group you can fold away — holding each of your
-   * collections and "+ New collection", then Bookmarks, Notes and Explore.
+   * collections and "+ New collection", then Bookmarks (notes live there
+   * too) and Explore.
    * Nothing here manages anything: a collection is managed from its
    * own page. Mobile has no room for the list, so its Collections tab opens
    * your profile, which lists them.
@@ -102,7 +103,6 @@
     everything: 'M4 12c3-3 5-3 8 0s5 3 8 0M4 17c3-3 5-3 8 0s5 3 8 0M4 7c3-3 5-3 8 0s5 3 8 0',
     collections: 'M4 6h16M4 12h16M4 18h10',
     bookmarks: 'M6 4h12v17l-6-4-6 4z',
-    notes: 'M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H10l-5 4v-4H5.5A1.5 1.5 0 0 1 4 14.5z',
     explore: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM15.5 8.5l-2 5-5 2 2-5z',
     admin: 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z'
   };
@@ -213,9 +213,6 @@
       <a href="/bookmarks" aria-current={current('/bookmarks') ? 'page' : undefined}>{@render icon(icons.bookmarks)}<span class="long">Bookmarks</span><span class="shortl">Bookmarks</span></a>
     </li>
     <li>
-      <a href="/notes" aria-current={current('/notes') ? 'page' : undefined}>{@render icon(icons.notes)}<span class="long">Notes</span><span class="shortl">Notes</span></a>
-    </li>
-    <li>
       <a href="/explore" aria-current={current('/explore') || inFeeds ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
     </li>
     <!-- Mobile: you. Opens the account menu — your profile, settings, and log out. -->
@@ -247,7 +244,7 @@
 </nav>
 
 <style>
-  /* Mobile: a bottom bar of five tabs (Read, Collections, Bookmarks, Notes, Explore). */
+  /* Mobile: a bottom bar of four tabs (Read, Collections, Bookmarks, Explore), then You. */
   nav {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
     height: calc(var(--nav-h) + var(--safe-b)); padding-bottom: var(--safe-b);
@@ -260,8 +257,7 @@
   li { flex: 1; min-width: 0; }
   li > a, li.you > .tab {
     display: flex; width: 100%; flex-direction: column; align-items: center; /* 2px is an optical gap between a tab's icon and its label. */ gap: 2px;
-    /* Held at 11px until Notes and Bookmarks merge into one tab; with five tabs this moves to --text-xs. */
-    height: 100%; font-size: calc(11px * var(--size-app)); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
+    height: 100%; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
   }
   li > a[aria-current='page'] { color: var(--accent); }
   .mono { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; }

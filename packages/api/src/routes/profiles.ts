@@ -18,9 +18,10 @@ import { db, schema } from "../db/client.js";
 import { currentUser, normalizeHandle } from "../lib/auth.js";
 import { exportCollectionOpml } from "../lib/opml.js";
 import { PUBLIC_URL } from "../lib/config.js";
-import { feedSlugSql, slugify, uniqueCollectionSlug } from "../lib/slug.js";
+import { slugify, uniqueCollectionSlug } from "../lib/slug.js";
 import { activityForViewer } from "../lib/activity.js";
-import { noteColumns } from "../lib/notes.js";
+import { noteJson } from "../lib/notes.js";
+import { activeAtSql } from "./bookmarks.js";
 import { allowedLevels, allowedLevelsSql, allows, isFriendOf, type Audience, type ShareLevel } from "../lib/visibility.js";
 import { visitorCap } from "../lib/instance.js";
 
@@ -61,6 +62,18 @@ function collectionRows(u: Owner, who: Audience) {
   `);
 }
 
+/**
+ * What this viewer may see of an owner's bookmarks: all of them, with or
+ * without their notes, or only the noted ones when notes are shared and
+ * bookmarks aren't. Null when neither is.
+ */
+function sharedSaves(u: Owner, who: Audience, bookmarkCount: number, noteCount: number) {
+  const marks = allows(u.bookmarksVisibility, who);
+  const notes = allows(u.notesVisibility, who);
+  if (!marks && !notes) return null;
+  return { count: marks ? bookmarkCount : noteCount, notes: notes ? noteCount : null, notedOnly: !marks };
+}
+
 profiles.get("/:handle", async (c) => {
   const u = await owner(c.req.param("handle"));
   if (!u) return c.json({ error: "not found" }, 404);
@@ -78,18 +91,23 @@ profiles.get("/:handle", async (c) => {
            (select count(*)::int from user_follows where followee_id = ${u.id}) as followers,
            exists(select 1 from user_follows where follower_id = ${viewer?.id ?? -1} and followee_id = ${u.id}) as "isFollowing"
   `)).rows;
-  const [{ noteCount }] = (await db.execute<{ noteCount: number }>(sql`select count(*)::int as "noteCount" from notes where user_id = ${u.id}`)).rows;
+  const [{ noteCount }] = (await db.execute<{ noteCount: number }>(sql`select count(*)::int as "noteCount" from bookmarks where user_id = ${u.id} and note is not null`)).rows;
   const collections = allows(u.collectionsVisibility, who) ? (await collectionRows(u, who)).rows : null;
 
   return c.json({
     ...publicUser(u, await avatarTime(u.id)), private: false, isMe, following,
     /** People: how many this person follows, how many follow them, and whether the viewer does. */
     people: { follows: people.follows, followers: people.followers, isFollowing: people.isFollowing },
-    /** Notes they have left, if they share them with this viewer (always for the owner). */
-    notes: allows(u.notesVisibility, who) ? { count: noteCount } : null,
     /** null = the owner hides this section. */
     collections,
-    bookmarks: allows(u.bookmarksVisibility, who) ? { count: bookmarkCount } : null,
+    /**
+     * Their saved posts and the notes on them: one section with two audiences
+     * (issue #84). `count` is how many posts this viewer can see, `notes` how
+     * many carry a note they can read (null: notes not shared with them).
+     * `notedOnly`: bookmarks aren't shared with this viewer but notes are, so
+     * they see only the noted posts. null = neither is shared.
+     */
+    bookmarks: sharedSaves(u, who, bookmarkCount, noteCount),
     /** For the owner: who each section is shared with, so the page can say what others see. */
     visibility: isMe ? { profile: u.profileVisibility, collections: u.collectionsVisibility, bookmarks: u.bookmarksVisibility, notes: u.notesVisibility } : undefined,
   });
@@ -253,38 +271,53 @@ profiles.post("/:handle/collections/:slug/copy", async (c) => {
   return c.json({ ...created, feedCount }, 201);
 });
 
-/** Someone's public bookmarks, newest first, with whether I already have each URL. */
+/**
+ * Someone's bookmarks, newest activity first, with their note on each when
+ * notes are shared with this viewer, and whether I already have each URL.
+ * Notes shared but bookmarks not: only the noted posts. `notes=1` narrows to
+ * the noted posts either way. Readable signed out when shared with Anyone.
+ */
 profiles.get("/:handle/bookmarks", async (c) => {
   const u = await owner(c.req.param("handle"));
   if (!u) return c.json({ error: "not found" }, 404);
   const viewer = c.get("user");
   const who = await audienceFor(u, viewer?.id);
   const isMe = who.isMe;
-  if (!isMe && (u.profileVisibility === "private" || !allows(u.bookmarksVisibility, who))) return c.json({ error: "not found" }, 404);
+  const shared = sharedSaves(u, who, 0, 0);
+  if (!isMe && (u.profileVisibility === "private" || !shared)) return c.json({ error: "not found" }, 404);
+  const showNotes = shared?.notes !== null;
+  // Narrowing to noted posts would say which posts have a note, so it is only
+  // honored for someone who may read the notes.
+  const notedOnly = shared?.notedOnly || (showNotes && c.req.query("notes") === "1");
   // Signed out, one page of at most VISITOR_CAP and nothing after it (lib/instance.ts).
   const cap = await visitorCap(viewer);
   const limit = Math.min(cap ?? 100, Math.max(1, Number(c.req.query("limit") ?? 40)));
   const before = c.req.query("before");
   if (cap && before) return c.json({ owner: publicUser(u), isMe, bookmarks: [], nextCursor: null, cappedAt: cap });
+  // A note moving a post up is only news to someone who can read the note.
+  const order = showNotes ? activeAtSql : sql`b.saved_at`;
   let cursor = sql``;
   if (before) {
     const [ts, id] = before.split("|");
-    cursor = sql`and (b.saved_at, b.id) < (${ts}::timestamptz, ${Number(id)}::bigint)`;
+    cursor = sql`and (${order}, b.id) < (${ts}::timestamptz, ${Number(id)}::bigint)`;
   }
   const viewerId = viewer?.id ?? -1;
   const rows = await db.execute(sql`
     select b.id, b.item_id as "itemId", b.feed_id as "feedId", b.url, b.title, b.summary, b.image_url as "imageUrl",
            b.site_title as "siteTitle", b.author, b.published_at as "publishedAt", b.saved_at as "savedAt",
+           ${order} as "activeAt",
+           ${showNotes ? sql`case when b.note is null then null else ${noteJson("b")} end` : sql`null::jsonb`} as note,
            exists(select 1 from feed_icons fi where fi.feed_id = b.feed_id and not fi.generic) as "hasIcon",
            (select mine.id from bookmarks mine where mine.user_id = ${viewerId} and mine.url = b.url limit 1) as "myBookmarkId",
            i.link_url as "linkUrl", i.link_label as "linkLabel"
-    from bookmarks b left join items i on i.id = b.item_id where b.user_id = ${u.id} ${cursor}
-    order by b.saved_at desc, b.id desc limit ${limit + 1}
+    from bookmarks b left join items i on i.id = b.item_id
+    where b.user_id = ${u.id} ${notedOnly ? sql`and b.note is not null` : sql``} ${cursor}
+    order by ${order} desc, b.id desc limit ${limit + 1}
   `);
   const all = rows.rows as any[];
   const page = all.slice(0, limit);
   const last = all.length > limit ? page[page.length - 1] : null;
-  return c.json({ owner: publicUser(u), isMe, bookmarks: page, nextCursor: last && !cap ? `${new Date(last.savedAt).toISOString()}|${last.id}` : null, cappedAt: cap && last ? cap : null });
+  return c.json({ owner: publicUser(u), isMe, notedOnly: !!shared?.notedOnly, showsNotes: showNotes, bookmarks: page, nextCursor: last && !cap ? `${new Date(last.activeAt).toISOString()}|${last.id}` : null, cappedAt: cap && last ? cap : null });
 });
 
 /**
@@ -305,52 +338,4 @@ profiles.get("/:handle/activity", async (c) => {
   const limit = Math.min(cap ?? 50, Math.max(1, Number(c.req.query("limit") ?? 20)));
   const { entries, nextCursor } = await activityForViewer(u, who, { limit, before });
   return c.json({ owner: publicUser(u), isMe: who.isMe, entries, nextCursor: cap ? null : nextCursor, cappedAt: cap && nextCursor ? cap : null });
-});
-
-/**
- * A person's notes as a body of work: the posts they noted, newest note first,
- * in river shape, so the page is the same cards as everywhere else. Readable by
- * whoever their notes are shared with, signed-out visitors included when that
- * is Anyone. Their note comes back first in `notes` (or as `myNote`, for them).
- */
-profiles.get("/:handle/notes", async (c) => {
-  const u = await owner(c.req.param("handle"));
-  if (!u) return c.json({ error: "not found" }, 404);
-  const viewer = c.get("user");
-  const who = await audienceFor(u, viewer?.id);
-  if (!who.isMe && (u.profileVisibility === "private" || !allows(u.notesVisibility, who))) return c.json({ error: "not found" }, 404);
-  // Signed out, one page of at most VISITOR_CAP and nothing after it (lib/instance.ts).
-  const cap = await visitorCap(viewer);
-  const limit = Math.min(cap ?? 100, Math.max(1, Number(c.req.query("limit") ?? 30)));
-  const before = c.req.query("before"); // "<iso>|<noteId>"
-  if (cap && before) return c.json({ owner: publicUser(u), isMe: who.isMe, items: [], nextCursor: null, cappedAt: cap });
-  let cursor = sql``;
-  if (before) {
-    const [ts, id] = before.split("|");
-    cursor = sql`and (theirs.created_at, theirs.id) < (${ts}::timestamptz, ${Number(id)}::bigint)`;
-  }
-  const viewerId = viewer?.id ?? -1;
-  const rows = await db.execute<any>(sql`
-    select i.id, i.feed_id as "feedId", f.title as "feedTitle", f.site_url as "siteUrl", ${feedSlugSql} as "feedSlug",
-           i.url, i.title, i.author, i.summary, i.link_url as "linkUrl", i.link_label as "linkLabel", i.image_url as "imageUrl", i.published_at as "publishedAt",
-           exists(select 1 from feed_icons fi where fi.feed_id = i.feed_id and not fi.generic) as "hasIcon",
-           (select bm.id from bookmarks bm where bm.user_id = ${viewerId} and bm.item_id = i.id limit 1) as "bookmarkId",
-           theirs.id as "noteId", theirs.created_at as "notedAt",
-           ${noteColumns(viewerId, u.id)}
-    from notes theirs
-    join items i on i.id = theirs.item_id
-    join feeds f on f.id = i.feed_id
-    where theirs.user_id = ${u.id} ${cursor}
-    order by theirs.created_at desc, theirs.id desc
-    limit ${limit + 1}
-  `);
-  const all = rows.rows;
-  const page = all.slice(0, limit);
-  const last = all.length > limit ? page[page.length - 1] : null;
-  return c.json({
-    owner: publicUser(u), isMe: who.isMe,
-    items: page.map(({ noteId, notedAt, ...r }: any) => ({ ...r, publishedAt: new Date(r.publishedAt).toISOString() })),
-    nextCursor: last && !cap ? `${new Date(last.notedAt).toISOString()}|${last.noteId}` : null,
-    cappedAt: cap && last ? cap : null,
-  });
 });

@@ -15,6 +15,7 @@
   import { page } from '$app/state';
   import { replaceState } from '$app/navigation';
   import { api, feedHref, itemHref, itemsApi, type Note, type RiverItem } from '$lib/api';
+  import { noteToast } from '$lib/saves';
   import { hostOf, relativeTime, webHref } from '$lib/time';
   import { openReaderHere, readsInline } from '$lib/reader.svelte';
   import { session } from '$lib/session.svelte';
@@ -123,7 +124,7 @@
     {#if session.user}
       {#if editing}
         <NoteEditor itemId={item.id} note={myNote}
-          onsaved={(n) => { showToast(myNote ? 'Note updated' : 'Note saved'); myNote = n; if (item) item.myNote = n; editing = false; }}
+          onsaved={(n) => { if (item) { showToast(noteToast(item)); item.myNote = n; item.bookmarkId = n.bookmarkId; } myNote = n; editing = false; }}
           ondeleted={() => { myNote = null; if (item) item.myNote = null; editing = false; }}
           oncancel={() => (editing = false)} />
       {:else if myNote}

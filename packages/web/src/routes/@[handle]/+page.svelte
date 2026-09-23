@@ -1,16 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/state';
-  import { api, authApi, profilesApi, publicCollectionHref, type Profile, type ProfileCollection, type PublicBookmark, type PublicUser, type RiverItem, type ShareLevel } from '$lib/api';
+  import { api, authApi, profilesApi, publicCollectionHref, type Profile, type ProfileCollection, type PublicBookmark, type PublicUser, type ShareLevel } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
-  import { hostOf, webHref } from '$lib/time';
+  import { hostOf } from '$lib/time';
   import Monogram from '$lib/components/Monogram.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import AvatarCropDialog from '$lib/components/AvatarCropDialog.svelte';
   import ActivityList from '$lib/components/ActivityList.svelte';
   import SectionAudience from '$lib/components/SectionAudience.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
-  import NoteCard from '$lib/components/NoteCard.svelte';
+  import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
   import Badge from '$lib/components/Badge.svelte';
@@ -85,20 +85,11 @@
   });
   onMount(() => api.event('profile_view', { handle }));
 
-  /** The newest few notes, shown right on the profile; the rest are one link away. */
-  const NOTES_SHOWN = 3;
-  let recentNotes = $state<RiverItem[] | null>(null);
-  let notesFor = $state<string | undefined>(undefined);
-  $effect(() => {
-    if (!profile || profile.private || !profile.notes || notesFor === profile.handle) return;
-    const h = profile.handle;
-    notesFor = h; recentNotes = null;
-    profilesApi.notes(h, { limit: NOTES_SHOWN }).then((r) => { if (notesFor === h) recentNotes = r.items; }).catch(() => (recentNotes = []));
-  });
-  /** On my own profile, a note I delete from its card takes the card with it. */
-  const shownNotes = $derived((recentNotes ?? []).filter((i) => !isMe || i.myNote));
-
-  /** A few recent bookmarks, shown right on the profile; the rest are one link away. */
+  /**
+   * A few recent bookmarks, with the notes on them, shown right on the
+   * profile; the rest are one link away. One section with two audiences
+   * (issue #84): the server sends only what this viewer may see.
+   */
   const BOOKMARKS_SHOWN = 3;
   let recentBookmarks = $state<PublicBookmark[] | null>(null);
   let bookmarksFor = $state<string | undefined>(undefined);
@@ -106,7 +97,7 @@
     if (!profile || profile.private || !profile.bookmarks || profile.bookmarks.count === 0 || bookmarksFor === profile.handle) return;
     const h = profile.handle;
     bookmarksFor = h; recentBookmarks = null;
-    profilesApi.bookmarks(h, null, BOOKMARKS_SHOWN).then((r) => { if (bookmarksFor === h) recentBookmarks = r.bookmarks; }).catch(() => (recentBookmarks = []));
+    profilesApi.bookmarks(h, { limit: BOOKMARKS_SHOWN }).then((r) => { if (bookmarksFor === h) recentBookmarks = r.bookmarks; }).catch(() => (recentBookmarks = []));
   });
 
   /** The people this person follows — their own section. */
@@ -138,6 +129,16 @@
    */
   const su = $derived(session.user);
   const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
+  const RANK: Record<ShareLevel, number> = { private: 0, friends: 1, public: 2 };
+  const SEES: Record<ShareLevel, string> = { private: 'Only you can see', friends: 'Only people you follow can see', public: 'Anyone can see' };
+  /** What the two settings on the Bookmarks section add up to, in words. */
+  function sharingSummary(marks: ShareLevel, notes: ShareLevel): string {
+    const lines = [`${SEES[marks]} your bookmarks.`];
+    lines.push(notes === 'private' ? `${SEES.private} your notes.` : `${SEES[notes]} your notes, here and under the post each one is about.`);
+    // Notes shared wider than bookmarks: those extra people see only the noted posts.
+    if (RANK[notes] > RANK[marks]) lines.push(`${notes === 'public' && marks === 'friends' ? 'Everyone else' : 'They'} see${notes === 'public' && marks === 'friends' ? 's' : ''} only the posts you’ve written a note on.`);
+    return lines.join(' ');
+  }
   const VISIBILITY = [
     { value: 'public', label: 'Anyone' },
     { value: 'private', label: 'Only me' }
@@ -426,70 +427,43 @@
 
   <ActivityList handle={profile.handle} isMe={profile.isMe} />
 
-  {#if profile.notes && (profile.notes.count > 0 || profile.isMe)}
+  {#if profile.bookmarks && (profile.bookmarks.count > 0 || profile.isMe)}
     <section>
-      <h2>Notes <Badge>{profile.notes.count}</Badge></h2>
+      <h2>Bookmarks <Badge>{profile.bookmarks.count}</Badge></h2>
       {#if profile.isMe}
         {#if su && su.profileVisibility !== 'private'}
           <div class="card">
             <div class="cardhead">
-              <span class="ctrl-label">Who sees this</span>
+              <span class="ctrl-label">Who sees your bookmarks</span>
+              <SectionAudience level={su.bookmarksVisibility} label="your bookmarks" onchange={(l) => save({ bookmarksVisibility: l }, `Bookmarks: ${AUD[l]}`)} />
+            </div>
+            <div class="cardhead">
+              <span class="ctrl-label">Who sees your notes</span>
               <SectionAudience level={su.notesVisibility} label="your notes" onchange={(l) => save({ notesVisibility: l }, `Notes: ${AUD[l]}`)} />
             </div>
-            <div class="pad"><p class="status">
-              {#if su.notesVisibility === 'public'}Anyone can see your notes, whether they are signed in or not. They display on your profile and under the post each note is about.{:else if su.notesVisibility === 'friends'}Only people you follow can see your notes. They display on your profile and under the post each note is about.{:else}Only you can see your notes.{/if}
-            </p></div>
+            <div class="pad"><p class="status">{sharingSummary(su.bookmarksVisibility, su.notesVisibility)}</p></div>
           </div>
         {/if}
-      {:else if session.user && profile.people.isFollowing}
+      {:else if profile.bookmarks.notes !== null && session.user && profile.people.isFollowing}
         <p class="status">You also see their notes on posts you come across{#if session.user.notesFrom === 'none'}, once you allow notes in <a href="/settings">Settings</a>{/if}.</p>
-      {:else if session.user?.notesFrom === 'following'}
+      {:else if profile.bookmarks.notes !== null && session.user?.notesFrom === 'following'}
         <p class="status">Follow them to also see their notes on posts you come across.</p>
       {/if}
-      {#if recentNotes === null}
+      {#if profile.bookmarks.count === 0}
+        <p class="status">Press the bookmark on any post to save it, or the note button to write down what you thought of it.</p>
+      {:else if recentBookmarks === null}
         <p class="status">Loading…</p>
-      {:else if shownNotes.length === 0}
-        <p class="status">{profile.isMe ? 'Press the note icon on any post to write down what you thought of it.' : 'No notes to show.'}</p>
+      {:else if recentBookmarks.length === 0}
+        <p class="status">No bookmarks to show.</p>
       {:else}
-        <ul class="notes">
-          {#each shownNotes as item (item.id)}
-            <NoteCard {item} />
+        <ul class="saves">
+          {#each recentBookmarks as b (b.id)}
+            <BookmarkCard {b} author={profile} onopen={() => api.event('bookmark_opened', { via: 'profile' })} />
           {/each}
         </ul>
-        {#if profile.notes.count > shownNotes.length}
-          <a class="all" href="/@{profile.handle}/notes">All {profile.notes.count} notes <span aria-hidden="true">›</span></a>
+        {#if profile.bookmarks.count > recentBookmarks.length}
+          <a class="all" href="/@{profile.handle}/bookmarks">All {profile.bookmarks.count} bookmarks <span aria-hidden="true">›</span></a>
         {/if}
-      {/if}
-    </section>
-  {/if}
-
-  {#if profile.bookmarks}
-    <section>
-      <h2>Bookmarks <Badge>{profile.bookmarks.count}</Badge></h2>
-      <div class="card">
-        {#if profile.isMe && su && su.profileVisibility !== 'private'}
-          <div class="cardhead">
-            <span class="ctrl-label">Who sees this</span>
-            <SectionAudience level={su.bookmarksVisibility} label="your bookmarks" onchange={(l) => save({ bookmarksVisibility: l }, `Bookmarks: ${AUD[l]}`)} />
-          </div>
-        {/if}
-        {#if profile.bookmarks.count === 0}
-          <div class="pad"><p class="status">{profile.isMe ? 'Nothing saved yet.' : 'No bookmarks to show.'}</p></div>
-        {:else if recentBookmarks === null}
-          <div class="pad"><p class="status">Loading…</p></div>
-        {:else}
-          <ul class="list">
-            {#each recentBookmarks as b (b.id)}
-              <li><a href={webHref(b.url) ?? '#'} target="_blank" rel="noopener">
-                <div class="meta2"><span class="name">{b.title ?? b.url}</span><span class="desc">{b.siteTitle ?? hostOf(b.url)}</span></div>
-                <span class="chev" aria-hidden="true">↗</span>
-              </a></li>
-            {/each}
-          </ul>
-        {/if}
-      </div>
-      {#if recentBookmarks && recentBookmarks.length > 0 && profile.bookmarks.count > recentBookmarks.length}
-        <a class="all" href="/@{profile.handle}/bookmarks">All {profile.bookmarks.count} bookmarks <span aria-hidden="true">›</span></a>
       {/if}
     </section>
   {/if}
@@ -594,7 +568,7 @@
   .new form :global(.grow) { flex: 1; min-width: 0; }
   .status { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
   .status a { color: var(--accent); font-weight: 600; }
-  .notes { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-1) 0 0; padding: 0; list-style: none; }
+  .saves { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-3) 0 0; padding: 0; list-style: none; }
   .all { display: block; width: fit-content; margin: var(--space-3) 0 0 auto; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
   .empty p { margin: 0; }

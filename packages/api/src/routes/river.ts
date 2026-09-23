@@ -11,7 +11,7 @@ import { Hono } from "hono";
 import { sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
-import { noteColumns } from "../lib/notes.js";
+import { myBookmarkIdSql, noteColumns } from "../lib/notes.js";
 import { visitorCap } from "../lib/instance.js";
 import { SHORTS_URL_PATTERN } from "../feeds/youtube.js";
 import { feedSlugSql } from "../lib/slug.js";
@@ -143,7 +143,7 @@ river.get("/", async (c) => {
            i.url, i.title, i.author, i.summary, i.link_url as "linkUrl", i.link_label as "linkLabel", i.image_url as "imageUrl", i.published_at as "publishedAt",
            exists(select 1 from blocks b where b.user_id = ${userId} and b.feed_id = i.feed_id) as blocked,
            exists(select 1 from feed_icons fi where fi.feed_id = i.feed_id and not fi.generic) as "hasIcon",
-           (select bm.id from bookmarks bm where bm.user_id = ${userId} and bm.item_id = i.id limit 1) as "bookmarkId",
+           ${myBookmarkIdSql(userId)} as "bookmarkId",
            (select coalesce(json_agg(json_build_object('id', o.id, 'publishedAt', o.published_at, 'url', o.url, 'title', o.title) order by o.published_at desc), '[]'::json)
               from (select o.id, o.published_at, o.url, o.title from item_repeats r join items o on o.id = r.of_item_id
                     where r.item_id = i.id order by o.published_at desc limit 5) o) as "repeatOf",

@@ -280,14 +280,14 @@
     <hr />
     <section class="admin">
       <h2>Admin</h2>
-      <p class="hint">Feeds are shared. Removing this one takes it away from everyone on this instance: its posts, the notes on them, and its place in every collection. Bookmarks keep their address. Use it for spam, abuse, or a feed that should never have been indexed.</p>
+      <p class="hint">Feeds are shared. Removing this one takes it away from everyone on this instance: its posts and its place in every collection. Bookmarks, and the notes on them, keep their saved copy. Use it for spam, abuse, or a feed that should never have been indexed.</p>
       <Button variant="danger" onclick={askRemove}>Remove this feed from thicket</Button>
     </section>
 
     <dialog bind:this={removeDialog} class="remove" onclick={(e) => { if (e.target === removeDialog) removeDialog?.close(); }} aria-labelledby="remove-title">
       <h2 id="remove-title">Remove {feedName(feed)} from thicket?</h2>
       {#if impact}
-        <p>This deletes, for everyone: <strong>{n(impact.posts, 'post', 'posts')}</strong>, <strong>{n(impact.notes, 'note', 'notes')}</strong> written on them, and its place in <strong>{n(impact.collections, 'collection', 'collections')}</strong> belonging to <strong>{n(impact.followers, 'person', 'people')}</strong>. {impact.bookmarks ? `${n(impact.bookmarks, 'bookmark keeps', 'bookmarks keep')} the address but ${impact.bookmarks === 1 ? 'loses' : 'lose'} the link to the post.` : ''} It cannot be undone; the feed can be added again later, but the notes cannot.</p>
+        <p>This deletes, for everyone: <strong>{n(impact.posts, 'post', 'posts')}</strong>, and its place in <strong>{n(impact.collections, 'collection', 'collections')}</strong> belonging to <strong>{n(impact.followers, 'person', 'people')}</strong>. {impact.bookmarks ? `${n(impact.bookmarks, 'bookmark keeps', 'bookmarks keep')} ${impact.bookmarks === 1 ? 'its' : 'their'} saved copy and any note, but ${impact.bookmarks === 1 ? 'loses' : 'lose'} the link to the post.` : ''} It cannot be undone; the feed can be added again later, but its older posts may not come back with it.</p>
       {:else}
         <p class="hint">Counting what this would take with it…</p>
       {/if}

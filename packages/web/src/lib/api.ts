@@ -1,6 +1,11 @@
 /** The only file that knows the API's shape. UI components import from here. */
-/** My note on a post. One per post; edits keep createdAt and move updatedAt. */
+/**
+ * My note on a post. One per post; edits keep createdAt and move updatedAt. A
+ * note is part of a bookmark (issue #84), so its id is the bookmark's.
+ */
 export type Note = { id: number; body: string; createdAt: string; updatedAt: string };
+/** A note just written: writing one saves the post, so this says which bookmark holds it. */
+export type SavedNote = Note & { bookmarkId: number };
 export type PublicNote = Note & { author: { handle: string; displayName: string | null } };
 export type RiverItem = {
   id: number; feedId: number; feedTitle: string | null; siteUrl: string | null;
@@ -217,28 +222,38 @@ export const importApi = {
     j<{ collections: ImportCommitted[] }>('/api/import/commit', { method: 'POST', body: JSON.stringify({ groups }) }),
 };
 
+/** A saved post, as the Bookmarks pages list it: its own copy of the post, and the note on it if any. */
 export type Bookmark = {
   id: number; itemId: number | null; feedId: number | null; url: string; title: string | null; summary: string | null;
   /** The source post's discussion-style link (e.g. Hacker News's "Comments"), read live from the item, if it still exists. */
   linkUrl: string | null; linkLabel: string | null;
-  imageUrl: string | null; siteTitle: string | null; author: string | null; publishedAt: string | null; note: string | null;
+  imageUrl: string | null; siteTitle: string | null; author: string | null; publishedAt: string | null;
   savedAt: string; hasIcon: boolean;
+  /** When it last saw activity: saved, or its note written or edited. What the list sorts on. */
+  activeAt: string;
+  /** The list owner's note on it: mine on my page, theirs on someone's profile (when they share notes with me). */
+  note: Note | null;
+  /** Other people's notes on the same post that I may read. My own list only. */
+  notes?: PublicNote[];
+};
+/** A bookmark as saving or removing one returns it: the stored row, note fields flat. Pass it back to `restore` to undo a removal. */
+export type BookmarkRow = {
+  id: number; itemId: number | null; feedId: number | null; url: string; title: string | null; summary: string | null;
+  imageUrl: string | null; siteTitle: string | null; author: string | null; publishedAt: string | null; savedAt: string;
+  note: string | null; noteCreatedAt: string | null; noteUpdatedAt: string | null;
 };
 export const NOTE_MAX = 2000;
-export type NotesPage = { items: RiverItem[]; nextCursor: string | null; cappedAt?: number | null };
+/** Notes by the post they are on. Writing one saves the post if it isn't saved yet; deleting one keeps the bookmark. */
 export const notesApi = {
-  list: (opts: { before?: string | null; limit?: number } = {}) => {
-    const q = new URLSearchParams();
-    if (opts.before) q.set('before', opts.before);
-    if (opts.limit) q.set('limit', String(opts.limit));
-    return j<NotesPage>(`/api/notes?${q}`);
-  },
-  count: () => j<{ count: number }>('/api/notes/count'),
-  write: (itemId: number, body: string) => j<Note>(`/api/notes/items/${itemId}`, { method: 'PUT', body: JSON.stringify({ body }) }),
+  write: (itemId: number, body: string) => j<SavedNote>(`/api/notes/items/${itemId}`, { method: 'PUT', body: JSON.stringify({ body }) }),
   remove: (itemId: number) => j<void>(`/api/notes/items/${itemId}`, { method: 'DELETE' }),
 };
 
-export type BookmarkSources = { feeds: { feedId: number; title: string | null; count: number }[]; collections: { id: number; name: string; count: number }[] };
+export type BookmarkSources = {
+  feeds: { feedId: number; title: string | null; count: number }[]; collections: { id: number; name: string; count: number }[];
+  /** How many of my bookmarks carry a note. */
+  noted: number;
+};
 
 export const itemsApi = {
   /** What the post is: readable by anyone, so a link you send works for whoever opens it. */
@@ -248,20 +263,26 @@ export const itemsApi = {
 };
 
 export const bookmarksApi = {
-  list: (opts: { before?: string | null; feed?: number | null; collection?: number | null; limit?: number } = {}) => {
+  list: (opts: { before?: string | null; feed?: number | null; collection?: number | null; notes?: boolean; limit?: number } = {}) => {
     const q = new URLSearchParams();
     if (opts.before) q.set('before', opts.before);
+    if (opts.notes) q.set('notes', '1');
     if (opts.feed) q.set('feed', String(opts.feed));
     if (opts.collection) q.set('collection', String(opts.collection));
     if (opts.limit) q.set('limit', String(opts.limit));
     return j<{ bookmarks: Bookmark[]; nextCursor: string | null }>(`/api/bookmarks?${q}`);
   },
   sources: () => j<BookmarkSources>('/api/bookmarks/sources'),
-  saveItem: (itemId: number) => j<Bookmark>('/api/bookmarks', { method: 'POST', body: JSON.stringify({ itemId }) }),
-  saveUrl: (url: string, title?: string) => j<Bookmark>('/api/bookmarks', { method: 'POST', body: JSON.stringify({ url, title }) }),
-  /** Copy someone's public bookmark, snapshot and all, into my own set. */
-  saveFrom: (bookmarkId: number) => j<Bookmark>('/api/bookmarks', { method: 'POST', body: JSON.stringify({ bookmarkId }) }),
-  remove: (id: number) => j<Bookmark>(`/api/bookmarks/${id}`, { method: 'DELETE' })
+  saveItem: (itemId: number) => j<BookmarkRow>('/api/bookmarks', { method: 'POST', body: JSON.stringify({ itemId }) }),
+  /** Copy someone's public bookmark, snapshot and all (not their note), into my own set. */
+  saveFrom: (bookmarkId: number) => j<BookmarkRow>('/api/bookmarks', { method: 'POST', body: JSON.stringify({ bookmarkId }) }),
+  /** Removes the note on it too. Returns what was removed, for `restore`. */
+  remove: (id: number) => j<BookmarkRow>(`/api/bookmarks/${id}`, { method: 'DELETE' }),
+  /** Undo a removal: puts the bookmark back as it was, note, times and all. */
+  restore: (row: BookmarkRow) => j<BookmarkRow>('/api/bookmarks', { method: 'POST', body: JSON.stringify({ restore: row }) }),
+  /** Write the note on a bookmark directly, for one whose post is gone. */
+  writeNote: (id: number, body: string) => j<SavedNote>(`/api/bookmarks/${id}/note`, { method: 'PUT', body: JSON.stringify({ body }) }),
+  removeNote: (id: number) => j<void>(`/api/bookmarks/${id}/note`, { method: 'DELETE' })
 };
 
 export const iconUrl = (feedId: number) => `/api/feeds/${feedId}/icon`;
@@ -343,7 +364,7 @@ export const adminApi = {
   resetPassword: (id: number) => j<{ handle: string; password: string }>(`/api/admin/users/${id}/password`, { method: 'POST' }),
   deleteUser: (id: number) => j<void>(`/api/admin/users/${id}`, { method: 'DELETE' }),
   /** Moderation: what removing this feed from the instance takes with it, then the removal itself. */
-  feedImpact: (id: number) => j<{ title: string | null; url: string; posts: number; followers: number; collections: number; notes: number; bookmarks: number }>(`/api/admin/feeds/${id}/impact`),
+  feedImpact: (id: number) => j<{ title: string | null; url: string; posts: number; followers: number; collections: number; bookmarks: number }>(`/api/admin/feeds/${id}/impact`),
   deleteFeed: (id: number) => j<void>(`/api/admin/feeds/${id}`, { method: 'DELETE' }),
   settings: () => j<InstanceStatus & { signupsStored: SignupPolicy | null; signupsDefault: SignupPolicy }>('/api/admin/settings'),
   update: (patch: { signups?: SignupPolicy; name?: string; visitorLimit?: boolean }) => j<InstanceStatus>('/api/admin/settings', { method: 'PATCH', body: JSON.stringify(patch) }),
@@ -363,10 +384,16 @@ export type Profile =
   | (PublicUser & {
       private: false; isMe: boolean; following: number;
       people: { follows: number; followers: number; isFollowing: boolean };
-      notes: { count: number } | null;
       /** null = the owner hides collections from others. */
       collections: ProfileCollection[] | null;
-      bookmarks: { count: number } | null;
+      /**
+       * Their saved posts and the notes on them: one section, two audiences.
+       * `count`: posts I can see. `notes`: how many carry a note I can read
+       * (null: notes aren't shared with me). `notedOnly`: bookmarks aren't
+       * shared with me but notes are, so I see only the noted posts. null =
+       * neither is shared with me.
+       */
+      bookmarks: { count: number; notes: number | null; notedOnly: boolean } | null;
       visibility?: { profile: 'public' | 'private'; collections: ShareLevel; bookmarks: ShareLevel; notes: ShareLevel };
     });
 export type PublicCollectionFeed = {
@@ -379,7 +406,8 @@ export type PublicCollection = {
   id: number; name: string; slug: string; description: string | null; visibility: ShareLevel; createdAt: string | null;
   owner: PublicUser; isMe: boolean; feeds: PublicCollectionFeed[]; children: { id: number; name: string; slug: string; description: string | null; feedCount: number }[];
 };
-export type PublicBookmark = Omit<Bookmark, 'note'> & { myBookmarkId: number | null };
+/** Someone's saved post on their profile: their note, if they share notes with me, and whether I have saved it too. */
+export type PublicBookmark = Omit<Bookmark, 'notes'> & { myBookmarkId: number | null };
 
 export const profilesApi = {
   get: (handle: string) => j<Profile>(`/api/profiles/${encodeURIComponent(handle)}`),
@@ -390,24 +418,23 @@ export const profilesApi = {
   collection: (handle: string, slug: string) => j<PublicCollection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}`),
   copyCollection: (handle: string, slug: string) => j<Collection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/copy`, { method: 'POST' }),
   opmlUrl: (handle: string, slug: string) => `/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/opml`,
-  bookmarks: (handle: string, before?: string | null, limit?: number) => {
+  /**
+   * Their bookmarks, newest activity first. `notes`: only the ones with a note
+   * (honored only when I may read their notes). `showsNotes`: whether I may.
+   * `notedOnly`: they share notes but not bookmarks, so only noted posts come.
+   */
+  bookmarks: (handle: string, opts: { before?: string | null; limit?: number; notes?: boolean } = {}) => {
     const q = new URLSearchParams();
-    if (before) q.set('before', before);
-    if (limit) q.set('limit', String(limit));
-    return j<{ owner: PublicUser; isMe: boolean; bookmarks: PublicBookmark[]; nextCursor: string | null; cappedAt?: number | null }>(`/api/profiles/${encodeURIComponent(handle)}/bookmarks?${q}`);
+    if (opts.before) q.set('before', opts.before);
+    if (opts.limit) q.set('limit', String(opts.limit));
+    if (opts.notes) q.set('notes', '1');
+    return j<{ owner: PublicUser; isMe: boolean; notedOnly: boolean; showsNotes: boolean; bookmarks: PublicBookmark[]; nextCursor: string | null; cappedAt?: number | null }>(`/api/profiles/${encodeURIComponent(handle)}/bookmarks?${q}`);
   },
   activity: (handle: string, before?: string | null, limit?: number) => {
     const q = new URLSearchParams();
     if (before) q.set('before', before);
     if (limit) q.set('limit', String(limit));
     return j<{ owner: PublicUser; isMe: boolean; entries: ActivityEntry[]; nextCursor: string | null; cappedAt?: number | null }>(`/api/profiles/${encodeURIComponent(handle)}/activity?${q}`);
-  },
-  /** Their notes, as the posts they noted. 404 when they don't share notes with me. */
-  notes: (handle: string, opts: { before?: string | null; limit?: number } = {}) => {
-    const q = new URLSearchParams();
-    if (opts.before) q.set('before', opts.before);
-    if (opts.limit) q.set('limit', String(opts.limit));
-    return j<NotesPage & { owner: PublicUser; isMe: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/notes?${q}`);
   }
 };
 

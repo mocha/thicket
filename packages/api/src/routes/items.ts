@@ -12,7 +12,7 @@ import { Hono } from "hono";
 import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
-import { noteColumns } from "../lib/notes.js";
+import { myBookmarkIdSql, noteColumns } from "../lib/notes.js";
 import { feedSlugSql } from "../lib/slug.js";
 import { looksPartial, sanitizeContent, textOf } from "../lib/sanitize.js";
 
@@ -34,7 +34,7 @@ items.get("/:id", async (c) => {
            ${feedSlugSql} as "feedSlug",
            i.url, i.title, i.author, i.summary, i.link_url as "linkUrl", i.link_label as "linkLabel", i.image_url as "imageUrl", i.published_at as "publishedAt",
            exists(select 1 from feed_icons fi where fi.feed_id = i.feed_id and not fi.generic) as "hasIcon",
-           (select bm.id from bookmarks bm where bm.user_id = ${userId} and bm.item_id = i.id limit 1) as "bookmarkId",
+           ${myBookmarkIdSql(userId)} as "bookmarkId",
            ${noteColumns(userId)}
     from items i
     join feeds f on f.id = i.feed_id

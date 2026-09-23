@@ -3,7 +3,7 @@
 
   /**
    * The one card. Every post that shows up in a list — in the river, in
-   * Bookmarks, on a notes page — sits on this: the surface color, the rounded
+   * Bookmarks, on a profile — sits on this: the surface color, the rounded
    * corner, the soft shadow, and on the two hard-edged color themes the
    * outline that stands in for the shadow.
    *

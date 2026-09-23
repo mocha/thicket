@@ -3,25 +3,51 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { api, bookmarksApi, profileHref, type Bookmark, type BookmarkSources } from '$lib/api';
+  /**
+   * My Bookmarks: every post I've saved, and my note on each one that has one
+   * (issue #84: a note is part of a bookmark). Newest activity first: saving a
+   * post, or writing or editing its note, brings it to the top.
+   */
   import { session } from '$lib/session.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import Button from '$lib/components/Button.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
   import Select from '$lib/components/Select.svelte';
+  import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   let list = $state<Bookmark[]>([]);
   let cursor = $state<string | null>(null);
   let done = $state(false);
   let loading = $state(false);
-  let sources = $state<BookmarkSources>({ feeds: [], collections: [] });
+  let sources = $state<BookmarkSources>({ feeds: [], collections: [], noted: 0 });
   let sentinel = $state<HTMLElement | null>(null);
 
-  // Filters live in the URL: ?c=<collection> or ?f=<feed>. One at a time keeps the pills honest.
+  // Filters live in the URL: ?c=<collection> or ?f=<feed>, one at a time so the pills stay honest,
+  // and ?notes=1 on top of either: "With notes" narrows whatever else is chosen.
+  const notes = $derived(page.url.searchParams.get('notes') === '1');
   const collection = $derived(page.url.searchParams.get('c') ? Number(page.url.searchParams.get('c')) : null);
   const feed = $derived(page.url.searchParams.get('f') ? Number(page.url.searchParams.get('f')) : null);
   let loadedKey = $state<string | undefined>(undefined);
+
+  /*
+   * Who sees this page's contents on my profile. Bookmarks and notes have
+   * their own audiences, so both count: notes shared while bookmarks are
+   * private still put the noted posts on my profile.
+   */
+  const TO = { public: 'anyone', friends: 'the people you follow', private: 'no one else' } as const;
+  const shared = $derived.by(() => {
+    const me = session.user;
+    if (!me || me.profileVisibility !== 'public') return null;
+    const marks = me.bookmarksVisibility, notes = me.notesVisibility;
+    if (marks === 'private' && notes === 'private') return null;
+    const text = marks === notes
+      ? (marks === 'friends' ? ' to the people you follow' : '')
+      : `: your bookmarks to ${TO[marks]}, your notes to ${TO[notes]}`;
+    return { handle: me.handle, text };
+  });
   const hasFilters = $derived(sources.collections.length > 0 || sources.feeds.length > 0);
+  const hasNotesFilter = $derived(sources.noted > 0 || notes);
   /* One tab per collection, plus All. Filtering by source instead leaves no
      tab chosen, which is what the empty value here means. */
   const filterTabs = $derived([
@@ -34,7 +60,7 @@
     if (loading || (done && !reset)) return;
     loading = true;
     try {
-      const pg = await bookmarksApi.list({ before: reset ? null : cursor, collection, feed, limit: 30 });
+      const pg = await bookmarksApi.list({ before: reset ? null : cursor, collection, feed, notes, limit: 30 });
       list = reset ? pg.bookmarks : [...list, ...pg.bookmarks];
       cursor = pg.nextCursor;
       done = pg.nextCursor === null;
@@ -43,24 +69,48 @@
     }
   }
 
-  function setFilter(kind: 'c' | 'f' | null, id?: number) {
-    api.event('bookmarks_filter', { kind, id });
-    void goto(kind ? `/bookmarks?${kind}=${id}` : '/bookmarks', { replaceState: true });
+  /** The page's address for a given set of filters. */
+  function href(kind: 'c' | 'f' | null, id: number | undefined, withNotes: boolean) {
+    const q = new URLSearchParams();
+    if (kind && id) q.set(kind, String(id));
+    if (withNotes) q.set('notes', '1');
+    return q.size ? `/bookmarks?${q}` : '/bookmarks';
   }
 
+  /** Choose a collection or source (or neither). "With notes" stays as it was. */
+  function setFilter(kind: 'c' | 'f' | null, id?: number) {
+    api.event('bookmarks_filter', { kind, id });
+    void goto(href(kind, id, notes), { replaceState: true });
+  }
+
+  /** Turn "With notes" on or off, keeping the collection or source. */
+  function setNotes(on: boolean) {
+    api.event('bookmarks_filter', { kind: 'notes', on });
+    void goto(href(collection ? 'c' : feed ? 'f' : null, collection ?? feed ?? undefined, on), { replaceState: true });
+  }
+
+  /** Remove a bookmark, and its note with it. Undo puts both back where they were. */
   async function remove(b: Bookmark) {
     const snapshot = list;
     list = list.filter((x) => x.id !== b.id);
-    await bookmarksApi.remove(b.id);
-    api.event('bookmark_removed', { bookmarkId: b.id, via: 'bookmarks_page' });
-    showToast('Removed bookmark', {
+    const removed = await bookmarksApi.remove(b.id);
+    api.event('bookmark_removed', { bookmarkId: b.id, via: 'bookmarks_page', hadNote: !!b.note });
+    if (b.note) sources.noted--;
+    showToast(b.note ? 'Removed bookmark and note' : 'Removed bookmark', {
       label: 'Undo',
       run: async () => {
-        if (b.itemId) await bookmarksApi.saveItem(b.itemId);
-        else await bookmarksApi.saveUrl(b.url, b.title ?? undefined);
-        list = snapshot;
+        const back = await bookmarksApi.restore(removed);
+        list = snapshot.map((x) => (x.id === b.id ? { ...x, id: back.id, note: x.note && { ...x.note, id: back.id } } : x));
+        if (b.note) sources.noted++;
       }
     });
+  }
+
+  /** A note written or deleted here. Under "With notes", a deleted one takes its card with it. */
+  function noteChanged(b: Bookmark, note: Bookmark['note'], had: boolean) {
+    if (note && !had) sources.noted++;
+    if (!note && had) sources.noted--;
+    if (!note && notes) list = list.filter((x) => x.id !== b.id);
   }
 
   onMount(() => {
@@ -69,7 +119,7 @@
   });
 
   $effect(() => {
-    const key = `${collection}|${feed}`;
+    const key = `${notes}|${collection}|${feed}`;
     if (loadedKey === key) return;
     loadedKey = key;
     list = []; cursor = null; done = false;
@@ -86,7 +136,7 @@
 
 <header class="top">
   <h1>My Bookmarks</h1>
-  <p class="sub">Posts you've saved. {#if session.user?.profileVisibility === 'public' && session.user.bookmarksVisibility === 'public'}Shown on <a href={profileHref(session.user.handle)}>your profile</a>.{:else if session.user?.profileVisibility === 'public' && session.user.bookmarksVisibility === 'friends'}Shown on <a href={profileHref(session.user.handle)}>your profile</a> to the people you follow.{:else}Only you can see them.{/if}</p>
+  <p class="sub">Posts you've saved, and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
 </header>
 
 {#if hasFilters}
@@ -99,6 +149,10 @@
       label="Filter bookmarks"
       panel="bookmark-results"
     />
+  </div>
+{/if}
+{#if (hasFilters && sources.feeds.length > 1) || hasNotesFilter}
+  <div class="controls">
     {#if sources.feeds.length > 1}
       <Select
         class="by-source"
@@ -113,6 +167,16 @@
         onchange={(e) => { const v = e.currentTarget.value; v ? setFilter('f', Number(v)) : setFilter(null); }}
       />
     {/if}
+    {#if hasNotesFilter}
+      <ChoiceGroup
+        class="with-notes"
+        size="sm"
+        label="Show all bookmarks, or only the ones with a note"
+        options={[{ value: 'all', label: 'all bookmarks' }, { value: 'notes', label: 'with notes' }]}
+        value={notes ? 'notes' : 'all'}
+        onchange={(v) => setNotes(v === 'notes')}
+      />
+    {/if}
   </div>
 {/if}
 
@@ -120,7 +184,10 @@
 <div id="bookmark-results" role={hasFilters ? 'tabpanel' : undefined}>
   {#if !loading && list.length === 0}
     <div class="empty">
-      {#if collection || feed}
+      {#if notes && !(collection || feed)}
+        <h2>No notes yet</h2>
+        <p>Every post has a note button next to its bookmark. Press it, write what you thought, and the post is saved here with your note. Depending on your settings, people who follow you can read your notes under the post.</p>
+      {:else if collection || feed || notes}
         <h2>No bookmarks match this filter.</h2>
       {:else}
         <!-- A post card, drawn small, with the bookmark corner lit up: this is the thing to press. -->
@@ -142,7 +209,9 @@
   {:else}
     <ul class="list">
       {#each list as b (b.id)}
-        <BookmarkCard {b} onopen={() => api.event('bookmark_opened', { bookmarkId: b.id })} action={{ kind: 'remove', on: true, label: 'Remove bookmark', run: () => remove(b) }} />
+        <BookmarkCard {b} mine onopen={() => api.event('bookmark_opened', { bookmarkId: b.id })}
+          onnote={(n, had) => noteChanged(b, n, had)}
+          action={{ kind: 'remove', on: true, label: b.note ? 'Remove bookmark and note' : 'Remove bookmark', run: () => remove(b) }} />
       {/each}
     </ul>
     {#if loading}<p class="status">Loading…</p>{/if}
@@ -161,7 +230,10 @@
   .filters { margin-bottom: var(--space-3); }
   /* Narrow enough to read as a filter rather than a form field, and it never
      runs past the edge of a phone. */
-  .filters :global(.by-source) { margin-top: var(--space-2); max-width: 280px; }
+  /* The source menu and the With notes choice share a row under the tabs,
+     wrapping onto two lines on a narrow phone. */
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: calc(-1 * var(--space-1)) 0 var(--space-3); }
+  .controls :global(.by-source) { flex: 1 1 200px; max-width: 280px; }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-2)) var(--space-5); color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-2); }

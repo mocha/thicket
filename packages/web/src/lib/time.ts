@@ -71,6 +71,16 @@ export function webHref(url: string | null | undefined): string | null {
   }
 }
 
+/**
+ * A bookmark's link, made safe the same way: a web address, or a post's own
+ * page here, which is what a post with no link of its own is saved under.
+ * Anything else is never made clickable.
+ */
+export function savedHref(url: string | null | undefined): string | null {
+  if (url && /^\/feeds\/\d+\/[a-z0-9-]+\/\d+$/.test(url)) return url;
+  return webHref(url);
+}
+
 export function hostOf(url: string | null): string {
   if (!url) return '';
   try {

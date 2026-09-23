@@ -7,7 +7,8 @@
    * original is right there. The original is always one press away regardless.
    */
   import { page } from '$app/state';
-  import { api, itemsApi, type ItemContent, type Note } from '$lib/api';
+  import { api, itemsApi, type ItemContent, type SavedNote } from '$lib/api';
+  import { noteToast } from '$lib/saves';
   import { hostOf, relativeTime, webHref } from '$lib/time';
   import { closeReader, reader, readerClosed } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
@@ -119,7 +120,7 @@
     editing = !editing;
     if (editing) { api.event('note_editor_opened', { itemId: item!.id, existing: !!item!.myNote, via: 'reader' }); scroller?.scrollTo({ top: 0, behavior: 'smooth' }); }
   }
-  function noteSaved(n: Note) { if (!item) return; showToast(item.myNote ? 'Note updated' : 'Note saved'); item.myNote = n; editing = false; }
+  function noteSaved(n: SavedNote) { if (!item) return; showToast(noteToast(item)); item.myNote = n; item.bookmarkId = n.bookmarkId; editing = false; }
 
   function outbound() { if (item) api.event('item_opened', { itemId: item.id, feedId: item.feedId, via: 'reader' }); }
 </script>
