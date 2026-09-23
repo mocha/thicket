@@ -155,7 +155,7 @@
         class="with-notes"
         size="sm"
         label="Show all bookmarks, or only the ones with a note"
-        options={[{ value: 'all', label: 'All' }, { value: 'notes', label: 'With notes' }]}
+        options={[{ value: 'all', label: 'all bookmarks' }, { value: 'notes', label: 'with notes' }]}
         value={notes ? 'notes' : 'all'}
         onchange={(v) => setNotes(v === 'notes')}
       />

@@ -108,7 +108,7 @@
     <ChoiceGroup
       size="sm"
       label="Show all bookmarks, or only the ones with a note"
-      options={[{ value: 'all', label: 'All' }, { value: 'notes', label: 'With notes' }]}
+      options={[{ value: 'all', label: 'all bookmarks' }, { value: 'notes', label: 'with notes' }]}
       value={notes ? 'notes' : 'all'}
       onchange={(v) => { api.event('public_bookmarks_filter', { notes: v === 'notes' }); void goto(v === 'notes' ? `${page.url.pathname}?notes=1` : page.url.pathname, { replaceState: true }); }}
     />
