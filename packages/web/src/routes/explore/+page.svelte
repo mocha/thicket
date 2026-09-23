@@ -107,6 +107,13 @@
   /** Rows for a narrowed scope, accumulated across pages. */
   let more = $state<(SearchFeed | SearchCollection | SearchPost | SearchPerson)[]>([]);
   let moreNext = $state<number | null>(null);
+  /**
+   * The scope `more` was loaded for. Switching tabs redraws the list before the
+   * new search is even sent, and drawing feed rows as collections crashed the
+   * page, so rows only show under the tab they came from.
+   */
+  let moreScope = $state<SearchScope | null>(null);
+  const rows = $derived(moreScope === scope ? more : []);
   const group = $derived(res && scope !== 'all' ? res[scope] : null);
   const found = $derived(res ? res.feeds.total + res.collections.total + res.posts.total + res.people.total : 0);
   function countFor(s: SearchScope) {
@@ -127,15 +134,24 @@
     })
   );
 
+  /**
+   * A new search (reset) always goes out, even with an older one in flight, and
+   * an answer that arrives after the search changed is dropped, so a slow reply
+   * for the last tab can never land on this one.
+   */
   async function loadSearch(reset = false) {
-    if (loading || (!reset && scope !== 'all' && moreNext === null)) return;
+    if (!reset && (loading || (scope !== 'all' && moreNext === null))) return;
+    const key = loadedKey;
+    const s = scope;
     loading = true; error = null;
     try {
-      const r = await searchApi.run({ q, scope, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork });
+      const r = await searchApi.run({ q, scope: s, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork });
+      if (key !== loadedKey) return;
       res = r;
-      if (scope === 'all') { more = []; moreNext = null; }
-      else { more = reset ? r[scope].rows : [...more, ...r[scope].rows]; moreNext = r[scope].nextOffset; }
-    } catch (e) { error = e instanceof Error ? e.message : String(e); } finally { loading = false; }
+      if (s === 'all') { more = []; moreNext = null; }
+      else { more = reset ? r[s].rows : [...more, ...r[s].rows]; moreNext = r[s].nextOffset; }
+      moreScope = s;
+    } catch (e) { if (key === loadedKey) error = e instanceof Error ? e.message : String(e); } finally { if (key === loadedKey) loading = false; }
   }
 
   /* ---- browse: feeds ---- */
@@ -501,10 +517,10 @@
     <section class="group">
       <h2>{SCOPES.find((s) => s.id === scope)?.label} <Badge>{(group?.total ?? 0).toLocaleString()}</Badge></h2>
       <ul class="list">
-        {#if scope === 'feeds'}{#each more as f (( f as SearchFeed).id)}{@render feedRow(f as SearchFeed, f as SearchFeed)}{/each}
-        {:else if scope === 'collections'}{#each more as c ((c as SearchCollection).id)}{@render colRow(c as SearchCollection, c as SearchCollection)}{/each}
-        {:else if scope === 'posts'}{#each more as p ((p as SearchPost).id)}{@render postRow(p as SearchPost)}{/each}
-        {:else}{#each more as u ((u as SearchPerson).handle)}{@render personRow(u as SearchPerson, u as SearchPerson)}{/each}{/if}
+        {#if scope === 'feeds'}{#each rows as f (( f as SearchFeed).id)}{@render feedRow(f as SearchFeed, f as SearchFeed)}{/each}
+        {:else if scope === 'collections'}{#each rows as c ((c as SearchCollection).id)}{@render colRow(c as SearchCollection, c as SearchCollection)}{/each}
+        {:else if scope === 'posts'}{#each rows as p ((p as SearchPost).id)}{@render postRow(p as SearchPost)}{/each}
+        {:else}{#each rows as u ((u as SearchPerson).handle)}{@render personRow(u as SearchPerson, u as SearchPerson)}{/each}{/if}
       </ul>
     </section>
   {/if}
