@@ -328,7 +328,7 @@
     {#if profilePrivate}
       <p class="info">Your profile is private, so your collections aren’t shown anywhere. Make it public <a href={profileHref(handle)}>on your profile</a> and you’ll be able to choose who sees this one.</p>
     {:else if collectionsHidden}
-      <p class="info">Your profile doesn’t show collections to anyone right now, so this setting has no effect until it does. Change that <a href={profileHref(handle)}>on your profile</a>.</p>
+      <p class="info">None of your collections are shown to anyone right now, so picking an audience here won’t do anything yet. Change that <a href={profileHref(handle)}>on your profile</a>.</p>
     {:else}
       {#if collectionsFriendsOnly}<p class="info">Your collections are shown only to the people you follow. Public here means public to them. Change that <a href={profileHref(handle)}>on your profile</a>.</p>{/if}
       <div class="radios vis" role="radiogroup" aria-label="Collection visibility">
