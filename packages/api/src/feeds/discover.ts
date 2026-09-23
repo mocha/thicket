@@ -69,7 +69,11 @@ export async function discover(input: string): Promise<Discovery> {
   }
 
   const url = normalizeFeedUrl(input);
-  const res = await httpGet(url);
+  // A page can be enormous even though its feed links live in the first few
+  // kilobytes. Keep the beginning instead of rejecting the whole page at the
+  // shared download limit; direct feeds larger than that were already too big
+  // to parse, while HTML discovery only inspects the first 200 KB below.
+  const res = await httpGet(url, {}, { truncate: true });
   if (res.status >= 400) throw new Error(`HTTP ${res.status} fetching ${url}`);
 
   // 1. Is it a feed already?
