@@ -8,7 +8,7 @@
     type SearchResults, type SearchScope, type SearchFeed, type SearchCollection, type SearchPost, type SearchPerson
   } from '$lib/api';
   import { feedOrigin, hostOf, longAgo, postRate, relativeTime, webHref } from '$lib/time';
-  import { highlight, plural, shareOfOutput } from '$lib/words';
+  import { highlight, latestShort, mentionRate, plural } from '$lib/words';
   import { feedListName } from '$lib/feedname';
   import { session } from '$lib/session.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
@@ -377,23 +377,21 @@
       <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={40} />
       <div class="meta">
         <span class="title">{feedListName(f)}</span>
-        {#if f.description}<span class="desc">{f.description}</span>{/if}
-        {#if ev && ev.matches > 0}
-          <span class="why">
-            <strong>{plural(ev.matches, 'post')}</strong> about “{q}”
-            {#if shareOfOutput(ev.matches, ev.posts)} · {shareOfOutput(ev.matches, ev.posts)}{/if}
-            {#if ev.lastMatchAt} · most recent {longAgo(ev.lastMatchAt)}{/if}
-          </span>
-        {:else if ev}
-          <span class="why muted">Matches the name · nothing it has published mentions “{q}”</span>
-        {/if}
-        <span class="sub2">
+        <span class="sub2 byline">
           {feedOrigin(f)}
-          {#if f.lastItemAt} · last post {longAgo(f.lastItemAt)}{/if}
-          {#if f.postsLast30d} · {postRate(f.postsLast30d)}{/if}
+          {#if f.postsLast30d} · publishes about {postRate(f.postsLast30d)}{/if}
+          {#if !ev && f.lastItemAt} · latest {longAgo(f.lastItemAt)}{/if}
           {#if !ev && feedsNetwork && (f as Feed).networkFollowers} · <span class="net-n">{(f as Feed).networkFollowers} {(f as Feed).networkFollowers === 1 ? 'person' : 'people'} you follow</span>{/if}
           {#if f.consecutiveFailures >= 3} · <span class="bad">failing</span>{/if}
         </span>
+        {#if f.description}<span class="desc">{f.description}</span>{/if}
+        {#if ev && ev.matchesLast30d > 0}
+          <span class="why">{mentionRate(ev.matchesLast30d)} “{q}”{#if ev.lastMatchAt}{' '}<span class="nowrap">({latestShort(ev.lastMatchAt)})</span>{/if}</span>
+        {:else if ev && ev.lastMatchAt}
+          <span class="why">Last mentioned “{q}” {longAgo(ev.lastMatchAt)}</span>
+        {:else if ev}
+          <span class="why">Name matches, but no posts mention “{q}”</span>
+        {/if}
       </div>
     </a>
     <FollowControl feedId={f.id} bind:ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} compact onchange={() => void api.feed(f.id).then((u) => Object.assign(f, u))} />
@@ -414,7 +412,7 @@
             {#if ev.lastMatchAt} · most recent {longAgo(ev.lastMatchAt)}{/if}
           </span>
         {:else if ev}
-          <span class="why muted">Matches the name</span>
+          <span class="why">Matches the name</span>
         {/if}
         <span class="sub2">by <span class="who">{c.displayName ?? `@${c.handle}`}</span> · {plural(c.feedCount, 'feed')}{#if c.description} · {c.description}{/if}</span>
       </div>
@@ -429,11 +427,11 @@
       <SourceIcon feedId={p.feedId} hasIcon={p.hasIcon} name={p.feedTitle ?? ''} size={40} />
       <div class="meta">
         <span class="title">{p.title ?? p.url}</span>
+        <!-- Plenty of feeds set the author to the feed's own name; saying it twice is noise. -->
+        <span class="sub2 byline">{p.feedTitle ?? hostOf(p.siteUrl)} · {relativeTime(p.publishedAt)}{#if p.author && p.author !== p.feedTitle}<span>{' · ' + p.author}</span>{/if}</span>
         {#if p.snippet}
           <span class="desc">{#each highlight(p.snippet) as part}{#if part.hit}<mark>{part.text}</mark>{:else}{part.text}{/if}{/each}</span>
         {/if}
-        <!-- Plenty of feeds set the author to the feed's own name; saying it twice is noise. -->
-        <span class="sub2">{p.feedTitle ?? hostOf(p.siteUrl)} · {relativeTime(p.publishedAt)}{#if p.author && p.author !== p.feedTitle}<span>{' · ' + p.author}</span>{/if}</span>
       </div>
     </a>
     {#if session.user}
@@ -591,17 +589,29 @@
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .handle { font-weight: 400; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-left: var(--space-1); }
-  /* Wraps rather than truncates: every part of it is a fact someone is deciding on. */
-  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  /* Wraps rather than truncates: every part of it is a fact someone is deciding on.
+     --text-2, not --text-3, because these facts are read, and --text-3 falls short
+     of readable contrast in most themes. The gap sets it apart from the
+     description above now that both share a color. */
+  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); margin-top: var(--space-1); }
   .desc { font-size: calc(var(--text-sm) * var(--size-app)); /* The 2px and 3px here are optical nudges around the description, not spacing steps. */ color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   /* 1px around a highlighted word is optical: the tint hugs the letters. */
   .desc mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
   /* Why this row is here: the same numbers the ranking is made of, in words. */
-  /* 2px and 1px are optical nudges around this line, not spacing steps. */
-  .why { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); margin: 2px 0 1px; }
+  /* The gap above keeps it clear of the description; 1px below is an optical nudge. */
+  .why { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); margin: var(--space-2) 0 1px; }
   .why strong { font-weight: 700; }
-  .why.muted { color: var(--text-3); }
+  /* When the line has to wrap, "(latest 13h ago)" moves down whole instead of
+     splitting inside the brackets. */
+  .nowrap { white-space: nowrap; }
   .who { color: var(--text-2); font-weight: 600; }
+  /* Each line's color says what it is about: dark is the feed (its name and these
+     facts), grey is the feed describing itself, green is your search. The facts sit
+     tight under the name, like a byline, and the description keeps its distance
+     below. The -2px is optical: it takes back some of the empty space above and
+     below each line of text, so the two lines read as a pair. */
+  .sub2.byline { margin-top: -2px; color: var(--text); }
+  .byline + .desc { margin-top: var(--space-2); }
   .net-n { color: var(--accent); font-weight: 600; }
   .bad { color: var(--danger); }
   .stack { display: inline-flex; flex: none; width: 40px; height: 40px; position: relative; }

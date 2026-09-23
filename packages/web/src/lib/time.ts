@@ -33,15 +33,21 @@ export function longAgo(iso: string, now = Date.now()): string {
 }
 
 /**
- * How often something posts, in words. `n` is posts in the last 30 days, so
- * this is already a monthly rate; below one a month it is the rate that is
- * uncertain, not the wording, hence "less than".
+ * A count of posts over the last 30 days, restated as the plainest rate: a day
+ * when there are plenty, a week when there are some, otherwise a month (the
+ * count itself, since the window already is a month).
  */
+export function perPeriod(n: number): { n: number; unit: 'day' | 'week' | 'month' } {
+  if (n >= 60) return { n: Math.round(n / 30), unit: 'day' };
+  if (n >= 8) return { n: Math.round(n / 4.35), unit: 'week' };
+  return { n, unit: 'month' };
+}
+
+/** How often something posts, in words ("9 posts a day"). `n` is posts in the last 30 days. */
 export function postRate(n: number): string {
   if (n <= 0) return '';
-  if (n >= 60) return `~${Math.round(n / 30)} posts per day`;
-  if (n >= 8) return `~${Math.round(n / 4.35)} posts per week`;
-  return `~${n} post${n === 1 ? '' : 's'} per month`;
+  const r = perPeriod(n);
+  return `${r.n} post${r.n === 1 ? '' : 's'} a ${r.unit}`;
 }
 
 /**

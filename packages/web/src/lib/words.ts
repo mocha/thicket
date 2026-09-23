@@ -1,28 +1,27 @@
 /**
  * Saying what a search result is made of, in words.
  *
- * A search rank is a number nobody can check. Every row on the results page
- * instead shows the three facts the ranking was built from — how many posts
- * matched, how much of the feed's output that is, and how recently it last
- * happened — so someone who disagrees with the order can see what it thought.
+ * A feed row answers the question a person searching is really asking: if I
+ * follow this, how much of it will be about my topic? So it gives a rate over
+ * the last 30 days ("about 2 posts a day mention 'news'"), the same window as
+ * the feed's own posting rate beside it, and the two read as one comparison.
  */
+import { perPeriod, relativeTime } from './time';
+
+/** "~2 posts a day mention", ready for the search words to follow. `n` is matches in the last 30 days. */
+export function mentionRate(n: number): string {
+  const r = perPeriod(n);
+  return `~${r.n} post${r.n === 1 ? '' : 's'} a ${r.unit} mention${r.n === 1 ? 's' : ''}`;
+}
 
 /**
- * The share of a feed's output, phrased the way a person would say it. Ratios
- * read as arithmetic homework ("0.083 of its posts"); "about 1 in 12" is the
- * same fact and needs no decoding. Above two thirds the fraction stops being
- * the interesting part and the words take over.
+ * "latest 13h ago", the short time form, which directory lists otherwise spell
+ * out. It is the one exception, so the search line fits on one row beside the
+ * Follow button. Past a week the short form is a date, which takes no "ago".
  */
-export function shareOfOutput(matches: number, posts: number): string | null {
-  if (matches <= 0 || posts <= 0) return null;
-  const r = matches / posts;
-  if (r >= 0.9) return 'nearly everything it publishes';
-  if (r >= 0.66) return 'most of what it publishes';
-  // Wide enough that the next step down is "1 in 3": "about 1 in 2" and "about
-  // half" in the same list read as two different measurements of one thing.
-  if (r >= 0.4) return 'about half of what it publishes';
-  const one = Math.round(posts / matches);
-  return `about 1 in ${one} of what it publishes`;
+export function latestShort(iso: string): string {
+  const t = relativeTime(iso);
+  return /^\d+[mhd]$/.test(t) ? `latest ${t} ago` : `latest ${t}`;
 }
 
 export const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString()} ${n === 1 ? one : many}`;

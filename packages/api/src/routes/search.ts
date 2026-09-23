@@ -201,7 +201,15 @@ async function searchFeeds(q: string, userId: number, limit: number, offset: num
   const [{ total }] = (await db.execute<{ total: number }>(sql`${base} select count(*)::int as total from scored`)).rows;
   const rows = await db.execute(sql`
     ${base}
-    select s.matches, s.posts::int as posts, s.last_match as "lastMatchAt", s.name_match as "nameMatch",
+    select s.matches, s.posts::int as posts, s.name_match as "nameMatch",
+           -- What the row says in words, counted per feed rather than read off the
+           -- capped sample: the ranking can live with an approximation, but a
+           -- number shown to a person has to be true. Both walk this one feed's
+           -- posts newest first, so they stay cheap.
+           (select count(*)::int from items i where i.feed_id = f.id and i.published_at > now() - interval '30 days'
+              and i.search @@ websearch_to_tsquery('english', ${q})) as "matchesLast30d",
+           (select i.published_at from items i where i.feed_id = f.id and i.search @@ websearch_to_tsquery('english', ${q})
+              order by i.published_at desc limit 1) as "lastMatchAt",
            f.id, f.url, f.site_url as "siteUrl", f.title, f.description,
            (select fs.display_name from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = f.id) as "displayName",
            coalesce(
