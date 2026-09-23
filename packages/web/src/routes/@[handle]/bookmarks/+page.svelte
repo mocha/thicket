@@ -5,7 +5,7 @@
   import { api, bookmarksApi, profileHref, profilesApi, type PublicBookmark, type PublicUser } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
-  import Tabs from '$lib/components/Tabs.svelte';
+  import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import VisitorMore from '$lib/components/VisitorMore.svelte';
   import { showToast } from '$lib/toast.svelte';
 
@@ -22,7 +22,7 @@
   let notedOnly = $state(false);
   let showsNotes = $state(false);
   /* All or With notes, when there is a choice: I may read their notes, and I'm seeing more than the noted posts. */
-  const hasTabs = $derived(showsNotes && !notedOnly);
+  const hasNotesFilter = $derived(showsNotes && !notedOnly);
   let list = $state<PublicBookmark[]>([]);
   let cursor = $state<string | null>(null);
   let done = $state(false);
@@ -103,20 +103,19 @@
   <p class="sub">{#if isMe}This is how others see them. <a href="/bookmarks">Manage them here.</a>{:else if notedOnly}The posts {owner?.displayName ?? `@${handle}`} has written a note on. {/if}{#if !isMe}{#if session.user}Tap the bookmark on any post to save a copy to yours.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save any of these to your own.{/if}{/if}</p>
 </header>
 
-{#if hasTabs}
+{#if hasNotesFilter}
   <div class="filters">
-  <Tabs
-    tabs={[{ value: 'all', label: 'All' }, { value: 'notes', label: 'With notes' }]}
-    value={notes ? 'notes' : 'all'}
-    onchange={(v) => { api.event('public_bookmarks_filter', { notes: v === 'notes' }); void goto(v === 'notes' ? `${page.url.pathname}?notes=1` : page.url.pathname, { replaceState: true }); }}
-    label="Filter bookmarks"
-    panel="bookmark-results"
-  />
+    <ChoiceGroup
+      size="sm"
+      label="Show all bookmarks, or only the ones with a note"
+      options={[{ value: 'all', label: 'All' }, { value: 'notes', label: 'With notes' }]}
+      value={notes ? 'notes' : 'all'}
+      onchange={(v) => { api.event('public_bookmarks_filter', { notes: v === 'notes' }); void goto(v === 'notes' ? `${page.url.pathname}?notes=1` : page.url.pathname, { replaceState: true }); }}
+    />
   </div>
 {/if}
 
-<!-- What the tabs above switch between. -->
-<div id="bookmark-results" role={hasTabs ? 'tabpanel' : undefined}>
+<div id="bookmark-results">
 {#if error}
   <div class="empty"><h2>Not here</h2><p>{error === 'not found' ? 'These bookmarks aren’t shared.' : error}</p></div>
 {:else if !loading && list.length === 0}
@@ -142,7 +141,7 @@
   /* 2px is an optical nudge under the title, not a spacing step. */
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
-  /* The tab strip gets the same air under it as on My Bookmarks. */
+  /* The With notes choice gets the same air under it as on My Bookmarks. */
   .filters { margin-bottom: var(--space-3); }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }

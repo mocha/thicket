@@ -13,6 +13,7 @@
   import Button from '$lib/components/Button.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
   import Select from '$lib/components/Select.svelte';
+  import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   let list = $state<Bookmark[]>([]);
@@ -22,21 +23,21 @@
   let sources = $state<BookmarkSources>({ feeds: [], collections: [], noted: 0 });
   let sentinel = $state<HTMLElement | null>(null);
 
-  // Filters live in the URL: ?notes=1, ?c=<collection> or ?f=<feed>. One at a time keeps the pills honest.
+  // Filters live in the URL: ?c=<collection> or ?f=<feed>, one at a time so the pills stay honest,
+  // and ?notes=1 on top of either: "With notes" narrows whatever else is chosen.
   const notes = $derived(page.url.searchParams.get('notes') === '1');
   const collection = $derived(page.url.searchParams.get('c') ? Number(page.url.searchParams.get('c')) : null);
   const feed = $derived(page.url.searchParams.get('f') ? Number(page.url.searchParams.get('f')) : null);
   let loadedKey = $state<string | undefined>(undefined);
-  const hasFilters = $derived(sources.noted > 0 || sources.collections.length > 0 || sources.feeds.length > 0 || notes);
-  /* All, the ones with a note, then one tab per collection. Filtering by
-     source instead leaves no tab chosen, which is what the empty value here
-     means. */
+  const hasFilters = $derived(sources.collections.length > 0 || sources.feeds.length > 0);
+  const hasNotesFilter = $derived(sources.noted > 0 || notes);
+  /* One tab per collection, plus All. Filtering by source instead leaves no
+     tab chosen, which is what the empty value here means. */
   const filterTabs = $derived([
     { value: 'all', label: 'All' },
-    { value: 'notes', label: 'With notes', count: sources.noted },
     ...sources.collections.map((c) => ({ value: String(c.id), label: c.name, count: c.count }))
   ]);
-  const filterValue = $derived(notes ? 'notes' : collection ? String(collection) : feed ? '' : 'all');
+  const filterValue = $derived(collection ? String(collection) : feed ? '' : 'all');
 
   async function loadMore(reset = false) {
     if (loading || (done && !reset)) return;
@@ -51,9 +52,24 @@
     }
   }
 
-  function setFilter(kind: 'notes' | 'c' | 'f' | null, id?: number) {
+  /** The page's address for a given set of filters. */
+  function href(kind: 'c' | 'f' | null, id: number | undefined, withNotes: boolean) {
+    const q = new URLSearchParams();
+    if (kind && id) q.set(kind, String(id));
+    if (withNotes) q.set('notes', '1');
+    return q.size ? `/bookmarks?${q}` : '/bookmarks';
+  }
+
+  /** Choose a collection or source (or neither). "With notes" stays as it was. */
+  function setFilter(kind: 'c' | 'f' | null, id?: number) {
     api.event('bookmarks_filter', { kind, id });
-    void goto(kind === 'notes' ? '/bookmarks?notes=1' : kind ? `/bookmarks?${kind}=${id}` : '/bookmarks', { replaceState: true });
+    void goto(href(kind, id, notes), { replaceState: true });
+  }
+
+  /** Turn "With notes" on or off, keeping the collection or source. */
+  function setNotes(on: boolean) {
+    api.event('bookmarks_filter', { kind: 'notes', on });
+    void goto(href(collection ? 'c' : feed ? 'f' : null, collection ?? feed ?? undefined, on), { replaceState: true });
   }
 
   /** Remove a bookmark, and its note with it. Undo puts both back where they were. */
@@ -112,10 +128,14 @@
       class="tabs"
       tabs={filterTabs}
       value={filterValue}
-      onchange={(v) => (v === 'all' ? setFilter(null) : v === 'notes' ? setFilter('notes') : setFilter('c', Number(v)))}
+      onchange={(v) => (v === 'all' ? setFilter(null) : setFilter('c', Number(v)))}
       label="Filter bookmarks"
       panel="bookmark-results"
     />
+  </div>
+{/if}
+{#if (hasFilters && sources.feeds.length > 1) || hasNotesFilter}
+  <div class="controls">
     {#if sources.feeds.length > 1}
       <Select
         class="by-source"
@@ -130,6 +150,16 @@
         onchange={(e) => { const v = e.currentTarget.value; v ? setFilter('f', Number(v)) : setFilter(null); }}
       />
     {/if}
+    {#if hasNotesFilter}
+      <ChoiceGroup
+        class="with-notes"
+        size="sm"
+        label="Show all bookmarks, or only the ones with a note"
+        options={[{ value: 'all', label: 'All' }, { value: 'notes', label: 'With notes' }]}
+        value={notes ? 'notes' : 'all'}
+        onchange={(v) => setNotes(v === 'notes')}
+      />
+    {/if}
   </div>
 {/if}
 
@@ -137,10 +167,10 @@
 <div id="bookmark-results" role={hasFilters ? 'tabpanel' : undefined}>
   {#if !loading && list.length === 0}
     <div class="empty">
-      {#if notes}
+      {#if notes && !(collection || feed)}
         <h2>No notes yet</h2>
         <p>Every post has a note button next to its bookmark. Press it, write what you thought, and the post is saved here with your note. Depending on your settings, people who follow you can read your notes under the post.</p>
-      {:else if collection || feed}
+      {:else if collection || feed || notes}
         <h2>No bookmarks match this filter.</h2>
       {:else}
         <!-- A post card, drawn small, with the bookmark corner lit up: this is the thing to press. -->
@@ -183,7 +213,10 @@
   .filters { margin-bottom: var(--space-3); }
   /* Narrow enough to read as a filter rather than a form field, and it never
      runs past the edge of a phone. */
-  .filters :global(.by-source) { margin-top: var(--space-2); max-width: 280px; }
+  /* The source menu and the With notes choice share a row under the tabs,
+     wrapping onto two lines on a narrow phone. */
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: calc(-1 * var(--space-1)) 0 var(--space-3); }
+  .controls :global(.by-source) { flex: 1 1 200px; max-width: 280px; }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-2)) var(--space-5); color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
