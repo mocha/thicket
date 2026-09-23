@@ -280,7 +280,7 @@
     <hr />
     <section class="admin">
       <h2>Admin</h2>
-      <p class="hint">Feeds are shared. Removing this one takes it away from everyone on this instance: its posts, the notes on them, and its place in every collection. Bookmarks keep their address. Use it for spam, abuse, or a feed that should never have been indexed.</p>
+      <p class="hint">Feeds are shared. Removing this one takes it away from everyone on this instance: its posts and its place in every collection. Bookmarks, and the notes on them, keep their saved copy. Use it for spam, abuse, or a feed that should never have been indexed.</p>
       <Button variant="danger" onclick={askRemove}>Remove this feed from thicket</Button>
     </section>
 

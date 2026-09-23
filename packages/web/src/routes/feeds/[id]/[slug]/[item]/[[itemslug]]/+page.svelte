@@ -16,7 +16,7 @@
   import { replaceState } from '$app/navigation';
   import { api, feedHref, itemHref, itemsApi, type Note, type RiverItem } from '$lib/api';
   import { noteToast } from '$lib/saves';
-  import { hostOf, relativeTime } from '$lib/time';
+  import { hostOf, relativeTime, webHref } from '$lib/time';
   import { openReaderHere, readsInline } from '$lib/reader.svelte';
   import { session } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
@@ -36,7 +36,7 @@
   const others = $derived(item?.notes ?? []);
 
   const source = $derived(item ? (item.feedTitle ?? hostOf(item.siteUrl ?? item.url)) : '');
-  const href = $derived(item?.url ?? item?.siteUrl ?? '#');
+  const href = $derived(webHref(item?.url) ?? webHref(item?.siteUrl) ?? '#');
   const backHref = $derived(item ? feedHref({ id: item.feedId, slug: item.feedSlug }) : '/');
   const isVideo = $derived(/(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/.test(hostOf(href)));
 

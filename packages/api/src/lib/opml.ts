@@ -9,6 +9,7 @@ import { generateOpml, parseOpml } from "feedsmith";
 import { db, schema } from "../db/client.js";
 import { addFeedToCollection, ensureFeedLazy } from "./subscribe.js";
 import { uniqueCollectionSlug } from "./slug.js";
+import { isHttpUrl } from "../feeds/normalize.js";
 import { type ShareLevel } from "./visibility.js";
 
 type Outline = { text: string; title?: string; type?: string; xmlUrl?: string; htmlUrl?: string; description?: string; outlines?: Outline[] };
@@ -34,7 +35,7 @@ async function outlinesFor(collectionId: number, levels?: ShareLevel[]): Promise
     out.push({ text: c.name, title: c.name, description: c.description ?? undefined, outlines: await outlinesFor(c.id, levels) });
   }
   for (const f of feeds.rows) {
-    out.push({ text: f.title ?? f.url, title: f.title ?? undefined, type: "rss", xmlUrl: f.url, htmlUrl: f.siteUrl ?? undefined, description: f.description ?? undefined });
+    out.push({ text: f.title ?? f.url, title: f.title ?? undefined, type: "rss", xmlUrl: f.url, htmlUrl: f.siteUrl && isHttpUrl(f.siteUrl) ? f.siteUrl : undefined, description: f.description ?? undefined });
   }
   return out;
 }

@@ -59,13 +59,11 @@
         b.myBookmarkId = null;
         const removed = await bookmarksApi.remove(removedId);
         api.event('bookmark_removed', { via: 'public_bookmarks', hadNote: !!removed.note });
-        // My copy may have carried my own note; it went with the bookmark, so say so and offer it back.
-        if (removed.note) {
-          showToast('Removed bookmark and note', {
-            label: 'Undo',
-            run: async () => { b.myBookmarkId = (await bookmarksApi.restore(removed)).id; }
-          });
-        }
+        // My copy may have carried my own note; it went with the bookmark, so say so. Either way, offer it back.
+        showToast(removed.note ? 'Removed bookmark and note' : 'Removed bookmark', {
+          label: 'Undo',
+          run: async () => { b.myBookmarkId = (await bookmarksApi.restore(removed)).id; }
+        });
       } else {
         const mine = await bookmarksApi.saveFrom(b.id);
         b.myBookmarkId = mine.id;

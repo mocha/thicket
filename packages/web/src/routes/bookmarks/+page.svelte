@@ -29,6 +29,23 @@
   const collection = $derived(page.url.searchParams.get('c') ? Number(page.url.searchParams.get('c')) : null);
   const feed = $derived(page.url.searchParams.get('f') ? Number(page.url.searchParams.get('f')) : null);
   let loadedKey = $state<string | undefined>(undefined);
+
+  /*
+   * Who sees this page's contents on my profile. Bookmarks and notes have
+   * their own audiences, so both count: notes shared while bookmarks are
+   * private still put the noted posts on my profile.
+   */
+  const TO = { public: 'anyone', friends: 'the people you follow', private: 'no one else' } as const;
+  const shared = $derived.by(() => {
+    const me = session.user;
+    if (!me || me.profileVisibility !== 'public') return null;
+    const marks = me.bookmarksVisibility, notes = me.notesVisibility;
+    if (marks === 'private' && notes === 'private') return null;
+    const text = marks === notes
+      ? (marks === 'friends' ? ' to the people you follow' : '')
+      : `: your bookmarks to ${TO[marks]}, your notes to ${TO[notes]}`;
+    return { handle: me.handle, text };
+  });
   const hasFilters = $derived(sources.collections.length > 0 || sources.feeds.length > 0);
   const hasNotesFilter = $derived(sources.noted > 0 || notes);
   /* One tab per collection, plus All. Filtering by source instead leaves no
@@ -119,7 +136,7 @@
 
 <header class="top">
   <h1>My Bookmarks</h1>
-  <p class="sub">Posts you've saved, and your notes on them. {#if session.user?.profileVisibility === 'public' && session.user.bookmarksVisibility === 'public'}Shown on <a href={profileHref(session.user.handle)}>your profile</a>.{:else if session.user?.profileVisibility === 'public' && session.user.bookmarksVisibility === 'friends'}Shown on <a href={profileHref(session.user.handle)}>your profile</a> to the people you follow.{:else}Only you can see them.{/if}</p>
+  <p class="sub">Posts you've saved, and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
 </header>
 
 {#if hasFilters}

@@ -13,7 +13,7 @@
    */
   import type { Bookmark, Note, PublicBookmark, PublicUser, SavedNote } from '$lib/api';
   import { api, itemsApi } from '$lib/api';
-  import { hostOf, relativeTime } from '$lib/time';
+  import { hostOf, relativeTime, savedHref, webHref } from '$lib/time';
   import { openReader, readsInline } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
   import Card from './Card.svelte';
@@ -54,7 +54,8 @@
       try {
         openReader(await itemsApi.get(b.itemId));
       } catch {
-        window.open(b.url, '_blank', 'noopener');
+        const href = savedHref(b.url);
+        if (href) window.open(href, '_blank', 'noopener');
       }
       return;
     }
@@ -84,7 +85,7 @@
 </script>
 
 <Card as="li" class="bm" pad={false}>
-  <a class="body" href={b.url} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
+  <a class="body" href={savedHref(b.url) ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
     <div class="text" class:two={mine && action}>
       <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} />
       <h3 class="card-title">{noOrphan(b.title ?? b.url)}</h3>
@@ -93,9 +94,9 @@
     </div>
     {#if b.imageUrl}<img class="thumb" src={b.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onerror={(e) => ((e.currentTarget as HTMLImageElement).hidden = true)} />{/if}
   </a>
-  {#if b.linkUrl && b.linkLabel}
+  {#if webHref(b.linkUrl) && b.linkLabel}
     <!-- The source post's discussion-style link (e.g. Hacker News's "Comments"), outside the body's own link. -->
-    <a class="card-extralink" href={b.linkUrl} target="_blank" rel="noopener">{b.linkLabel} →</a>
+    <a class="card-extralink" href={webHref(b.linkUrl)} target="_blank" rel="noopener">{b.linkLabel} →</a>
   {/if}
   <div class="corner">
     {#if mine}

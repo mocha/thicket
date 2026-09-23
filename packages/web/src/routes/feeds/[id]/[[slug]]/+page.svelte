@@ -5,7 +5,7 @@
   import { api, feedHref, type Feed } from '$lib/api';
   import { feedName } from '$lib/feedname';
   import { dismissNotice, hiddenContent, noticeDismissed } from '$lib/feedsettings';
-  import { feedOrigin, longAgo } from '$lib/time';
+  import { feedOrigin, longAgo, webHref } from '$lib/time';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import River from '$lib/components/River.svelte';
   import FollowControl from '$lib/components/FollowControl.svelte';
@@ -63,7 +63,7 @@
           </div>
         {/if}
       </div>
-      <a class="host" href={feed.siteUrl ?? feed.url} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
+      <a class="host" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
       {#if feed.description}<p class="desc">{feed.description}</p>{/if}
     </div>
   </header>

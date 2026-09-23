@@ -5,8 +5,21 @@
 import { sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { NOTE_MAX, postAddressSql } from "./notes.js";
+import { isHttpUrl } from "../feeds/normalize.js";
 
 type Snapshot = typeof schema.bookmarks.$inferInsert;
+
+/** A post's own page here, which is what a post with no link of its own is saved under. */
+const POST_PAGE = /^\/feeds\/\d+\/[a-z0-9-]+\/\d+$/;
+
+/**
+ * Can this be a bookmark's address? A web address (http or https), or a post's
+ * page here. Nothing else: a bookmark is a link others may click, and a
+ * javascript: address would run code when they did.
+ */
+export function isSavedAddress(url: string): boolean {
+  return POST_PAGE.test(url) || isHttpUrl(url);
+}
 
 /**
  * What a bookmark of this post keeps: its own copy of the post as it is now,

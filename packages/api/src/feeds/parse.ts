@@ -135,9 +135,7 @@ function summarizeWithLink(cands: Array<string | undefined | null>, itemUrl: str
     const l = c ? linkOnly(c) : null;
     if (!l) continue;
     const url = absolutize(l.url, base);
-    // A card link is clickable, so only ever a web address — never javascript:,
-    // data:, mailto: or the like from a hostile or careless feed.
-    if (url && /^https?:\/\//i.test(url) && !sameUrl(url, itemUrl)) return { summary: null, linkUrl: url, linkLabel: l.label };
+    if (url && !sameUrl(url, itemUrl)) return { summary: null, linkUrl: url, linkLabel: l.label };
     break;
   }
   return { summary: null, linkUrl: null, linkLabel: null };
@@ -169,14 +167,21 @@ function dedupeKey(guid: string | undefined | null, link: string | null, title: 
   return `hash:${hash(`${title ?? ""}\n${body ?? ""}`)}`;
 }
 
+/**
+ * A feed-supplied link made absolute, or null. Every link a feed hands us ends
+ * up clickable (or fetched), so only a web address survives — never
+ * javascript:, data:, mailto: or the like from a hostile or careless feed.
+ */
 function absolutize(href: string | null | undefined, base: string | null): string | null {
   if (!href) return null;
+  href = href.trim();
   // Some generators emit "www.example.com/post" with no scheme. Treat a leading www. as a host, not a path.
   if (/^www\./i.test(href)) href = `https://${href}`;
   try {
-    return new URL(href, base ?? undefined).toString();
+    const u = new URL(href, base ?? undefined);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.toString() : null;
   } catch {
-    return href;
+    return null;
   }
 }
 
@@ -199,7 +204,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
   // dedupeKey on purpose: a key that changed would store every post again.
   if (format === "rss" || format === "rdf") {
     const f = feed as any;
-    const siteUrl = f.link ?? null;
+    const siteUrl = absolutize(f.link ?? null, feedUrl);
     for (const it of f.items ?? []) {
       const rich: string | null = it.content?.encoded ?? null;
       const permalinkGuid = it.guid?.isPermaLink && /^https?:\/\//.test(it.guid?.value ?? "") ? it.guid.value : null;
@@ -223,7 +228,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         // itself is already held in linkUrl. A media-only body (a lone image or
         // video, also textless) is real content and stays.
         content: body && !linkOnly(body) ? body : mediaText,
-        imageUrl: choosePreview(mediaThumb ?? enclosureImg, body),
+        imageUrl: choosePreview(mediaThumb ?? enclosureImg, body, link ?? siteUrl ?? feedUrl),
         publishedAt: toDate(it.pubDate) ?? toDate(it.dc?.dates?.[0]) ?? null,
       });
     }
@@ -251,7 +256,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         linkUrl: sl.linkUrl,
         linkLabel: sl.linkLabel,
         content: body && !linkOnly(body) ? body : mediaText,
-        imageUrl: choosePreview(e.media?.thumbnails?.[0] ?? e.media?.groups?.[0]?.thumbnails?.[0], body),
+        imageUrl: choosePreview(e.media?.thumbnails?.[0] ?? e.media?.groups?.[0]?.thumbnails?.[0], body, link ?? siteUrl ?? feedUrl),
         publishedAt: toDate(e.published) ?? toDate(e.updated) ?? null,
       });
     }
@@ -261,7 +266,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
 
   // json
   const f = feed as any;
-  const siteUrl = f.home_page_url ?? null;
+  const siteUrl = absolutize(f.home_page_url ?? null, feedUrl);
   for (const it of f.items ?? []) {
     const link = absolutize(it.url ?? it.external_url ?? null, siteUrl ?? feedUrl);
     const title = it.title ? stripHtml(it.title) : null;
@@ -277,7 +282,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       linkUrl: sl.linkUrl,
       linkLabel: sl.linkLabel,
       content: body && !linkOnly(body) ? body : null,
-      imageUrl: choosePreview(it.image ?? it.banner_image, it.content_html),
+      imageUrl: choosePreview(it.image ?? it.banner_image, it.content_html, link ?? siteUrl ?? feedUrl),
       publishedAt: toDate(it.date_published) ?? toDate(it.date_modified) ?? null,
     });
   }

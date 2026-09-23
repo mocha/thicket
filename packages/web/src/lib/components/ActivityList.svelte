@@ -10,7 +10,7 @@
   import { api, authApi, profilesApi, publicCollectionHref, type ActivityEntry, type ShareLevel } from '$lib/api';
   import SourceIcon from './SourceIcon.svelte';
   import SectionAudience from './SectionAudience.svelte';
-  import { relativeTime, hostOf } from '$lib/time';
+  import { relativeTime, hostOf, savedHref } from '$lib/time';
   import { audienceTag } from '$lib/visibility';
   import { session, setMe } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
@@ -132,7 +132,7 @@
             <div class="row">
               <SourceIcon feedId={e.payload.feedId} hasIcon={e.payload.hasIcon} name={e.payload.siteTitle ?? e.payload.title} size={20} />
               <p class="what">
-                Saved <a href={e.payload.url} target="_blank" rel="noopener">{e.payload.title ?? e.payload.url}</a>
+                Saved <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel="noopener">{e.payload.title ?? e.payload.url}</a>
                 <span class="src">{e.payload.siteTitle ?? hostOf(e.payload.url)}</span>
               </p>
               <span class="when">{relativeTime(e.at)}</span>
@@ -141,7 +141,7 @@
             <div class="row">
               <SourceIcon feedId={e.payload.feedId} hasIcon={e.payload.hasIcon} name={e.payload.siteTitle ?? e.payload.title} size={20} />
               <p class="what">
-                Noted on <a href={e.payload.url} target="_blank" rel="noopener">{e.payload.title ?? e.payload.url}</a>
+                Noted on <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel="noopener">{e.payload.title ?? e.payload.url}</a>
                 <span class="src">{e.payload.siteTitle ?? hostOf(e.payload.url)}</span>
               </p>
               <span class="when">{relativeTime(e.at)}</span>

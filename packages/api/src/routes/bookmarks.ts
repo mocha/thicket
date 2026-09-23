@@ -13,8 +13,9 @@ import { Hono } from "hono";
 import { and, eq, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
-import { cleanNote, noteOf, snapshotOfItem } from "../lib/bookmarks.js";
+import { cleanNote, isSavedAddress, noteOf, snapshotOfItem } from "../lib/bookmarks.js";
 import { noteJson, othersNotesSql } from "../lib/notes.js";
+import { isHttpUrl } from "../feeds/normalize.js";
 
 export const bookmarks = new Hono();
 
@@ -103,7 +104,9 @@ bookmarks.post("/", async (c) => {
   let values: typeof schema.bookmarks.$inferInsert;
   if (body.restore) {
     const r = body.restore;
-    if (!r.url) return c.json({ error: "url is required" }, 400);
+    // The address comes back from the page, so it gets the same check as any
+    // saved address: a web address, or a post's page here.
+    if (!r.url || !isSavedAddress(r.url)) return c.json({ error: "only http(s) URLs or a post's page here" }, 400);
     const note = r.note ? cleanNote(r.note) : null;
     if (note && "error" in note) return c.json({ error: note.error }, 400);
     values = {
@@ -114,7 +117,10 @@ bookmarks.post("/", async (c) => {
   } else if (body.bookmarkId) {
     const rows = await db.execute<typeof schema.bookmarks.$inferSelect>(sql`
       select b.* from bookmarks b join users u on u.id = b.user_id
-      where b.id = ${body.bookmarkId} and (b.user_id = ${user.id} or (u.profile_visibility = 'public' and ${allowsSql("u.bookmarks_visibility", "u.id", user.id)}))
+      where b.id = ${body.bookmarkId} and (b.user_id = ${user.id} or (u.profile_visibility = 'public' and (
+        ${allowsSql("u.bookmarks_visibility", "u.id", user.id)}
+        -- Shown to me because I may read their notes: a noted post is on their page for me, so I can save it.
+        or (b.note is not null and ${allowsSql("u.notes_visibility", "u.id", user.id)}))))
     `);
     const src = rows.rows[0] as any;
     if (!src) return c.json({ error: "bookmark not found" }, 404);
@@ -124,7 +130,10 @@ bookmarks.post("/", async (c) => {
     if (!snap) return c.json({ error: "item not found" }, 404);
     values = snap;
   } else if (body.url) {
-    values = { userId: user.id, url: body.url.trim(), title: body.title ?? null };
+    // A bookmark is a clickable card others may see, so only ever a web address.
+    const url = body.url.trim();
+    if (!isHttpUrl(url)) return c.json({ error: "only http(s) URLs" }, 400);
+    values = { userId: user.id, url, title: body.title ?? null };
   } else {
     return c.json({ error: "itemId or url is required" }, 400);
   }
