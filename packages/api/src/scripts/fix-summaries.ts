@@ -18,7 +18,7 @@
  */
 import { sql } from "drizzle-orm";
 import { db, pool } from "../db/client.js";
-import { isLinkOnly, linkOnly, stripHtml } from "../feeds/parse.js";
+import { linkOnly, stripHtml } from "../feeds/parse.js";
 
 const dry = process.argv.includes("--dry");
 const BATCH = 2000;
@@ -38,17 +38,19 @@ for (;;) {
   for (const r of rows) {
     seen++;
     after = Number(r.id);
-    if (!isLinkOnly(r.content)) continue;
+    // Only an actual lone link, not any textless body: a media-only body (a
+    // lone image or video) is real content and must be left alone.
     const l = linkOnly(r.content);
+    if (!l) continue;
     // Leave a summary that came from somewhere other than this link.
-    if (r.summary !== null && (!l || stripHtml(r.content) !== r.summary)) continue;
+    if (r.summary !== null && stripHtml(r.content) !== r.summary) continue;
     // A bookmark keeps its own copy of the summary from when it was saved. Ones
     // saved before this fix still hold the bare word ("Comments"); clear them so
     // the card shows only the kept link. New bookmarks copy the item's now-null
     // summary, so this is only for the back catalogue.
     if (!dry) bmCleared += (await db.execute(sql`update bookmarks set summary = null where item_id = ${r.id} and summary is not null`)).rowCount ?? 0;
-    const url = l && /^https?:\/\//i.test(l.url) && norm(l.url) !== norm(r.url) ? l.url : null;
-    const label = url ? l!.label : null;
+    const url = /^https?:\/\//i.test(l.url) && norm(l.url) !== norm(r.url) ? l.url : null;
+    const label = url ? l.label : null;
     cleared++;
     if (url) linked++;
     if (samples.length < 5) samples.push(`#${r.id}: “${r.summary ?? "∅"}” → ${url ? `link “${label}” → ${url}` : "(none)"}`);

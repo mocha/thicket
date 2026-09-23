@@ -220,8 +220,9 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         linkLabel: sl.linkLabel,
         // A body that is nothing but a link isn't content — keeping it would
         // feed the search index the link's bare word ("Comments"). The link
-        // itself is already held in linkUrl.
-        content: body && !isLinkOnly(body) ? body : mediaText,
+        // itself is already held in linkUrl. A media-only body (a lone image or
+        // video, also textless) is real content and stays.
+        content: body && !linkOnly(body) ? body : mediaText,
         imageUrl: choosePreview(mediaThumb ?? enclosureImg, body),
         publishedAt: toDate(it.pubDate) ?? toDate(it.dc?.dates?.[0]) ?? null,
       });
@@ -249,7 +250,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         summary: sl.summary,
         linkUrl: sl.linkUrl,
         linkLabel: sl.linkLabel,
-        content: body && !isLinkOnly(body) ? body : mediaText,
+        content: body && !linkOnly(body) ? body : mediaText,
         imageUrl: choosePreview(e.media?.thumbnails?.[0] ?? e.media?.groups?.[0]?.thumbnails?.[0], body),
         publishedAt: toDate(e.published) ?? toDate(e.updated) ?? null,
       });
@@ -275,7 +276,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       summary: sl.summary,
       linkUrl: sl.linkUrl,
       linkLabel: sl.linkLabel,
-      content: body && !isLinkOnly(body) ? body : null,
+      content: body && !linkOnly(body) ? body : null,
       imageUrl: choosePreview(it.image ?? it.banner_image, it.content_html),
       publishedAt: toDate(it.date_published) ?? toDate(it.date_modified) ?? null,
     });
