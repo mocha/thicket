@@ -21,13 +21,13 @@ const hostOf = (u: string) => { try { return new URL(u).hostname.replace(/^www\.
 const fileOf = (u: string) => u.split("?")[0].split("/").pop() ?? "";
 
 for (;;) {
-  const rows = (await db.execute<{ id: number; imageUrl: string; content: string | null }>(sql`
-    select id, image_url as "imageUrl", content from items where image_url is not null and id > ${after} order by id limit ${BATCH}`)).rows;
+  const rows = (await db.execute<{ id: number; url: string | null; imageUrl: string; content: string | null }>(sql`
+    select id, url, image_url as "imageUrl", content from items where image_url is not null and id > ${after} order by id limit ${BATCH}`)).rows;
   if (!rows.length) break;
   for (const r of rows) {
     seen++;
     after = Number(r.id);
-    const next = choosePreview(r.imageUrl, r.content);
+    const next = choosePreview(r.imageUrl, r.content, r.url);
     if (!next || next === r.imageUrl) continue;
     changed++;
     const sameFile = fileOf(next) !== "" && fileOf(next) === fileOf(r.imageUrl);

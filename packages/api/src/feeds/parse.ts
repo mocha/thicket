@@ -228,7 +228,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         // itself is already held in linkUrl. A media-only body (a lone image or
         // video, also textless) is real content and stays.
         content: body && !linkOnly(body) ? body : mediaText,
-        imageUrl: choosePreview(mediaThumb ?? enclosureImg, body),
+        imageUrl: choosePreview(mediaThumb ?? enclosureImg, body, link ?? siteUrl ?? feedUrl),
         publishedAt: toDate(it.pubDate) ?? toDate(it.dc?.dates?.[0]) ?? null,
       });
     }
@@ -256,7 +256,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         linkUrl: sl.linkUrl,
         linkLabel: sl.linkLabel,
         content: body && !linkOnly(body) ? body : mediaText,
-        imageUrl: choosePreview(e.media?.thumbnails?.[0] ?? e.media?.groups?.[0]?.thumbnails?.[0], body),
+        imageUrl: choosePreview(e.media?.thumbnails?.[0] ?? e.media?.groups?.[0]?.thumbnails?.[0], body, link ?? siteUrl ?? feedUrl),
         publishedAt: toDate(e.published) ?? toDate(e.updated) ?? null,
       });
     }
@@ -282,7 +282,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       linkUrl: sl.linkUrl,
       linkLabel: sl.linkLabel,
       content: body && !linkOnly(body) ? body : null,
-      imageUrl: choosePreview(it.image ?? it.banner_image, it.content_html),
+      imageUrl: choosePreview(it.image ?? it.banner_image, it.content_html, link ?? siteUrl ?? feedUrl),
       publishedAt: toDate(it.date_published) ?? toDate(it.date_modified) ?? null,
     });
   }
