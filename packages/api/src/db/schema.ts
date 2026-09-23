@@ -210,6 +210,16 @@ export const items = pgTable("items", {
    * current reading model. Anything that does render it has to sanitize first.
    */
   content: text("content"),
+  /**
+   * When a feed's whole description is just a link that points somewhere other
+   * than the post itself, we keep that link here instead of flattening it into
+   * a bare-word summary. Hacker News is the case this exists for: its
+   * description is a lone "Comments" link to the discussion thread, so linkUrl
+   * is that thread and linkLabel is "Comments". Both null for an ordinary post,
+   * and null when the lone link just points back at the post the card opens.
+   */
+  linkUrl: text("link_url"),
+  linkLabel: text("link_label"),
   imageUrl: text("image_url"),
   publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),

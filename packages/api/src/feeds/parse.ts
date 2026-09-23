@@ -16,6 +16,14 @@ export type ParsedItem = {
   /** Plain text for the river card, capped at SUMMARY_LEN. A display string, never the record. */
   summary: string | null;
   /**
+   * When the whole description is a single link pointing somewhere other than
+   * this post — Hacker News's "Comments" link to the discussion — that link,
+   * to show on the card in place of a summary. linkLabel is the link's own
+   * words. Both null for an ordinary post.
+   */
+  linkUrl: string | null;
+  linkLabel: string | null;
+  /**
    * Everything the publisher gave us for this item's body, whole: the rich
    * field (`content:encoded`, Atom `<content>`, `content_html`) when there is
    * one, otherwise the description. Both are stored at full length.
@@ -94,6 +102,45 @@ function summarize(...candidates: Array<string | undefined | null>): string | nu
   return null;
 }
 
+/**
+ * The href and words of the lone link in a link-only description, so we can
+ * keep it (Hacker News's "Comments" link to the discussion) instead of
+ * dropping it. Null when the text isn't link-only or the anchor has no usable
+ * href or words.
+ */
+export function linkOnly(html: string): { url: string; label: string } | null {
+  if (!isLinkOnly(html)) return null;
+  const m = /<a\b[^>]*?\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/i.exec(html);
+  if (!m) return null;
+  const url = (m[1] ?? m[2] ?? m[3] ?? "").trim();
+  const label = stripHtml(m[4] ?? "");
+  return url && label ? { url, label } : null;
+}
+
+/** Two URLs equal but for a trailing slash. */
+function sameUrl(a: string | null, b: string | null): boolean {
+  return !!a && !!b && a.replace(/\/+$/, "") === b.replace(/\/+$/, "");
+}
+
+/**
+ * A card's summary, and — when the description is nothing but a link that goes
+ * somewhere other than the post itself — that link to show in its place. A real
+ * text summary wins and carries no link; a lone link back to the post the card
+ * already opens is dropped as redundant.
+ */
+function summarizeWithLink(cands: Array<string | undefined | null>, itemUrl: string | null, base: string | null): { summary: string | null; linkUrl: string | null; linkLabel: string | null } {
+  const summary = summarize(...cands);
+  if (summary !== null) return { summary, linkUrl: null, linkLabel: null };
+  for (const c of cands) {
+    const l = c ? linkOnly(c) : null;
+    if (!l) continue;
+    const url = absolutize(l.url, base);
+    if (url && !sameUrl(url, itemUrl)) return { summary: null, linkUrl: url, linkLabel: l.label };
+    break;
+  }
+  return { summary: null, linkUrl: null, linkLabel: null };
+}
+
 function toDate(v: unknown): Date | null {
   if (!v) return null;
   const d = new Date(v as string);
@@ -160,12 +207,15 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       const mediaText = mediaDescription(it.media);
       const mediaThumb = it.media?.thumbnails?.[0] ?? it.media?.groups?.[0]?.thumbnails?.[0] ?? it.media?.contents?.find((c: any) => c.medium === "image");
       const enclosureImg = it.enclosures?.find((e: any) => e.type?.startsWith("image/"))?.url;
+      const sl = summarizeWithLink([it.description, rich, mediaText], link, siteUrl ?? feedUrl);
       items.push({
         dedupeKey: dedupeKey(it.guid?.value, link, title, body),
         url: link,
         title,
         author: cleanAuthor(it.dc?.creators?.[0]) ?? cleanAuthor(it.authors?.[0]),
-        summary: summarize(it.description, rich, mediaText),
+        summary: sl.summary,
+        linkUrl: sl.linkUrl,
+        linkLabel: sl.linkLabel,
         content: body ?? mediaText,
         imageUrl: choosePreview(mediaThumb ?? enclosureImg, body),
         publishedAt: toDate(it.pubDate) ?? toDate(it.dc?.dates?.[0]) ?? null,
@@ -185,12 +235,15 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       const rich: string | null = e.content ?? null;
       const body = rich ?? e.summary ?? null;
       const mediaText = mediaDescription(e.media);
+      const sl = summarizeWithLink([e.summary, rich, mediaText], link, siteUrl ?? feedUrl);
       items.push({
         dedupeKey: dedupeKey(e.id, link, title, body),
         url: link,
         title,
         author: e.authors?.[0]?.name ?? f.authors?.[0]?.name ?? null,
-        summary: summarize(e.summary, rich, mediaText),
+        summary: sl.summary,
+        linkUrl: sl.linkUrl,
+        linkLabel: sl.linkLabel,
         content: body ?? mediaText,
         imageUrl: choosePreview(e.media?.thumbnails?.[0] ?? e.media?.groups?.[0]?.thumbnails?.[0], body),
         publishedAt: toDate(e.published) ?? toDate(e.updated) ?? null,
@@ -208,12 +261,15 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
     const title = it.title ? stripHtml(it.title) : null;
     const rich: string | null = it.content_html ?? it.content_text ?? null;
     const body = rich ?? it.summary ?? null;
+    const sl = summarizeWithLink([it.summary, it.content_text, it.content_html], link, siteUrl ?? feedUrl);
     items.push({
       dedupeKey: dedupeKey(it.id, link, title, rich),
       url: link,
       title,
       author: it.authors?.[0]?.name ?? f.authors?.[0]?.name ?? null,
-      summary: summarize(it.summary, it.content_text, it.content_html),
+      summary: sl.summary,
+      linkUrl: sl.linkUrl,
+      linkLabel: sl.linkLabel,
       content: body,
       imageUrl: choosePreview(it.image ?? it.banner_image, it.content_html),
       publishedAt: toDate(it.date_published) ?? toDate(it.date_modified) ?? null,

@@ -74,6 +74,8 @@ export async function storeItems(feedId: number, parsed: ParsedFeed, opts: { fir
     title: it.title,
     author: it.author,
     summary: it.summary,
+    linkUrl: it.linkUrl,
+    linkLabel: it.linkLabel,
     content: it.content,
     imageUrl: it.imageUrl,
     publishedAt: dateFor(it.publishedAt),

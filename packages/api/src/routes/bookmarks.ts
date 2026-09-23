@@ -34,8 +34,10 @@ bookmarks.get("/", async (c) => {
   const rows = await db.execute(sql`
     select b.id, b.item_id as "itemId", b.feed_id as "feedId", b.url, b.title, b.summary, b.image_url as "imageUrl",
            b.site_title as "siteTitle", b.author, b.published_at as "publishedAt", b.note, b.saved_at as "savedAt",
-           exists(select 1 from feed_icons fi where fi.feed_id = b.feed_id and not fi.generic) as "hasIcon"
+           exists(select 1 from feed_icons fi where fi.feed_id = b.feed_id and not fi.generic) as "hasIcon",
+           i.link_url as "linkUrl", i.link_label as "linkLabel"
     from bookmarks b
+    left join items i on i.id = b.item_id
     where b.user_id = ${user.id} ${feedFilter} ${collectionFilter} ${cursor}
     order by b.saved_at desc, b.id desc
     limit ${limit + 1}
