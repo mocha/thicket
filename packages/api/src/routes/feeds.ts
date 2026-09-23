@@ -136,7 +136,12 @@ feeds.post("/", async (c) => {
     if (outcome.status === "subscribed") for (const id of mine.slice(1)) await addFeedToCollection(id, outcome.feed.id);
     return c.json(outcome, outcome.status === "none" ? 404 : 200);
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : String(err) }, 502);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[subscribe] ${new URL(normalized).hostname}:`, err);
+    // Cloudflare replaces an origin 502 body with its own HTML error page,
+    // hiding the useful explanation from the person adding the feed. This is
+    // a dependency failure inside a healthy API, so preserve our JSON body.
+    return c.json({ error: message }, 424);
   }
 });
 
