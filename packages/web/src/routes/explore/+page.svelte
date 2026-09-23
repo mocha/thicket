@@ -7,7 +7,7 @@
     type Feed, type ExploreCollection, type ExploreUser,
     type SearchResults, type SearchScope, type SearchFeed, type SearchCollection, type SearchPost, type SearchPerson
   } from '$lib/api';
-  import { feedOrigin, hostOf, longAgo, postRate, relativeTime } from '$lib/time';
+  import { feedOrigin, hostOf, longAgo, postRate, relativeTime, webHref } from '$lib/time';
   import { highlight, plural, shareOfOutput } from '$lib/words';
   import { feedListName } from '$lib/feedname';
   import { session } from '$lib/session.svelte';
@@ -409,7 +409,7 @@
 
 {#snippet postRow(p: SearchPost)}
   <li>
-    <a class="row" href={p.url ?? feedHref({ id: p.feedId })} target={p.url ? '_blank' : undefined} rel={p.url ? 'noreferrer' : undefined}>
+    <a class="row" href={webHref(p.url) ?? feedHref({ id: p.feedId })} target={webHref(p.url) ? '_blank' : undefined} rel={webHref(p.url) ? 'noreferrer' : undefined}>
       <SourceIcon feedId={p.feedId} hasIcon={p.hasIcon} name={p.feedTitle ?? ''} size={40} />
       <div class="meta">
         <span class="title">{p.title ?? p.url}</span>

@@ -56,6 +56,21 @@ export function feedOrigin(f: { url: string; siteUrl: string | null; sameTitle?:
   return hostOf(f.siteUrl ?? f.url);
 }
 
+/**
+ * The link itself when it is a web address, else null. Feeds and saved posts
+ * supply these links, and an href of javascript: would run code when clicked,
+ * so anything other than http or https is never made clickable.
+ */
+export function webHref(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'http:' || u.protocol === 'https:' ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 export function hostOf(url: string | null): string {
   if (!url) return '';
   try {

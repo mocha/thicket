@@ -9,7 +9,7 @@
    */
   import type { Bookmark, PublicBookmark } from '$lib/api';
   import { itemsApi } from '$lib/api';
-  import { hostOf, relativeTime } from '$lib/time';
+  import { hostOf, relativeTime, webHref } from '$lib/time';
   import { openReader, readsInline } from '$lib/reader.svelte';
   import Card from './Card.svelte';
   import CardMeta from './CardMeta.svelte';
@@ -37,7 +37,8 @@
       try {
         openReader(await itemsApi.get(b.itemId));
       } catch {
-        window.open(b.url, '_blank', 'noopener');
+        const href = webHref(b.url);
+        if (href) window.open(href, '_blank', 'noopener');
       }
       return;
     }
@@ -46,7 +47,7 @@
 </script>
 
 <Card as="li" class="bm">
-  <a class="body" href={b.url} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
+  <a class="body" href={webHref(b.url) ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
     <div class="text">
       <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} />
       <h3 class="card-title">{noOrphan(b.title ?? b.url)}</h3>
@@ -55,9 +56,9 @@
     </div>
     {#if b.imageUrl}<img class="thumb" src={b.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onerror={(e) => ((e.currentTarget as HTMLImageElement).hidden = true)} />{/if}
   </a>
-  {#if b.linkUrl && b.linkLabel}
+  {#if webHref(b.linkUrl) && b.linkLabel}
     <!-- The source post's discussion-style link (e.g. Hacker News's "Comments"), outside the body's own link. -->
-    <a class="card-extralink" href={b.linkUrl} target="_blank" rel="noopener">{b.linkLabel} →</a>
+    <a class="card-extralink" href={webHref(b.linkUrl)} target="_blank" rel="noopener">{b.linkLabel} →</a>
   {/if}
   {#if action}
     {#if action.kind === 'remove'}

@@ -9,7 +9,7 @@
    */
   import type { Note, RiverItem } from '$lib/api';
   import { api } from '$lib/api';
-  import { hostOf } from '$lib/time';
+  import { hostOf, webHref } from '$lib/time';
   import { openReader, readsInline } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
   import Card from './Card.svelte';
@@ -35,7 +35,7 @@
 </script>
 
 <Card as="li" pad={false}>
-  <a class="body" href={item.url ?? item.siteUrl ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
+  <a class="body" href={webHref(item.url) ?? webHref(item.siteUrl) ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
     <div class="text">
       <CardMeta feedId={item.feedId} hasIcon={item.hasIcon} name={source} when={item.publishedAt} />
       <h3 class="card-title">{noOrphan(item.title ?? item.summary ?? item.url)}</h3>
@@ -43,9 +43,9 @@
     </div>
     {#if item.imageUrl && !imgFailed}<img class="thumb" src={item.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onerror={() => (imgFailed = true)} />{/if}
   </a>
-  {#if item.linkUrl && item.linkLabel}
+  {#if webHref(item.linkUrl) && item.linkLabel}
     <!-- The source post's discussion-style link (e.g. Hacker News's "Comments"), outside the body's own link. -->
-    <a class="card-extralink" href={item.linkUrl} target="_blank" rel="noopener">{item.linkLabel} →</a>
+    <a class="card-extralink" href={webHref(item.linkUrl)} target="_blank" rel="noopener">{item.linkLabel} →</a>
   {/if}
   {#if editing}
     <NoteEditor itemId={item.id} note={item.myNote} onsaved={saved} ondeleted={() => { item.myNote = null; editing = false; }} oncancel={() => (editing = false)} />

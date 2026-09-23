@@ -6,7 +6,7 @@
    * or the site itself.
    */
   import { api, feedHref, type Feed } from '$lib/api';
-  import { feedOrigin, hostOf, relativeTime } from '$lib/time';
+  import { feedOrigin, hostOf, relativeTime, webHref } from '$lib/time';
   import SourceIcon from './SourceIcon.svelte';
   import FollowControl from './FollowControl.svelte';
   import IconButton from './IconButton.svelte';
@@ -31,7 +31,7 @@
         <SourceIcon feedId={feed.id} hasIcon={feed.hasIcon} name={feed.title ?? hostOf(feed.url)} size={48} />
         <div class="who">
           <h2>{feed.title ?? hostOf(feed.url)}</h2>
-          <a class="host" href={feed.siteUrl ?? feed.url} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
+          <a class="host" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
         </div>
         <IconButton class="close" icon="close" label="Close" onclick={() => dialog?.close()} />
       </header>
