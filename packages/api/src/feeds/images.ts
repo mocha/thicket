@@ -63,15 +63,26 @@ export function firstImg(html: string | undefined | null): string | null {
   return m?.[1] ?? null;
 }
 
+/** The address when it is a web address, else null: a card never shows a data:, javascript: or other picture. */
+function webUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url.trim());
+    return u.protocol === "http:" || u.protocol === "https:" ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The card's picture: what the feed declared, unless that is a thumbnail, in
  * which case the first image of the body; either way asked for at full size.
  */
 export function choosePreview(declared: Declared, body: string | null | undefined): string | null {
   const d = typeof declared === "string" ? { url: declared } : declared;
-  const url = d?.url ?? null;
+  const url = webUrl(d?.url);
   if (url && !isSmallImage(url, d?.width, d?.height)) return upsizeImageUrl(url);
-  const body1 = firstImg(body);
+  const body1 = webUrl(firstImg(body));
   if (body1) return upsizeImageUrl(body1);
   return url ? upsizeImageUrl(url) : null;
 }
