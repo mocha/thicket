@@ -135,7 +135,9 @@ function summarizeWithLink(cands: Array<string | undefined | null>, itemUrl: str
     const l = c ? linkOnly(c) : null;
     if (!l) continue;
     const url = absolutize(l.url, base);
-    if (url && !sameUrl(url, itemUrl)) return { summary: null, linkUrl: url, linkLabel: l.label };
+    // A card link is clickable, so only ever a web address — never javascript:,
+    // data:, mailto: or the like from a hostile or careless feed.
+    if (url && /^https?:\/\//i.test(url) && !sameUrl(url, itemUrl)) return { summary: null, linkUrl: url, linkLabel: l.label };
     break;
   }
   return { summary: null, linkUrl: null, linkLabel: null };
@@ -216,7 +218,10 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         summary: sl.summary,
         linkUrl: sl.linkUrl,
         linkLabel: sl.linkLabel,
-        content: body ?? mediaText,
+        // A body that is nothing but a link isn't content — keeping it would
+        // feed the search index the link's bare word ("Comments"). The link
+        // itself is already held in linkUrl.
+        content: body && !isLinkOnly(body) ? body : mediaText,
         imageUrl: choosePreview(mediaThumb ?? enclosureImg, body),
         publishedAt: toDate(it.pubDate) ?? toDate(it.dc?.dates?.[0]) ?? null,
       });
@@ -244,7 +249,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         summary: sl.summary,
         linkUrl: sl.linkUrl,
         linkLabel: sl.linkLabel,
-        content: body ?? mediaText,
+        content: body && !isLinkOnly(body) ? body : mediaText,
         imageUrl: choosePreview(e.media?.thumbnails?.[0] ?? e.media?.groups?.[0]?.thumbnails?.[0], body),
         publishedAt: toDate(e.published) ?? toDate(e.updated) ?? null,
       });
@@ -270,7 +275,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       summary: sl.summary,
       linkUrl: sl.linkUrl,
       linkLabel: sl.linkLabel,
-      content: body,
+      content: body && !isLinkOnly(body) ? body : null,
       imageUrl: choosePreview(it.image ?? it.banner_image, it.content_html),
       publishedAt: toDate(it.date_published) ?? toDate(it.date_modified) ?? null,
     });

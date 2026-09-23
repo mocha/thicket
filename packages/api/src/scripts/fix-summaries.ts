@@ -49,11 +49,13 @@ for (;;) {
     if (!dry) bmCleared += (await db.execute(sql`update bookmarks set summary = null where item_id = ${r.id} and summary is not null`)).rowCount ?? 0;
     const url = l && /^https?:\/\//i.test(l.url) && norm(l.url) !== norm(r.url) ? l.url : null;
     const label = url ? l!.label : null;
-    if (r.summary === null && norm(r.linkUrl) === norm(url) && (r.linkLabel ?? null) === label) continue; // already correct
     cleared++;
     if (url) linked++;
     if (samples.length < 5) samples.push(`#${r.id}: “${r.summary ?? "∅"}” → ${url ? `link “${label}” → ${url}` : "(none)"}`);
-    if (!dry) await db.execute(sql`update items set summary = null, link_url = ${url}, link_label = ${label} where id = ${r.id}`);
+    // Clear the summary, keep the link, and drop the link-only body: leaving it
+    // would keep feeding search the bare word ("Comments"). Once content is
+    // null the row no longer matches the filter, so this is safe to re-run.
+    if (!dry) await db.execute(sql`update items set summary = null, link_url = ${url}, link_label = ${label}, content = null where id = ${r.id}`);
   }
   console.log(`  ${seen} looked at, ${cleared} fixed (${linked} kept a link)`);
 }
