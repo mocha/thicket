@@ -19,10 +19,18 @@ export type HttpResult = {
   truncated: boolean;
 };
 
-/** The body was bigger than we accept. The message keeps "too large" because the importer and survey match on it. */
+/**
+ * The body was bigger than we accept. Carries the status and declared type so a
+ * caller can tell an oversized feed from an oversized error page. The message
+ * keeps "too large" because the importer and survey match on it.
+ */
 export class TooLargeError extends Error {
-  constructor(readonly bytes: number) {
+  readonly status: number;
+  readonly contentType: string | null;
+  constructor(readonly bytes: number, res: Response) {
     super(`response too large (${bytes} bytes)`);
+    this.status = res.status;
+    this.contentType = res.headers.get("content-type");
   }
 }
 
@@ -62,13 +70,13 @@ async function request(url: string, headers: Record<string, string>, opts: HttpO
   const len = Number(res.headers.get("content-length") ?? 0);
   if (len > limit && !opts.truncate) {
     await res.body.cancel().catch(() => {});
-    throw new TooLargeError(len);
+    throw new TooLargeError(len, res);
   }
-  return { res, ...(await readUpTo(res.body, limit, !!opts.truncate)) };
+  return { res, ...(await readUpTo(res, res.body, limit, !!opts.truncate)) };
 }
 
 /** Read a body up to `limit` bytes. Past it: stop downloading, then either fail or keep what arrived. */
-async function readUpTo(body: ReadableStream<Uint8Array>, limit: number, truncate: boolean): Promise<{ bytes: Buffer; truncated: boolean }> {
+async function readUpTo(res: Response, body: ReadableStream<Uint8Array>, limit: number, truncate: boolean): Promise<{ bytes: Buffer; truncated: boolean }> {
   const reader = body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -79,7 +87,7 @@ async function readUpTo(body: ReadableStream<Uint8Array>, limit: number, truncat
     total += value.byteLength;
     if (total > limit) {
       await reader.cancel().catch(() => {});
-      if (!truncate) throw new TooLargeError(total);
+      if (!truncate) throw new TooLargeError(total, res);
       return { bytes: Buffer.concat(chunks, total).subarray(0, limit), truncated: true };
     }
   }
