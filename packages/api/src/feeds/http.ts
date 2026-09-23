@@ -7,7 +7,7 @@
 import { afterResponse, awaitTurn } from "./hosts.js";
 
 export const USER_AGENT = "thicket/0.1 (feed reader; +https://github.com/mocha/thicket)";
-const MAX_BYTES = 5 * 1024 * 1024;
+export const MAX_BYTES = 5 * 1024 * 1024;
 const TIMEOUT_MS = 20_000;
 
 export type HttpResult = {
@@ -15,9 +15,26 @@ export type HttpResult = {
   finalUrl: string;
   headers: Headers;
   body: string;
+  /** The body stopped at `maxBytes` because `truncate` was set; what we have is only the beginning. */
+  truncated: boolean;
 };
 
-export type HttpBytes = Omit<HttpResult, "body"> & { bytes: Buffer };
+/**
+ * The body was bigger than we accept. Carries the status and declared type so a
+ * caller can tell an oversized feed from an oversized error page. The message
+ * keeps "too large" because the importer and survey match on it.
+ */
+export class TooLargeError extends Error {
+  readonly status: number;
+  readonly contentType: string | null;
+  constructor(readonly bytes: number, res: Response) {
+    super(`response too large (${bytes} bytes)`);
+    this.status = res.status;
+    this.contentType = res.headers.get("content-type");
+  }
+}
+
+export type HttpBytes = Omit<HttpResult, "body" | "truncated"> & { bytes: Buffer };
 
 export type HttpOptions = {
   redirect?: RequestRedirect;
@@ -30,8 +47,8 @@ export type HttpOptions = {
 const FEED_ACCEPT = "application/rss+xml, application/atom+xml, application/feed+json, application/xml;q=0.9, text/html;q=0.8, */*;q=0.5";
 
 export async function httpGet(url: string, extra: Record<string, string> = {}, opts: HttpOptions = {}): Promise<HttpResult> {
-  const { res, bytes } = await request(url, { accept: FEED_ACCEPT, ...extra }, opts);
-  return { status: res.status, finalUrl: res.url || url, headers: res.headers, body: bytes.length ? decode(bytes, res.headers.get("content-type")) : "" };
+  const { res, bytes, truncated } = await request(url, { accept: FEED_ACCEPT, ...extra }, opts);
+  return { status: res.status, finalUrl: res.url || url, headers: res.headers, body: bytes.length ? decode(bytes, res.headers.get("content-type")) : "", truncated };
 }
 
 /** The same polite request, for images and anything else that isn't text. */
@@ -49,17 +66,17 @@ async function request(url: string, headers: Record<string, string>, opts: HttpO
   });
   await afterResponse(host, res.status, res.headers);
   const limit = opts.maxBytes ?? MAX_BYTES;
-  if (res.status === 304 || !res.body) return { res, bytes: Buffer.alloc(0) };
+  if (res.status === 304 || !res.body) return { res, bytes: Buffer.alloc(0), truncated: false };
   const len = Number(res.headers.get("content-length") ?? 0);
   if (len > limit && !opts.truncate) {
     await res.body.cancel().catch(() => {});
-    throw new Error(`response too large (${len} bytes)`);
+    throw new TooLargeError(len, res);
   }
-  return { res, bytes: await readUpTo(res.body, limit, !!opts.truncate) };
+  return { res, ...(await readUpTo(res, res.body, limit, !!opts.truncate)) };
 }
 
 /** Read a body up to `limit` bytes. Past it: stop downloading, then either fail or keep what arrived. */
-async function readUpTo(body: ReadableStream<Uint8Array>, limit: number, truncate: boolean): Promise<Buffer> {
+async function readUpTo(res: Response, body: ReadableStream<Uint8Array>, limit: number, truncate: boolean): Promise<{ bytes: Buffer; truncated: boolean }> {
   const reader = body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -70,11 +87,11 @@ async function readUpTo(body: ReadableStream<Uint8Array>, limit: number, truncat
     total += value.byteLength;
     if (total > limit) {
       await reader.cancel().catch(() => {});
-      if (!truncate) throw new Error(`response too large (${total} bytes)`);
-      return Buffer.concat(chunks, total).subarray(0, limit);
+      if (!truncate) throw new TooLargeError(total, res);
+      return { bytes: Buffer.concat(chunks, total).subarray(0, limit), truncated: true };
     }
   }
-  return Buffer.concat(chunks, total);
+  return { bytes: Buffer.concat(chunks, total), truncated: false };
 }
 
 /** Honor the declared charset when it isn't UTF-8; fall back to the XML prolog. */

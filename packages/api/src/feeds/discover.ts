@@ -3,7 +3,7 @@
  * path: the add-feed form, the PWA share target, and any future extension or
  * external tool all land here.
  */
-import { httpGet } from "./http.js";
+import { httpGet, MAX_BYTES, TooLargeError, type HttpResult } from "./http.js";
 import { normalizeFeedUrl } from "./normalize.js";
 import { parseFeedDocument, type ParsedFeed } from "./parse.js";
 import { resolveYouTube } from "./youtube.js";
@@ -18,6 +18,34 @@ export type Discovery =
   | { status: "none"; pageUrl: string };
 
 const FEED_TYPES = /application\/(rss|atom|feed)\+(xml|json)|application\/(rss|atom)|text\/xml|application\/xml|application\/json/i;
+/** What the person adding a feed sees, and what the log records, when the feed itself is over our limit. Keeps "too large" for the importer's match. */
+const TOO_LARGE = `This feed is too large for Thicket to read (over ${MAX_BYTES / 1024 / 1024} MB).`;
+
+/** Declared as a feed rather than a web page. */
+function feedType(contentType: string | null): boolean {
+  return /xml|rss|atom|json/i.test(contentType ?? "") && !/html/i.test(contentType ?? "");
+}
+
+/** A feed, going by its declared type or its opening tag, as opposed to a web page. */
+function looksLikeFeed(res: HttpResult): boolean {
+  return feedType(res.headers.get("content-type")) || /^\s*(<\?[^>]*>\s*|<!--[\s\S]*?-->\s*)*<(rss|feed|rdf:RDF)\b/i.test(res.body.slice(0, 4096));
+}
+
+/**
+ * Fetch an address we hope is a feed. Only a successful answer declared as a
+ * feed counts as "too large"; an oversized error or web page (a site's 404, or
+ * an app that answers every address with the same page) is simply not a feed.
+ */
+async function fetchFeed(url: string): Promise<HttpResult | null> {
+  try {
+    return await httpGet(url);
+  } catch (err) {
+    if (!(err instanceof TooLargeError)) throw err;
+    if (err.status < 400 && feedType(err.contentType)) throw new Error(TOO_LARGE, { cause: err });
+    return null;
+  }
+}
+
 const PROBE_PATHS = ["/feed", "/rss", "/feed.xml", "/rss.xml", "/atom.xml", "/index.xml", "/feed.json", "/feed/", "/rss/", "/blog/feed", "/blog/rss.xml", "/blog/index.xml", "/posts/index.xml"];
 
 function tryParse(body: string, url: string): ParsedFeed | null {
@@ -81,27 +109,34 @@ export async function discover(input: string): Promise<Discovery> {
   if (direct) {
     return { status: "feed", url: normalizeFeedUrl(res.finalUrl), parsed: direct, etag: res.headers.get("etag"), lastModified: res.headers.get("last-modified") };
   }
+  // Cut short and not a page: it's a feed we couldn't read whole. Say so,
+  // rather than searching it for links and reporting that nothing was found.
+  if (res.truncated && looksLikeFeed(res)) throw new Error(TOO_LARGE);
 
   // 2. It's a page: look for advertised feeds.
   const advertised = extractFeedLinks(res.body, res.finalUrl);
   if (advertised.length === 1) {
-    const one = await httpGet(advertised[0].url);
-    const parsed = tryParse(one.body, one.finalUrl);
-    if (parsed) return { status: "feed", url: normalizeFeedUrl(one.finalUrl), parsed, etag: one.headers.get("etag"), lastModified: one.headers.get("last-modified") };
+    const one = await fetchFeed(advertised[0].url);
+    const parsed = one && tryParse(one.body, one.finalUrl);
+    if (one && parsed) return { status: "feed", url: normalizeFeedUrl(one.finalUrl), parsed, etag: one.headers.get("etag"), lastModified: one.headers.get("last-modified") };
   }
   if (advertised.length > 1) return { status: "candidates", pageUrl: res.finalUrl, candidates: advertised };
 
   // 3. Nothing advertised: probe the usual suspects, quietly.
   const origin = new URL(res.finalUrl).origin;
+  let tooLarge: Error | null = null;
   for (const path of PROBE_PATHS) {
     try {
-      const probe = await httpGet(origin + path);
-      if (probe.status >= 400) continue;
+      const probe = await fetchFeed(origin + path);
+      if (!probe || probe.status >= 400) continue;
       const parsed = tryParse(probe.body, probe.finalUrl);
       if (parsed) return { status: "feed", url: normalizeFeedUrl(probe.finalUrl), parsed, etag: probe.headers.get("etag"), lastModified: probe.headers.get("last-modified") };
-    } catch {
-      /* keep probing */
+    } catch (err) {
+      // Keep probing, but remember a feed that exists and is only too big:
+      // that, not "no feed found", is the honest answer if nothing else works.
+      if (err instanceof Error && err.message === TOO_LARGE) tooLarge ??= err;
     }
   }
+  if (tooLarge) throw tooLarge;
   return { status: "none", pageUrl: res.finalUrl };
 }
