@@ -7,9 +7,9 @@
  *
  * The row at the address the fetch actually lands on survives. Everything
  * people did with the other one moves to it: the collections it was filed in,
- * their settings on it, blocks, and the notes and bookmarks on its posts.
+ * their settings on it, blocks, and the bookmarks (notes included) on its posts.
  * Posts the surviving feed already holds (same dedupe key, or failing that the
- * same link) are not copied; notes and bookmarks are pointed at its copy.
+ * same link) are not copied; bookmarks are pointed at its copy.
  *
  * The same folding ran once as SQL for YouTube's "No Shorts" feeds
  * (drizzle/0008_feed_settings.sql); this is the general form.
@@ -45,11 +45,6 @@ export async function mergeFeeds(fromId: number, intoId: number): Promise<void> 
               order by (j.dedupe_key = i.dedupe_key) desc, j.id limit 1) as new_id
       from items i where i.feed_id = ${fromId}`);
     await tx.execute(sql`update items set feed_id = ${intoId} where id in (select old_id from merge_twins where new_id is null)`);
-    // A note is one per person per post: someone who noted both copies keeps the one already on the surviving feed.
-    await tx.execute(sql`
-      update notes nt set item_id = t.new_id from merge_twins t
-      where nt.item_id = t.old_id and t.new_id is not null
-        and not exists (select 1 from notes y where y.user_id = nt.user_id and y.item_id = t.new_id)`);
     await tx.execute(sql`
       update bookmarks b set item_id = t.new_id from merge_twins t
       where b.item_id = t.old_id and t.new_id is not null`);

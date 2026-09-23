@@ -108,19 +108,19 @@ export async function activityForViewer(
       where col.user_id = ${u.id} and col.parent_id is not null and ${showCollections} ${colVisible}
 
       union all
+      -- Writing a note saves the post too (issue #84), so a noted post is one
+      -- act, shown once: as the note, when this viewer may read notes.
       select 'bookmark'::text, b.saved_at, b.id,
              jsonb_build_object('url', b.url, 'title', b.title, 'siteTitle', b.site_title, 'feedId', b.feed_id, 'hasIcon', ${ICON("b.feed_id")})
       from bookmarks b
-      where b.user_id = ${u.id} and ${showBookmarks}
+      where b.user_id = ${u.id} and ${showBookmarks} and not (b.note is not null and ${showNotes})
 
       union all
-      select 'note'::text, n.created_at, n.id,
-             jsonb_build_object('body', n.body, 'itemId', n.item_id, 'url', i.url, 'title', i.title,
-                                'siteTitle', f.title, 'feedId', i.feed_id, 'hasIcon', ${ICON("i.feed_id")})
-      from notes n
-      join items i on i.id = n.item_id
-      join feeds f on f.id = i.feed_id
-      where n.user_id = ${u.id} and ${showNotes}
+      select 'note'::text, n.note_created_at, n.id,
+             jsonb_build_object('body', n.note, 'itemId', n.item_id, 'url', n.url, 'title', n.title,
+                                'siteTitle', n.site_title, 'feedId', n.feed_id, 'hasIcon', ${ICON("n.feed_id")})
+      from bookmarks n
+      where n.user_id = ${u.id} and n.note is not null and ${showNotes}
     )
     select kind, at, id, payload from entries
     ${cursor}

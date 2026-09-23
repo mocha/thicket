@@ -7,16 +7,20 @@
    * The box accepts a little more than the cap on purpose, so running long
    * shows you by how much instead of stopping your typing dead. Save stays off
    * while you are over.
+   *
+   * The note belongs to a post (`itemId`) wherever there is one; saving it
+   * saves the post too. A bookmark whose post is gone is noted through the
+   * bookmark instead (`bookmarkId`).
    */
-  import { api, notesApi, NOTE_MAX, type Note } from '$lib/api';
+  import { api, bookmarksApi, notesApi, NOTE_MAX, type Note, type SavedNote } from '$lib/api';
   import { showToast } from '$lib/toast.svelte';
   import Button from '$lib/components/Button.svelte';
   import Field from '$lib/components/Field.svelte';
   import Textarea from '$lib/components/Textarea.svelte';
 
-  let { itemId, note = null, onsaved, ondeleted, oncancel }: {
-    itemId: number; note?: Note | null;
-    onsaved: (n: Note) => void; ondeleted: () => void; oncancel: () => void;
+  let { itemId = null, bookmarkId = null, note = null, onsaved, ondeleted, oncancel }: {
+    itemId?: number | null; bookmarkId?: number | null; note?: Note | null;
+    onsaved: (n: SavedNote) => void; ondeleted: () => void; oncancel: () => void;
   } = $props();
 
   // svelte-ignore state_referenced_locally
@@ -39,8 +43,8 @@
     if (busy || !body.trim() || over) return;
     busy = true; error = null;
     try {
-      const saved = await notesApi.write(itemId, body);
-      api.event(note ? 'note_edited' : 'note_written', { itemId, length: saved.body.length });
+      const saved = itemId !== null ? await notesApi.write(itemId, body) : await bookmarksApi.writeNote(bookmarkId!, body);
+      api.event(note ? 'note_edited' : 'note_written', { itemId, bookmarkId: saved.bookmarkId, length: saved.body.length });
       onsaved(saved);
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
@@ -54,8 +58,9 @@
     if (!confirm('Delete this note?')) return;
     busy = true;
     try {
-      await notesApi.remove(itemId);
-      api.event('note_deleted', { itemId });
+      if (itemId !== null) await notesApi.remove(itemId);
+      else await bookmarksApi.removeNote(bookmarkId!);
+      api.event('note_deleted', { itemId, bookmarkId });
       showToast('Note deleted');
       ondeleted();
     } catch (e) {

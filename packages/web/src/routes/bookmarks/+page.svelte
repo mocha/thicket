@@ -3,6 +3,11 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { api, bookmarksApi, profileHref, type Bookmark, type BookmarkSources } from '$lib/api';
+  /**
+   * My Bookmarks: every post I've saved, and my note on each one that has one
+   * (issue #84: a note is part of a bookmark). Newest activity first: saving a
+   * post, or writing or editing its note, brings it to the top.
+   */
   import { session } from '$lib/session.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import Button from '$lib/components/Button.svelte';
@@ -14,27 +19,30 @@
   let cursor = $state<string | null>(null);
   let done = $state(false);
   let loading = $state(false);
-  let sources = $state<BookmarkSources>({ feeds: [], collections: [] });
+  let sources = $state<BookmarkSources>({ feeds: [], collections: [], noted: 0 });
   let sentinel = $state<HTMLElement | null>(null);
 
-  // Filters live in the URL: ?c=<collection> or ?f=<feed>. One at a time keeps the pills honest.
+  // Filters live in the URL: ?notes=1, ?c=<collection> or ?f=<feed>. One at a time keeps the pills honest.
+  const notes = $derived(page.url.searchParams.get('notes') === '1');
   const collection = $derived(page.url.searchParams.get('c') ? Number(page.url.searchParams.get('c')) : null);
   const feed = $derived(page.url.searchParams.get('f') ? Number(page.url.searchParams.get('f')) : null);
   let loadedKey = $state<string | undefined>(undefined);
-  const hasFilters = $derived(sources.collections.length > 0 || sources.feeds.length > 0);
-  /* One tab per collection, plus All. Filtering by source instead leaves no
-     tab chosen, which is what the empty value here means. */
+  const hasFilters = $derived(sources.noted > 0 || sources.collections.length > 0 || sources.feeds.length > 0 || notes);
+  /* All, the ones with a note, then one tab per collection. Filtering by
+     source instead leaves no tab chosen, which is what the empty value here
+     means. */
   const filterTabs = $derived([
     { value: 'all', label: 'All' },
+    { value: 'notes', label: 'With notes', count: sources.noted },
     ...sources.collections.map((c) => ({ value: String(c.id), label: c.name, count: c.count }))
   ]);
-  const filterValue = $derived(collection ? String(collection) : feed ? '' : 'all');
+  const filterValue = $derived(notes ? 'notes' : collection ? String(collection) : feed ? '' : 'all');
 
   async function loadMore(reset = false) {
     if (loading || (done && !reset)) return;
     loading = true;
     try {
-      const pg = await bookmarksApi.list({ before: reset ? null : cursor, collection, feed, limit: 30 });
+      const pg = await bookmarksApi.list({ before: reset ? null : cursor, collection, feed, notes, limit: 30 });
       list = reset ? pg.bookmarks : [...list, ...pg.bookmarks];
       cursor = pg.nextCursor;
       done = pg.nextCursor === null;
@@ -43,24 +51,33 @@
     }
   }
 
-  function setFilter(kind: 'c' | 'f' | null, id?: number) {
+  function setFilter(kind: 'notes' | 'c' | 'f' | null, id?: number) {
     api.event('bookmarks_filter', { kind, id });
-    void goto(kind ? `/bookmarks?${kind}=${id}` : '/bookmarks', { replaceState: true });
+    void goto(kind === 'notes' ? '/bookmarks?notes=1' : kind ? `/bookmarks?${kind}=${id}` : '/bookmarks', { replaceState: true });
   }
 
+  /** Remove a bookmark, and its note with it. Undo puts both back where they were. */
   async function remove(b: Bookmark) {
     const snapshot = list;
     list = list.filter((x) => x.id !== b.id);
-    await bookmarksApi.remove(b.id);
-    api.event('bookmark_removed', { bookmarkId: b.id, via: 'bookmarks_page' });
-    showToast('Removed bookmark', {
+    const removed = await bookmarksApi.remove(b.id);
+    api.event('bookmark_removed', { bookmarkId: b.id, via: 'bookmarks_page', hadNote: !!b.note });
+    if (b.note) sources.noted--;
+    showToast(b.note ? 'Removed bookmark and note' : 'Removed bookmark', {
       label: 'Undo',
       run: async () => {
-        if (b.itemId) await bookmarksApi.saveItem(b.itemId);
-        else await bookmarksApi.saveUrl(b.url, b.title ?? undefined);
-        list = snapshot;
+        const back = await bookmarksApi.restore(removed);
+        list = snapshot.map((x) => (x.id === b.id ? { ...x, id: back.id, note: x.note && { ...x.note, id: back.id } } : x));
+        if (b.note) sources.noted++;
       }
     });
+  }
+
+  /** A note written or deleted here. Under "With notes", a deleted one takes its card with it. */
+  function noteChanged(b: Bookmark, note: Bookmark['note'], had: boolean) {
+    if (note && !had) sources.noted++;
+    if (!note && had) sources.noted--;
+    if (!note && notes) list = list.filter((x) => x.id !== b.id);
   }
 
   onMount(() => {
@@ -69,7 +86,7 @@
   });
 
   $effect(() => {
-    const key = `${collection}|${feed}`;
+    const key = `${notes}|${collection}|${feed}`;
     if (loadedKey === key) return;
     loadedKey = key;
     list = []; cursor = null; done = false;
@@ -86,7 +103,7 @@
 
 <header class="top">
   <h1>My Bookmarks</h1>
-  <p class="sub">Posts you've saved. {#if session.user?.profileVisibility === 'public' && session.user.bookmarksVisibility === 'public'}Shown on <a href={profileHref(session.user.handle)}>your profile</a>.{:else if session.user?.profileVisibility === 'public' && session.user.bookmarksVisibility === 'friends'}Shown on <a href={profileHref(session.user.handle)}>your profile</a> to the people you follow.{:else}Only you can see them.{/if}</p>
+  <p class="sub">Posts you've saved, and your notes on them. {#if session.user?.profileVisibility === 'public' && session.user.bookmarksVisibility === 'public'}Shown on <a href={profileHref(session.user.handle)}>your profile</a>.{:else if session.user?.profileVisibility === 'public' && session.user.bookmarksVisibility === 'friends'}Shown on <a href={profileHref(session.user.handle)}>your profile</a> to the people you follow.{:else}Only you can see them.{/if}</p>
 </header>
 
 {#if hasFilters}
@@ -95,7 +112,7 @@
       class="tabs"
       tabs={filterTabs}
       value={filterValue}
-      onchange={(v) => (v === 'all' ? setFilter(null) : setFilter('c', Number(v)))}
+      onchange={(v) => (v === 'all' ? setFilter(null) : v === 'notes' ? setFilter('notes') : setFilter('c', Number(v)))}
       label="Filter bookmarks"
       panel="bookmark-results"
     />
@@ -120,7 +137,10 @@
 <div id="bookmark-results" role={hasFilters ? 'tabpanel' : undefined}>
   {#if !loading && list.length === 0}
     <div class="empty">
-      {#if collection || feed}
+      {#if notes}
+        <h2>No notes yet</h2>
+        <p>Every post has a note button next to its bookmark. Press it, write what you thought, and the post is saved here with your note. Depending on your settings, people who follow you can read your notes under the post.</p>
+      {:else if collection || feed}
         <h2>No bookmarks match this filter.</h2>
       {:else}
         <!-- A post card, drawn small, with the bookmark corner lit up: this is the thing to press. -->
@@ -142,7 +162,9 @@
   {:else}
     <ul class="list">
       {#each list as b (b.id)}
-        <BookmarkCard {b} onopen={() => api.event('bookmark_opened', { bookmarkId: b.id })} action={{ kind: 'remove', on: true, label: 'Remove bookmark', run: () => remove(b) }} />
+        <BookmarkCard {b} mine onopen={() => api.event('bookmark_opened', { bookmarkId: b.id })}
+          onnote={(n, had) => noteChanged(b, n, had)}
+          action={{ kind: 'remove', on: true, label: b.note ? 'Remove bookmark and note' : 'Remove bookmark', run: () => remove(b) }} />
       {/each}
     </ul>
     {#if loading}<p class="status">Loading…</p>{/if}

@@ -359,6 +359,17 @@ export const hostCooldowns = pgTable("host_cooldowns", {
  * They can be filtered by the feed they came from, or by the collections that
  * feed is in, but that is a query-time join, never stored membership.
  * Decided 2026-09-11 after the collection-scoped version felt wrong in use.
+ *
+ * A bookmark can carry a note: one short Markdown note, the first social
+ * object. The note lives here rather than on the post so it survives anything
+ * the bookmark survives (a pruned post, a removed feed), and so "a note always
+ * comes with a bookmark" holds by construction: writing a note saves the post,
+ * removing the bookmark removes the note. Decided 2026-09-23, issue #84.
+ * Capped at NOTE_MAX characters (lib/notes.ts) to keep it a margin note, not a
+ * blog. It shows under every post with the bookmark's address, so the same
+ * story in two feeds carries it in both. Visibility is derived at read time:
+ * the author's profile must be public and notes_visibility must admit the
+ * reader, and the reader's notes_from must admit the author.
  */
 export const bookmarks = pgTable("bookmarks", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
@@ -367,6 +378,7 @@ export const bookmarks = pgTable("bookmarks", {
    *  of truth so pruning items or unfollowing feeds can never break a bookmark. */
   itemId: bigint("item_id", { mode: "number" }).references(() => items.id, { onDelete: "set null" }),
   feedId: bigint("feed_id", { mode: "number" }).references(() => feeds.id, { onDelete: "set null" }),
+  /** The post's own link, or its page here (/feeds/...) when the feed gave it none. */
   url: text("url").notNull(),
   title: text("title"),
   summary: text("summary"),
@@ -374,7 +386,12 @@ export const bookmarks = pgTable("bookmarks", {
   siteTitle: text("site_title"),
   author: text("author"),
   publishedAt: timestamp("published_at", { withTimezone: true }),
+  /** My note on this post, or null. The two times are null exactly when it is. */
   note: text("note"),
+  /** When the thought was first written down. */
+  noteCreatedAt: timestamp("note_created_at", { withTimezone: true }),
+  /** Moves on every edit. */
+  noteUpdatedAt: timestamp("note_updated_at", { withTimezone: true }),
   /**
    * Not enforced anywhere: bookmarks_visibility governs the whole set, and
    * per-bookmark overrides are deliberately out of scope for now (collections
@@ -386,29 +403,9 @@ export const bookmarks = pgTable("bookmarks", {
 }, (t) => [
   uniqueIndex("bookmarks_user_url_uq").on(t.userId, t.url),
   index("bookmarks_user_saved_idx").on(t.userId, t.savedAt),
-]);
-
-/**
- * Notes: one short Markdown note per (user, post). The first social object.
- * Attached to the item itself, not to a feed, collection or bookmark, so you
- * can note anything you run across, including posts in someone else's
- * collection you never followed. Capped at NOTE_MAX characters (see
- * routes/notes.ts) to keep this a margin note, not a blog. created_at is when
- * the thought was first written down; updated_at moves on every edit.
- * Visibility is derived at read time: the author's profile must be public and
- * show_notes on, and the reader's notes_from must admit the author.
- */
-export const notes = pgTable("notes", {
-  id: bigserial("id", { mode: "number" }).primaryKey(),
-  userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
-  itemId: bigint("item_id", { mode: "number" }).notNull().references(() => items.id, { onDelete: "cascade" }),
-  body: text("body").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [
-  uniqueIndex("notes_user_item_uq").on(t.userId, t.itemId),
-  index("notes_item_idx").on(t.itemId),
-  index("notes_user_created_idx").on(t.userId, t.createdAt),
+  /** Finding the notes under a post: by its address, or by the post itself when it has none. */
+  index("bookmarks_noted_url_idx").on(t.url).where(sql`${t.note} is not null`),
+  index("bookmarks_noted_item_idx").on(t.itemId).where(sql`${t.note} is not null`),
 ]);
 
 /**

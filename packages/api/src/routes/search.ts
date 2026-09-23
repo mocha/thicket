@@ -19,6 +19,7 @@ import { Hono } from "hono";
 import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { allowsSql } from "../lib/visibility.js";
+import { myBookmarkIdSql } from "../lib/notes.js";
 
 export const search = new Hono();
 
@@ -307,7 +308,7 @@ async function searchPosts(q: string, viewerId: number | null, limit: number, of
            ts_headline('english', regexp_replace(coalesce(nullif(i.summary, ''), left(coalesce(i.content, ''), 4000), ''), '<[^>]*>', ' ', 'g'),
                        websearch_to_tsquery('english', ${q}), ${HL}) as snippet,
            exists(select 1 from feed_icons fi where fi.feed_id = i.feed_id and not fi.generic) as "hasIcon",
-           (select bm.id from bookmarks bm where bm.user_id = ${me} and bm.item_id = i.id limit 1) as "bookmarkId",
+           ${myBookmarkIdSql(me)} as "bookmarkId",
            coalesce((select array_agg(cf.collection_id order by cf.collection_id) from collection_feeds cf join collections col on col.id = cf.collection_id and col.user_id = ${me} where cf.feed_id = i.feed_id), '{}') as "myCollectionIds"
     from ranked r join items i on i.id = r.id join feeds f on f.id = i.feed_id
     where not exists(select 1 from blocks b where b.user_id = ${me} and b.feed_id = i.feed_id)
@@ -329,10 +330,13 @@ async function searchPeople(q: string, viewerId: number | null, limit: number, o
   if (!viewerId) return { rows: [] as any[], total: 0, nextOffset: null as number | null };
   const like = likeFor(q);
   const named = sql`coalesce((u.handle ilike ${like} or u.display_name ilike ${like} or u.bio ilike ${like} or ${q} <% u.handle), false)`;
-  const notesSeen = sql`(select count(*)::int from notes n where n.user_id = u.id and n.body ilike ${like}
+  // A note is part of a bookmark, but it has its own audience: the note's text
+  // counts when notes are shared with this viewer, the saved post's when
+  // bookmarks are.
+  const notesSeen = sql`(select count(*)::int from bookmarks n where n.user_id = u.id and n.note ilike ${like}
     and ${allowsSql("u.notes_visibility", "u.id", viewerId)})`;
   const marksSeen = sql`(select count(*)::int from bookmarks bm where bm.user_id = u.id
-    and (bm.title ilike ${like} or bm.summary ilike ${like} or bm.note ilike ${like})
+    and (bm.title ilike ${like} or bm.summary ilike ${like})
     and ${allowsSql("u.bookmarks_visibility", "u.id", viewerId)})`;
   const base = sql`
     with cand as (

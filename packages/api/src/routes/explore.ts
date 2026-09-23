@@ -125,7 +125,7 @@ explore.get("/users", async (c) => {
            (select ua.updated_at from user_avatars ua where ua.user_id = u.id) as "avatarUpdatedAt",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = u.id) as feeds,
            (select count(*)::int from collections col where col.user_id = u.id and col.parent_id is not null and col.visibility = 'public' and u.collections_visibility = 'public') as collections,
-           case when u.notes_visibility = 'public' then (select count(*)::int from notes n where n.user_id = u.id) else null end as notes,
+           case when u.notes_visibility = 'public' then (select count(*)::int from bookmarks n where n.user_id = u.id and n.note is not null) else null end as notes,
            exists(select 1 from user_follows uf where uf.follower_id = ${viewer.id} and uf.followee_id = u.id) as "isFollowing"
     from users u where ${sql.join(where, sql` and `)}
     order by "isFollowing" desc, lower(coalesce(u.display_name, u.handle)) limit ${limit + 1} offset ${offset}

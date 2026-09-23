@@ -3,9 +3,12 @@
    * The two things you can do to a post wherever you meet it: leave a note,
    * save a bookmark. The card and the reader both show these, over the same
    * item object, so pressing one in the reader shows in the card behind it.
+   * A note is part of the bookmark, so taking the bookmark away takes the note
+   * too, with Undo.
    */
   import type { RiverItem } from '$lib/api';
   import { api, bookmarksApi } from '$lib/api';
+  import { unsaveItem } from '$lib/saves';
   import { showToast } from '$lib/toast.svelte';
   import IconButton from './IconButton.svelte';
 
@@ -16,12 +19,9 @@
   async function toggleBookmark() {
     if (saving) return;
     saving = true;
-    const removedId = item.bookmarkId;
     try {
-      if (removedId) {
-        item.bookmarkId = null;
-        await bookmarksApi.remove(removedId);
-        api.event('bookmark_removed', { itemId: item.id, via });
+      if (item.bookmarkId) {
+        await unsaveItem(item, via);
       } else {
         const b = await bookmarksApi.saveItem(item.id);
         item.bookmarkId = b.id;
@@ -29,8 +29,6 @@
         showToast('Saved to Bookmarks');
       }
     } catch (err) {
-      // The remove was optimistic; put the bookmark back if the request failed.
-      if (removedId) item.bookmarkId = removedId;
       showToast(err instanceof Error ? err.message : String(err));
     } finally {
       saving = false;
@@ -50,6 +48,6 @@
   icon="bookmark"
   pressed={!!item.bookmarkId}
   onclick={toggleBookmark}
-  label={item.bookmarkId ? 'Remove bookmark' : 'Bookmark this post'}
+  label={item.bookmarkId ? (item.myNote ? 'Remove bookmark and note' : 'Remove bookmark') : 'Bookmark this post'}
   title={item.bookmarkId ? 'Bookmarked' : 'Bookmark'}
 />

@@ -118,22 +118,21 @@ admin.delete("/users/:id", async (c) => {
 admin.get("/feeds/:id/impact", async (c) => {
   await requireAdmin(c);
   const id = Number(c.req.param("id"));
-  const [row] = (await db.execute<{ title: string | null; url: string; posts: number; followers: number; collections: number; notes: number; bookmarks: number }>(sql`
+  const [row] = (await db.execute<{ title: string | null; url: string; posts: number; followers: number; collections: number; bookmarks: number }>(sql`
     select f.title, f.url,
            (select count(*)::int from items i where i.feed_id = f.id) as posts,
            (select count(distinct col.user_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where cf.feed_id = f.id) as followers,
            (select count(*)::int from collection_feeds cf where cf.feed_id = f.id) as collections,
-           (select count(*)::int from notes n join items i on i.id = n.item_id where i.feed_id = f.id) as notes,
            (select count(*)::int from bookmarks b where b.feed_id = f.id) as bookmarks
     from feeds f where f.id = ${id}`)).rows;
   return row ? c.json(row) : c.json({ error: "not found" }, 404);
 });
 
 /**
- * Remove a feed from the instance. Cascades: its posts, the notes on them,
- * its place in every collection, everyone's settings and blocks on it, its
- * icon and fetch log. Bookmarks keep their address and lose the link to the
- * post (the column is nullable for exactly this). Logged, because it is the
+ * Remove a feed from the instance. Cascades: its posts, its place in every
+ * collection, everyone's settings and blocks on it, its icon and fetch log.
+ * Bookmarks, and the notes on them, keep their copy of the post and lose the
+ * link to it (the column is nullable for exactly this). Logged, because it is the
  * one admin action that deletes other people's things.
  */
 admin.delete("/feeds/:id", async (c) => {

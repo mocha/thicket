@@ -18,8 +18,9 @@
  *    real archives — one personal blog alone publishes 514 posts going back
  *    to 2001. thicket ends up holding more history than the feeds themselves
  *    do, which is worth something. So an operator who wants the storage back has to ask
- *    for it by setting RETAIN_ITEMS_DAYS, and posts somebody wrote a note on
- *    are kept regardless of the window.
+ *    for it by setting RETAIN_ITEMS_DAYS. Nobody's bookmarks or notes go
+ *    with the posts: a bookmark keeps its own copy of the post, and a note is
+ *    part of the bookmark (issue #84), so both outlive it.
  *
  * Deletes run in chunks so a big first pass never holds a long lock.
  */
@@ -59,15 +60,13 @@ export async function pruneOldData(): Promise<{ items: number; fetchLog: number;
   }
 
   if (RETAIN_ITEMS_DAYS > 0) {
-    // A post someone wrote a note on is kept whatever the window says: notes
-    // cascade with the item, so pruning it would delete a person's own words.
-    // Bookmarks need no such guard — they keep their own snapshot and their
-    // item_id is ON DELETE SET NULL, so they survive by design.
+    // No guard for bookmarked or noted posts: a bookmark keeps its own
+    // snapshot, its note lives on it, and item_id is ON DELETE SET NULL, so
+    // both survive by design.
     out.items = await deleteInChunks("posts", (chunk) => db.execute(sql`
       delete from items where ctid in (
         select i.ctid from items i
         where i.published_at < now() - ${`${RETAIN_ITEMS_DAYS} days`}::interval
-          and not exists (select 1 from notes n where n.item_id = i.id)
         limit ${chunk})`));
   }
 
