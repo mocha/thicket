@@ -24,7 +24,7 @@ const dry = process.argv.includes("--dry");
 const BATCH = 2000;
 const norm = (u: string | null) => (u ?? "").replace(/\/+$/, "");
 
-let after = 0, seen = 0, cleared = 0, linked = 0;
+let after = 0, seen = 0, cleared = 0, linked = 0, bmCleared = 0;
 const samples: string[] = [];
 
 for (;;) {
@@ -42,6 +42,11 @@ for (;;) {
     const l = linkOnly(r.content);
     // Leave a summary that came from somewhere other than this link.
     if (r.summary !== null && (!l || stripHtml(r.content) !== r.summary)) continue;
+    // A bookmark keeps its own copy of the summary from when it was saved. Ones
+    // saved before this fix still hold the bare word ("Comments"); clear them so
+    // the card shows only the kept link. New bookmarks copy the item's now-null
+    // summary, so this is only for the back catalogue.
+    if (!dry) bmCleared += (await db.execute(sql`update bookmarks set summary = null where item_id = ${r.id} and summary is not null`)).rowCount ?? 0;
     const url = l && /^https?:\/\//i.test(l.url) && norm(l.url) !== norm(r.url) ? l.url : null;
     const label = url ? l!.label : null;
     if (r.summary === null && norm(r.linkUrl) === norm(url) && (r.linkLabel ?? null) === label) continue; // already correct
@@ -53,6 +58,6 @@ for (;;) {
   console.log(`  ${seen} looked at, ${cleared} fixed (${linked} kept a link)`);
 }
 
-console.log(`${dry ? "dry run: " : ""}${cleared} posts fixed, ${linked} kept a link`);
+console.log(`${dry ? "dry run: " : ""}${cleared} posts fixed, ${linked} kept a link, ${bmCleared} stale bookmark summaries cleared`);
 for (const s of samples) console.log(`  ${s}`);
 await pool.end();
