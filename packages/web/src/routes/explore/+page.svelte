@@ -8,7 +8,7 @@
     type SearchResults, type SearchScope, type SearchFeed, type SearchCollection, type SearchPost, type SearchPerson
   } from '$lib/api';
   import { feedOrigin, hostOf, longAgo, postRate, relativeTime, webHref } from '$lib/time';
-  import { highlight, plural, shareOfOutput } from '$lib/words';
+  import { highlight, latestShort, mentionRate, plural } from '$lib/words';
   import { feedListName } from '$lib/feedname';
   import { session } from '$lib/session.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
@@ -107,6 +107,13 @@
   /** Rows for a narrowed scope, accumulated across pages. */
   let more = $state<(SearchFeed | SearchCollection | SearchPost | SearchPerson)[]>([]);
   let moreNext = $state<number | null>(null);
+  /**
+   * The scope `more` was loaded for. Switching tabs redraws the list before the
+   * new search is even sent, and drawing feed rows as collections crashed the
+   * page, so rows only show under the tab they came from.
+   */
+  let moreScope = $state<SearchScope | null>(null);
+  const rows = $derived(moreScope === scope ? more : []);
   const group = $derived(res && scope !== 'all' ? res[scope] : null);
   const found = $derived(res ? res.feeds.total + res.collections.total + res.posts.total + res.people.total : 0);
   function countFor(s: SearchScope) {
@@ -127,15 +134,40 @@
     })
   );
 
-  async function loadSearch(reset = false) {
-    if (loading || (!reset && scope !== 'all' && moreNext === null)) return;
+  /**
+   * Every list on the page loads through here. A fresh load (reset) always goes
+   * out, even with an older one in flight, and an answer that arrives after the
+   * view changed is dropped, so a slow reply for the last tab or search can never
+   * land on this one. Each request also gets its own number, because someone can
+   * leave a view and return to it while its first request is still in flight.
+   * `loading` belongs to the newest request alone: an outdated request neither
+   * clears it nor blocks the new view's load, which is what left the page stuck
+   * on "Loading…" when a search was cleared mid-request. Scrolling for more (not
+   * a reset) waits its turn and stops at the end.
+   */
+  let latestLoad = 0;
+  async function load<T>(reset: boolean, hasMore: boolean, request: () => Promise<T>, apply: (r: T) => void) {
+    if (!reset && (loading || !hasMore)) return;
+    const key = loadedKey;
+    const id = ++latestLoad;
+    const isCurrent = () => key === loadedKey && id === latestLoad;
     loading = true; error = null;
     try {
-      const r = await searchApi.run({ q, scope, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork });
-      res = r;
-      if (scope === 'all') { more = []; moreNext = null; }
-      else { more = reset ? r[scope].rows : [...more, ...r[scope].rows]; moreNext = r[scope].nextOffset; }
-    } catch (e) { error = e instanceof Error ? e.message : String(e); } finally { loading = false; }
+      const r = await request();
+      if (isCurrent()) apply(r);
+    } catch (e) { if (isCurrent()) error = e instanceof Error ? e.message : String(e); } finally { if (isCurrent()) loading = false; }
+  }
+
+  function loadSearch(reset = false) {
+    const s = scope;
+    return load(reset, s === 'all' || moreNext !== null,
+      () => searchApi.run({ q, scope: s, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork }),
+      (r) => {
+        res = r;
+        if (s === 'all') { more = []; moreNext = null; }
+        else { more = reset ? r[s].rows : [...more, ...r[s].rows]; moreNext = r[s].nextOffset; }
+        moreScope = s;
+      });
   }
 
   /* ---- browse: feeds ---- */
@@ -150,42 +182,39 @@
     { id: 'title', label: 'A–Z' },
     { id: 'added', label: 'Newest here' }
   ];
-  async function loadFeeds(reset = false) {
-    if (loading || (!reset && feedsNext === null)) return;
-    loading = true; error = null;
-    try {
-      const r = await api.feeds({ network: feedsNetwork, since, sort, limit: 50, offset: reset ? 0 : feedsNext ?? 0 });
-      feeds = reset ? r.feeds : [...feeds, ...r.feeds];
-      feedsTotal = r.total; feedsAll = r.indexTotal; feedsNext = r.nextOffset;
-    } catch (e) { error = e instanceof Error ? e.message : String(e); } finally { loading = false; }
+  function loadFeeds(reset = false) {
+    return load(reset, feedsNext !== null,
+      () => api.feeds({ network: feedsNetwork, since, sort, limit: 50, offset: reset ? 0 : feedsNext ?? 0 }),
+      (r) => {
+        feeds = reset ? r.feeds : [...feeds, ...r.feeds];
+        feedsTotal = r.total; feedsAll = r.indexTotal; feedsNext = r.nextOffset;
+      });
   }
 
   /* ---- browse: collections ---- */
   let cols = $state<ExploreCollection[]>([]);
   let colsTotal = $state(0);
   let colsNext = $state<number | null>(null);
-  async function loadCols(reset = false) {
-    if (loading || (!reset && colsNext === null)) return;
-    loading = true; error = null;
-    try {
-      const r = await exploreApi.collections({ network: narrowToNetwork, limit: 30, offset: reset ? 0 : colsNext ?? 0 });
-      cols = reset ? r.collections : [...cols, ...r.collections];
-      colsTotal = r.total; colsNext = r.nextOffset;
-    } catch (e) { error = e instanceof Error ? e.message : String(e); } finally { loading = false; }
+  function loadCols(reset = false) {
+    return load(reset, colsNext !== null,
+      () => exploreApi.collections({ network: narrowToNetwork, limit: 30, offset: reset ? 0 : colsNext ?? 0 }),
+      (r) => {
+        cols = reset ? r.collections : [...cols, ...r.collections];
+        colsTotal = r.total; colsNext = r.nextOffset;
+      });
   }
 
   /* ---- browse: people ---- */
   let users = $state<ExploreUser[]>([]);
   let usersTotal = $state(0);
   let usersNext = $state<number | null>(null);
-  async function loadUsers(reset = false) {
-    if (loading || (!reset && usersNext === null)) return;
-    loading = true; error = null;
-    try {
-      const r = await exploreApi.users({ limit: 30, offset: reset ? 0 : usersNext ?? 0 });
-      users = reset ? r.users : [...users, ...r.users];
-      usersTotal = r.total; usersNext = r.nextOffset;
-    } catch (e) { error = e instanceof Error ? e.message : String(e); } finally { loading = false; }
+  function loadUsers(reset = false) {
+    return load(reset, usersNext !== null,
+      () => exploreApi.users({ limit: 30, offset: reset ? 0 : usersNext ?? 0 }),
+      (r) => {
+        users = reset ? r.users : [...users, ...r.users];
+        usersTotal = r.total; usersNext = r.nextOffset;
+      });
   }
 
   /* ---- verbs ---- */
@@ -361,23 +390,21 @@
       <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={40} />
       <div class="meta">
         <span class="title">{feedListName(f)}</span>
-        {#if f.description}<span class="desc">{f.description}</span>{/if}
-        {#if ev && ev.matches > 0}
-          <span class="why">
-            <strong>{plural(ev.matches, 'post')}</strong> about “{q}”
-            {#if shareOfOutput(ev.matches, ev.posts)} · {shareOfOutput(ev.matches, ev.posts)}{/if}
-            {#if ev.lastMatchAt} · most recent {longAgo(ev.lastMatchAt)}{/if}
-          </span>
-        {:else if ev}
-          <span class="why muted">Matches the name · nothing it has published mentions “{q}”</span>
-        {/if}
-        <span class="sub2">
+        <span class="sub2 byline">
           {feedOrigin(f)}
-          {#if f.lastItemAt} · last post {longAgo(f.lastItemAt)}{/if}
-          {#if f.postsLast30d} · {postRate(f.postsLast30d)}{/if}
+          {#if f.postsLast30d} · publishes about {postRate(f.postsLast30d)}{/if}
+          {#if !ev && f.lastItemAt} · latest {longAgo(f.lastItemAt)}{/if}
           {#if !ev && feedsNetwork && (f as Feed).networkFollowers} · <span class="net-n">{(f as Feed).networkFollowers} {(f as Feed).networkFollowers === 1 ? 'person' : 'people'} you follow</span>{/if}
           {#if f.consecutiveFailures >= 3} · <span class="bad">failing</span>{/if}
         </span>
+        {#if f.description}<span class="desc">{f.description}</span>{/if}
+        {#if ev && ev.matchesLast30d > 0}
+          <span class="why"><span aria-hidden="true">~</span><span class="visually-hidden">about </span>{mentionRate(ev.matchesLast30d)} “{q}”{#if ev.lastMatchAt}{' '}<span class="nowrap">({latestShort(ev.lastMatchAt)})</span>{/if}</span>
+        {:else if ev && ev.lastMatchAt}
+          <span class="why">Last mentioned “{q}” {longAgo(ev.lastMatchAt)}</span>
+        {:else if ev}
+          <span class="why">Name matches, but no posts mention “{q}”</span>
+        {/if}
       </div>
     </a>
     <FollowControl feedId={f.id} bind:ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} compact onchange={() => void api.feed(f.id).then((u) => Object.assign(f, u))} />
@@ -398,7 +425,7 @@
             {#if ev.lastMatchAt} · most recent {longAgo(ev.lastMatchAt)}{/if}
           </span>
         {:else if ev}
-          <span class="why muted">Matches the name</span>
+          <span class="why">Matches the name</span>
         {/if}
         <span class="sub2">by <span class="who">{c.displayName ?? `@${c.handle}`}</span> · {plural(c.feedCount, 'feed')}{#if c.description} · {c.description}{/if}</span>
       </div>
@@ -413,11 +440,11 @@
       <SourceIcon feedId={p.feedId} hasIcon={p.hasIcon} name={p.feedTitle ?? ''} size={40} />
       <div class="meta">
         <span class="title">{p.title ?? p.url}</span>
+        <!-- Plenty of feeds set the author to the feed's own name; saying it twice is noise. -->
+        <span class="sub2 byline">{p.feedTitle ?? hostOf(p.siteUrl)} · {relativeTime(p.publishedAt)}{#if p.author && p.author !== p.feedTitle}<span>{' · ' + p.author}</span>{/if}</span>
         {#if p.snippet}
           <span class="desc">{#each highlight(p.snippet) as part}{#if part.hit}<mark>{part.text}</mark>{:else}{part.text}{/if}{/each}</span>
         {/if}
-        <!-- Plenty of feeds set the author to the feed's own name; saying it twice is noise. -->
-        <span class="sub2">{p.feedTitle ?? hostOf(p.siteUrl)} · {relativeTime(p.publishedAt)}{#if p.author && p.author !== p.feedTitle}<span>{' · ' + p.author}</span>{/if}</span>
       </div>
     </a>
     {#if session.user}
@@ -501,10 +528,10 @@
     <section class="group">
       <h2>{SCOPES.find((s) => s.id === scope)?.label} <Badge>{(group?.total ?? 0).toLocaleString()}</Badge></h2>
       <ul class="list">
-        {#if scope === 'feeds'}{#each more as f (( f as SearchFeed).id)}{@render feedRow(f as SearchFeed, f as SearchFeed)}{/each}
-        {:else if scope === 'collections'}{#each more as c ((c as SearchCollection).id)}{@render colRow(c as SearchCollection, c as SearchCollection)}{/each}
-        {:else if scope === 'posts'}{#each more as p ((p as SearchPost).id)}{@render postRow(p as SearchPost)}{/each}
-        {:else}{#each more as u ((u as SearchPerson).handle)}{@render personRow(u as SearchPerson, u as SearchPerson)}{/each}{/if}
+        {#if scope === 'feeds'}{#each rows as f (( f as SearchFeed).id)}{@render feedRow(f as SearchFeed, f as SearchFeed)}{/each}
+        {:else if scope === 'collections'}{#each rows as c ((c as SearchCollection).id)}{@render colRow(c as SearchCollection, c as SearchCollection)}{/each}
+        {:else if scope === 'posts'}{#each rows as p ((p as SearchPost).id)}{@render postRow(p as SearchPost)}{/each}
+        {:else}{#each rows as u ((u as SearchPerson).handle)}{@render personRow(u as SearchPerson, u as SearchPerson)}{/each}{/if}
       </ul>
     </section>
   {/if}
@@ -575,17 +602,30 @@
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .handle { font-weight: 400; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-left: var(--space-1); }
-  /* Wraps rather than truncates: every part of it is a fact someone is deciding on. */
-  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  /* Wraps rather than truncates: every part of it is a fact someone is deciding on.
+     --text-2, not --text-3, because these facts are read, and --text-3 falls short
+     of readable contrast in most themes. The gap sets it apart from the
+     description above now that both share a color. */
+  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); margin-top: var(--space-1); }
   .desc { font-size: calc(var(--text-sm) * var(--size-app)); /* The 2px and 3px here are optical nudges around the description, not spacing steps. */ color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   /* 1px around a highlighted word is optical: the tint hugs the letters. */
   .desc mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
-  /* Why this row is here: the same numbers the ranking is made of, in words. */
-  /* 2px and 1px are optical nudges around this line, not spacing steps. */
-  .why { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); margin: 2px 0 1px; }
+  /* The line about your search: for a feed, how often it mentions your words
+     over the last 30 days; for a collection, how many of its feeds do. The gap
+     above keeps it clear of the description; 1px below is an optical nudge. */
+  .why { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); margin: var(--space-2) 0 1px; }
   .why strong { font-weight: 700; }
-  .why.muted { color: var(--text-3); }
+  /* When the line has to wrap, "(latest 13h ago)" moves down whole instead of
+     splitting inside the brackets. */
+  .nowrap { white-space: nowrap; }
   .who { color: var(--text-2); font-weight: 600; }
+  /* Each line's color says what it is about: dark is the feed (its name and these
+     facts), grey is the feed describing itself, green is your search. The facts sit
+     tight under the name, like a byline, and the description keeps its distance
+     below. The -2px is optical: it takes back some of the empty space above and
+     below each line of text, so the two lines read as a pair. */
+  .sub2.byline { margin-top: -2px; color: var(--text); }
+  .byline + .desc { margin-top: var(--space-2); }
   .net-n { color: var(--accent); font-weight: 600; }
   .bad { color: var(--danger); }
   .stack { display: inline-flex; flex: none; width: 40px; height: 40px; position: relative; }

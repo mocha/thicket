@@ -492,6 +492,8 @@ export type SearchFeed = {
   id: number; url: string; siteUrl: string | null; title: string | null; description: string | null; slug: string;
   lastItemAt: string | null; consecutiveFailures: number; postsLast30d: number; hasIcon: boolean; myCollectionIds: number[];
   matches: number; posts: number; lastMatchAt: string | null; nameMatch: boolean;
+  /** Posts in the last 30 days that match the search; same window as postsLast30d. */
+  matchesLast30d: number;
   displayName: string | null;
 };
 export type SearchCollection = ExploreCollection & {
