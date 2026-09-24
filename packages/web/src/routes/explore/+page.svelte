@@ -138,19 +138,24 @@
    * Every list on the page loads through here. A fresh load (reset) always goes
    * out, even with an older one in flight, and an answer that arrives after the
    * view changed is dropped, so a slow reply for the last tab or search can never
-   * land on this one. `loading` belongs to the current view alone: an outdated
-   * request neither clears it nor blocks the new view's load, which is what
-   * left the page stuck on "Loading…" when a search was cleared mid-request.
-   * Scrolling for more (not a reset) waits its turn and stops at the end.
+   * land on this one. Each request also gets its own number, because someone can
+   * leave a view and return to it while its first request is still in flight.
+   * `loading` belongs to the newest request alone: an outdated request neither
+   * clears it nor blocks the new view's load, which is what left the page stuck
+   * on "Loading…" when a search was cleared mid-request. Scrolling for more (not
+   * a reset) waits its turn and stops at the end.
    */
+  let latestLoad = 0;
   async function load<T>(reset: boolean, hasMore: boolean, request: () => Promise<T>, apply: (r: T) => void) {
     if (!reset && (loading || !hasMore)) return;
     const key = loadedKey;
+    const id = ++latestLoad;
+    const isCurrent = () => key === loadedKey && id === latestLoad;
     loading = true; error = null;
     try {
       const r = await request();
-      if (key === loadedKey) apply(r);
-    } catch (e) { if (key === loadedKey) error = e instanceof Error ? e.message : String(e); } finally { if (key === loadedKey) loading = false; }
+      if (isCurrent()) apply(r);
+    } catch (e) { if (isCurrent()) error = e instanceof Error ? e.message : String(e); } finally { if (isCurrent()) loading = false; }
   }
 
   function loadSearch(reset = false) {
