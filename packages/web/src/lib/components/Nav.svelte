@@ -31,7 +31,8 @@
   const meHref = $derived(me ? profileHref(me.handle) : '/login');
   const colHref = (slug: string) => (me ? collectionHref(me.handle, slug) : '/');
   const onCollection = (slug: string) => path === colHref(slug) || path.startsWith(colHref(slug) + '/');
-  const onAnyCollection = $derived(!!me && path.startsWith(meHref + '/collections/'));
+  /** The phone's Collections tab opens your profile, which lists them, so it is current there too. */
+  const onAnyCollection = $derived(!!me && (path === meHref || path.startsWith(meHref + '/collections/')));
   const current = (href: string) => path === href || (href !== '/' && path.startsWith(href + '/'));
   /**
    * An open post's address is under /feeds/, but reading one is not the same as
