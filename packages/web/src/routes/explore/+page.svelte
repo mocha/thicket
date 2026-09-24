@@ -135,23 +135,34 @@
   );
 
   /**
-   * A new search (reset) always goes out, even with an older one in flight, and
-   * an answer that arrives after the search changed is dropped, so a slow reply
-   * for the last tab can never land on this one.
+   * Every list on the page loads through here. A fresh load (reset) always goes
+   * out, even with an older one in flight, and an answer that arrives after the
+   * view changed is dropped, so a slow reply for the last tab or search can never
+   * land on this one. `loading` belongs to the current view alone: an outdated
+   * request neither clears it nor blocks the new view's load, which is what
+   * left the page stuck on "Loading…" when a search was cleared mid-request.
+   * Scrolling for more (not a reset) waits its turn and stops at the end.
    */
-  async function loadSearch(reset = false) {
-    if (!reset && (loading || (scope !== 'all' && moreNext === null))) return;
+  async function load<T>(reset: boolean, hasMore: boolean, request: () => Promise<T>, apply: (r: T) => void) {
+    if (!reset && (loading || !hasMore)) return;
     const key = loadedKey;
-    const s = scope;
     loading = true; error = null;
     try {
-      const r = await searchApi.run({ q, scope: s, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork });
-      if (key !== loadedKey) return;
-      res = r;
-      if (s === 'all') { more = []; moreNext = null; }
-      else { more = reset ? r[s].rows : [...more, ...r[s].rows]; moreNext = r[s].nextOffset; }
-      moreScope = s;
+      const r = await request();
+      if (key === loadedKey) apply(r);
     } catch (e) { if (key === loadedKey) error = e instanceof Error ? e.message : String(e); } finally { if (key === loadedKey) loading = false; }
+  }
+
+  function loadSearch(reset = false) {
+    const s = scope;
+    return load(reset, s === 'all' || moreNext !== null,
+      () => searchApi.run({ q, scope: s, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork }),
+      (r) => {
+        res = r;
+        if (s === 'all') { more = []; moreNext = null; }
+        else { more = reset ? r[s].rows : [...more, ...r[s].rows]; moreNext = r[s].nextOffset; }
+        moreScope = s;
+      });
   }
 
   /* ---- browse: feeds ---- */
@@ -166,42 +177,39 @@
     { id: 'title', label: 'A–Z' },
     { id: 'added', label: 'Newest here' }
   ];
-  async function loadFeeds(reset = false) {
-    if (loading || (!reset && feedsNext === null)) return;
-    loading = true; error = null;
-    try {
-      const r = await api.feeds({ network: feedsNetwork, since, sort, limit: 50, offset: reset ? 0 : feedsNext ?? 0 });
-      feeds = reset ? r.feeds : [...feeds, ...r.feeds];
-      feedsTotal = r.total; feedsAll = r.indexTotal; feedsNext = r.nextOffset;
-    } catch (e) { error = e instanceof Error ? e.message : String(e); } finally { loading = false; }
+  function loadFeeds(reset = false) {
+    return load(reset, feedsNext !== null,
+      () => api.feeds({ network: feedsNetwork, since, sort, limit: 50, offset: reset ? 0 : feedsNext ?? 0 }),
+      (r) => {
+        feeds = reset ? r.feeds : [...feeds, ...r.feeds];
+        feedsTotal = r.total; feedsAll = r.indexTotal; feedsNext = r.nextOffset;
+      });
   }
 
   /* ---- browse: collections ---- */
   let cols = $state<ExploreCollection[]>([]);
   let colsTotal = $state(0);
   let colsNext = $state<number | null>(null);
-  async function loadCols(reset = false) {
-    if (loading || (!reset && colsNext === null)) return;
-    loading = true; error = null;
-    try {
-      const r = await exploreApi.collections({ network: narrowToNetwork, limit: 30, offset: reset ? 0 : colsNext ?? 0 });
-      cols = reset ? r.collections : [...cols, ...r.collections];
-      colsTotal = r.total; colsNext = r.nextOffset;
-    } catch (e) { error = e instanceof Error ? e.message : String(e); } finally { loading = false; }
+  function loadCols(reset = false) {
+    return load(reset, colsNext !== null,
+      () => exploreApi.collections({ network: narrowToNetwork, limit: 30, offset: reset ? 0 : colsNext ?? 0 }),
+      (r) => {
+        cols = reset ? r.collections : [...cols, ...r.collections];
+        colsTotal = r.total; colsNext = r.nextOffset;
+      });
   }
 
   /* ---- browse: people ---- */
   let users = $state<ExploreUser[]>([]);
   let usersTotal = $state(0);
   let usersNext = $state<number | null>(null);
-  async function loadUsers(reset = false) {
-    if (loading || (!reset && usersNext === null)) return;
-    loading = true; error = null;
-    try {
-      const r = await exploreApi.users({ limit: 30, offset: reset ? 0 : usersNext ?? 0 });
-      users = reset ? r.users : [...users, ...r.users];
-      usersTotal = r.total; usersNext = r.nextOffset;
-    } catch (e) { error = e instanceof Error ? e.message : String(e); } finally { loading = false; }
+  function loadUsers(reset = false) {
+    return load(reset, usersNext !== null,
+      () => exploreApi.users({ limit: 30, offset: reset ? 0 : usersNext ?? 0 }),
+      (r) => {
+        users = reset ? r.users : [...users, ...r.users];
+        usersTotal = r.total; usersNext = r.nextOffset;
+      });
   }
 
   /* ---- verbs ---- */
