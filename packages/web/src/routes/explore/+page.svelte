@@ -399,7 +399,7 @@
         </span>
         {#if f.description}<span class="desc">{f.description}</span>{/if}
         {#if ev && ev.matchesLast30d > 0}
-          <span class="why">{mentionRate(ev.matchesLast30d)} “{q}”{#if ev.lastMatchAt}{' '}<span class="nowrap">({latestShort(ev.lastMatchAt)})</span>{/if}</span>
+          <span class="why"><span aria-hidden="true">~</span><span class="visually-hidden">about </span>{mentionRate(ev.matchesLast30d)} “{q}”{#if ev.lastMatchAt}{' '}<span class="nowrap">({latestShort(ev.lastMatchAt)})</span>{/if}</span>
         {:else if ev && ev.lastMatchAt}
           <span class="why">Last mentioned “{q}” {longAgo(ev.lastMatchAt)}</span>
         {:else if ev}
@@ -610,8 +610,9 @@
   .desc { font-size: calc(var(--text-sm) * var(--size-app)); /* The 2px and 3px here are optical nudges around the description, not spacing steps. */ color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   /* 1px around a highlighted word is optical: the tint hugs the letters. */
   .desc mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
-  /* Why this row is here: the same numbers the ranking is made of, in words. */
-  /* The gap above keeps it clear of the description; 1px below is an optical nudge. */
+  /* The line about your search: for a feed, how often it mentions your words
+     over the last 30 days; for a collection, how many of its feeds do. The gap
+     above keeps it clear of the description; 1px below is an optical nudge. */
   .why { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); margin: var(--space-2) 0 1px; }
   .why strong { font-weight: 700; }
   /* When the line has to wrap, "(latest 13h ago)" moves down whole instead of

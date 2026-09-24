@@ -3,15 +3,19 @@
  *
  * A feed row answers the question a person searching is really asking: if I
  * follow this, how much of it will be about my topic? So it gives a rate over
- * the last 30 days ("about 2 posts a day mention 'news'"), the same window as
+ * the last 30 days ("~2 posts a day mention 'news'"), the same window as
  * the feed's own posting rate beside it, and the two read as one comparison.
  */
 import { perPeriod, relativeTime } from './time';
 
-/** "~2 posts a day mention", ready for the search words to follow. `n` is matches in the last 30 days. */
+/**
+ * "2 posts a day mention", ready for the search words to follow. `n` is matches
+ * in the last 30 days. The page puts the "~" in front itself, shown on screen
+ * but read aloud as "about", since screen readers say "tilde".
+ */
 export function mentionRate(n: number): string {
   const r = perPeriod(n);
-  return `~${r.n} post${r.n === 1 ? '' : 's'} a ${r.unit} mention${r.n === 1 ? 's' : ''}`;
+  return `${r.n} post${r.n === 1 ? '' : 's'} a ${r.unit} mention${r.n === 1 ? 's' : ''}`;
 }
 
 /**
