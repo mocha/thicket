@@ -256,7 +256,7 @@
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
   li { flex: 1; min-width: 0; }
   li > a, li.you > .tab {
-    display: flex; width: 100%; flex-direction: column; align-items: center; /* 2px is an optical gap between a tab's icon and its label. */ gap: 2px;
+    display: flex; width: 100%; flex-direction: column; align-items: center; justify-content: center; /* 2px is an optical gap between a tab's icon and its label. */ gap: 2px;
     height: 100%; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
   }
   li > a[aria-current='page'] { color: var(--accent); }
