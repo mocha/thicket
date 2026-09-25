@@ -31,7 +31,8 @@
   const meHref = $derived(me ? profileHref(me.handle) : '/login');
   const colHref = (slug: string) => (me ? collectionHref(me.handle, slug) : '/');
   const onCollection = (slug: string) => path === colHref(slug) || path.startsWith(colHref(slug) + '/');
-  const onAnyCollection = $derived(!!me && path.startsWith(meHref + '/collections/'));
+  /** The phone's Collections tab opens your profile, which lists them, so it is current there too. */
+  const onAnyCollection = $derived(!!me && (path === meHref || path.startsWith(meHref + '/collections/')));
   const current = (href: string) => path === href || (href !== '/' && path.startsWith(href + '/'));
   /**
    * An open post's address is under /feeds/, but reading one is not the same as
@@ -256,7 +257,7 @@
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
   li { flex: 1; min-width: 0; }
   li > a, li.you > .tab {
-    display: flex; width: 100%; flex-direction: column; align-items: center; /* 2px is an optical gap between a tab's icon and its label. */ gap: 2px;
+    display: flex; width: 100%; flex-direction: column; align-items: center; justify-content: center; /* 2px is an optical gap between a tab's icon and its label. */ gap: 2px;
     height: 100%; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
   }
   li > a[aria-current='page'] { color: var(--accent); }
