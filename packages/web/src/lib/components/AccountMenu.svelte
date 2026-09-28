@@ -16,6 +16,7 @@
   import { showToast } from '$lib/toast.svelte';
   import Avatar from './Avatar.svelte';
   import Icon from './Icon.svelte';
+  import { navWidth } from '$lib/navwidth.svelte';
 
   let { anchor, onclose }: { anchor: HTMLElement | null; onclose: () => void } = $props();
 
@@ -24,13 +25,11 @@
   let sheet = $state(false);
   let pos = $state<{ top: number; left: number }>({ top: 0, left: 0 });
 
-  // The panel's width in numbers, for the arithmetic that keeps it on screen.
-  // Keep it in step with --nav-w in app.css, which draws the panel itself.
-  const WIDTH = 240;
   function place() {
     if (!anchor) return;
     const r = anchor.getBoundingClientRect();
-    const left = Math.max(8, Math.min(r.left, window.innerWidth - WIDTH - 8));
+    // The panel is as wide as the sidebar (--nav-w draws it); this keeps it on screen.
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - navWidth.px - 8));
     // The trigger sits low, so the menu grows upward from its top edge.
     pos = { top: r.top - 8, left };
   }

@@ -39,6 +39,11 @@
 					if (lf === 'dyslexic') { ds.fontHeadings = 'dyslexic'; ds.fontReading = 'dyslexic'; ds.fontApp = 'dyslexic'; }
 				}
 			} catch (e) {}
+			// The sidebar width the reader dragged to (see lib/navwidth.svelte.ts).
+			try {
+				var w = Number(localStorage.getItem('thicket:nav-width'));
+				if (w >= 200 && w <= 360) document.documentElement.style.setProperty('--nav-w', w + 'px');
+			} catch (e) {}
 		</script>
 		%sveltekit.head%
 	</head>

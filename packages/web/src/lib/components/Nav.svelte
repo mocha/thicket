@@ -13,6 +13,7 @@
   import Badge from './Badge.svelte';
   import { display } from '$lib/display.svelte';
   import { marks, badge, anyNew, countText } from '$lib/marks.svelte';
+  import { navWidth, loadNavWidth, setNavWidth, NAV_W_MIN, NAV_W_MAX, NAV_W_DEFAULT } from '$lib/navwidth.svelte';
 
   /**
    * The sidebar, top to bottom: Everything (the whole stream, its own item
@@ -99,6 +100,28 @@
   // Leaving for a page clears the filter, so you never return to a sidebar
   // mysteriously narrowed to your last search.
   $effect(() => { void path; filter = ''; });
+
+  // The sidebar's right edge is a handle: drag it, or focus it and use the
+  // arrow keys, to set how wide the sidebar is. Double-click puts it back.
+  // The sidebar starts at the window's left edge, so the pointer's x is the width.
+  $effect(() => { loadNavWidth(); });
+  let dragging = $state(false);
+  function dragStart(e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragging = true;
+  }
+  // Mid-drag the pointer strays off the thin handle; keep the resize cursor, and keep the page from selecting text.
+  $effect(() => { document.documentElement.classList.toggle('nav-resizing', dragging); });
+  function dragMove(e: PointerEvent) { if (dragging) setNavWidth(e.clientX, false); }
+  function dragEnd() { if (!dragging) return; dragging = false; setNavWidth(navWidth.px); }
+  function resizeKey(e: KeyboardEvent) {
+    const next = { ArrowLeft: navWidth.px - 16, ArrowRight: navWidth.px + 16, Home: NAV_W_MIN, End: NAV_W_MAX }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    setNavWidth(next);
+  }
 
   const icons = {
     everything: 'M4 12c3-3 5-3 8 0s5 3 8 0M4 17c3-3 5-3 8 0s5 3 8 0M4 7c3-3 5-3 8 0s5 3 8 0',
@@ -242,6 +265,27 @@
   {#if menuOpen}
     <AccountMenu anchor={menuAnchor} onclose={() => (menuOpen = false)} />
   {/if}
+
+  <!-- Desktop only; the bottom bar has no edge to drag. A focusable separator
+       with a value is an interactive control in ARIA; the checker doesn't know that. -->
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+  <div
+    class="resize"
+    class:dragging
+    role="separator"
+    aria-orientation="vertical"
+    aria-label="Sidebar width"
+    aria-valuemin={NAV_W_MIN}
+    aria-valuemax={NAV_W_MAX}
+    aria-valuenow={navWidth.px}
+    tabindex="0"
+    onpointerdown={dragStart}
+    onpointermove={dragMove}
+    onpointerup={dragEnd}
+    onpointercancel={dragEnd}
+    onkeydown={resizeKey}
+    ondblclick={() => setNavWidth(NAV_W_DEFAULT)}
+  ></div>
 </nav>
 
 <style>
@@ -253,7 +297,7 @@
     backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
     border-top: 1px solid var(--line);
   }
-  .brand, .account, .long, li.admin, li.collections { display: none; }
+  .brand, .account, .long, li.admin, li.collections, .resize { display: none; }
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
   li { flex: 1; min-width: 0; }
   li > a, li.you > .tab {
@@ -326,5 +370,14 @@
     nav:not(.paged) .dn { font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     nav:not(.paged) .h { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     nav:not(.paged) .who .chev { flex: none; margin-left: auto; display: flex; color: var(--text-3); }
+
+    /* The drag handle: an 8px strip along the sidebar's edge. The edge's own
+       hairline turns accent while you hover, drag, or tab to it. */
+    nav:not(.paged) .resize { display: block; position: absolute; top: 0; bottom: 0; right: 0; width: var(--space-2); cursor: col-resize; touch-action: none; }
+    nav:not(.paged) .resize::after { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 2px; background: transparent; transition: background-color 0.12s; }
+    nav:not(.paged) .resize:hover::after, nav:not(.paged) .resize.dragging::after { background: var(--accent); }
+    nav:not(.paged) .resize:focus-visible { outline: none; }
+    nav:not(.paged) .resize:focus-visible::after { width: 3px; background: var(--accent); }
+    :global(html.nav-resizing), :global(html.nav-resizing *) { cursor: col-resize !important; user-select: none; }
   }
 </style>

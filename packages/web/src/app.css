@@ -133,7 +133,8 @@
 
   --nav-h: 56px;
   /* Width of the sidebar on desktop: the nav itself, the account menu that
-     hangs off it, and the page's left margin all measure from this. */
+     hangs off it, and the page's left margin all measure from this. The reader
+     can drag it between 200 and 360; their choice is set on <html> and wins. */
   --nav-w: 240px;
   /* Width of the page-turn strips in paged layout. */
   --pager-w: 44px;
