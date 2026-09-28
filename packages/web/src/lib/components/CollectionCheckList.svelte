@@ -6,6 +6,11 @@
    * one collection — "followed but filed nowhere" remains impossible — it is
    * just that emptying the list is a legitimate way to say you are done with
    * a feed, rather than an error to be corrected.
+   * With no Save button, a tick needs a receipt (issue #101): `saved` turns on
+   * for a moment once the server has the change, for the surrounding panel to
+   * show as "Saved" by its heading. Following for the first time also says so
+   * in a toast with Undo, the mirror of the one unfollowing shows. A failed
+   * save puts the boxes back and says why.
    */
   import { api, collectionsApi } from '$lib/api';
   import { collectionStore, loadCollections, namedCollections } from '$lib/collections.svelte';
@@ -14,7 +19,7 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
 
-  let { feedId, ids = $bindable(), name = 'this feed', onchange }: { feedId: number; ids: number[]; name?: string; onchange?: (ids: number[]) => void } = $props();
+  let { feedId, ids = $bindable(), name = 'this feed', saved = $bindable(false), onchange }: { feedId: number; ids: number[]; name?: string; saved?: boolean; onchange?: (ids: number[]) => void } = $props();
   let newName = $state('');
   let busy = $state(false);
   /** Collection ids whose count just went up; drives the green flash. */
@@ -26,31 +31,60 @@
 
   $effect(() => { void loadCollections(); });
 
-  async function save(next: number[]) {
+  let savedTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Counts saves, so a failure only rolls back the boxes if nothing was ticked since. */
+  let seq = 0;
+
+  /** Resolves true once the server has it. */
+  async function save(next: number[]): Promise<boolean> {
+    const prev = ids;
+    const mine = ++seq;
     ids = next;
-    await collectionsApi.setFeedCollections(feedId, next);
+    saved = false;
+    try {
+      await collectionsApi.setFeedCollections(feedId, next);
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      if (mine === seq) ids = prev;
+      showToast(`Couldn’t save that change to ${name}: ${reason}`);
+      api.event('feed_collections_save_failed', { feedId, collectionIds: next, reason });
+      return false;
+    }
     onchange?.(next);
     void loadCollections(true);
+    if (mine === seq) {
+      saved = true;
+      clearTimeout(savedTimer);
+      savedTimer = setTimeout(() => (saved = false), 2000);
+    }
+    return true;
   }
 
-  function toggle(id: number) {
+  $effect(() => () => clearTimeout(savedTimer));
+
+  async function toggle(id: number) {
     if (ids.includes(id)) {
       const next = ids.filter((x) => x !== id);
       const prev = ids;
-      void save(next);
+      if (!(await save(next))) return;
       // Taking it out of the last collection is unfollowing. Say so plainly and
       // offer the way back, the same as the Unfollow button does.
       if (next.length === 0) {
         api.event('feed_unfollowed', { feedId, via: 'checklist' });
-        showToast(`Unfollowed ${name}`, { label: 'Undo', run: () => save(prev) });
+        showToast(`Unfollowed ${name}`, { label: 'Undo', run: () => void save(prev) });
       } else {
         api.event('feed_unfiled', { feedId, collectionId: id });
       }
       return;
     }
-    api.event(ids.length === 0 ? 'feed_followed' : 'feed_filed', { feedId, collectionId: id });
+    const first = ids.length === 0;
     flashCount(id);
-    void save([...ids, id]);
+    if (!(await save([...ids, id]))) return;
+    api.event(first ? 'feed_followed' : 'feed_filed', { feedId, collectionId: id });
+    if (first) {
+      const where = namedCollections().find((c) => c.id === id)?.name;
+      showToast(where ? `Following ${name} in ${where}` : `Following ${name}`, { label: 'Undo', run: () => void save([]) });
+    }
   }
 
   async function createAndAdd() {
@@ -62,7 +96,7 @@
       await loadCollections(true);
       newName = '';
       api.event('collection_created', { collectionId: c.id, via: 'checklist' });
-      toggle(c.id);
+      void toggle(c.id);
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e));
     } finally {
@@ -75,7 +109,7 @@
   {#each namedCollections() as c (c.id)}
     <li>
       <label>
-        <input type="checkbox" checked={ids.includes(c.id)} onchange={() => toggle(c.id)} />
+        <input type="checkbox" checked={ids.includes(c.id)} onchange={() => void toggle(c.id)} />
         <span class="name">{c.name}</span>
         <span class="count" class:flash={flash.has(c.id)}>{c.feedCount}</span>
       </label>

@@ -24,6 +24,7 @@
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import CollectionCheckList from './CollectionCheckList.svelte';
   import Icon from './Icon.svelte';
+  import SavedNote from './SavedNote.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   let { feedId, ids = $bindable(), name = 'this feed', compact = false, inline = false, mainLabel, onmain, onchange }: {
@@ -31,6 +32,8 @@
   } = $props();
 
   let open = $state(false);
+  /** On for a moment after a tick in the checklist reaches the server. */
+  let saved = $state(false);
   let anchor = $state<HTMLElement | null>(null);
   let panel = $state<HTMLElement | null>(null);
   let pos = $state<{ top: number; left: number; up: boolean }>({ top: 0, left: 0, up: false });
@@ -107,8 +110,8 @@
 
 {#if open}
   <div class="panel" class:inline bind:this={panel} style:top={inline ? undefined : `${pos.top}px`} style:left={inline ? undefined : `${pos.left}px`} style:transform={inline || !pos.up ? 'none' : 'translateY(-100%)'} role={inline ? 'group' : 'dialog'} aria-label="Collections for {name}">
-    <div class="eyebrow">{following ? 'In your collections' : 'Follow into a collection'}</div>
-    <CollectionCheckList {feedId} bind:ids {name} onchange={(next) => onchange?.(next)} />
+    <div class="eyebrow"><span>{following ? 'In your collections' : 'Follow into a collection'}</span><SavedNote show={saved} /></div>
+    <CollectionCheckList {feedId} bind:ids bind:saved {name} onchange={(next) => onchange?.(next)} />
     {#if following}
       <button class="unfollow" onclick={unfollow}>Unfollow</button>
     {/if}
@@ -137,7 +140,7 @@
   .panel.inline { position: static; width: 100%; flex-basis: 100%; order: 10; box-shadow: none; border: 1px solid var(--line); padding: var(--space-3); }
   /* Inside a sheet the list scrolls on its own so Unfollow stays in reach. */
   .panel.inline :global(.checks) { max-height: 34vh; overflow-y: auto; }
-  .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: var(--space-1); }
+  .eyebrow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: var(--space-1); }
   .unfollow { width: 100%; margin-top: var(--space-3); padding: var(--space-2); border-radius: var(--radius-sm); color: var(--danger); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); border: 1px solid var(--line); }
   .unfollow:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
 </style>
