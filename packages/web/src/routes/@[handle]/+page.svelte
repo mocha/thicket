@@ -544,7 +544,7 @@
   .visrow :global(.vis) { margin-left: auto; flex: none; }
 
   /* Editing name, bio and homepage right in the header. */
-  .edit { display: flex; flex-direction: column; gap: var(--space-3); }
+  .edit { display: flex; flex-direction: column; gap: var(--space-5); }
   .editrow { display: flex; justify-content: flex-end; gap: var(--space-2); }
 
   section { margin-bottom: var(--space-5); }

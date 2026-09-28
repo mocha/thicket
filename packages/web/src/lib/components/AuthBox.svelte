@@ -137,7 +137,7 @@
 <style>
   .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); }
   .box :global(.tabs) { margin-bottom: var(--space-4); }
-  form { display: flex; flex-direction: column; gap: var(--space-3); }
+  form { display: flex; flex-direction: column; gap: var(--space-5); }
   /* 2px is an optical nudge that lifts the button off the last field. */
     .go { margin-top: 2px; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .go:disabled { opacity: 0.5; }
