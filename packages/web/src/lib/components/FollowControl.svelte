@@ -36,7 +36,9 @@
   let saved = $state(false);
   let anchor = $state<HTMLElement | null>(null);
   let panel = $state<HTMLElement | null>(null);
-  let pos = $state<{ top: number; left: number; up: boolean }>({ top: 0, left: 0, up: false });
+  let pos = $state<{ top: number; left: number; up: boolean; max: number }>({ top: 0, left: 0, up: false, max: 0 });
+  /** The list has scrolled off its top rows; a line under the heading says so. */
+  let scrolled = $state(false);
 
   const following = $derived(ids.length > 0);
   /**
@@ -70,10 +72,20 @@
     const r = anchor.getBoundingClientRect();
     const width = Math.min(320, window.innerWidth - 16);
     const left = Math.max(8, Math.min(r.right - width, window.innerWidth - width - 8));
-    const spaceBelow = window.innerHeight - r.bottom;
-    const up = spaceBelow < 320 && r.top > spaceBelow;
-    // Never let a tall panel run off the top; the checklist scrolls instead (see .panel max-height).
-    pos = { top: up ? Math.max(r.top - 8, Math.min(r.top - 8, window.innerHeight - 8)) : r.bottom + 8, left, up };
+    // On a phone the main nav is a bar pinned to the bottom of the screen; the
+    // panel stops above it rather than covering its tabs. On desktop the nav
+    // is the sidebar, whose top is at the top, so the window edge is the floor.
+    const bar = document.querySelector('nav')?.getBoundingClientRect();
+    const floor = bar && bar.top > window.innerHeight / 2 ? bar.top : window.innerHeight;
+    // Room on each side, less the 8px gap to the button and 8px to the edge.
+    const below = floor - r.bottom - 16;
+    const above = r.top - 16;
+    // Below reads most naturally, so it wins whenever a useful few rows fit
+    // there; otherwise open toward the roomier side.
+    const up = below < 420 && above > below;
+    // The panel never grows past the window edge on the side it opens toward;
+    // the checklist scrolls inside it instead.
+    pos = { top: up ? r.top - 8 : r.bottom + 8, left, up, max: up ? above : below };
   }
 
   function toggle() {
@@ -89,11 +101,20 @@
     if (!open) return;
     const onDoc = (e: MouseEvent) => { if (!panel?.contains(e.target as Node) && !anchor?.contains(e.target as Node)) open = false; };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') open = false; };
-    const onScroll = () => place();
+    // Follow the button when the page scrolls or the window resizes. Scrolls
+    // inside the panel (its own list) don't move the button, so skip those.
+    const onMove = (e: Event) => { if (!inline && !panel?.contains(e.target as Node)) place(); };
+    const onList = (e: Event) => { const t = e.target as HTMLElement; if (t.classList?.contains('checks') && panel?.contains(t)) scrolled = t.scrollTop > 0; };
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
-    window.addEventListener('resize', onScroll);
-    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); window.removeEventListener('resize', onScroll); };
+    window.addEventListener('resize', onMove);
+    document.addEventListener('scroll', onMove, true);
+    document.addEventListener('scroll', onList, true);
+    return () => {
+      document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', onMove); document.removeEventListener('scroll', onMove, true); document.removeEventListener('scroll', onList, true);
+      scrolled = false;
+    };
   });
 </script>
 
@@ -109,8 +130,8 @@
 </div>
 
 {#if open}
-  <div class="panel" class:inline bind:this={panel} style:top={inline ? undefined : `${pos.top}px`} style:left={inline ? undefined : `${pos.left}px`} style:transform={inline || !pos.up ? 'none' : 'translateY(-100%)'} role={inline ? 'group' : 'dialog'} aria-label="Collections for {name}">
-    <div class="eyebrow"><span>{following ? 'In your collections' : 'Follow into a collection'}</span><SavedNote show={saved} /></div>
+  <div class="panel" class:inline bind:this={panel} style:top={inline ? undefined : `${pos.top}px`} style:left={inline ? undefined : `${pos.left}px`} style:transform={inline || !pos.up ? 'none' : 'translateY(-100%)'} style:max-height={inline ? undefined : `${pos.max}px`} role={inline ? 'group' : 'dialog'} aria-label="Collections for {name}">
+    <div class="eyebrow" class:scrolled><span>{following ? 'In your collections' : 'Follow into a collection'}</span><SavedNote show={saved} /></div>
     <CollectionCheckList {feedId} bind:ids bind:saved {name} onchange={(next) => onchange?.(next)} />
     {#if following}
       <button class="unfollow" onclick={unfollow}>Unfollow</button>
@@ -133,14 +154,19 @@
     position: fixed; z-index: 60; width: min(320px, calc(100vw - 16px));
     background: var(--surface); color: var(--text); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
     box-shadow: var(--shadow-menu);
-    max-height: calc(100vh - 16px); display: flex; flex-direction: column;
+    display: flex; flex-direction: column;
   }
-  /* A long list of collections scrolls inside the panel rather than pushing Unfollow (or the panel) off screen. */
-  .panel:not(.inline) :global(.checks) { overflow-y: auto; min-height: 0; max-height: 50vh; }
+  /* The panel's height is capped to the room beside the button (see place()).
+     A long list of collections scrolls inside it rather than pushing Unfollow
+     (or the panel) off screen. */
+  .panel:not(.inline) > :global(*) { flex-shrink: 0; }
+  .panel:not(.inline) > :global(.checks) { overflow-y: auto; min-height: 0; max-height: 50vh; flex-shrink: 1; }
   .panel.inline { position: static; width: 100%; flex-basis: 100%; order: 10; box-shadow: none; border: 1px solid var(--line); padding: var(--space-3); }
   /* Inside a sheet the list scrolls on its own so Unfollow stays in reach. */
   .panel.inline :global(.checks) { max-height: 34vh; overflow-y: auto; }
-  .eyebrow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: var(--space-1); }
+  .eyebrow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); padding-bottom: var(--space-1); border-bottom: 1px solid transparent; }
+  /* Once the list scrolls under the heading, a rule marks the edge so the top rows read as scrolled away, not missing. */
+  .eyebrow.scrolled { border-bottom-color: var(--line); }
   .unfollow { width: 100%; margin-top: var(--space-3); padding: var(--space-2); border-radius: var(--radius-sm); color: var(--danger); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); border: 1px solid var(--line); }
   .unfollow:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
 </style>
