@@ -3,8 +3,8 @@
 
   /**
    * The one labelled field. Everything around a single control: its name above
-   * it, and under it either the note that explains it or the thing that went
-   * wrong. It draws none of the control itself — it hands the control the three
+   * it, then the note that explains it (read before typing, so it sits between
+   * the name and the control), and under the control whatever went wrong. It draws none of the control itself — it hands the control the three
    * things it needs to be announced properly (its id, what describes it, and
    * whether it is in error) and lets the control draw itself.
    *
@@ -12,11 +12,11 @@
    * for screen readers only, which is what a search box with a magnifier and a
    * placeholder wants.
    *
-   * An error replaces the hint while it lasts, is announced the moment it
-   * appears, and turns the control red.
+   * An error appears under the control while it lasts, is announced the moment
+   * it appears, and turns the control red. The hint stays put above.
    *
-   * `optional` adds the quiet "optional" marker after the name, for a field
-   * someone can simply skip.
+   * `optional` adds a quiet "(optional)" after the name, for a field someone
+   * can simply skip.
    */
   interface Props {
     /** What this field is called. Required, even when hidden. */
@@ -25,7 +25,7 @@
     hideLabel?: boolean;
     /** The steady note under the field, e.g. "At least 8 characters." */
     hint?: string;
-    /** What went wrong. Replaces the hint and marks the control invalid. */
+    /** What went wrong. Shows under the control and marks it invalid. */
     error?: string | null;
     optional?: boolean;
     /** Only when the caller needs to know the id too; otherwise one is made. */
@@ -49,22 +49,19 @@
 
   const uid = $props.id();
   const id = $derived(givenId ?? uid);
-  const noteId = $derived(`${id}-note`);
-  const note = $derived(error || hint);
-  const describedBy = $derived(note ? noteId : undefined);
+  const hintId = $derived(`${id}-hint`);
+  const errorId = $derived(`${id}-error`);
+  const describedBy = $derived([error && errorId, hint && hintId].filter(Boolean).join(' ') || undefined);
   const invalid = $derived(!!error);
 </script>
 
 <div class="field {klass}" {...rest}>
   <label for={id} class:visually-hidden={hideLabel}>
-    {label}{#if optional}<em>optional</em>{/if}
+    {label}{#if optional}<em>(optional)</em>{/if}
   </label>
+  {#if hint}<p class="note" id={hintId}>{hint}</p>{/if}
   {@render children({ id, describedBy, invalid })}
-  {#if error}
-    <p class="note bad" id={noteId} role="alert">{error}</p>
-  {:else if hint}
-    <p class="note" id={noteId}>{hint}</p>
-  {/if}
+  {#if error}<p class="note bad" id={errorId} role="alert">{error}</p>{/if}
 </div>
 
 <style>
@@ -75,14 +72,16 @@
     min-width: 0;
   }
 
+  /* The name reads first: body size and full-strength ink, a step above the
+     note under it, so name and note never look alike. */
   label {
-    font-size: calc(var(--text-sm) * var(--size-app));
+    font-size: calc(var(--text-base) * var(--size-app));
     font-weight: 600;
-    color: var(--text-2);
+    color: var(--text);
   }
 
-  /* The "optional" marker: the same small size as the name, but unemphasised,
-     so it reads as an aside rather than part of what the field is called. */
+  /* The "(optional)" marker: the same size as the name, but unemphasized and
+     gray, so it reads as an aside rather than part of what the field is called. */
   label em {
     margin-left: var(--space-1);
     font-style: normal;

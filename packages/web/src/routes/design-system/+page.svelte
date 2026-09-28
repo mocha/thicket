@@ -357,7 +357,7 @@
   <!-- ============================== FORMS ============================= -->
   <section id="forms" aria-labelledby="forms-h">
     <h2 id="forms-h">Forms</h2>
-    <p class="section-lede">A field is the label, the control, and the note or error beneath it. Every text box is the same rounded rectangle, with a focus ring that only thickens for someone arriving by keyboard.</p>
+    <p class="section-lede">A field is the label, the note that explains it, the control, and any error beneath the control. The note sits above the box so it’s read before typing. Every text box is the same rounded rectangle, with a focus ring that only thickens for someone arriving by keyboard.</p>
 
     <div class="stack">
       <Field label="Display name" hint="Shown on your notes and profile.">

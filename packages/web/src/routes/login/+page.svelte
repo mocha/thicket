@@ -67,7 +67,7 @@
 <style>
   .auth { max-width: 380px; margin: calc(var(--space-6) + var(--space-2)) auto 0; }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-5); }
-  form { display: flex; flex-direction: column; gap: var(--space-4); }
+  form { display: flex; flex-direction: column; gap: var(--space-5); }
   button { margin-top: var(--space-1); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   button:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }

@@ -128,7 +128,7 @@
       <!-- This box is thicket's own marketing: sign ups there are always open, so it
            carries no notes about invites or closed sign ups, and no instance name. -->
       {#if mode === 'signup'}
-        <p class="note">All you need is a handle and a password.</p>
+        <p class="note">All you need is<br />a handle and a password.</p>
       {/if}
     {/if}
   </div>
@@ -137,10 +137,11 @@
 <style>
   .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); }
   .box :global(.tabs) { margin-bottom: var(--space-4); }
-  form { display: flex; flex-direction: column; gap: var(--space-3); }
+  form { display: flex; flex-direction: column; gap: var(--space-5); }
   /* 2px is an optical nudge that lifts the button off the last field. */
     .go { margin-top: 2px; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .go:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .note { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
+  /* Body size in primary ink, centered: a line from thicket, not a field's help text. */
+  .note { margin: var(--space-4) 0 0; text-align: center; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text); line-height: 1.4; }
 </style>
