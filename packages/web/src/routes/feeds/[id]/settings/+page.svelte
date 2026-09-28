@@ -7,6 +7,7 @@
   import { resetNotice } from '$lib/feedsettings';
   import { loadCollections } from '$lib/collections.svelte';
   import CollectionCheckList from '$lib/components/CollectionCheckList.svelte';
+  import SavedNote from '$lib/components/SavedNote.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Button from '$lib/components/Button.svelte';
@@ -25,6 +26,7 @@
   const id = $derived(Number(page.params.id));
   let feed = $state<Feed | null>(null);
   let ids = $state<number[]>([]);
+  let collectionsSaved = $state(false);
   let loadedId = $state<number | undefined>(undefined);
 
   const original = $derived(feed ? (feed.title ?? hostOf(feed.url)) : '');
@@ -242,9 +244,9 @@
   </section>
 
   <section class="opt">
-    <h2>Collections ({ids.length})</h2>
+    <h2 class="withnote">Collections ({ids.length}) <SavedNote show={collectionsSaved} /></h2>
     <div class="card">
-      <CollectionCheckList feedId={feed.id} bind:ids name={feedName(feed)} />
+      <CollectionCheckList feedId={feed.id} bind:ids bind:saved={collectionsSaved} name={feedName(feed)} />
     </div>
     <Button variant="danger" onclick={removeFromAll} disabled={ids.length === 0}>Remove from all collections</Button>
   </section>
@@ -308,6 +310,7 @@
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 2px 0 0; /* 2px is an optical nudge: the title sits on the label's line. */ overflow-wrap: anywhere; }
   hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-4) 0; }
   section > h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 var(--space-3); }
+  section > h2.withnote { display: flex; align-items: center; gap: var(--space-3); }
   .opt { margin-bottom: var(--space-4); }
   h3 { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; margin: 0 0 var(--space-2); }
   .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
