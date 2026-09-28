@@ -117,7 +117,7 @@ async function itemHead(id: number): Promise<Head | null> {
 export async function headForPath(path: string): Promise<string> {
   const status = await publicStatus();
   const site = status.name;
-  const generic: Head = { title: site, description: "Read the web on your own terms. Follow the sites you like and get every new post in one calm stream, newest first. No ranking, no ads, nothing about you for sale.", url: `${PUBLIC_URL}${path === "/" ? "" : path}` };
+  const generic: Head = { title: site, description: "Read the web on your own terms. Follow the sites you like and get every new post in one place, newest first. No ranking, no ads, nothing about you for sale.", url: `${PUBLIC_URL}${path === "/" ? "" : path}` };
   // A post inside its feed: /feeds/:id/:slug/:item, with an optional readable tail.
   const post = /^\/feeds\/\d+\/[^/]+\/(\d+)(?:\/[^/]*)?\/?$/.exec(path);
   if (post) {

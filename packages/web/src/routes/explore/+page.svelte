@@ -52,7 +52,7 @@
    */
   const SCOPE_BLURB: Record<SearchScope, string> = {
     all: 'Feeds, collections, posts, and people, together in one search.',
-    feeds: 'Sites that publish a feed. Follow one and its posts arrive in your stream.',
+    feeds: 'Sites that publish a feed. Follow one and you’ll see every new post it publishes.',
     collections: 'Topical sets of feeds people share, so you can follow along.',
     posts: 'Individual posts from across every feed on thicket.',
     people: 'Public profiles you can browse and follow.'

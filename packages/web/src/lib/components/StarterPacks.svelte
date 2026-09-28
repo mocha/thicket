@@ -46,7 +46,7 @@
       copied = new Set([...copied, c.id]);
       await loadCollections();
       api.event('starter_pack_copied', { collectionId: c.id });
-      showToast(`${c.name} is yours. Its posts are in your stream now.`);
+      showToast(`${c.name} is yours. You’ll see its posts along with everything else you follow.`);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'That didn’t work. Try again in a moment.');
     } finally {

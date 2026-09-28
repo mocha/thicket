@@ -22,7 +22,7 @@
 {#if brandNew}
   <header class="top">
     <h1>Welcome{session.user?.displayName ? `, ${session.user.displayName}` : ''}.</h1>
-    <p class="sub">You aren't following anything yet, so this is where your stream will be. Nothing is ranked here and nothing is inserted: you'll see what the sites you choose publish, newest first.</p>
+    <p class="sub">You aren’t following anything, yet. Once you are, new posts will show up here in chronological order. We never curate the content you see.</p>
   </header>
   <div class="start">
     <StarterPacks />
