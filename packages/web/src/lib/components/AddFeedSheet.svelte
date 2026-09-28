@@ -35,7 +35,9 @@
     outcome && 'error' in outcome
       ? `Couldn’t reach that: ${outcome.error}`
       : outcome?.status === 'none'
-        ? `No feed found at ${hostOf(outcome.pageUrl)}. Try the site’s blog or news section.`
+        // Some big sites (CNN, for one) have quietly stopped publishing feeds,
+        // so say that can happen instead of implying the address was wrong.
+        ? `We couldn’t find a feed at ${hostOf(outcome.pageUrl)}. Not every site publishes one. If it has a blog or news page, try that page’s address.`
         : null
   );
 
