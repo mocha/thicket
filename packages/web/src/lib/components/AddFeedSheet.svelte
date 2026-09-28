@@ -11,7 +11,7 @@
   import { page } from '$app/state';
   import { api, feedHref, type SubscribeOutcome } from '$lib/api';
   import { addFeed, closeAddFeed } from '$lib/addfeed.svelte';
-  import { defaultCollection, loadCollections, namedCollections } from '$lib/collections.svelte';
+  import { loadCollections, whereItGoes } from '$lib/collections.svelte';
   import { hostOf } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
   import Sheet from './Sheet.svelte';
@@ -60,14 +60,7 @@
     ids = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
   }
 
-  const nameOf = (id: number) => namedCollections().find((c) => c.id === id)?.name ?? 'a collection';
-
-  const hint = $derived(
-    !namedCollections().length ? 'No collections yet — one will be made for this feed.'
-      : ids.length === 1 ? `It goes in ${nameOf(ids[0])}. Tick more if it belongs in several.`
-        : ids.length ? `It goes in ${ids.length} of your collections.`
-          : `Pick one, or it goes in ${defaultCollection()?.name ?? 'your first collection'}.`
-  );
+  const hint = $derived(whereItGoes(ids));
 
   /** Any URL in. A page, a feed, a shared link from another app: the server figures it out. */
   async function submit(target = url) {

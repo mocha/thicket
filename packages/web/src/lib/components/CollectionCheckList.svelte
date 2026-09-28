@@ -15,7 +15,7 @@
    * shared one the Add a feed sheet uses; this adds saving on each tick.
    */
   import { api, collectionsApi } from '$lib/api';
-  import { loadCollections, namedCollections } from '$lib/collections.svelte';
+  import { loadCollections, namedCollections, placeName } from '$lib/collections.svelte';
   import { showToast } from '$lib/toast.svelte';
   import CollectionList from './CollectionList.svelte';
 
@@ -80,7 +80,7 @@
     if (!(await save([...ids, id]))) return;
     api.event(first ? 'feed_followed' : 'feed_filed', { feedId, collectionId: id });
     if (first) {
-      const where = namedCollections().find((c) => c.id === id)?.name;
+      const where = placeName([id]);
       showToast(where ? `Following ${name} in ${where}` : `Following ${name}`, { label: 'Undo', run: () => void save([]) });
     }
   }

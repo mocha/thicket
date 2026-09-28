@@ -2,18 +2,26 @@
   /**
    * The Follow sheet: where the Follow button sends you to choose which of
    * your collections hold a feed. Built like the Add a feed sheet — same
-   * Sheet, same collection list with its filter and seven-row scroll — so the
-   * two read as one way of filing a feed. The difference is timing: here each
-   * tick saves at once (a "Saved" note by the heading confirms it), so closing
-   * is never a cancel and Done just closes.
-   * The title follows the state: "Follow Core77" until the first tick, then
-   * "Following Core77". Unfollow takes it out of every collection at once,
-   * worth one click when a feed sits in five.
+   * Sheet, same collection list with its filter and seven-row scroll — and
+   * it works in one of two ways, fixed for as long as the sheet is open:
+   *
+   * - Not following yet: exactly like Add a feed. Starting to follow
+   *   something is one decision, so you pick collections, then press Follow;
+   *   closing without it is a true cancel. Pick nothing and it goes in your
+   *   default collection, as the line under the list says.
+   * - Already following: each tick saves at once, since moving a feed
+   *   between collections is a run of small, reversible tweaks. A "Saved"
+   *   note by the heading confirms each one, and Done just closes. Unfollow
+   *   takes it out of every collection at once, worth one click when a feed
+   *   sits in five.
+   *
+   * So "Follow" means the same thing in both sheets: press it to start.
    */
-  import { api } from '$lib/api';
-  import { loadCollections } from '$lib/collections.svelte';
+  import { api, collectionsApi } from '$lib/api';
+  import { loadCollections, placeName, whereItGoes } from '$lib/collections.svelte';
   import { showToast } from '$lib/toast.svelte';
   import Sheet from './Sheet.svelte';
+  import CollectionList from './CollectionList.svelte';
   import CollectionCheckList from './CollectionCheckList.svelte';
   import SavedNote from './SavedNote.svelte';
   import Button from './Button.svelte';
@@ -23,10 +31,45 @@
   } = $props();
 
   let dialog = $state<HTMLDialogElement | null>(null);
+  /** Which way the sheet works is decided when it opens and stays put, so it never changes under you mid-task. */
+  // svelte-ignore state_referenced_locally
+  const adding = ids.length === 0;
+  /** Adding: the boxes you've ticked, not saved until Follow. */
+  let picked = $state<number[]>([]);
+  let busy = $state(false);
   let saved = $state(false);
   const following = $derived(ids.length > 0);
 
   $effect(() => { dialog?.showModal(); });
+
+  function pick(id: number) {
+    picked = picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id];
+  }
+
+  /** Adding: file it where you picked, or in your default collection if you picked nothing. */
+  async function follow() {
+    if (busy) return;
+    busy = true;
+    try {
+      const res = picked.length ? await collectionsApi.setFeedCollections(feedId, picked) : await api.follow(feedId);
+      ids = res.collectionIds;
+      onchange?.(ids);
+      api.event('feed_followed', { feedId, collectionIds: ids, via: 'follow_sheet' });
+      await loadCollections(true);
+      const where = placeName(ids);
+      showToast(where ? `Following ${name} in ${where}` : `Following ${name}`, {
+        label: 'Undo',
+        run: async () => { await collectionsApi.setFeedCollections(feedId, []); ids = []; onchange?.(ids); void loadCollections(true); }
+      });
+      dialog?.close();
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      showToast(`Couldn’t follow ${name}: ${reason}`);
+      api.event('feed_follow_failed', { feedId, collectionIds: picked, reason });
+    } finally {
+      busy = false;
+    }
+  }
 
   async function unfollow() {
     const removed = await api.unfollow(feedId);
@@ -43,14 +86,22 @@
   }
 </script>
 
-<Sheet title={following ? `Following ${name}` : `Follow ${name}`} bind:dialog {onclose}>
-  <div class="eyebrow"><span>Put it in a collection</span><SavedNote show={saved} /></div>
-  <CollectionCheckList {feedId} bind:ids bind:saved {name} {onchange} />
+<Sheet title={adding || !following ? `Follow ${name}` : `Following ${name}`} bind:dialog {onclose}>
+  <div class="eyebrow"><span>Put it in a collection</span>{#if !adding}<SavedNote show={saved} />{/if}</div>
+  {#if adding}
+    <CollectionList ids={picked} hint={whereItGoes(picked)} via="follow_sheet" disabled={busy} ontoggle={pick} oncreated={(id) => (picked = [...picked, id])} />
+  {:else}
+    <CollectionCheckList {feedId} bind:ids bind:saved {name} {onchange} />
+  {/if}
   {#snippet footer()}
-    <div class="actions">
-      {#if following}<Button variant="danger" size="lg" onclick={unfollow}>Unfollow</Button>{/if}
-      <button type="button" class="sheet-action" onclick={() => dialog?.close()}>Done</button>
-    </div>
+    {#if adding}
+      <button type="button" class="sheet-action" onclick={follow} disabled={busy}>{busy ? 'Following…' : 'Follow'}</button>
+    {:else}
+      <div class="actions">
+        {#if following}<Button variant="danger" size="lg" onclick={unfollow}>Unfollow</Button>{/if}
+        <button type="button" class="sheet-action" onclick={() => dialog?.close()}>Done</button>
+      </div>
+    {/if}
   {/snippet}
 </Sheet>
 
