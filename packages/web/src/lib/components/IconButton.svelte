@@ -14,6 +14,11 @@
    *
    * Give `pressed` only to a toggle. It announces the on/off state and, when
    * on, fills the glyph and turns it the accent color.
+   *
+   * Give `stretch` when the circle sits in the middle of a bigger tap area,
+   * like the page-turn strips down each side of the screen. The button's click
+   * area grows to fill its nearest positioned container while the circle stays
+   * the same size, so there is still one real button to focus and announce.
    */
   interface Props {
     icon: 'gear' | 'pencil' | 'close' | 'caret' | 'back' | 'dots' | 'bookmark' | 'note';
@@ -25,6 +30,8 @@
     /** Only for a spot that needs a glyph off the default scale. */
     iconSize?: number;
     pressed?: boolean;
+    /** Fill the nearest positioned container with the click area. */
+    stretch?: boolean;
     href?: string;
     type?: 'button' | 'submit' | 'reset';
     disabled?: boolean;
@@ -41,6 +48,7 @@
     size = 'md',
     iconSize,
     pressed,
+    stretch = false,
     href,
     type = 'button',
     disabled = false,
@@ -60,6 +68,7 @@
     class="ib {variant} {size} {klass}"
     class:on={pressed}
     class:toggle
+    class:stretch
     href={disabled ? undefined : href}
     aria-disabled={disabled ? 'true' : undefined}
     aria-label={label}
@@ -73,6 +82,7 @@
     class="ib {variant} {size} {klass}"
     class:on={pressed}
     class:toggle
+    class:stretch
     {type}
     {disabled}
     aria-label={label}
@@ -97,7 +107,7 @@
     color: var(--text-2);
     cursor: pointer;
     text-decoration: none;
-    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
   }
 
   /* Three circles: 24, 32 and 40px. */
@@ -108,11 +118,21 @@
   .plain:hover { background: var(--surface-2); color: var(--text); }
 
   .bordered { border: 1px solid var(--line); background: var(--surface); }
-  .bordered:hover { background: var(--surface-2); color: var(--text); }
+  /* On hover the circle stays white while the outline and glyph darken, and it
+     casts a shadow and lifts a pixel. A darker fill would sink it into the
+     page, which is nearly the same color. */
+  .bordered:hover { border-color: var(--text-2); color: var(--text); box-shadow: var(--shadow); transform: translateY(-1px); }
+  .bordered:active { transform: translateY(0); box-shadow: none; }
 
   /* A toggle leans towards the accent color on hover, and stays there when on. */
   .toggle:hover { color: var(--accent); }
   .on { color: var(--accent); }
+
+  /* The click area covers the container; the circle is drawn where it sits. */
+  .stretch::after { content: ''; position: absolute; inset: 0; }
+  /* A moved button would shrink its click area back to the circle mid-hover,
+     so a stretched one keeps the shadow but doesn't lift. */
+  .stretch:hover { transform: none; }
 
   .ib:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 

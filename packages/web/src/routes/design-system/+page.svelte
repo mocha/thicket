@@ -352,6 +352,11 @@
       <IconButton icon="pencil" label="Edit" variant="bordered" />
       <IconButton icon="bookmark" label="Bookmarked" pressed={true} />
     </div>
+    <p class="section-lede">The page-turn arrows are bordered icon buttons stretched over a tall strip down each edge, so the whole strip turns the page. When there’s no page that way, the arrow is simply disabled.</p>
+    <div class="row">
+      <span class="strip-demo"><IconButton icon="caret" dir="left" label="Previous page" variant="bordered" stretch disabled /></span>
+      <span class="strip-demo"><IconButton icon="caret" dir="right" label="Next page" variant="bordered" stretch /></span>
+    </div>
   </section>
 
   <!-- ============================== FORMS ============================= -->
@@ -594,6 +599,7 @@
   /* ---- Component demos ---- */
   .row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin-bottom: var(--space-3); }
   .row.baseline { align-items: center; }
+  .strip-demo { position: relative; display: grid; place-items: center; width: var(--pager-w); height: 160px; border: 1px solid var(--line); }
   .stack { display: flex; flex-direction: column; gap: var(--space-4); max-width: 460px; }
   .prefix { color: var(--text-3); }
   .dot-demo { display: inline-flex; align-items: center; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }

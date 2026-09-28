@@ -228,12 +228,12 @@
        shows. -->
   {#if moreLeft}
     <div class="arrow left">
-      <IconButton icon="caret" dir="left" size="sm" label="Scroll tabs left" onclick={() => nudge(-1)} />
+      <IconButton icon="caret" dir="left" size="sm" variant="bordered" label="Scroll tabs left" onclick={() => nudge(-1)} />
     </div>
   {/if}
   {#if moreRight}
     <div class="arrow right">
-      <IconButton icon="caret" dir="right" size="sm" label="Scroll tabs right" onclick={() => nudge(1)} />
+      <IconButton icon="caret" dir="right" size="sm" variant="bordered" label="Scroll tabs right" onclick={() => nudge(1)} />
     </div>
   {/if}
 </div>
@@ -257,12 +257,6 @@
   }
   .arrow.right {
     right: 0;
-  }
-  /* The arrow sits on the page, not on the tabs: its own small disc, outlined
-     so it reads as something to press on every theme. */
-  .arrow :global(.ib) {
-    background: var(--bg);
-    box-shadow: 0 0 0 1px var(--line);
   }
   /* On a touchscreen the row is swiped, so the soft edge says it all. */
   @media (hover: none) {
