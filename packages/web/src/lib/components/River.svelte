@@ -21,6 +21,7 @@
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import VisitorMore from './VisitorMore.svelte';
   import Button from '$lib/components/Button.svelte';
+  import { recall, keepOnLeave } from '$lib/listmemory';
 
   let { collection = null, feed = null, showSource = true, emptyTitle = 'Nothing here yet', emptyBody = 'thicket shows the posts of sites you follow, newest first, with nothing in between. Add a site by its address and its posts start arriving here, or look through Explore to see what other people here read.', emptyHref = null, emptyCta = 'Add a feed', emptyAction = () => openAddFeed({ via: 'empty_river' }), emptyPoll = false }: {
     collection?: number | null; feed?: number | null; showSource?: boolean;
@@ -31,16 +32,24 @@
     emptyPoll?: boolean;
   } = $props();
 
-  let items = $state<RiverItem[]>([]);
-  let cursor = $state<string | null>(null);
-  let done = $state(false);
+  /** Back or Forward to this list: pick up exactly where it was left, rather than reloading from the top. */
+  type Kept = {
+    items: RiverItem[]; cursor: string | null; done: boolean; hidden: number; cappedAt: number | null; loadedKey: string | undefined;
+    anchorAtOpen: string | null; newAtOpen: string; caught: boolean; pageIndex: number;
+  };
+  const listName = () => `river|${collection}|${feed}`;
+  const back = recall<Kept>(listName());
+
+  let items = $state<RiverItem[]>(back?.items ?? []);
+  let cursor = $state<string | null>(back?.cursor ?? null);
+  let done = $state(back?.done ?? false);
   let loading = $state(false);
   let error = $state<string | null>(null);
-  let hidden = $state(0);
+  let hidden = $state(back?.hidden ?? 0);
   /** Set when a visitor without an account has had all the instance lets visitors see; the number is that limit. */
-  let cappedAt = $state<number | null>(null);
+  let cappedAt = $state<number | null>(back?.cappedAt ?? null);
   let sentinel = $state<HTMLElement | null>(null);
-  let loadedKey = $state<string | undefined>(undefined);
+  let loadedKey = $state<string | undefined>(back?.loadedKey);
   /**
    * "What's new", as this list opened: the point where the reader last stopped
    * in this collection, and the count above it. Posts newer than the point are
@@ -48,8 +57,8 @@
    * reading moves the point on. null = not marking (option off, a single feed,
    * someone else's collection, or the first time here).
    */
-  let anchorAtOpen = $state<string | null>(null);
-  let newAtOpen = $state('');
+  let anchorAtOpen = $state<string | null>(back?.anchorAtOpen ?? null);
+  let newAtOpen = $state(back?.newAtOpen ?? '');
   /** The collection whose point this list moves: the one shown, or the root for Everything. */
   const markId = $derived(feed !== null ? null : (collection ?? collectionStore.rootId));
 
@@ -144,7 +153,7 @@
    * the line moves nothing, and next time the line is still where it was, with
    * the new arrivals above it.
    */
-  let caught = $state(false);
+  let caught = $state(back?.caught ?? false);
   function caughtUp() {
     if (caught || !display.fresh || markId === null || !marks.byId[markId] || !items[0]) return;
     caught = true;
@@ -199,7 +208,9 @@
   let frameH = $state(0);
   let cols = $state(1);
   let perPage = $state(3);
-  let pageIndex = $state(0);
+  let pageIndex = $state(back?.pageIndex ?? 0);
+
+  keepOnLeave(listName, () => ({ items, cursor, done, hidden, cappedAt, loadedKey, anchorAtOpen, newAtOpen, caught, pageIndex }));
 
   /** The frame runs from wherever the page's own header ends to the top of the bottom bar. */
   function measure() {

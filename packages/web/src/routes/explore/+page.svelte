@@ -21,6 +21,7 @@
   import Tabs from '$lib/components/Tabs.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import { recall, keepOnLeave } from '$lib/listmemory';
 
   /**
    * Explore is one search box over everything, plus the browse lists you land
@@ -247,8 +248,47 @@
   let sentinel = $state<HTMLElement | null>(null);
   let loadedKey = $state<string | undefined>(undefined);
 
+  /**
+   * Back or Forward to Explore: every list as it was left, so the scroll lands
+   * where you were. The row you opened is the one thing likely to have changed
+   * while you were away (you followed that feed or person), so it alone is
+   * looked up again.
+   */
+  type Opened = { feed: number } | { person: string };
+  let opened: Opened | null = null;
+  const back = recall<{
+    res: SearchResults | null; more: typeof more; moreNext: number | null; moreScope: SearchScope | null;
+    feeds: Feed[]; feedsTotal: number; feedsAll: number; feedsNext: number | null;
+    cols: ExploreCollection[]; colsTotal: number; colsNext: number | null;
+    users: ExploreUser[]; usersTotal: number; usersNext: number | null;
+    followsAnyone: boolean | null; loadedKey: string | undefined; opened: Opened | null;
+  }>('explore');
+  function restore(b: NonNullable<typeof back>) {
+    ({ res, more, moreNext, moreScope, feeds, feedsTotal, feedsAll, feedsNext, cols, colsTotal, colsNext, users, usersTotal, usersNext, followsAnyone, loadedKey } = b);
+    if (b.opened) void refreshOpened(b.opened);
+  }
+  if (back) restore(back);
+  keepOnLeave(() => 'explore', () => ({
+    res, more, moreNext, moreScope, feeds, feedsTotal, feedsAll, feedsNext, cols, colsTotal, colsNext, users, usersTotal, usersNext, followsAnyone, loadedKey, opened
+  }));
+
+  async function refreshOpened(o: Opened) {
+    try {
+      if ('feed' in o) {
+        const rows = [...feeds, ...(res?.feeds.rows ?? []), ...(moreScope === 'feeds' ? more : [])] as (Feed | SearchFeed)[];
+        const hits = rows.filter((f) => f.id === o.feed);
+        if (hits.length) { const u = await api.feed(o.feed); for (const f of hits) Object.assign(f, u); }
+      } else {
+        const rows = [...users, ...(res?.people.rows ?? []), ...(moreScope === 'people' ? more : [])] as (ExploreUser | SearchPerson)[];
+        const hits = rows.filter((u) => u.handle === o.person);
+        if (hits.length) { const p = await profilesApi.get(o.person); if (!p.private) for (const u of hits) u.isFollowing = p.people.isFollowing; }
+      }
+    } catch { /* the row keeps what it showed before; the next fresh visit corrects it */ }
+  }
+
   onMount(() => {
     api.event('feeds_view'); draft = q;
+    if (back && back.followsAnyone !== null) return;
     if (session.user) profilesApi.get(session.user.handle).then((p) => { followsAnyone = !p.private && p.people.follows > 0; }).catch(() => (followsAnyone = false));
     else followsAnyone = false;
   });
@@ -386,7 +426,7 @@
 <!-- Rows. Each kind knows how to show its own evidence; see lib/words.ts. -->
 {#snippet feedRow(f: SearchFeed | Feed, ev: SearchFeed | null)}
   <li>
-    <a class="row" href={feedHref(f)}>
+    <a class="row" href={feedHref(f)} onclick={() => (opened = { feed: f.id })}>
       <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={40} />
       <div class="meta">
         <span class="title">{feedListName(f)}</span>
@@ -457,7 +497,7 @@
 
 {#snippet personRow(u: ExploreUser | SearchPerson, ev: SearchPerson | null)}
   <li>
-    <a class="row" href={profileHref(u.handle)}>
+    <a class="row" href={profileHref(u.handle)} onclick={() => (opened = { person: u.handle })}>
       <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={40} v={u.avatarUpdatedAt} />
       <div class="meta">
         <span class="title">{u.displayName ?? u.handle} <span class="handle">@{u.handle}</span></span>

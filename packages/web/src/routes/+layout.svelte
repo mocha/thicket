@@ -13,7 +13,9 @@
   import { session, loadMe, isPublicPath } from '$lib/session.svelte';
   import { display, loadDisplay } from '$lib/display.svelte';
   import { watchMarks } from '$lib/marks.svelte';
+  import { watchBackForward } from '$lib/listmemory';
   let { children } = $props();
+  watchBackForward();
 
   /**
    * The auth gate. We learn who is signed in before rendering any page, so no

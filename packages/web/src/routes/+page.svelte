@@ -9,7 +9,11 @@
   import { openAddFeed } from '$lib/addfeed.svelte';
   import { session } from '$lib/session.svelte';
   import { loadCollections } from '$lib/collections.svelte';
-  let stats = $state<{ feeds: number; collections: number; posts24h: number; feeds24h: number } | null>(null);
+  import { recall, keepOnLeave } from '$lib/listmemory';
+  type Stats = { feeds: number; collections: number; posts24h: number; feeds24h: number };
+  /** Kept for Back like the list below it, so the line under the title is the same height when the scroll is put back. */
+  let stats = $state<Stats | null>(recall<Stats>('everything-stats') ?? null);
+  keepOnLeave(() => 'everything-stats', () => stats);
   onMount(() => { if (session.user) { api.event('river_view'); void loadCollections(); api.riverStats().then((s) => (stats = s)).catch(() => {}); } });
   const n = (v: number, one: string, many: string) => `${v} ${v === 1 ? one : many}`;
   /** Following nothing is a different page, not an empty one: the first screen has to offer a first move. */
