@@ -2,47 +2,38 @@
   /**
    * The follow control: the one place to see and change "my relationship to
    * this feed". A split button — a main half naming the state, a caret half
-   * opening the filing menu:
+   * opening the Follow sheet:
    *   not following            → [ Follow | ▾ ]
    *   following, 1 collection  → [ In Tech News | ▾ ]
    *   following, N collections → [ In N collections | ▾ ]
-   * Either half opens the same panel. Following is *filing*: you pick where it
+   * Either half opens the same sheet. Following is *filing*: you pick where it
    * goes, and picking nowhere is how you stop following. Follow used to file
    * into your oldest collection and tell you which in a toast; being moved
    * somewhere you didn't choose read as the app deciding for you, so now the
    * choice comes first.
-   * Unfollow stays in the panel as a shortcut for "take it out of all of
-   * these", which is worth one click when a feed sits in five collections.
+   * The choosing happens in a Sheet like Add a feed's, not a menu hanging off
+   * the button: a long list of collections needs the room, and filing a feed
+   * should look the same however you got there.
    * `mainLabel` + `onmain` repurpose the main half for a page-specific action
    * ("Remove from Tech News" on a Manage page) while ▾ still opens the same
-   * checklist, so filing is one control everywhere.
-   * `inline` renders the panel in flow under the button instead of floating.
-   * Use it inside dialogs: a transformed/top-layer ancestor breaks fixed
-   * positioning, and the panel would land off screen.
+   * sheet, so filing is one control everywhere.
    */
   import { api } from '$lib/api';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
-  import CollectionCheckList from './CollectionCheckList.svelte';
+  import FollowSheet from './FollowSheet.svelte';
   import Icon from './Icon.svelte';
-  import SavedNote from './SavedNote.svelte';
-  import { showToast } from '$lib/toast.svelte';
 
-  let { feedId, ids = $bindable(), name = 'this feed', compact = false, inline = false, mainLabel, onmain, onchange }: {
-    feedId: number; ids: number[]; name?: string; compact?: boolean; inline?: boolean; mainLabel?: string; onmain?: () => void; onchange?: (ids: number[]) => void;
+  let { feedId, ids = $bindable(), name = 'this feed', compact = false, mainLabel, onmain, onchange }: {
+    feedId: number; ids: number[]; name?: string; compact?: boolean; mainLabel?: string; onmain?: () => void; onchange?: (ids: number[]) => void;
   } = $props();
 
   let open = $state(false);
-  /** On for a moment after a tick in the checklist reaches the server. */
-  let saved = $state(false);
-  let anchor = $state<HTMLElement | null>(null);
-  let panel = $state<HTMLElement | null>(null);
-  let pos = $state<{ top: number; left: number; up: boolean }>({ top: 0, left: 0, up: false });
 
   const following = $derived(ids.length > 0);
   /**
    * Filed in exactly one place, the button names it: "In Tech News" answers
    * "where did this go" outright, where "In 1 collection" makes you open the
-   * panel to find out. Past one there is no name to give, so it counts.
+   * sheet to find out. Past one there is no name to give, so it counts.
    * The name comes from the shared list, which may not have loaded yet — until
    * it does, the count is the honest thing to show.
    */
@@ -51,71 +42,28 @@
     !following ? 'Follow' : only ? `In ${only.name}` : ids.length === 1 ? 'In 1 collection' : `In ${ids.length} collections`
   );
 
-  async function unfollow() {
-    const removed = await api.unfollow(feedId);
-    const prev = ids;
-    ids = [];
-    onchange?.(ids);
-    open = false;
-    api.event('feed_unfollowed', { feedId, via: 'follow_button' });
-    void loadCollections(true);
-    showToast(`Unfollowed ${name}`, {
-      label: 'Undo',
-      run: async () => { const r = await api.restore(feedId, removed.collectionIds.length ? removed.collectionIds : prev); ids = r.collectionIds; onchange?.(ids); void loadCollections(true); }
-    });
+  function show() {
+    open = true;
+    api.event('follow_panel_opened', { feedId });
   }
 
-  function place() {
-    if (!anchor) return;
-    const r = anchor.getBoundingClientRect();
-    const width = Math.min(320, window.innerWidth - 16);
-    const left = Math.max(8, Math.min(r.right - width, window.innerWidth - width - 8));
-    const spaceBelow = window.innerHeight - r.bottom;
-    const up = spaceBelow < 320 && r.top > spaceBelow;
-    // Never let a tall panel run off the top; the checklist scrolls instead (see .panel max-height).
-    pos = { top: up ? Math.max(r.top - 8, Math.min(r.top - 8, window.innerHeight - 8)) : r.bottom + 8, left, up };
-  }
-
-  function toggle() {
-    if (!open && !inline) place();
-    open = !open;
-    if (open) api.event('follow_panel_opened', { feedId });
-  }
-
-  // Needed to name the one collection on the button, before the panel is opened.
+  // Needed to name the one collection on the button, before the sheet is opened.
   $effect(() => { if (following) void loadCollections(); });
-
-  $effect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => { if (!panel?.contains(e.target as Node) && !anchor?.contains(e.target as Node)) open = false; };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') open = false; };
-    const onScroll = () => place();
-    document.addEventListener('mousedown', onDoc);
-    document.addEventListener('keydown', onKey);
-    window.addEventListener('resize', onScroll);
-    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); window.removeEventListener('resize', onScroll); };
-  });
 </script>
 
-<div class="split" class:on={following && !onmain} class:neutral={!!onmain} class:compact bind:this={anchor}>
+<div class="split" class:on={following && !onmain} class:neutral={!!onmain} class:compact>
   {#if onmain}
     <button class="main" onclick={onmain}>{mainLabel ?? label}</button>
   {:else}
-    <button class="main" onclick={toggle} aria-expanded={open}>{label}</button>
+    <button class="main" onclick={show} aria-haspopup="dialog" aria-expanded={open}>{label}</button>
   {/if}
-  <button class="more" onclick={toggle} aria-expanded={open} aria-label="More options for {name}">
+  <button class="more" onclick={show} aria-haspopup="dialog" aria-expanded={open} aria-label="Collections for {name}">
     <Icon name="caret" dir="down" size={16} stroke={2.2} />
   </button>
 </div>
 
 {#if open}
-  <div class="panel" class:inline bind:this={panel} style:top={inline ? undefined : `${pos.top}px`} style:left={inline ? undefined : `${pos.left}px`} style:transform={inline || !pos.up ? 'none' : 'translateY(-100%)'} role={inline ? 'group' : 'dialog'} aria-label="Collections for {name}">
-    <div class="eyebrow"><span>{following ? 'In your collections' : 'Follow into a collection'}</span><SavedNote show={saved} /></div>
-    <CollectionCheckList {feedId} bind:ids bind:saved {name} onchange={(next) => onchange?.(next)} />
-    {#if following}
-      <button class="unfollow" onclick={unfollow}>Unfollow</button>
-    {/if}
-  </div>
+  <FollowSheet {feedId} bind:ids {name} {onchange} onclose={() => (open = false)} />
 {/if}
 
 <style>
@@ -129,18 +77,4 @@
   .main:hover, .more:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
   .compact .main { padding: var(--space-1) var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .compact .more { padding: 0 var(--space-1); }
-  .panel {
-    position: fixed; z-index: 60; width: min(320px, calc(100vw - 16px));
-    background: var(--surface); color: var(--text); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
-    box-shadow: var(--shadow-menu);
-    max-height: calc(100vh - 16px); display: flex; flex-direction: column;
-  }
-  /* A long list of collections scrolls inside the panel rather than pushing Unfollow (or the panel) off screen. */
-  .panel:not(.inline) :global(.checks) { overflow-y: auto; min-height: 0; max-height: 50vh; }
-  .panel.inline { position: static; width: 100%; flex-basis: 100%; order: 10; box-shadow: none; border: 1px solid var(--line); padding: var(--space-3); }
-  /* Inside a sheet the list scrolls on its own so Unfollow stays in reach. */
-  .panel.inline :global(.checks) { max-height: 34vh; overflow-y: auto; }
-  .eyebrow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: var(--space-1); }
-  .unfollow { width: 100%; margin-top: var(--space-3); padding: var(--space-2); border-radius: var(--radius-sm); color: var(--danger); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); border: 1px solid var(--line); }
-  .unfollow:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
 </style>

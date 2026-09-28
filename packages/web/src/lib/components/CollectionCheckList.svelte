@@ -11,17 +11,15 @@
    * show as "Saved" by its heading. Following for the first time also says so
    * in a toast with Undo, the mirror of the one unfollowing shows. A failed
    * save puts the boxes back and says why.
+   * The list itself (filter, seven-row scroll, new-collection box) is the
+   * shared one the Add a feed sheet uses; this adds saving on each tick.
    */
   import { api, collectionsApi } from '$lib/api';
-  import { collectionStore, loadCollections, namedCollections } from '$lib/collections.svelte';
+  import { loadCollections, namedCollections } from '$lib/collections.svelte';
   import { showToast } from '$lib/toast.svelte';
-  import Button from './Button.svelte';
-  import Field from './Field.svelte';
-  import Input from './Input.svelte';
+  import CollectionList from './CollectionList.svelte';
 
   let { feedId, ids = $bindable(), name = 'this feed', saved = $bindable(false), onchange }: { feedId: number; ids: number[]; name?: string; saved?: boolean; onchange?: (ids: number[]) => void } = $props();
-  let newName = $state('');
-  let busy = $state(false);
   /** Collection ids whose count just went up; drives the green flash. */
   let flash = $state<Set<number>>(new Set());
   function flashCount(id: number) {
@@ -87,62 +85,14 @@
     }
   }
 
-  async function createAndAdd() {
-    const name = newName.trim();
-    if (!name || busy) return;
-    busy = true;
-    try {
-      const c = await collectionsApi.create(name);
-      await loadCollections(true);
-      newName = '';
-      api.event('collection_created', { collectionId: c.id, via: 'checklist' });
-      void toggle(c.id);
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : String(e));
-    } finally {
-      busy = false;
-    }
-  }
+  const hint = $derived(namedCollections().length ? 'Every feed you follow lives in at least one collection.' : 'You have no collections yet. Start one below to file this feed.');
 </script>
 
-<ul class="checks">
-  {#each namedCollections() as c (c.id)}
-    <li>
-      <label>
-        <input type="checkbox" checked={ids.includes(c.id)} onchange={() => void toggle(c.id)} />
-        <span class="name">{c.name}</span>
-        <span class="count" class:flash={flash.has(c.id)}>{c.feedCount}</span>
-      </label>
-    </li>
-  {/each}
-</ul>
-{#if collectionStore.loaded}
-  <p class="hint">{namedCollections().length ? 'Every feed you follow lives in at least one collection.' : 'You have no collections yet. Start one below to file this feed.'}</p>
-{/if}
-<form class="new" onsubmit={(e) => { e.preventDefault(); void createAndAdd(); }}>
-  <span class="plus" aria-hidden="true">+</span>
-  <Field label="New collection name" hideLabel class="grow">
-    {#snippet children({ id })}
-      <Input {id} variant="create" bind:value={newName} placeholder="Start a new collection…" disabled={busy}>
-        {#snippet trailing()}
-          <Button type="submit" variant="primary" disabled={busy || !newName.trim()}>Create</Button>
-        {/snippet}
-      </Input>
-    {/snippet}
-  </Field>
-</form>
+<!-- A column that can shrink inside a Sheet, so the list scrolls rather than the Sheet overflowing. -->
+<div class="col">
+  <CollectionList {ids} {flash} {hint} via="checklist" ontoggle={(id) => void toggle(id)} oncreated={(id) => void toggle(id)} />
+</div>
 
 <style>
-  .checks { list-style: none; margin: 0; padding: 0; }
-  li label { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-1); border-top: 1px solid var(--line); cursor: pointer; }
-  li:first-child label { border-top: 0; }
-  input[type='checkbox'] { width: 20px; height: 20px; accent-color: var(--accent); }
-  .name { flex: 1; font-weight: 500; }
-  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); transition: color 300ms; }
-  .count.flash { color: var(--accent); font-weight: 700; animation: pop 1.2s ease-out; }
-  @keyframes pop { 0% { transform: scale(1.4); } 30% { transform: scale(1); } 100% { transform: scale(1); } }
-  .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .new { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
-  .plus { width: 20px; text-align: center; color: var(--accent); font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; font-weight: 600; }
-  .new :global(.grow) { flex: 1; min-width: 0; }
+  .col { display: flex; flex-direction: column; gap: var(--space-3); min-height: 0; flex: 0 1 auto; }
 </style>
