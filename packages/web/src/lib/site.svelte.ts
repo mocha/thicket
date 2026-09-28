@@ -15,10 +15,5 @@ export function loadSite(): Promise<InstanceStatus> {
     .then((s) => (site.status = s));
 }
 
-/** The site's address without the scheme, for showing a page address: "bookclub.example". */
-export function siteHost(s: InstanceStatus | null): string {
-  return (s?.url ?? '').replace(/^https?:\/\//, '').replace(/\/+$/, '');
-}
-
 /** The handle rules, word for word what the server says when it turns a handle down. */
 export const HANDLE_RULES = 'A handle needs 2 to 30 characters and must start with a letter or number. You can use lowercase letters, numbers, hyphens, and/or underscores.';

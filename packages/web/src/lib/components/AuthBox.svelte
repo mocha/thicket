@@ -10,7 +10,7 @@
   import { goto } from '$app/navigation';
   import { api, authApi, ApiError } from '$lib/api';
   import { setMe } from '$lib/session.svelte';
-  import { site, loadSite, siteHost, HANDLE_RULES } from '$lib/site.svelte';
+  import { site, loadSite, HANDLE_RULES } from '$lib/site.svelte';
   import Tabs from './Tabs.svelte';
   import Field from './Field.svelte';
   import Input from './Input.svelte';
@@ -90,7 +90,7 @@
         {/if}
         <Field
           label="Handle"
-          hint={mode === 'signup' ? (handleBroken ? HANDLE_RULES : `You’ll log in with this. Your page will be ${siteHost(status)}/@${handleClean || 'you'}.`) : undefined}
+          hint={mode === 'signup' ? (handleBroken ? HANDLE_RULES : `You’ll log in with this. Your page will be readthicket.com/@${handleClean || 'you'}.`) : undefined}
           error={error?.field === 'handle' ? error.message : null}
         >
           {#snippet children({ id, describedBy, invalid })}

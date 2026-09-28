@@ -4,7 +4,7 @@
   import { page } from '$app/state';
   import { api, authApi, ApiError } from '$lib/api';
   import { setMe } from '$lib/session.svelte';
-  import { site, loadSite, siteHost, HANDLE_RULES } from '$lib/site.svelte';
+  import { site, loadSite, HANDLE_RULES } from '$lib/site.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
 
@@ -76,7 +76,7 @@
       {/if}
       <Field
         label="Handle"
-        hint={handleBroken ? HANDLE_RULES : `You’ll log in with this. Your page will be ${siteHost(status)}/@${handleClean || 'you'}.`}
+        hint={handleBroken ? HANDLE_RULES : `You’ll log in with this. Your page will be readthicket.com/@${handleClean || 'you'}.`}
         error={error?.field === 'handle' ? error.message : null}
       >
         {#snippet children({ id, describedBy, invalid })}
