@@ -1,6 +1,7 @@
 <script lang="ts">
   /**
-   * Sign up or log in, in one small box. Sits in the homepage hero; the
+   * Sign up or log in, in one small box. Sits in the homepage hero, which is
+   * thicket's own landing page (not meant for self-hosted instances); the
    * dedicated /login and /signup pages still exist for links and invites.
    * Sign-up follows the instance policy: open shows the form, invite-only
    * asks for the code, closed offers only log in.
@@ -9,7 +10,7 @@
   import { goto } from '$app/navigation';
   import { api, authApi, ApiError } from '$lib/api';
   import { setMe } from '$lib/session.svelte';
-  import { site, loadSite, siteHost } from '$lib/site.svelte';
+  import { site, loadSite, siteHost, HANDLE_RULES } from '$lib/site.svelte';
   import Tabs from './Tabs.svelte';
   import Field from './Field.svelte';
   import Input from './Input.svelte';
@@ -25,6 +26,8 @@
 
   const handleClean = $derived(handle.trim().toLowerCase().replace(/^@/, ''));
   const handleOk = $derived(/^[a-z0-9][a-z0-9_-]{1,29}$/.test(handleClean));
+  // The rules only show once what's typed breaks them; still being too short while typing doesn't count.
+  const handleBroken = $derived(handleClean.length > 30 || (handleClean !== '' && !/^[a-z0-9][a-z0-9_-]*$/.test(handleClean)));
   const status = $derived(site.status);
   const needsInvite = $derived(status?.signups === 'invite');
   const closed = $derived(status?.signups === 'closed');
@@ -87,7 +90,7 @@
         {/if}
         <Field
           label="Handle"
-          hint={mode === 'signup' ? `You’ll log in with this, and it’s your page’s address: ${siteHost(status)}/@${handleClean || 'you'}. You can use lowercase letters, numbers, hyphens, and/or underscores.` : undefined}
+          hint={mode === 'signup' ? (handleBroken ? HANDLE_RULES : `You’ll log in with this. Your page will be ${siteHost(status)}/@${handleClean || 'you'}.`) : undefined}
           error={error?.field === 'handle' ? error.message : null}
         >
           {#snippet children({ id, describedBy, invalid })}
@@ -122,11 +125,10 @@
           {busy ? (mode === 'signup' ? 'Signing up…' : 'Logging in…') : mode === 'signup' ? 'Sign up' : 'Log in'}
         </button>
       </form>
+      <!-- This box is thicket's own marketing: sign ups there are always open, so it
+           carries no notes about invites or closed sign ups, and no instance name. -->
       {#if mode === 'signup'}
-        <p class="note">{#if needsInvite}You need an invite to sign up for <strong>{status?.name}</strong>.{:else}All you need is a handle and a password.{#if status?.name}{' '}You’re joining <strong>{status.name}</strong>.{/if}{/if}</p>
-      {:else}
-        {#if closed}<p class="note">Sign ups are closed for <strong>{status?.name}</strong>.</p>{/if}
-        <p class="note">Forgot your password? Ask whoever runs {status?.name ?? 'this site'} to reset it. thicket never asks for your email, so it can’t send you a reset link.</p>
+        <p class="note">All you need is a handle and a password.</p>
       {/if}
     {/if}
   </div>
@@ -140,6 +142,5 @@
     .go { margin-top: 2px; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .go:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .note { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
-  .note strong { color: var(--text-2); }
+  .note { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
 </style>

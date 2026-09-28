@@ -32,8 +32,9 @@
     exploreApi.featured().then((r) => {
       packs = r.collections.filter((c) => !c.isMine);
       from = r.from;
-      // The credit line names the site; only load it when that line will show.
-      if (r.from && !site.status) void loadSite();
+      // Signed out, this is the landing page, which only ever says "thicket".
+      // Signed in, the credit line names this site.
+      if (r.from && session.user && !site.status) void loadSite();
     }).catch(() => {});
   });
 
@@ -78,7 +79,7 @@
       {/each}
     </ul>
     {#if from}
-      <p class="from">These are <a href={profileHref(from)}>@{from}</a>’s collections. @{from} is a regular account on {site.status?.name ?? 'this site'}. Visit their page for a longer look at what they read, save, and note.</p>
+      <p class="from">These are <a href={profileHref(from)}>@{from}</a>’s collections. @{from} is a regular account on {session.user ? (site.status?.name ?? 'this site') : 'thicket'}. Visit their page for a longer look at what they read, save, and note.</p>
     {/if}
   </section>
 {/if}

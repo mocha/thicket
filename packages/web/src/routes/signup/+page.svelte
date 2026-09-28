@@ -4,7 +4,7 @@
   import { page } from '$app/state';
   import { api, authApi, ApiError } from '$lib/api';
   import { setMe } from '$lib/session.svelte';
-  import { site, loadSite, siteHost } from '$lib/site.svelte';
+  import { site, loadSite, siteHost, HANDLE_RULES } from '$lib/site.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
 
@@ -23,6 +23,8 @@
 
   const handleClean = $derived(handle.trim().toLowerCase().replace(/^@/, ''));
   const handleOk = $derived(/^[a-z0-9][a-z0-9_-]{1,29}$/.test(handleClean));
+  // The rules only show once what's typed breaks them; still being too short while typing doesn't count.
+  const handleBroken = $derived(handleClean.length > 30 || (handleClean !== '' && !/^[a-z0-9][a-z0-9_-]*$/.test(handleClean)));
 
   async function submit() {
     if (busy) return;
@@ -74,7 +76,7 @@
       {/if}
       <Field
         label="Handle"
-        hint="You’ll log in with this, and it’s your page’s address: {siteHost(status)}/@{handleClean || 'you'}. You can use lowercase letters, numbers, hyphens, and/or underscores."
+        hint={handleBroken ? HANDLE_RULES : `You’ll log in with this. Your page will be ${siteHost(status)}/@${handleClean || 'you'}.`}
         error={error?.field === 'handle' ? error.message : null}
       >
         {#snippet children({ id, describedBy, invalid })}
