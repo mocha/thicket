@@ -42,7 +42,7 @@
         <div><dt>Followers</dt><dd>{feed.followerCount}</dd></div>
       </dl>
       <footer>
-        {#if session.user}<FollowControl feedId={feed.id} bind:ids name={feed.title ?? hostOf(feed.url)} inline />{/if}
+        {#if session.user}<FollowControl feedId={feed.id} bind:ids name={feed.title ?? hostOf(feed.url)} />{/if}
         <Button href={feedHref(feed)} onclick={() => dialog?.close()} style="flex: 1">Open feed</Button>
       </footer>
     {:else}

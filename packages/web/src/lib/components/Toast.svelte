@@ -1,9 +1,27 @@
 <script lang="ts">
   import { toast, dismissToast } from '$lib/toast.svelte';
+
+  /* An open Sheet sits above everything the page can stack, and the browser
+     ignores clicks outside it, so an ordinary toast would land behind it and
+     its Undo couldn't be pressed (and a "couldn't save" message would go
+     unseen). While a Sheet is open the toast moves inside it; when that Sheet
+     closes the toast moves back to the page, so a toast raised by closing
+     (Unfollow does this) outlives the Sheet. */
+  function onTop(el: HTMLElement, _id: number) {
+    const home = el.parentElement!;
+    const place = () => {
+      const sheet = [...document.querySelectorAll('dialog')].filter((d) => d.matches(':modal')).pop();
+      (sheet ?? home).appendChild(el);
+    };
+    const onClose = (e: Event) => { if ((e.target as Node).contains(el)) home.appendChild(el); };
+    place();
+    document.addEventListener('close', onClose, true);
+    return { update: place, destroy: () => document.removeEventListener('close', onClose, true) };
+  }
 </script>
 
 {#if toast.current}
-  <div class="toast" role="status">
+  <div class="toast" role="status" use:onTop={toast.current.id}>
     <span>{toast.current.message}</span>
     {#if toast.current.action}
       <button class="action" onclick={() => { toast.current?.action?.run(); dismissToast(); }}>{toast.current.action.label}</button>

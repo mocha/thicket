@@ -323,7 +323,7 @@
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-1) var(--space-4) var(--space-3); margin-bottom: var(--space-3); }
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-3); }
   .admin { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; }
   .admin > h2 { margin: 0; }
   dialog.remove { max-width: 440px; padding: var(--space-5) var(--space-5) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: var(--shadow-dialog); }
