@@ -20,15 +20,15 @@
     },
     {
       title: 'Nothing is trying to keep you here',
-      body: 'No recommendations to pull you along, no notifications engineered to bring you back, no infinite anything. You reach the end of what the sites you chose published, and you are done for the day.'
+      body: 'No recommendations to pull you along, no notifications engineered to bring you back, no infinite anything. You reach the end of what the sites you chose published, and you’re done for the day.'
     },
     {
       title: 'What you read is your business',
-      body: 'We do not track what you open, build a profile of you, or keep a history you did not ask us to save. There is nothing to sell because we do not collect it. Library rules.'
+      body: 'We don’t track what you open, build a profile of you, or keep a history you didn’t ask us to save. There’s nothing to sell because we don’t collect it. Library rules.'
     },
     {
-      title: 'If you dislike how it is run, run it',
-      body: 'thicket is open source and an instance is one small server. Your collections copy from any instance to any other, so leaving is a copy rather than a loss. That is the part a social network cannot offer you.'
+      title: 'If you dislike how it’s run, run it',
+      body: 'thicket is open source, so anyone can run their own thicket site. Your collections copy from one site to any other, so leaving costs you nothing. That’s the part a social network can’t offer you.'
     }
   ];
 
@@ -45,7 +45,7 @@
   <div class="pitch">
     <h1>Read the web on your own terms.</h1>
     <p class="sub">Follow the sites you like. Every new post lands in one calm stream, in the order it was written.</p>
-    <p class="body">No ranking deciding what you see, no ads dressed up as posts, nothing about you for sale. Make an account in ten seconds and follow your first site.</p>
+    <p class="body">No ranking deciding what you see, no ads dressed up as posts, nothing about you for sale. Sign up in ten seconds and follow your first site.</p>
   </div>
   <div class="auth"><AuthBox /></div>
 </section>
@@ -90,7 +90,7 @@
   lede="Open one and read it without an account. Make collections of your own later and someone can copy yours the same way." />
 
 <footer>
-  <p>thicket is free software under the <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener">AGPL</a> — the <a href="https://github.com/mocha/thicket" rel="noopener">source is here</a>. Run your own, or join a friend’s: collections can be copied from any instance to any other, so you are never stuck.</p>
+  <p>thicket is free software under the <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener">AGPL</a>, and the <a href="https://github.com/mocha/thicket" rel="noopener">source is here</a>. Run your own thicket site or join a friend’s. Your collections copy from one site to any other, so you’re never stuck.</p>
 </footer>
 
 <style>

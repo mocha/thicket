@@ -2,8 +2,9 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { api, authApi, ApiError, type InstanceStatus } from '$lib/api';
+  import { api, authApi, ApiError } from '$lib/api';
   import { setMe } from '$lib/session.svelte';
+  import { site, loadSite, siteHost } from '$lib/site.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
 
@@ -16,7 +17,7 @@
   let password = $state('');
   let displayName = $state('');
   let busy = $state(false);
-  let status = $state<InstanceStatus | null>(null);
+  const status = $derived(site.status);
   let inviteCode = $state('');
   let error = $state<{ message: string; field?: string } | null>(null);
 
@@ -35,29 +36,33 @@
       await goto(next && next.startsWith('/') && !next.startsWith('//') ? next : '/', { replaceState: true });
     } catch (e) {
       error = e instanceof ApiError ? { message: e.message, field: e.field } : { message: e instanceof Error ? e.message : String(e) };
+      // The policy changed while the form was open (say, to invite-only): catch up so the form matches.
+      if (e instanceof ApiError && e.status === 403) void loadSite();
     } finally {
       busy = false;
     }
   }
   onMount(() => {
     inviteCode = page.url.searchParams.get('invite') ?? '';
-    authApi.status().then((s) => (status = s)).catch(() => (status = { name: 'thicket', url: '', signups: 'open', visitorLimit: true }));
+    void loadSite();
   });
   const needsInvite = $derived(status?.signups === 'invite');
+  // An error about a field this form isn't showing still has to be seen, so it goes under the form.
+  const errorOnField = $derived(error?.field === 'handle' || error?.field === 'password' || (error?.field === 'inviteCode' && needsInvite));
   const canSubmit = $derived(handleOk && password.length >= 8 && (!needsInvite || inviteCode.trim().length > 0));
 </script>
 
-<svelte:head><title>Sign up · thicket</title></svelte:head>
+<svelte:head><title>Sign up · {status?.name ?? 'thicket'}</title></svelte:head>
 
 <section class="auth">
-  <h1>Make an account{#if status?.name}{" on "}{status.name}{/if}</h1>
-  <p class="lede">A handle and a password. Everything else is optional, and you can start following feeds right away.</p>
+  <h1>Sign up{#if status?.name}{" for "}{status.name}{/if}</h1>
+  <p class="lede">All you need is a handle and a password. You can start following feeds right away.</p>
   {#if !status}
     <p class="lede">Loading…</p>
   {:else if status.signups === 'closed'}
-    <p class="bad">Sign-ups are closed on this instance.</p>
+    <p class="bad">Sign ups are closed for {status.name}.</p>
   {:else if needsInvite && !inviteCode}
-    <p class="bad">This instance is invite-only. Ask a member for an invite link; it will bring you back here.</p>
+    <p class="bad">You need an invite to sign up for {status.name}. Ask someone who already has an account to send you an invite link. It will bring you back here.</p>
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); void submit(); }}>
       {#if needsInvite}
@@ -69,7 +74,7 @@
       {/if}
       <Field
         label="Handle"
-        hint="Your page will be /@{handleClean || 'you'}. Lowercase letters, numbers, - and _."
+        hint="You’ll log in with this, and it’s your page’s address: {siteHost(status)}/@{handleClean || 'you'}. You can use lowercase letters, numbers, hyphens, and/or underscores."
         error={error?.field === 'handle' ? error.message : null}
       >
         {#snippet children({ id, describedBy, invalid })}
@@ -94,21 +99,21 @@
           <Input {id} aria-describedby={describedBy} {invalid} type="password" bind:value={password} autocomplete="new-password" required minlength="8" />
         {/snippet}
       </Field>
-      <Field label="Display name" optional>
+      <Field label="Display name" optional hint="The name people see instead of your handle. You can change it at any time.">
         {#snippet children({ id, describedBy, invalid })}
-          <Input {id} aria-describedby={describedBy} {invalid} bind:value={displayName} autocomplete="name" placeholder="How you’d like to appear" />
+          <Input {id} aria-describedby={describedBy} {invalid} bind:value={displayName} autocomplete="name" />
         {/snippet}
       </Field>
-      {#if error && !error.field}<p class="bad" role="alert">{error.message}</p>{/if}
-      <button type="submit" disabled={busy || !canSubmit}>{busy ? 'Creating…' : 'Create account'}</button>
+      {#if error && !errorOnField}<p class="bad" role="alert">{error.message}</p>{/if}
+      <button type="submit" disabled={busy || !canSubmit}>{busy ? 'Signing up…' : 'Sign up'}</button>
     </form>
   {/if}
-  <p class="alt">Already have one? <a href="/login{page.url.search}">Log in</a></p>
+  <p class="alt">Already have an account? <a href="/login{page.url.search}">Log in</a></p>
 
   <aside class="what">
     <h2>What you’re joining</h2>
-    <p>A reader, not a network. You pick the sites; thicket shows you what they published, newest first, with nothing reordered and nothing inserted. We don’t track what you read or keep a history you didn’t ask us to save.</p>
-    <p>Your collections can be copied to any other instance, so you are never locked in — and if you ever dislike how this one is run, thicket is open source and you can run your own.</p>
+    <p>You pick the sites, and thicket shows you everything they publish, newest first. Nothing is reordered, and nothing is added. We don’t track what you read or keep a history you didn’t ask us to save.</p>
+    <p>thicket is open source, so other people run their own thicket sites, and you can, too. You can copy your collections to any of them, so you’re never locked in.</p>
   </aside>
 </section>
 

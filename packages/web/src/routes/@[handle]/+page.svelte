@@ -492,7 +492,7 @@
   {/if}
 
   {#if !session.user}
-    <p class="join">Want your own? <a href="/signup?next={encodeURIComponent(page.url.pathname)}">Make an account</a> and start following feeds.</p>
+    <p class="join">Want your own? <a href="/signup?next={encodeURIComponent(page.url.pathname)}">Sign up</a> and start following feeds.</p>
   {/if}
 {/if}
 

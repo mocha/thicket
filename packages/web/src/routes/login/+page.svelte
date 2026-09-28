@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { authApi } from '$lib/api';
   import { setMe } from '$lib/session.svelte';
+  import { site, loadSite } from '$lib/site.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
 
@@ -10,6 +12,8 @@
   let password = $state('');
   let busy = $state(false);
   let error = $state<string | null>(null);
+
+  onMount(() => void loadSite());
 
   async function submit() {
     if (busy) return;
@@ -56,8 +60,8 @@
     {#if error}<p class="bad" role="alert">{error}</p>{/if}
     <button type="submit" disabled={busy || !handle.trim() || !password}>{busy ? 'Logging in…' : 'Log in'}</button>
   </form>
-  <p class="alt">New here? <a href="/signup{page.url.search}">Create an account</a></p>
-  <p class="hint">Forgot your password? There’s no email on this instance: ask whoever runs it to reset it.</p>
+  <p class="alt">New here? <a href="/signup{page.url.search}">Sign up</a></p>
+  <p class="hint">Forgot your password? Ask whoever runs {site.status?.name ?? 'this site'} to reset it. thicket never asks for your email, so it can’t send you a reset link.</p>
 </section>
 
 <style>

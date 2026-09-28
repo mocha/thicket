@@ -7,8 +7,9 @@
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { api, authApi, ApiError, type InstanceStatus } from '$lib/api';
+  import { api, authApi, ApiError } from '$lib/api';
   import { setMe } from '$lib/session.svelte';
+  import { site, loadSite, siteHost } from '$lib/site.svelte';
   import Tabs from './Tabs.svelte';
   import Field from './Field.svelte';
   import Input from './Input.svelte';
@@ -16,7 +17,6 @@
   let { initial = 'signup' }: { initial?: 'signup' | 'login' } = $props();
   // svelte-ignore state_referenced_locally
   let mode = $state<'signup' | 'login'>(initial);
-  let status = $state<InstanceStatus | null>(null);
   let handle = $state('');
   let password = $state('');
   let inviteCode = $state('');
@@ -25,16 +25,19 @@
 
   const handleClean = $derived(handle.trim().toLowerCase().replace(/^@/, ''));
   const handleOk = $derived(/^[a-z0-9][a-z0-9_-]{1,29}$/.test(handleClean));
+  const status = $derived(site.status);
   const needsInvite = $derived(status?.signups === 'invite');
   const closed = $derived(status?.signups === 'closed');
+  // An error about a field this form isn't showing still has to be seen, so it goes under the form.
+  const errorOnField = $derived(error?.field === 'handle' || error?.field === 'password' || (error?.field === 'inviteCode' && mode === 'signup' && needsInvite));
   const canSignup = $derived(handleOk && password.length >= 8 && (!needsInvite || inviteCode.trim().length > 0));
   const TABS = $derived([
-    { value: 'signup', label: 'Create account', disabled: closed },
+    { value: 'signup', label: 'Sign up', disabled: closed },
     { value: 'login', label: 'Log in' }
   ]);
 
   onMount(() => {
-    authApi.status().then((s) => { status = s; if (s.signups === 'closed') mode = 'login'; }).catch(() => (status = { name: 'thicket', url: '', signups: 'open', visitorLimit: true }));
+    loadSite().then((s) => { if (s.signups === 'closed') mode = 'login'; });
   });
 
   async function submit() {
@@ -50,6 +53,11 @@
       await goto('/', { replaceState: true });
     } catch (e) {
       error = e instanceof ApiError ? { message: e.message, field: e.field } : { message: e instanceof Error ? e.message : String(e) };
+      // The policy changed while the form was open (say, to invite-only): catch up so the form matches.
+      // Closed outright: switch to Log in, where the closed note says it.
+      if (e instanceof ApiError && e.status === 403) {
+        void loadSite().then((s) => { if (s.signups === 'closed') { mode = 'login'; error = null; } });
+      }
     } finally {
       busy = false;
     }
@@ -62,15 +70,13 @@
     tabs={TABS}
     value={mode}
     onchange={(v) => { mode = v as 'signup' | 'login'; error = null; }}
-    label="Create an account or log in"
+    label="Sign up or log in"
     panel="auth-panel"
     fill
   />
 
   <div id="auth-panel" role="tabpanel">
-    {#if mode === 'signup' && closed}
-      <p class="note">Sign-ups are closed on this instance. If you have an account, log in.</p>
-    {:else}
+    {#if !(mode === 'signup' && closed)}
       <form onsubmit={(e) => { e.preventDefault(); void submit(); }}>
         {#if mode === 'signup' && needsInvite}
           <Field label="Invite code" error={error?.field === 'inviteCode' ? error.message : null}>
@@ -81,7 +87,7 @@
         {/if}
         <Field
           label="Handle"
-          hint={mode === 'signup' ? `Your page will be /@${handleClean || 'you'}` : undefined}
+          hint={mode === 'signup' ? `You’ll log in with this, and it’s your page’s address: ${siteHost(status)}/@${handleClean || 'you'}. You can use lowercase letters, numbers, hyphens, and/or underscores.` : undefined}
           error={error?.field === 'handle' ? error.message : null}
         >
           {#snippet children({ id, describedBy, invalid })}
@@ -111,15 +117,16 @@
             <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={password} autocomplete={mode === 'signup' ? 'new-password' : 'current-password'} required minlength={mode === 'signup' ? 8 : undefined} />
           {/snippet}
         </Field>
-        {#if error && !error.field}<p class="bad" role="alert">{error.message}</p>{/if}
+        {#if error && !errorOnField}<p class="bad" role="alert">{error.message}</p>{/if}
         <button type="submit" class="go" disabled={busy || (mode === 'signup' ? !canSignup : !handleClean || !password)}>
-          {busy ? (mode === 'signup' ? 'Creating…' : 'Logging in…') : mode === 'signup' ? 'Create account' : 'Log in'}
+          {busy ? (mode === 'signup' ? 'Signing up…' : 'Logging in…') : mode === 'signup' ? 'Sign up' : 'Log in'}
         </button>
       </form>
       {#if mode === 'signup'}
-        <p class="note">{#if needsInvite}This instance is invite-only.{:else}A handle and a password. Everything else is optional.{/if}{#if status?.name}{' '}You’re joining <strong>{status.name}</strong>.{/if}</p>
+        <p class="note">{#if needsInvite}You need an invite to sign up for <strong>{status?.name}</strong>.{:else}All you need is a handle and a password.{#if status?.name}{' '}You’re joining <strong>{status.name}</strong>.{/if}{/if}</p>
       {:else}
-        <p class="note">Forgot your password? There’s no email here: ask whoever runs this instance to reset it.</p>
+        {#if closed}<p class="note">Sign ups are closed for <strong>{status?.name}</strong>.</p>{/if}
+        <p class="note">Forgot your password? Ask whoever runs {status?.name ?? 'this site'} to reset it. thicket never asks for your email, so it can’t send you a reset link.</p>
       {/if}
     {/if}
   </div>

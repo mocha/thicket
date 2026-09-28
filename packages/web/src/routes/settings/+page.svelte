@@ -174,7 +174,7 @@
 {#if me.isAdmin}
   <section class="card admin">
     <h2>Admin</h2>
-    <p class="help">You’re an admin of this instance. Sign-ups, invites and accounts live on the <a href="/admin">Admin page</a>.</p>
+    <p class="help">You’re an admin of this instance. Sign ups, invites, and accounts live on the <a href="/admin">Admin page</a>.</p>
   </section>
 {/if}
 

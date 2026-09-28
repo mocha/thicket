@@ -12,6 +12,7 @@
    * text is not shown to the open web; what the post is, is. So a link you
    * send never dead-ends, and it says what it is before anyone signs in.
    */
+  import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { replaceState } from '$app/navigation';
   import { api, feedHref, itemHref, itemsApi, type Note, type RiverItem } from '$lib/api';
@@ -19,6 +20,7 @@
   import { hostOf, relativeTime, webHref } from '$lib/time';
   import { openReaderHere, readsInline } from '$lib/reader.svelte';
   import { session } from '$lib/session.svelte';
+  import { site, loadSite } from '$lib/site.svelte';
   import { showToast } from '$lib/toast.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import ItemActions from '$lib/components/ItemActions.svelte';
@@ -85,6 +87,8 @@
     editing = !editing;
     if (editing && item) api.event('note_editor_opened', { itemId: item.id, existing: !!myNote, via: 'post' });
   }
+  // Signed out, the footer note names the site.
+  onMount(() => { if (!session.user) void loadSite(); });
 </script>
 
 {#if item}
@@ -117,7 +121,7 @@
     <footer>
       <ReadOnSiteLink {href} label={isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : undefined} onclick={outbound} />
       {#if !session.user}
-        <p class="note">Posts are read here by people with an account on this instance. <a href="/login">Sign in</a> to read it without leaving, or follow {source} to get what they publish next.</p>
+        <p class="note">People with an account on {site.status?.name ?? 'this site'} can read posts right here. <a href="/login">Log in</a> to read this one without leaving, or follow {source} to get what they publish next.</p>
       {/if}
     </footer>
 

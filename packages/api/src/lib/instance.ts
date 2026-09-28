@@ -51,9 +51,14 @@ export async function visitorCap(user: unknown): Promise<number | null> {
   return (await visitorsLimited()) ? VISITOR_CAP : null;
 }
 
+/** The name people see for this instance, as the admin set it. */
+export async function siteName(): Promise<string> {
+  return (await getSetting<string>("name")) ?? INSTANCE_NAME;
+}
+
 /** What the sign-up page needs to render itself. Public. */
 export async function publicStatus() {
-  return { name: (await getSetting<string>("name")) ?? INSTANCE_NAME, url: PUBLIC_URL, signups: await signupPolicy(), visitorLimit: await visitorsLimited() };
+  return { name: await siteName(), url: PUBLIC_URL, signups: await signupPolicy(), visitorLimit: await visitorsLimited() };
 }
 
 /** Self-healing: if nobody is admin, the oldest account is. Runs at boot and after the first sign-up. */
