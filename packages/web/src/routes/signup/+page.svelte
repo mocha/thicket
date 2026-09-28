@@ -35,7 +35,7 @@
       api.event('signed_up');
       // Back to whatever brought you here (someone's collection, say), else Everything.
       const next = page.url.searchParams.get('next');
-      await goto(next && next.startsWith('/') && !next.startsWith('//') ? next : '/', { replaceState: true });
+      await goto(next && next.startsWith('/') && !next.startsWith('//') ? next : '/everything', { replaceState: true });
     } catch (e) {
       error = e instanceof ApiError ? { message: e.message, field: e.field } : { message: e instanceof Error ? e.message : String(e) };
       // The policy changed while the form was open (say, to invite-only): catch up so the form matches.

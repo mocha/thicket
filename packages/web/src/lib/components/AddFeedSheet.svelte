@@ -90,7 +90,7 @@
   /** Closing from /add (the share target) has nothing underneath; go home. */
   function onclose() {
     closeAddFeed();
-    if (!landing && page.url.pathname === '/add') void goto('/', { replaceState: true });
+    if (!landing && page.url.pathname === '/add') void goto('/everything', { replaceState: true });
   }
 </script>
 

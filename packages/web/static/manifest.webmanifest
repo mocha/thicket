@@ -2,7 +2,7 @@
   "name": "thicket",
   "short_name": "thicket",
   "description": "A feed reader for the rewilded web",
-  "start_url": "/",
+  "start_url": "/everything",
   "display": "standalone",
   "background_color": "#f6f1e8",
   "theme_color": "#f6f1e8",
