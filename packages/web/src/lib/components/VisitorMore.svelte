@@ -10,7 +10,7 @@
   const next = $derived(encodeURIComponent(page.url.pathname + page.url.search));
 </script>
 
-<p class="more"><strong>But wait, there’s more!</strong> We only display the {cap} most recent items to visitors without an account. <a href="/login?next={next}">Log in</a> or <a href="/signup?next={next}">Create an account</a> to keep browsing.</p>
+<p class="more"><strong>But wait, there’s more!</strong> We only display the {cap} most recent items to visitors without an account. <a href="/login?next={next}">Log in</a> or <a href="/signup?next={next}">sign up</a> to keep browsing.</p>
 
 <style>
   .more { margin: var(--space-1) 0 0; padding: var(--space-4); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); text-align: center; }

@@ -118,8 +118,8 @@
       <div class="ways">
         <section>
           <h3>New here?</h3>
-          <p>Make an account on this thicket. You’ll land right back here, and the copy is one tap.</p>
-          <Button variant="primary" href="/signup?next={encodeURIComponent(page.url.pathname)}">Create an account</Button>
+          <p>Sign up for thicket. You’ll come right back here and can copy it straight away.</p>
+          <Button variant="primary" href="/signup?next={encodeURIComponent(page.url.pathname)}">Sign up</Button>
           <Button href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</Button>
         </section>
         <section>

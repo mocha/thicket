@@ -70,8 +70,8 @@ export function normalizeHandle(raw: string): string {
   return raw.trim().toLowerCase().replace(/^@/, "");
 }
 export function handleProblem(handle: string): string | null {
-  if (!HANDLE_RE.test(handle)) return "Handles are 2 to 30 characters: lowercase letters, numbers, - and _, starting with a letter or number.";
-  if (RESERVED.has(handle)) return "That handle is reserved.";
+  if (!HANDLE_RE.test(handle)) return "A handle needs 2 to 30 characters and must start with a letter or number. You can use lowercase letters, numbers, hyphens, and/or underscores.";
+  if (RESERVED.has(handle)) return "That handle is reserved for thicket itself. Try another one.";
   return null;
 }
 

@@ -71,7 +71,7 @@
     if (!instance) return;
     instance = { ...instance, ...(await adminApi.update({ signups })) };
     api.event('instance_signups_changed', { signups });
-    showToast(signups === 'open' ? 'Anyone can sign up' : signups === 'invite' ? 'Sign-ups need an invite' : 'Sign-ups closed');
+    showToast(signups === 'open' ? 'Anyone can sign up' : signups === 'invite' ? 'Sign ups need an invite' : 'Sign ups closed');
   }
   async function setVisitorLimit(visitorLimit: boolean) {
     if (!instance) return;
@@ -179,7 +179,7 @@
     </fieldset>
     <fieldset>
       <legend>What visitors without an account can read</legend>
-      <label class="radio"><input type="radio" name="visitors" checked={instance.visitorLimit} onchange={() => setVisitorLimit(true)} /><span><strong>The newest 100</strong><small>Feed pages, collections, and people’s notes, bookmarks and activity show their 100 most recent items, then ask visitors to log in or make an account.</small></span></label>
+      <label class="radio"><input type="radio" name="visitors" checked={instance.visitorLimit} onchange={() => setVisitorLimit(true)} /><span><strong>The newest 100</strong><small>Feed pages, collections, and people’s notes, bookmarks and activity show their 100 most recent items, then ask visitors to log in or sign up.</small></span></label>
       <label class="radio"><input type="radio" name="visitors" checked={!instance.visitorLimit} onchange={() => setVisitorLimit(false)} /><span><strong>Everything</strong><small>Visitors can scroll back as far as anyone signed in.</small></span></label>
     </fieldset>
   </section>

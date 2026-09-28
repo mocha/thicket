@@ -10,12 +10,13 @@ import {
   createSession, destroySession, destroyAllSessions, createUser, deleteUser, currentUser, findUserByHandle,
   handleProblem, hashPassword, normalizeHandle, verifyPassword, trackingEnabled,
 } from "../lib/auth.js";
-import { consumeInvite, findUsableInvite, publicStatus, signupPolicy } from "../lib/instance.js";
+import { consumeInvite, findUsableInvite, publicStatus, signupPolicy, siteName } from "../lib/instance.js";
 import { LIMITS, clear, clientKey, hit, tooMany } from "../lib/ratelimit.js";
 
 export const auth = new Hono();
 
 const MIN_PASSWORD = 8;
+const BAD_INVITE = "That invite code doesn’t work. It may have been mistyped or already used. Ask whoever invited you for a new invite link.";
 
 /** Everything the app needs about the signed-in user, including settings only they can see. */
 async function me(userId: number) {
@@ -34,23 +35,23 @@ auth.post("/signup", async (c) => {
   const body = await c.req.json<Body>().catch(() => ({} as Body));
   const addr = clientKey(c);
   const flood = hit(`signup:${addr}`, LIMITS.signupAddress);
-  if (!flood.ok) return tooMany(c, flood.retryAfterS, "Too many sign-ups from here.");
+  if (!flood.ok) return tooMany(c, flood.retryAfterS, "There have been too many sign ups from your internet connection.");
   const policy = await signupPolicy();
-  if (policy === "closed") return c.json({ error: "Sign-ups are closed on this instance." }, 403);
+  if (policy === "closed") return c.json({ error: `Sign ups are closed for ${await siteName()}.` }, 403);
   const invite = policy === "invite" ? await findUsableInvite((body.inviteCode ?? "").trim()) : null;
-  if (policy === "invite" && !invite) return c.json({ error: body.inviteCode ? "That invite isn’t valid any more." : "This instance is invite-only. Ask a member for an invite link.", field: "inviteCode" }, 403);
+  if (policy === "invite" && !invite) return c.json({ error: body.inviteCode ? BAD_INVITE : `You need an invite to sign up for ${await siteName()}. Ask someone who already has an account to send you an invite link. It will bring you back here.`, field: "inviteCode" }, 403);
   const handle = normalizeHandle(body.handle ?? "");
   const problem = handleProblem(handle);
   if (problem) return c.json({ error: problem, field: "handle" }, 400);
   if (!body.password || body.password.length < MIN_PASSWORD) return c.json({ error: `Use at least ${MIN_PASSWORD} characters.`, field: "password" }, 400);
-  if (await findUserByHandle(handle)) return c.json({ error: "That handle is taken.", field: "handle" }, 409);
+  if (await findUserByHandle(handle)) return c.json({ error: "Someone already has that handle. Try another one.", field: "handle" }, 409);
   const user = await createUser({ handle, password: body.password, displayName: body.displayName });
   // Claim the invite atomically. If two signups raced on the same code, only one
   // wins; the loser undoes its just-created account (no session exists yet) so an
   // invite can never yield two accounts.
   if (invite && !(await consumeInvite(invite.code, user.id))) {
     await deleteUser(user.id);
-    return c.json({ error: "That invite isn’t valid any more.", field: "inviteCode" }, 403);
+    return c.json({ error: BAD_INVITE, field: "inviteCode" }, 403);
   }
   await createSession(c, user.id);
   return c.json(await me(user.id), 201);

@@ -14,6 +14,7 @@
   import { onMount } from 'svelte';
   import { api, exploreApi, profilesApi, collectionHref, profileHref, type ExploreCollection } from '$lib/api';
   import { session } from '$lib/session.svelte';
+  import { site, loadSite } from '$lib/site.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { loadCollections } from '$lib/collections.svelte';
   import SourceIcon from './SourceIcon.svelte';
@@ -28,7 +29,13 @@
   let copied = $state<Set<number>>(new Set());
 
   onMount(() => {
-    exploreApi.featured().then((r) => { packs = r.collections.filter((c) => !c.isMine); from = r.from; }).catch(() => {});
+    exploreApi.featured().then((r) => {
+      packs = r.collections.filter((c) => !c.isMine);
+      from = r.from;
+      // Signed out, this is the landing page, which only ever says "thicket".
+      // Signed in, the credit line names this site.
+      if (r.from && session.user && !site.status) void loadSite();
+    }).catch(() => {});
   });
 
   async function copy(c: ExploreCollection) {
@@ -72,7 +79,7 @@
       {/each}
     </ul>
     {#if from}
-      <p class="from">These are <a href={profileHref(from)}>@{from}</a>’s collections — an ordinary account on this instance. Its page shows everything it reads, saves and notes, if you want a longer look before you pick.</p>
+      <p class="from">These are <a href={profileHref(from)}>@{from}</a>’s collections. @{from} is a regular account on {session.user ? (site.status?.name ?? 'this site') : 'thicket'}. Visit their page for a longer look at what they read, save, and note.</p>
     {/if}
   </section>
 {/if}
