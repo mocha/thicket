@@ -107,7 +107,7 @@
     color: var(--text-2);
     cursor: pointer;
     text-decoration: none;
-    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
   }
 
   /* Three circles: 24, 32 and 40px. */
@@ -118,7 +118,9 @@
   .plain:hover { background: var(--surface-2); color: var(--text); }
 
   .bordered { border: 1px solid var(--line); background: var(--surface); }
-  .bordered:hover { background: var(--surface-2); color: var(--text); }
+  /* Same hover as a bordered Button: it darkens, casts a shadow, and lifts a pixel. */
+  .bordered:hover { background: var(--surface-2); color: var(--text); box-shadow: var(--shadow); transform: translateY(-1px); }
+  .bordered:active { transform: translateY(0); box-shadow: none; }
 
   /* A toggle leans towards the accent color on hover, and stays there when on. */
   .toggle:hover { color: var(--accent); }
@@ -126,6 +128,9 @@
 
   /* The click area covers the container; the circle is drawn where it sits. */
   .stretch::after { content: ''; position: absolute; inset: 0; }
+  /* A moved button would shrink its click area back to the circle mid-hover,
+     so a stretched one keeps the shadow but doesn't lift. */
+  .stretch:hover { transform: none; }
 
   .ib:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 

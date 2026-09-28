@@ -28,10 +28,10 @@
 
 <svelte:window onkeydown={keys} />
 
-<div class="turn prev" class:off={!canPrev} style:top style:bottom>
+<div class="turn prev" style:top style:bottom>
   <IconButton icon="caret" dir="left" variant="bordered" stretch disabled={!canPrev} onclick={onprev} label="Previous {label}" />
 </div>
-<div class="turn next" class:off={!canNext} style:top style:bottom>
+<div class="turn next" style:top style:bottom>
   <IconButton icon="caret" dir="right" variant="bordered" stretch disabled={!canNext} onclick={onnext} label="Next {label}" />
 </div>
 
@@ -43,5 +43,4 @@
   }
   .prev { left: 0; border-right: 1px solid var(--line); }
   .next { right: 0; border-left: 1px solid var(--line); }
-  .turn:not(.off):hover { background: color-mix(in srgb, var(--surface-2) 80%, transparent); }
 </style>
