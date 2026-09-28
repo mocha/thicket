@@ -142,5 +142,6 @@
     .go { margin-top: 2px; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .go:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .note { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
+  /* Body size in primary ink, centered: a line from thicket, not a field's help text. */
+  .note { margin: var(--space-4) 0 0; text-align: center; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text); line-height: 1.4; }
 </style>
