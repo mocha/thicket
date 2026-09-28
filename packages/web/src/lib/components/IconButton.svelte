@@ -118,8 +118,10 @@
   .plain:hover { background: var(--surface-2); color: var(--text); }
 
   .bordered { border: 1px solid var(--line); background: var(--surface); }
-  /* Same hover as a bordered Button: it darkens, casts a shadow, and lifts a pixel. */
-  .bordered:hover { background: var(--surface-2); color: var(--text); box-shadow: var(--shadow); transform: translateY(-1px); }
+  /* On hover the circle stays white while the outline and glyph darken, and it
+     casts a shadow and lifts a pixel. A darker fill would sink it into the
+     page, which is nearly the same color. */
+  .bordered:hover { border-color: var(--text-2); color: var(--text); box-shadow: var(--shadow); transform: translateY(-1px); }
   .bordered:active { transform: translateY(0); box-shadow: none; }
 
   /* A toggle leans towards the accent color on hover, and stays there when on. */
