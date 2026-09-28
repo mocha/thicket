@@ -54,10 +54,10 @@
   const canSubmit = $derived(handleOk && password.length >= 8 && (!needsInvite || inviteCode.trim().length > 0));
 </script>
 
-<svelte:head><title>Sign up · {status?.name ?? 'thicket'}</title></svelte:head>
+<svelte:head><title>Sign up · thicket</title></svelte:head>
 
 <section class="auth">
-  <h1>Sign up{#if status?.name}{" for "}{status.name}{/if}</h1>
+  <h1>Sign up for thicket</h1>
   <p class="lede">All you need is a handle and a password. You can start following feeds right away.</p>
   {#if !status}
     <p class="lede">Loading…</p>

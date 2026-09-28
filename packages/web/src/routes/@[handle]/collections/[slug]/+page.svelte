@@ -5,7 +5,6 @@
   import { api, collectionHref, feedHref, manageCollectionHref, profileHref, profilesApi, type PublicCollection } from '$lib/api';
   import { openAddFeed } from '$lib/addfeed.svelte';
   import { session } from '$lib/session.svelte';
-  import { site, loadSite } from '$lib/site.svelte';
   import { loadCollections } from '$lib/collections.svelte';
   import { feedOrigin, hostOf, relativeTime } from '$lib/time';
   import { feedListName } from '$lib/feedname';
@@ -52,11 +51,7 @@
     col = null; error = null; justCopied = null;
     profilesApi.collection(handle, slug).then((c) => { col = c; showFeeds = !c.isMe && c.feeds.length <= 8; }).catch((e) => (error = e instanceof Error ? e.message : String(e)));
   });
-  onMount(() => {
-    api.event('public_collection_view', { handle, slug });
-    // Signed out, the copy Sheet names the site.
-    if (!session.user) void loadSite();
-  });
+  onMount(() => api.event('public_collection_view', { handle, slug }));
 
   async function copy() {
     if (!col || copying) return;
@@ -123,7 +118,7 @@
       <div class="ways">
         <section>
           <h3>New here?</h3>
-          <p>Sign up for {site.status?.name ?? 'this site'}. You’ll come right back here and can copy it straight away.</p>
+          <p>Sign up for thicket. You’ll come right back here and can copy it straight away.</p>
           <Button variant="primary" href="/signup?next={encodeURIComponent(page.url.pathname)}">Sign up</Button>
           <Button href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</Button>
         </section>
