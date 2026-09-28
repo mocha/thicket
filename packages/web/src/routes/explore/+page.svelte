@@ -631,11 +631,12 @@
   .browse .filters { margin: 0; padding: var(--space-3) var(--space-3) var(--space-1); }
   .browse .list { background: none; box-shadow: none; border-radius: 0; }
   li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3); border-top: 1px solid var(--line); flex-wrap: wrap; }
-  /* On a phone the Follow control would squeeze the description into a column
-     four words wide, so it drops to its own line and the text gets the row. */
+  /* On a phone a row's button would squeeze the description into a column
+     four words wide, so it drops to its own line and the text gets the row.
+     Every kind of row keeps that button at the right, so they all line up. */
   @media (max-width: 560px) {
     li > :global(.row) { flex-basis: 100%; }
-    li > :global(.split) { margin-left: auto; }
+    li > :global(.split), li > .follow, li > .save { margin-left: auto; }
   }
   li:first-child { border-top: 0; }
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
