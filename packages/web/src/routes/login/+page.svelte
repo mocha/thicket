@@ -20,7 +20,7 @@
     busy = true; error = null;
     try {
       setMe(await authApi.login(handle, password));
-      await goto(page.url.searchParams.get('next') || '/', { replaceState: true });
+      await goto(page.url.searchParams.get('next') || '/everything', { replaceState: true });
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {

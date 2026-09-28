@@ -39,7 +39,7 @@
 
   const source = $derived(item ? (item.feedTitle ?? hostOf(item.siteUrl ?? item.url)) : '');
   const href = $derived(webHref(item?.url) ?? webHref(item?.siteUrl) ?? '#');
-  const backHref = $derived(item ? feedHref({ id: item.feedId, slug: item.feedSlug }) : '/');
+  const backHref = $derived(item ? feedHref({ id: item.feedId, slug: item.feedSlug }) : '/everything');
   const isVideo = $derived(/(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/.test(hostOf(href)));
 
   async function load() {

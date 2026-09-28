@@ -4,12 +4,13 @@
    * thicket's own landing page (not meant for self-hosted instances); the
    * dedicated /login and /signup pages still exist for links and invites.
    * Sign-up follows the instance policy: open shows the form, invite-only
-   * asks for the code, closed offers only log in.
+   * asks for the code, closed offers only log in. Someone already signed in
+   * gets the same box with who they are and the way into the app instead.
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { api, authApi, ApiError } from '$lib/api';
-  import { setMe } from '$lib/session.svelte';
+  import { session, setMe } from '$lib/session.svelte';
   import { site, loadSite, HANDLE_RULES } from '$lib/site.svelte';
   import Tabs from './Tabs.svelte';
   import Field from './Field.svelte';
@@ -53,7 +54,7 @@
       } else {
         setMe(await authApi.login(handleClean, password));
       }
-      await goto('/', { replaceState: true });
+      await goto('/everything', { replaceState: true });
     } catch (e) {
       error = e instanceof ApiError ? { message: e.message, field: e.field } : { message: e instanceof Error ? e.message : String(e) };
       // The policy changed while the form was open (say, to invite-only): catch up so the form matches.
@@ -68,6 +69,10 @@
 </script>
 
 <div class="box">
+  {#if session.user}
+    <p class="who">You’re logged in as @{session.user.handle}.</p>
+    <a class="go" href="/everything">Open thicket <span aria-hidden="true">→</span></a>
+  {:else}
   <Tabs
     class="tabs"
     tabs={TABS}
@@ -132,6 +137,7 @@
       {/if}
     {/if}
   </div>
+  {/if}
 </div>
 
 <style>
@@ -140,6 +146,8 @@
   form { display: flex; flex-direction: column; gap: var(--space-5); }
   /* 2px is an optical nudge that lifts the button off the last field. */
     .go { margin-top: 2px; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
+  a.go { display: block; text-align: center; }
+  .who { margin: 0 0 var(--space-4); text-align: center; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text); }
   .go:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   /* Body size in primary ink, centered: a line from thicket, not a field's help text. */

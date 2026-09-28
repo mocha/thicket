@@ -62,7 +62,7 @@
     starterCandidates = f.candidates; starter = f.handle;
   }
   onMount(() => {
-    if (!session.user?.isAdmin) return void goto('/', { replaceState: true });
+    if (!session.user?.isAdmin) return void goto('/everything', { replaceState: true });
     api.event('admin_view');
     void load();
   });

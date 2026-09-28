@@ -35,11 +35,14 @@
    * renders straight away rather than waiting on who's signed in.
    */
   const bare = $derived(path === '/design-system');
+  /** The landing page looks the same to everyone; being signed in doesn't wrap it in the app. */
+  const front = $derived(path === '/');
+  const inApp = $derived(signedIn && !front);
 
   $effect(() => {
     if (!session.loaded) return;
     if (!signedIn && !isPublic) void goto(`/login?next=${encodeURIComponent(path + page.url.search)}`, { replaceState: true });
-    else if (signedIn && (path === '/login' || path === '/signup')) void goto(page.url.searchParams.get('next') || '/', { replaceState: true });
+    else if (signedIn && (path === '/login' || path === '/signup')) void goto(page.url.searchParams.get('next') || '/everything', { replaceState: true });
   });
   const show = $derived(session.loaded && (signedIn || isPublic));
 
@@ -52,18 +55,18 @@
 {#if bare}
   <main class="bare">{@render children()}</main>
 {:else}
-  {#if signedIn}
+  {#if inApp}
     <Nav />
   {:else if session.loaded}
-    <header class="anon" class:home={path === '/'}>
+    <header class="anon" class:home={front}>
       <a class="brand" href="/"><img src="/icon.svg" alt="" width="24" height="24" /><span>thicket</span></a>
-      {#if path !== '/login' && path !== '/signup' && path !== '/'}
+      {#if !signedIn && path !== '/login' && path !== '/signup' && !front}
         <span class="auth"><Button href="/login?next={encodeURIComponent(path)}">Log in</Button><Button variant="primary" href="/signup?next={encodeURIComponent(path)}">Sign up</Button></span>
       {/if}
     </header>
   {/if}
 
-  <main class:anon={!signedIn} class:home={!signedIn && path === '/'} class:paged={display.layout === 'paged'}>
+  <main class:anon={!inApp} class:home={front} class:paged={inApp && display.layout === 'paged'}>
     {#if show}{@render children()}
     {:else if session.unreachable}
       <div class="unreachable" role="status">
@@ -72,8 +75,8 @@
       </div>
     {/if}
   </main>
-  {#if signedIn && addFeed.open}<AddFeedSheet />{/if}
-  {#if signedIn}<Reader /><Configurator />{/if}
+  {#if inApp && addFeed.open}<AddFeedSheet />{/if}
+  {#if inApp}<Reader /><Configurator />{/if}
 {/if}
 <Toast />
 
