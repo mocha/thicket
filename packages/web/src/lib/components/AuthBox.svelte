@@ -128,7 +128,7 @@
       <!-- This box is thicket's own marketing: sign ups there are always open, so it
            carries no notes about invites or closed sign ups, and no instance name. -->
       {#if mode === 'signup'}
-        <p class="note">All you need is a handle and a password.</p>
+        <p class="note">All you need is<br />a handle and a password.</p>
       {/if}
     {/if}
   </div>
