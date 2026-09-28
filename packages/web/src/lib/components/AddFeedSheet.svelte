@@ -35,7 +35,9 @@
     outcome && 'error' in outcome
       ? `Couldn’t reach that: ${outcome.error}`
       : outcome?.status === 'none'
-        ? `No feed found at ${hostOf(outcome.pageUrl)}. Try the site’s blog or news section.`
+        // Some big sites (CNN, for one) have quietly stopped publishing feeds,
+        // so say that can happen instead of implying the address was wrong.
+        ? `We couldn’t find a feed at ${hostOf(outcome.pageUrl)}. Not every site publishes one. If it has a blog or news page, try that page’s address.`
         : null
   );
 
@@ -93,7 +95,11 @@
 </script>
 
 <Sheet title="Add a feed" bind:dialog {onclose}>
-  <form id="add-feed" class="form" onsubmit={(e) => { e.preventDefault(); void submit(); }}>
+  <!-- novalidate: the browser's own URL check rejects "example.com" (it wants
+       https:// in front), yet that is how people type an address and what the
+       box suggests. The server adds https:// itself, and says so under the box
+       if there's really nothing there. -->
+  <form id="add-feed" class="form" novalidate onsubmit={(e) => { e.preventDefault(); void submit(); }}>
     <p class="lede">Enter the address of a site, blog, subreddit, or YouTube channel or video, and thicket finds the feed for you. You can also enter the feed itself.</p>
     <Field label="Address" hideLabel error={urlError}>
       {#snippet children({ id, describedBy, invalid })}
