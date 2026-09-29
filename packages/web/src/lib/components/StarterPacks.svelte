@@ -14,10 +14,11 @@
   import { onMount } from 'svelte';
   import { api, exploreApi, profilesApi, collectionHref, profileHref, type ExploreCollection } from '$lib/api';
   import { session } from '$lib/session.svelte';
-  import { site, loadSite } from '$lib/site.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { loadCollections } from '$lib/collections.svelte';
   import SourceIcon from './SourceIcon.svelte';
+  import Card from './Card.svelte';
+  import Button from './Button.svelte';
 
   let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false }:
     { heading?: string; lede?: string; compact?: boolean } = $props();
@@ -32,9 +33,6 @@
     exploreApi.featured().then((r) => {
       packs = r.collections.filter((c) => !c.isMine);
       from = r.from;
-      // Signed out, this is the landing page, which only ever says "thicket".
-      // Signed in, the credit line names this site.
-      if (r.from && session.user && !site.status) void loadSite();
     }).catch(() => {});
   });
 
@@ -44,9 +42,10 @@
     try {
       await profilesApi.copyCollection(c.handle, c.slug);
       copied = new Set([...copied, c.id]);
-      await loadCollections();
+      // Forced: the sidebar's list is already loaded, and without it the new collection wouldn't show until a reload.
+      await loadCollections(true);
       api.event('starter_pack_copied', { collectionId: c.id });
-      showToast(`${c.name} is yours. You’ll see its posts along with everything else you follow.`);
+      showToast(`${c.name} is now in your collections.`);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'That didn’t work. Try again in a moment.');
     } finally {
@@ -61,25 +60,32 @@
     {#if lede}<p class="lede">{lede}</p>{/if}
     <ul>
       {#each packs as c (c.id)}
-        <li>
-          <a class="card" href={collectionHref(c.handle, c.slug)}>
-            <div class="icons">
-              {#each c.sample as f (f.id)}<SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title} size={26} />{/each}
-            </div>
-            <div class="name">{c.name}</div>
-            <div class="meta">{c.feedCount} {c.feedCount === 1 ? 'site' : 'sites'}{#if !from} · by {c.displayName ?? `@${c.handle}`}{/if}</div>
-            {#if c.description}<div class="desc">{c.description}</div>{/if}
-          </a>
+        <Card as="li" class="pack">
+          <!-- Laid out like an article card: a small line on top (here, the
+               sites inside and how many), then the title, then
+               the summary. -->
+          <div class="meta">
+            <span class="icons" aria-hidden="true">
+              {#each c.sample as f (f.id)}<SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title} size={20} />{/each}
+            </span>
+            <span class="count">{c.feedCount} {c.feedCount === 1 ? 'site' : 'sites'}{#if !from}{' · '}{c.displayName ?? `@${c.handle}`}{/if}</span>
+          </div>
+          <!-- The name is the link, stretched over the whole card, so the card
+               still opens the collection while the button below stays its own control. -->
+          <h3 class="card-title"><a class="name" href={collectionHref(c.handle, c.slug)}>{c.name}</a></h3>
+          {#if c.description}<p class="card-summary">{c.description}</p>{/if}
           {#if session.user}
-            <button type="button" class="take" disabled={copying === c.id || copied.has(c.id)} onclick={() => void copy(c)}>
-              {#if copied.has(c.id)}Added{:else if copying === c.id}Copying…{:else}Copy to my collections{/if}
-            </button>
+            <div class="take">
+              <Button variant="secondary" size="sm" loading={copying === c.id} disabled={copied.has(c.id)} onclick={() => void copy(c)}>
+                {#if copied.has(c.id)}Added{:else if copying === c.id}Copying…{:else}<span aria-hidden="true">+</span> Copy to my collections{/if}
+              </Button>
+            </div>
           {/if}
-        </li>
+        </Card>
       {/each}
     </ul>
     {#if from}
-      <p class="from">These are <a href={profileHref(from)}>@{from}</a>’s collections. @{from} is a regular account on {session.user ? (site.status?.name ?? 'this site') : 'thicket'}. Visit their page for a longer look at what they read, save, and note.</p>
+      <p class="from">These are <a href={profileHref(from)}>@{from}</a>’s collections.</p>
     {/if}
   </section>
 {/if}
@@ -87,23 +93,41 @@
 <style>
   .packs { margin: 0; }
   h2 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-1); }
+  /* With no lede, the heading needs its own room above the cards. */
+  h2 + ul { margin-top: var(--space-4); }
   .lede { margin: 0 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); max-width: 60ch; }
-  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
-  li { display: flex; flex-direction: column; }
-  .card { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-4); flex: 1; }
-  .card:hover { border-color: var(--accent); }
-  .icons { display: flex; gap: var(--space-1); margin-bottom: var(--space-2); min-height: 26px; }
-  .name { font-weight: 700; font-size: calc(var(--text-base) * var(--size-app)); }
-  /* 2px is an optical nudge under the name, not a spacing step. */
-  .meta { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: 2px; }
-  .desc { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: var(--space-2); }
-  .take { margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .take:hover:not(:disabled) { border-color: var(--accent); }
-  .take:disabled { opacity: 0.55; color: var(--text-3); }
+  /* As many columns as fit, with every card wide enough for its button's
+     label and its small line of icons, count, and name. Counted from the space
+     the list really has, not the window, so the sidebar can't squeeze three
+     cards into room for two. */
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(17rem * var(--size-app))), 1fr)); }
+  ul :global(.pack) { display: flex; flex-direction: column; }
+  /* Pressing the button presses the button, not the card: the card's own
+     press shrink is for opening the collection. */
+  ul :global(.pack:has(.take:active)) { transform: none; }
+  /* The same small line an article card opens with: 14px, secondary ink. */
+  .meta { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  /* Side by side, not stacked: site icons are rounded squares, and overlapping
+     them clips their letters. */
+  .icons { display: flex; flex: none; gap: var(--space-1); }
+  /* One line, like an article card's: a long name trails off rather than wrapping. */
+  .count { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Written as "after the small line" so it outranks the shared card title's own zero margin. */
+  .meta + .card-title { margin-top: var(--space-2); }
+  .name { color: inherit; text-decoration: none; }
+  /* The article card's cue that the card opens something: the title underlines
+     softly while the pointer is anywhere on the card but the button. */
+  @media (hover: hover) { .name:hover { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
+  .name::after { content: ''; position: absolute; inset: 0; }
+  .name:focus-visible { outline: none; }
+  ul :global(.pack:has(.name:focus-visible)) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* Pinned to the bottom so the buttons line up across a row of uneven cards,
+     and lifted above the stretched link so a tap lands on the button. */
+  .take { margin-top: auto; padding-top: var(--space-3); position: relative; z-index: 1; }
   .from { margin: var(--space-4) 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; max-width: 62ch; }
   .from a { color: var(--accent); font-weight: 600; }
   .compact h2 { font-size: calc(var(--text-xl) * var(--size-app)); }
-  .compact .desc { display: none; }
-  @media (min-width: 700px) { ul { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 1100px) { ul { grid-template-columns: repeat(3, 1fr); } .compact ul { grid-template-columns: repeat(2, 1fr); } }
+  .compact .card-summary { display: none; }
+  .compact ul { grid-template-columns: 1fr; }
+  @media (min-width: 700px) { .compact ul { grid-template-columns: repeat(2, 1fr); } }
 </style>

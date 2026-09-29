@@ -2,12 +2,12 @@
   import type { Snippet } from 'svelte';
 
   /**
-   * The one button. Renders a <button>, or an <a> when given href. Three looks
-   * (primary / ghost / danger) and two sizes, all built on the shared spacing,
+   * The one button. Renders a <button>, or an <a> when given href. Four looks
+   * (primary / secondary / ghost / danger) and three sizes, all built on the shared spacing,
    * type, and color tokens so every button in the app matches by default.
    */
   interface Props {
-    variant?: 'primary' | 'ghost' | 'danger';
+    variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
     size?: 'sm' | 'md' | 'lg';
     solid?: boolean;
     href?: string;
@@ -104,6 +104,19 @@
     background: color-mix(in srgb, var(--accent) 84%, #000);
     border-color: color-mix(in srgb, var(--accent) 84%, #000);
     color: var(--accent-ink);
+  }
+
+  /* Secondary: the same move as primary, turned down, for when a screen offers
+     it more than once (one per card) and a row of solid fills would shout.
+     A pale wash of the accent; hover keeps the wash and lifts like the rest. */
+  .btn.secondary {
+    background: var(--accent-soft);
+    color: var(--accent-soft-ink);
+    border-color: var(--accent-soft-line, var(--accent-soft));
+  }
+  .btn.secondary:hover {
+    background: var(--accent-soft);
+    color: var(--accent-soft-ink);
   }
 
   .btn.danger {

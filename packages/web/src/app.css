@@ -40,6 +40,18 @@
   --d-line: #322d22;
   --d-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
 
+  /* The secondary button: a pale wash of the accent, lettered in the accent.
+     Worked out from each theme's own accent and card color, so every theme
+     gets one without naming it. A theme whose card and accent sit close
+     together (the soft ones) turns the wash up with --*-soft-mix, and then
+     needs its own, deeper lettering to keep reading on it. */
+  --l-soft-mix: 12%;
+  --d-soft-mix: 12%;
+  --l-accent-soft: color-mix(in srgb, var(--l-accent) var(--l-soft-mix), var(--l-surface));
+  --l-accent-soft-ink: var(--l-accent);
+  --d-accent-soft: color-mix(in srgb, var(--d-accent) var(--d-soft-mix), var(--d-surface));
+  --d-accent-soft-ink: var(--d-accent);
+
   /* Three more colors that every theme sets for itself, alongside the ones above:
 
      --danger-ink  the lettering on a filled red button. White reads on the
@@ -47,6 +59,9 @@
                    the lettering has to go near-black instead.
      --amber       the warning color: caution notices and the "posted again"
                    strip on a card.
+     --accent-soft / --accent-soft-ink  the secondary button's fill and
+                   lettering. Derived from the accent (see above); Crisp
+                   adds an accent outline, and Black and white has no wash.
      --toast-accent the action word in a toast. A toast is an inverted chip —
                    dark card on a light page, light card on a dark page — so
                    its action word borrows the *other* half's accent, which is
@@ -59,6 +74,8 @@
   --text-3: var(--l-text-3);
   --accent: var(--l-accent);
   --accent-ink: var(--l-accent-ink);
+  --accent-soft: var(--l-accent-soft);
+  --accent-soft-ink: var(--l-accent-soft-ink);
   --danger: var(--l-danger);
   --danger-ink: var(--l-danger-ink);
   --amber: var(--l-amber);
@@ -104,17 +121,20 @@
   --space-6: 32px;
 
   /* Type scale: one ladder of named interface sizes. Every size in the app is
-     one of these seven. Multiply by the reader's role scale at the point of
+     one of these eight. Multiply by the reader's role scale at the point of
      use, e.g. calc(var(--text-sm) * var(--size-app)), so text resizing keeps
      working exactly as before. --text-reading is the article body's own size
      and is always multiplied by --size-reading. --text-lg is the card title:
-     bigger than body text, smaller than a page heading. */
+     bigger than body text, smaller than a page heading. --text-3xl is the
+     welcome headline on an empty screen, the one line meant to be seen from
+     across the room; everyday page titles stay --text-2xl. */
   --text-xs: 12px;
   --text-sm: 14px;
   --text-base: 16px;
   --text-lg: 20px;
   --text-xl: 21px;
   --text-2xl: 26px;
+  --text-3xl: 36px;
   --text-reading: 17px;
 
   /* The three faces on offer, and the three roles they can fill. Which face
@@ -152,6 +172,8 @@
     --text-3: var(--d-text-3);
     --accent: var(--d-accent);
     --accent-ink: var(--d-accent-ink);
+    --accent-soft: var(--d-accent-soft);
+    --accent-soft-ink: var(--d-accent-soft-ink);
     --danger: var(--d-danger);
     --danger-ink: var(--d-danger-ink);
     --amber: var(--d-amber);
@@ -170,6 +192,8 @@
   --text-3: var(--d-text-3);
   --accent: var(--d-accent);
   --accent-ink: var(--d-accent-ink);
+  --accent-soft: var(--d-accent-soft);
+  --accent-soft-ink: var(--d-accent-soft-ink);
   --danger: var(--d-danger);
   --danger-ink: var(--d-danger-ink);
   --amber: var(--d-amber);
@@ -181,8 +205,9 @@
 :root[data-theme='light'] { color-scheme: light; }
 
 /* Colour themes. Four beside the default: a neutral gray (slate), a vivid
-   warm (ember), and two soft low-contrast ones (parchment warm, plum cool),
-   then two hard-edged ones. Readers see them by what they are for (Neutral,
+   warm (ember: orange, not red, so its buttons never read as danger), and
+   two soft low-contrast ones (parchment warm, plum cool), then two
+   hard-edged ones. Readers see them by what they are for (Neutral,
    Vivid, Soft sepia, Soft plum, Crisp); the ids are older. The thicket logo
    stays dark green on every theme, so no theme's accent may fight it: that
    is why the vivid blue went, and why the three grays became one. Every
@@ -202,17 +227,19 @@
   --l-accent: #7a3d68; --l-accent-ink: #faf3f7; --l-danger: #9a3434; --l-line: #d6c8d1;
   /* Soft like parchment, so it names its toast action color outright too. */
   --l-danger-ink: #ffffff; --l-amber: #86621e; --l-toast-accent: #e7c3dc;
+  --l-soft-mix: 25%; --l-accent-soft-ink: #632f54;
   --l-shadow: 0 1px 2px rgba(50, 20, 40, 0.05), 0 6px 20px -12px rgba(50, 20, 40, 0.2);
   --d-bg: #231c21; --d-surface: #2b2328; --d-surface-2: #342b31; --d-text: #d4c6cf; --d-text-2: #ab9ca6; --d-text-3: #8c7d87;
   --d-accent: #c894b8; --d-accent-ink: #22121d; --d-danger: #d88080; --d-line: #3d333a;
   --d-danger-ink: #2a0f0a; --d-amber: #c9a266; --d-toast-accent: #5c2a4d;
+  --d-soft-mix: 25%; --d-accent-soft-ink: #dcb0cf;
 }
 :root[data-palette='ember'] {
   --l-bg: #fbf4ec; --l-surface: #fffaf4; --l-surface-2: #f3e6d6; --l-text: #23170f; --l-text-2: #5f4d3a; --l-text-3: #8a7761;
-  --l-accent: #b53802; --l-accent-ink: #fff7ef; --l-danger: #9f1d1d; --l-line: #e8d9c6;
+  --l-accent: #a05100; --l-accent-ink: #fff7ef; --l-danger: #9f1d1d; --l-line: #e8d9c6;
   --l-danger-ink: #ffffff; --l-amber: #9a7605; --l-toast-accent: var(--d-accent);
   --d-bg: #1a120c; --d-surface: #241a12; --d-surface-2: #30241a; --d-text: #f4e9dc; --d-text-2: #c0ad96; --d-text-3: #8c7a63;
-  --d-accent: #ff8a4c; --d-accent-ink: #1f0f05; --d-danger: #ff7a6b; --d-line: #3a2c20;
+  --d-accent: #ffa24a; --d-accent-ink: #1f0f05; --d-danger: #ff7a6b; --d-line: #3a2c20;
   --d-danger-ink: #2a0f0a; --d-amber: #f0bb5a; --d-toast-accent: var(--l-accent);
 }
 :root[data-palette='parchment'] {
@@ -221,12 +248,14 @@
   /* Parchment's own accents are too close in lightness to its text to read on
      an inverted toast, so this theme names the toast's action color outright. */
   --l-danger-ink: #ffffff; --l-amber: #8a5f22; --l-toast-accent: #dfcba8;
+  --l-soft-mix: 25%; --l-accent-soft-ink: #5e3f24;
   --l-shadow: 0 1px 2px rgba(60, 40, 10, 0.05), 0 6px 20px -12px rgba(60, 40, 10, 0.2);
   --d-bg: #26211a; --d-surface: #2d2820; --d-surface-2: #363027; --d-text: #cfc2ad; --d-text-2: #a89b86; --d-text-3: #8a7d68;
   --d-accent: #c59f70; --d-accent-ink: #211a10; --d-danger: #d0806c; --d-line: #3e372c;
   --d-danger-ink: #2a0f0a; --d-amber: #c9a266; --d-toast-accent: #5a3a18;
+  --d-soft-mix: 25%; --d-accent-soft-ink: #dcbb8f;
 }
-/* Crisp (high contrast): no tints, no shadows, rules drawn in ink. Accent is one of four
+/* Crisp (high contrast): no tints but the secondary button's wash, no shadows, rules drawn in ink. Accent is one of four
    colour-blind-safe hues (Okabe–Ito, darkened to pass on white). */
 :root[data-palette='contrast'] {
   --l-bg: #ffffff; --l-surface: #ffffff; --l-surface-2: #f2f2f2; --l-text: #000000; --l-text-2: #000000; --l-text-3: #2b2b2b;
@@ -250,6 +279,12 @@
 }
 /* Cards on the two hard-edged palettes are outlined, since there is no shadow or tint to separate them from the page. */
 :root[data-palette='contrast'], :root[data-palette='mono'] { --card-border: 1px solid var(--line); }
+/* Crisp's secondary button keeps the wash but draws its edge in the accent,
+   like every other rule on that theme. 16% is as deep as the light wash can
+   go before the orange accent stops reading on it. Black and white has no
+   wash at all: the card color, outlined. */
+:root[data-palette='contrast'] { --l-soft-mix: 16%; --d-soft-mix: 20%; --accent-soft-line: var(--accent); }
+:root[data-palette='mono'] { --l-accent-soft: var(--l-surface); --d-accent-soft: var(--d-surface); --accent-soft-line: var(--accent); }
 
 /* Literata, the serif, also served from here: a reading face made for screens
    (Google Play Books' own), SIL Open Font Licence, licence alongside in /fonts.
