@@ -64,12 +64,15 @@ pnpm passwd <handle> <new password> [--rename <new handle>]
 
 Sign-up policy is set by the admin in Settings; `SIGNUPS` in `.env` only seeds a fresh instance.
 
+To test email (confirmation and password reset), see [docs/testing.md](docs/testing.md).
+
 ## Layout
 
 ```
 packages/api   Hono + Drizzle + Postgres. Feed fetching, parsing, scheduling, HTTP API.
 packages/web   SvelteKit PWA (Svelte 5 runes). Talks only to /api.
 docs/DEPLOY.md Running an instance: Compose, reverse proxies, hosted platforms.
+docs/testing.md Testing in dev, including email.
 ```
 
 The **design system** — the colors, type, spacing, and components the web app

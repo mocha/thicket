@@ -161,12 +161,12 @@ export function trackingEnabled(): boolean {
  * feed; "My first collection" is an ordinary collection from the moment it
  * exists — rename it, delete it once there is another, share it.
  */
-export async function createUser(input: { handle: string; password: string; displayName?: string | null }) {
+export async function createUser(input: { handle: string; password: string; displayName?: string | null; email?: string | null }) {
   const passwordHash = await hashPassword(input.password);
   return db.transaction(async (tx) => {
     // First account on the instance is the admin.
     const [{ n }] = (await tx.execute<{ n: number }>(sql`select count(*)::int as n from users`)).rows;
-    const [user] = await tx.insert(schema.users).values({ handle: input.handle, passwordHash, displayName: input.displayName?.trim() || null, isAdmin: n === 0 }).returning();
+    const [user] = await tx.insert(schema.users).values({ handle: input.handle, passwordHash, displayName: input.displayName?.trim() || null, email: input.email ?? null, isAdmin: n === 0 }).returning();
     const [root] = await tx.insert(schema.collections).values({ userId: user.id, parentId: null, name: "All collections", slug: ROOT_SLUG }).returning();
     await tx.insert(schema.collections).values({ userId: user.id, parentId: root.id, name: FIRST_COLLECTION_NAME, slug: FIRST_COLLECTION_SLUG });
     return user;

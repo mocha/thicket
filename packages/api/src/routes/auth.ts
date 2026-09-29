@@ -1,22 +1,30 @@
 /**
  * Sign up, log in, log out, and "me": the signed-in user's own profile and
  * settings. Public profile reads are in routes/profiles.ts.
+ *
+ * Account email and password reset are readthicket.com only (HOSTED); on a
+ * self-hosted copy those routes answer 404, and sign up never asks for email.
  */
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { isShareLevel, type ShareLevel } from "../lib/visibility.js";
-import { eq } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import {
   createSession, destroySession, destroyAllSessions, createUser, deleteUser, currentUser, findUserByHandle,
   handleProblem, hashPassword, normalizeHandle, verifyPassword, trackingEnabled,
 } from "../lib/auth.js";
+import { HOSTED } from "../lib/config.js";
 import { consumeInvite, findUsableInvite, publicStatus, signupPolicy, siteName } from "../lib/instance.js";
+import { cleanEmail, looksLikeEmail, messages, send } from "../lib/mail.js";
+import { issueToken, pendingEmail, takeToken } from "../lib/email-tokens.js";
 import { LIMITS, clear, clientKey, hit, tooMany } from "../lib/ratelimit.js";
 
 export const auth = new Hono();
 
 const MIN_PASSWORD = 8;
 const BAD_INVITE = "That invite code doesn’t work. It may have been mistyped or already used. Ask whoever invited you for a new invite link.";
+const BAD_EMAIL = "That doesn’t look like an email address.";
+const NOT_SENT = "We saved your email, but the confirmation didn’t send. Try Resend link in a few minutes.";
 
 /** Everything the app needs about the signed-in user, including settings only they can see. */
 async function me(userId: number) {
@@ -24,14 +32,34 @@ async function me(userId: number) {
   if (!u) return null;
   const [avatar] = await db.select({ updatedAt: schema.userAvatars.updatedAt }).from(schema.userAvatars).where(eq(schema.userAvatars.userId, userId));
   const { passwordHash, ...rest } = u;
-  return { ...rest, hasPassword: !!passwordHash, createdAt: u.createdAt.toISOString(), claimVerifiedAt: u.claimVerifiedAt?.toISOString() ?? null, avatarUpdatedAt: avatar?.updatedAt.toISOString() ?? null, instanceTracking: trackingEnabled() };
+  return {
+    ...rest, hasPassword: !!passwordHash, createdAt: u.createdAt.toISOString(), claimVerifiedAt: u.claimVerifiedAt?.toISOString() ?? null,
+    emailConfirmedAt: u.emailConfirmedAt?.toISOString() ?? null, pendingEmail: await pendingEmail(u.id, u.emailConfirmedAt ? u.email : null),
+    avatarUpdatedAt: avatar?.updatedAt.toISOString() ?? null, instanceTracking: trackingEnabled(),
+  };
+}
+
+/** Email routes exist only on readthicket.com. */
+const hostedOnly = (c: Context) => (HOSTED ? null : c.json({ error: "not found" }, 404));
+
+/** Send a confirmation link for `email`. False if the mail didn't go out (already logged). */
+async function sendConfirm(user: { id: number; handle: string }, email: string): Promise<boolean> {
+  const token = await issueToken(user.id, "confirm", email);
+  return send({ to: email, ...messages.confirm(user.handle, token) });
+}
+
+/** "Your password was changed", to a confirmed address. Fire and forget; send() logs a failure. */
+async function notifyPasswordChanged(userId: number) {
+  if (!HOSTED) return;
+  const [u] = await db.select({ handle: schema.users.handle, email: schema.users.email, confirmed: schema.users.emailConfirmedAt }).from(schema.users).where(eq(schema.users.id, userId));
+  if (u?.email && u.confirmed) void send({ to: u.email, ...messages.passwordChanged(u.handle) });
 }
 
 /** Instance name, public URL, and sign-up policy. Public; the sign-up page renders from it. */
 auth.get("/status", async (c) => c.json(await publicStatus()));
 
 auth.post("/signup", async (c) => {
-  type Body = { handle?: string; password?: string; displayName?: string; inviteCode?: string };
+  type Body = { handle?: string; password?: string; displayName?: string; inviteCode?: string; email?: string };
   const body = await c.req.json<Body>().catch(() => ({} as Body));
   const addr = clientKey(c);
   const flood = hit(`signup:${addr}`, LIMITS.signupAddress);
@@ -44,8 +72,10 @@ auth.post("/signup", async (c) => {
   const problem = handleProblem(handle);
   if (problem) return c.json({ error: problem, field: "handle" }, 400);
   if (!body.password || body.password.length < MIN_PASSWORD) return c.json({ error: `Use at least ${MIN_PASSWORD} characters.`, field: "password" }, 400);
+  const email = HOSTED ? cleanEmail(body.email) : null;
+  if (HOSTED && !looksLikeEmail(email!)) return c.json({ error: email ? BAD_EMAIL : "Enter your email so you can reset your password if you forget it.", field: "email" }, 400);
   if (await findUserByHandle(handle)) return c.json({ error: "Someone already has that handle. Try another one.", field: "handle" }, 409);
-  const user = await createUser({ handle, password: body.password, displayName: body.displayName });
+  const user = await createUser({ handle, password: body.password, displayName: body.displayName, email });
   // Claim the invite atomically. If two signups raced on the same code, only one
   // wins; the loser undoes its just-created account (no session exists yet) so an
   // invite can never yield two accounts.
@@ -54,6 +84,8 @@ auth.post("/signup", async (c) => {
     return c.json({ error: BAD_INVITE, field: "inviteCode" }, 403);
   }
   await createSession(c, user.id);
+  // The account works either way; a confirmation that didn't send is resent from the Account page.
+  if (email) await sendConfirm(user, email);
   return c.json(await me(user.id), 201);
 });
 
@@ -139,5 +171,113 @@ auth.post("/me/password", async (c) => {
   await db.update(schema.users).set({ passwordHash: await hashPassword(body.next) }).where(eq(schema.users.id, user.id));
   await destroyAllSessions(user.id);
   await createSession(c, user.id);
+  await notifyPasswordChanged(user.id);
   return c.body(null, 204);
+});
+
+// ---- account email (readthicket.com only) ------------------------------------
+
+/**
+ * Add or change my email. Asks for the current password, so someone at an
+ * unlocked laptop can't point the reset links at themselves.
+ *
+ * With no confirmed address yet, the new one simply replaces whatever is
+ * there. With a confirmed one, the new address waits on its confirmation link
+ * and the old one keeps getting resets until then, so a typo can't lock anyone
+ * out; the old address gets a note saying a change was asked for.
+ */
+auth.put("/me/email", async (c) => {
+  const blocked = hostedOnly(c); if (blocked) return blocked;
+  const user = currentUser(c);
+  const body = await c.req.json<{ email?: string; password?: string }>().catch(() => ({} as { email?: string; password?: string }));
+  const email = cleanEmail(body.email);
+  if (!looksLikeEmail(email)) return c.json({ error: BAD_EMAIL, field: "email" }, 400);
+  const [row] = await db.select().from(schema.users).where(eq(schema.users.id, user.id));
+  if (!(await verifyPassword(body.password ?? "", row.passwordHash))) return c.json({ error: "Current password is wrong.", field: "password" }, 400);
+  const flood = hit(`email-send:${user.id}`, LIMITS.emailSend);
+  if (!flood.ok) return tooMany(c, flood.retryAfterS, "That’s a lot of confirmation emails.");
+  if (row.emailConfirmedAt && row.email) {
+    if (row.email.toLowerCase() === email.toLowerCase()) return c.json({ error: "That’s already your email.", field: "email" }, 400);
+    void send({ to: row.email, ...messages.changed(row.handle, email) });
+  } else {
+    await db.update(schema.users).set({ email, emailConfirmedAt: null }).where(eq(schema.users.id, user.id));
+  }
+  const sent = await sendConfirm(row, email);
+  return c.json({ me: await me(user.id), sent, ...(sent ? {} : { error: NOT_SENT }) });
+});
+
+/** Send the confirmation link again, for whichever address is waiting on one. */
+auth.post("/me/email/resend", async (c) => {
+  const blocked = hostedOnly(c); if (blocked) return blocked;
+  const user = currentUser(c);
+  const [row] = await db.select().from(schema.users).where(eq(schema.users.id, user.id));
+  const target = row.emailConfirmedAt ? await pendingEmail(user.id, row.email) : row.email;
+  if (!target) return c.json({ error: "There’s no email waiting to be confirmed." }, 400);
+  const flood = hit(`email-send:${user.id}`, LIMITS.emailSend);
+  if (!flood.ok) return tooMany(c, flood.retryAfterS, "That’s a lot of confirmation emails.");
+  const sent = await sendConfirm(row, target);
+  if (!sent) return c.json({ error: "The confirmation didn’t send. Try again in a few minutes." }, 502);
+  return c.json({ email: target });
+});
+
+/**
+ * The confirmation link lands here (via the web page it opens). No sign-in
+ * needed: people often click it on a different device. The address becomes
+ * the account's email only if nothing newer has replaced it since.
+ */
+auth.post("/confirm-email", async (c) => {
+  const blocked = hostedOnly(c); if (blocked) return blocked;
+  const body = await c.req.json<{ token?: string }>().catch(() => ({} as { token?: string }));
+  const row = await takeToken(body.token ?? "", "confirm");
+  if (!row) return c.json({ error: "That link doesn’t work anymore." }, 410);
+  await db.update(schema.users).set({ email: row.email, emailConfirmedAt: new Date() }).where(eq(schema.users.id, row.userId));
+  return c.body(null, 204);
+});
+
+/**
+ * "Forgot your password?" Takes a handle or an email, and always answers the
+ * same way, whether or not any account matched, so it can't be used to learn
+ * who has an account. The mail goes out after the answer, so how long the
+ * answer takes gives nothing away either. Only confirmed addresses get links.
+ */
+auth.post("/forgot-password", async (c) => {
+  const blocked = hostedOnly(c); if (blocked) return blocked;
+  const body = await c.req.json<{ who?: string }>().catch(() => ({} as { who?: string }));
+  const who = (body.who ?? "").trim();
+  const flood = hit(`forgot-addr:${clientKey(c)}`, LIMITS.forgotAddress);
+  if (!flood.ok) return tooMany(c, flood.retryAfterS, "Too many reset requests from here.");
+  const byEmail = who.includes("@") && !who.startsWith("@");
+  const key = byEmail ? who.toLowerCase() : normalizeHandle(who);
+  // Over the per-account limit: answer as usual, send nothing.
+  if (key && hit(`forgot-target:${key}`, LIMITS.forgotTarget).ok) {
+    const matches = await db.select({ id: schema.users.id, handle: schema.users.handle, email: schema.users.email }).from(schema.users).where(and(
+      isNotNull(schema.users.emailConfirmedAt),
+      byEmail ? eq(sql`lower(${schema.users.email})`, key) : eq(schema.users.handle, key),
+    ));
+    void (async () => {
+      for (const u of matches) {
+        const token = await issueToken(u.id, "reset", u.email!);
+        await send({ to: u.email!, ...messages.reset(u.handle, token) });
+      }
+    })().catch((e) => console.error("[mail] reset links failed:", e));
+  }
+  return c.body(null, 204);
+});
+
+/**
+ * Choose a new password from a reset link. Checks the new password before
+ * using the link up, so a too-short password doesn't waste it. Signs out every
+ * other device, signs in this one, and sends "your password was changed".
+ */
+auth.post("/reset-password", async (c) => {
+  const blocked = hostedOnly(c); if (blocked) return blocked;
+  const body = await c.req.json<{ token?: string; password?: string }>().catch(() => ({} as { token?: string; password?: string }));
+  if (!body.password || body.password.length < MIN_PASSWORD) return c.json({ error: `Use at least ${MIN_PASSWORD} characters.`, field: "password" }, 400);
+  const row = await takeToken(body.token ?? "", "reset");
+  if (!row) return c.json({ error: "That link doesn’t work anymore." }, 410);
+  await db.update(schema.users).set({ passwordHash: await hashPassword(body.password) }).where(eq(schema.users.id, row.userId));
+  await destroyAllSessions(row.userId);
+  await createSession(c, row.userId);
+  await notifyPasswordChanged(row.userId);
+  return c.json(await me(row.userId));
 });

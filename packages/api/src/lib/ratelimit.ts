@@ -1,5 +1,6 @@
 /**
- * Rate limiting for the endpoints that guess: login and sign-up.
+ * Rate limiting for the endpoints that guess or send: login, sign-up, and the
+ * ones that email someone (forgot password, confirmation links).
  *
  * In-process fixed windows in a Map. Deliberate shortcut, the same one the
  * scheduler makes: this instance is one process, so a shared store would be
@@ -71,6 +72,12 @@ export const LIMITS = {
   loginAddress: { limit: 40, windowMs: 15 * 60_000 } satisfies Limit,
   /** Per address. Sign-ups are rare and real; a flood is not. */
   signupAddress: { limit: 6, windowMs: 60 * 60_000 } satisfies Limit,
+  /** Per address, across all accounts. "Forgot password" requests. */
+  forgotAddress: { limit: 10, windowMs: 60 * 60_000 } satisfies Limit,
+  /** Per handle or email asked about, so nobody can fill someone's inbox with reset links. Hit silently. */
+  forgotTarget: { limit: 3, windowMs: 60 * 60_000 } satisfies Limit,
+  /** Per account. Confirmation links sent from the Account page. */
+  emailSend: { limit: 5, windowMs: 60 * 60_000 } satisfies Limit,
 };
 
 /** The 429 body, shaped like every other auth error so the web client renders it unchanged. */

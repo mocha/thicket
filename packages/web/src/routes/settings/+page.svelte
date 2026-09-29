@@ -1,19 +1,18 @@
 <script lang="ts">
-  import { api, authApi, ApiError } from '$lib/api';
+  import { api, authApi } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { display, setDisplay, APPEARANCES, READING_MODES, LAYOUTS, FRESH_OPTIONS, type Display } from '$lib/display.svelte';
   import Tiles from '$lib/components/display/Tiles.svelte';
   import ThemePicker from '$lib/components/display/ThemePicker.svelte';
   import FontTable from '$lib/components/display/FontTable.svelte';
   import { APPEARANCE_ART, READING_ART, LAYOUT_ART, FRESH_ART } from '$lib/components/display/art';
-  import Field from '$lib/components/Field.svelte';
-  import Input from '$lib/components/Input.svelte';
   import Button from '$lib/components/Button.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   /**
    * Your private preferences: reading, whose notes you see, feed defaults,
-   * tracking, password. Who you are in public — name, bio, homepage, and who
+   * tracking. Your email and password are on the Account page
+   * (routes/account). Who you are in public — name, bio, homepage, and who
    * can see each part of your profile — is edited on the profile itself
    * (routes/@[handle]), so those choices sit where you can see their effect.
    *
@@ -30,28 +29,6 @@
       showToast(label);
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  let current = $state('');
-  let next = $state('');
-  /* The server says which of the two boxes is wrong — a mistyped current
-     password, or a new one that's too short — so the message lands on that
-     box. Anything else (the network, say) is about neither, so it sits under
-     the pair. */
-  let pwError = $state<{ message: string; field?: string } | null>(null);
-  let pwBusy = $state(false);
-  async function changePassword() {
-    if (pwBusy) return;
-    pwBusy = true; pwError = null;
-    try {
-      await authApi.changePassword(current, next);
-      current = ''; next = '';
-      showToast('Password changed. Other devices were signed out.');
-    } catch (e) {
-      pwError = e instanceof ApiError ? { message: e.message, field: e.field } : { message: e instanceof Error ? e.message : String(e) };
-    } finally {
-      pwBusy = false;
     }
   }
 
@@ -148,24 +125,6 @@
 {/if}
 
 <section class="card">
-  <h2>Change password</h2>
-  <form onsubmit={(e) => { e.preventDefault(); void changePassword(); }}>
-    <Field label="Current password" error={pwError?.field === 'current' ? pwError.message : null}>
-      {#snippet children({ id, describedBy, invalid })}
-        <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={current} autocomplete="current-password" required />
-      {/snippet}
-    </Field>
-    <Field label="New password" hint="At least 8 characters." error={pwError?.field === 'next' ? pwError.message : null}>
-      {#snippet children({ id, describedBy, invalid })}
-        <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={next} autocomplete="new-password" required minlength={8} />
-      {/snippet}
-    </Field>
-    {#if pwError && !pwError.field}<p class="bad" role="alert">{pwError.message}</p>{/if}
-    <div class="row"><Button type="submit" disabled={pwBusy || !current || next.length < 8} loading={pwBusy}>{pwBusy ? 'Changing…' : 'Change password'}</Button></div>
-  </form>
-</section>
-
-<section class="card">
   <h2>Bring your feeds in</h2>
   <p class="help">Coming from Feedly or another reader? Export your subscriptions as an OPML file there, and bring them in here. Each folder becomes a collection.</p>
   <div class="row"><Button href="/import">Import from OPML</Button></div>
@@ -187,7 +146,6 @@
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
   .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
   .fine { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
-  form { display: flex; flex-direction: column; gap: var(--space-5); }
   .row { display: flex; justify-content: flex-end; }
   fieldset { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
@@ -199,6 +157,5 @@
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
   .radio small, .switch small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .admin .help a { color: var(--accent); font-weight: 600; }
 </style>
