@@ -106,17 +106,18 @@
     <h2>Email</h2>
     <p class="help">If you forget your password, we’ll email you a link to reset it. We won’t send you anything else, and no one else can see this address.</p>
 
+    <!-- The address and its one action share a row; the status, when there is
+         one, is a single line under it with Resend as a link at its end. -->
     {#if me.email}
       <div class="address">
-        <span class="addr">{me.email}</span>
-        {#if !confirmed}<Badge>Not confirmed</Badge>{/if}
+        <span class="who"><span class="addr">{me.email}</span>{#if !confirmed}<Badge>Not confirmed</Badge>{/if}</span>
+        {#if !editing}<Button size="sm" onclick={startEdit}>Change</Button>{/if}
       </div>
-      {#if !confirmed}
-        <p class="note">We sent a link to {me.email}. Resets won’t work until you click it. The link expires after 24 hours.</p>
-      {:else if me.pendingEmail}
-        <p class="note">Waiting for you to confirm {me.pendingEmail}. Until then, reset links still go to {me.email}.</p>
-      {:else}
-        <p class="note">If you forget your password, we’ll send a reset link here.</p>
+      {#if !confirmed || me.pendingEmail}
+        <p class="note">
+          {#if !confirmed}Check your inbox for the link. It expires in 24 hours.{:else}Waiting for you to confirm {me.pendingEmail}. Until then, reset links still go here.{/if}
+          <button type="button" class="link" onclick={resend} disabled={resendBusy}>{resendBusy ? 'Sending…' : 'Resend it'}</button>
+        </p>
       {/if}
     {/if}
 
@@ -140,11 +141,6 @@
           <Button type="submit" variant="primary" disabled={emailBusy || !email.trim() || !emailPw} loading={emailBusy}>{me.email ? 'Save new email' : 'Add email'}</Button>
         </div>
       </form>
-    {:else}
-      <div class="row">
-        {#if !confirmed || me.pendingEmail}<Button onclick={resend} disabled={resendBusy} loading={resendBusy}>Resend link</Button>{/if}
-        <Button onclick={startEdit}>Change email</Button>
-      </div>
     {/if}
   </section>
 {/if}
@@ -174,11 +170,18 @@
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
   .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
-  .address { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1); }
+  .address { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  .who { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
   .addr { font-weight: 600; overflow-wrap: anywhere; }
-  .note { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
+  .note { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  /* Resend reads as a link inside the sentence, like links in help text elsewhere. */
+  .link { font: inherit; color: var(--accent); font-weight: 600; }
+  .link:hover { text-decoration: underline; }
+  .link:disabled { opacity: 0.6; }
+  /* The form opening under an address needs room from it. */
+  .address + form, .note + form { margin-top: var(--space-4); }
   form { display: flex; flex-direction: column; gap: var(--space-5); }
   .row { display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; }
-  .bad { color: var(--danger); margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .bad { color: var(--danger); margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   form .bad { margin: 0; }
 </style>
