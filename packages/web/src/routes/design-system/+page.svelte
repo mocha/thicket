@@ -89,18 +89,16 @@
     { name: 'line', use: 'Hairline borders' }
   ];
 
-  /* The nine palettes, with a representative light-mode swatch so the whole set
+  /* The seven palettes, with a representative light-mode swatch so the whole set
      shows at once. Tapping one previews it live above. Values mirror app.css. */
   const palettes = [
-    { id: 'default', label: 'Thicket', note: 'Cream paper, moss green. The default.', bg: '#f6f1e8', accent: '#2f5d3a' },
-    { id: 'kingfisher', label: 'Kingfisher', note: 'Cool white, river blue. Vivid.', bg: '#eef3f7', accent: '#0b5fa5' },
-    { id: 'slate', label: 'Slate', note: 'Blue-gray stone, steel. Cool and calm.', bg: '#eceff2', accent: '#3f5f7a' },
-    { id: 'ember', label: 'Ember', note: 'Ivory, burnt orange. Warm and awake.', bg: '#fbf4ec', accent: '#b93c0a' },
-    { id: 'parchment', label: 'Parchment', note: 'Sepia on old paper. Soft on the eyes.', bg: '#eadfcb', accent: '#7a5535' },
-    { id: 'graphite', label: 'Graphite', note: 'Plain grays, quiet steel.', bg: '#f0f0ef', accent: '#465a7c' },
-    { id: 'fog', label: 'Fog', note: 'Gray on gray, sage. The gentlest.', bg: '#e6e7e6', accent: '#556a67' },
-    { id: 'contrast', label: 'High contrast', note: 'Black and white, hard edges, one strong accent.', bg: '#ffffff', accent: '#0050a0' },
-    { id: 'mono', label: 'Black and white', note: 'Two colors, no shading. For e-ink.', bg: '#ffffff', accent: '#000000' }
+    { id: 'default', label: 'Thicket', note: 'The default. Cream and green.', bg: '#f6f1e8', accent: '#2f5d3a' },
+    { id: 'slate', label: 'Neutral', note: 'No cream tint. Gray and green.', bg: '#efefee', accent: '#2f5d3a' },
+    { id: 'ember', label: 'Vivid', note: 'Bolder color. Ivory and orange.', bg: '#fbf4ec', accent: '#b53802' },
+    { id: 'parchment', label: 'Soft sepia', note: 'Low contrast. Warm sepia.', bg: '#eadfcb', accent: '#7a5535' },
+    { id: 'plum', label: 'Soft plum', note: 'Low contrast. Cool mauve.', bg: '#e9e1e6', accent: '#7a3d68' },
+    { id: 'contrast', label: 'Crisp', note: 'High contrast. Black and white, one accent.', bg: '#ffffff', accent: '#0050a0' },
+    { id: 'mono', label: 'Black and white', note: 'For e‑ink. No color or shading.', bg: '#ffffff', accent: '#000000' }
   ];
 
   /* The type ladder: seven named interface sizes, plus the reading size. */
@@ -188,7 +186,7 @@
       {#if palette === 'contrast'}
         <div class="ctl">
           <span class="ctl-label">Accent</span>
-          <ChoiceGroup options={accentOptions} value={accent} onchange={(v) => (accent = v)} label="High-contrast accent" size="sm" />
+          <ChoiceGroup options={accentOptions} value={accent} onchange={(v) => (accent = v)} label="Crisp accent" size="sm" />
         </div>
       {/if}
     </div>
@@ -210,7 +208,7 @@
       </div>
       <div class="tile">
         <h3>Three theme states, not two</h3>
-        <p>Light and dark, plus "follow the device" — the state most people never leave. On top of that sit nine full color themes, from soft parchment to hard black-and-white for e-ink.</p>
+        <p>Light and dark, plus "follow the device" — the state most people never leave. On top of that sit seven full color themes, from soft sepia to hard black-and-white for e-ink.</p>
       </div>
       <div class="tile">
         <h3>One of each</h3>
@@ -238,7 +236,7 @@
       {/each}
     </div>
 
-    <h3 class="sub">The nine themes</h3>
+    <h3 class="sub">The seven themes</h3>
     <p class="section-lede">Tap one to try it on. The whole page follows.</p>
     <div class="palettes">
       {#each palettes as p}

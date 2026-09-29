@@ -2,21 +2,45 @@
  * The little pictures on the display choices. Each is a 50×30 window drawn in
  * the live tokens, so they repaint with the palette. Inline SVG strings, ours.
  */
+import type { Palette, Accent } from '$lib/display.svelte';
+import { SWATCHES, ACCENT_HEX, type Sw } from '$lib/generated/palette-swatches';
+
 const frame = (inner: string, bg = 'var(--surface)') =>
   `<svg viewBox="0 0 50 30" xmlns="http://www.w3.org/2000/svg"><rect width="50" height="30" fill="${bg}"/>${inner}</svg>`;
+
+/** Mix two #rrggbb colors, `t` of the first. */
+const blend = (a: string, b: string, t: number) =>
+  '#' + [1, 3, 5].map((i) => Math.round(parseInt(a.slice(i, i + 2), 16) * t + parseInt(b.slice(i, i + 2), 16) * (1 - t)).toString(16).padStart(2, '0')).join('');
 
 const lines = (x: number, y: number, w: number, color: string, n = 3, gap = 3) =>
   Array.from({ length: n }, (_, i) => `<rect x="${x}" y="${y + i * gap}" width="${i === n - 1 ? w * 0.6 : w}" height="1.4" rx="0.7" fill="${color}"/>`).join('');
 
-export const APPEARANCE_ART = {
-  light: frame(`<circle cx="25" cy="12" r="5" fill="var(--accent)"/>${lines(13, 21, 24, 'var(--text-3)', 2)}`, '#f6f1e8'),
-  dark: frame(`<path d="M28 7a5.5 5.5 0 1 0 2 10.5A6.5 6.5 0 1 1 28 7z" fill="var(--accent)"/>${lines(13, 21, 24, '#7f7864', 2)}`, '#16140f'),
-  system: frame(
-    `<rect width="25" height="30" fill="#f6f1e8"/><rect x="25" width="25" height="30" fill="#16140f"/>` +
-    `<circle cx="14" cy="12" r="4.5" fill="var(--accent)"/><path d="M36 7.5a5 5 0 1 0 2 9.5A6 6 0 1 1 36 7.5z" fill="var(--accent)"/>` +
-    `${lines(7, 21, 12, '#8c8574', 2)}${lines(31, 21, 12, '#7f7864', 2)}`
-  )
-};
+/**
+ * Light, dark and "match my device", drawn in the current theme's own light
+ * and dark colors, not the live ones: the live ones belong to whichever half
+ * the screen is in, so a white moon from a dark theme would vanish on the
+ * light picture's page.
+ */
+export function appearanceArt(palette: Palette, accent: Accent) {
+  const pick = (half: 'light' | 'dark') => {
+    const s = SWATCHES[palette][half];
+    return { ...s, accent: palette === 'contrast' ? ACCENT_HEX[accent][half] : s.accent };
+  };
+  const l = pick('light'), d = pick('dark');
+  /* The lines are the theme's text, faded 55% toward its page. */
+  const ink = (s: Sw) => blend(s.text, s.bg, 0.45);
+  const sun = (cx: number, r: number, s: Sw) => `<circle cx="${cx}" cy="12" r="${r}" fill="${s.accent}"/>`;
+  const moon = (path: string, s: Sw) => `<path d="${path}" fill="${s.accent}"/>`;
+  return {
+    light: frame(`${sun(25, 5, l)}${lines(13, 21, 24, ink(l), 2)}`, l.bg),
+    dark: frame(`${moon('M28 7a5.5 5.5 0 1 0 2 10.5A6.5 6.5 0 1 1 28 7z', d)}${lines(13, 21, 24, ink(d), 2)}`, d.bg),
+    system: frame(
+      `<rect width="25" height="30" fill="${l.bg}"/><rect x="25" width="25" height="30" fill="${d.bg}"/>` +
+      `${sun(14, 4.5, l)}${moon('M36 7.5a5 5 0 1 0 2 9.5A6 6 0 1 1 36 7.5z', d)}` +
+      `${lines(7, 21, 12, ink(l), 2)}${lines(31, 21, 12, ink(d), 2)}`
+    )
+  };
+}
 
 export const READING_ART = {
   tabs: frame(

@@ -1,8 +1,8 @@
 <script lang="ts" generics="T extends string">
   /**
    * A row of illustrated choices standing in for a radio group. The picture
-   * does the explaining; the label names it; the note (optional, settings
-   * page only) says what it means. Illustrations are drawn in the live tokens
+   * does the explaining; the label names it; the note (optional) says what it
+   * means, in secondary ink: the faintest ink is too faint to read. Illustrations are drawn in the live tokens
    * so they always show the current palette.
    */
   let { options, value, onchange, art, notes = false, name }: {
@@ -39,5 +39,5 @@
   .art :global(svg) { display: block; width: 100%; height: 100%; }
   .label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .on .label { color: var(--accent); }
-  .note { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.35; }
+  .note { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.35; }
 </style>

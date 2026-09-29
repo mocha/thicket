@@ -15,7 +15,7 @@
  * a device with no record has never been set up, and gets the walkthrough.
  */
 export type Appearance = 'system' | 'light' | 'dark';
-export type Palette = 'default' | 'kingfisher' | 'slate' | 'ember' | 'parchment' | 'graphite' | 'fog' | 'contrast' | 'mono';
+export type Palette = 'default' | 'slate' | 'ember' | 'parchment' | 'plum' | 'contrast' | 'mono';
 export type Accent = 'blue' | 'orange' | 'green' | 'purple';
 export type Family = 'sans' | 'serif' | 'dyslexic';
 export type Role = 'headings' | 'reading' | 'app';
@@ -29,7 +29,7 @@ export type Layout = 'scroll' | 'paged';
 export type Display = {
   appearance: Appearance;
   palette: Palette;
-  /** Only High contrast uses it; the other palettes bring their own. */
+  /** Only Crisp uses it; the other palettes bring their own. */
   accent: Accent;
   fonts: Record<Role, { family: Family; size: Size }>;
   reading: ReadingMode;
@@ -65,15 +65,13 @@ export const APPEARANCES: { id: Appearance; label: string; note: string }[] = [
 ];
 
 export const PALETTES: { id: Palette; label: string; note: string }[] = [
-  { id: 'default', label: 'Thicket', note: 'Cream paper and moss green. The default.' },
-  { id: 'kingfisher', label: 'Kingfisher', note: 'Cool white, river-blue accent. Vivid.' },
-  { id: 'slate', label: 'Slate', note: 'Blue-gray stone, steel accent. Cool and calm.' },
-  { id: 'ember', label: 'Ember', note: 'Ivory, burnt-orange accent. Warm and awake.' },
-  { id: 'parchment', label: 'Parchment', note: 'Sepia on old paper. Soft, for eyes that find black on white harsh.' },
-  { id: 'graphite', label: 'Graphite', note: 'Plain grays, quiet steel accent.' },
-  { id: 'fog', label: 'Fog', note: 'Gray on gray, sage accent. The gentlest.' },
-  { id: 'contrast', label: 'High contrast', note: 'Black and white with hard edges and one strong accent.' },
-  { id: 'mono', label: 'Black and white', note: 'Two colors, no shading. For e-ink.' }
+  { id: 'default', label: 'Thicket', note: 'The default. Cream and green.' },
+  { id: 'slate', label: 'Neutral', note: 'No cream tint. Gray and green.' },
+  { id: 'ember', label: 'Vivid', note: 'Bolder color. Ivory and orange.' },
+  { id: 'parchment', label: 'Soft sepia', note: 'Low contrast. Warm sepia.' },
+  { id: 'plum', label: 'Soft plum', note: 'Low contrast. Cool mauve.' },
+  { id: 'contrast', label: 'Crisp', note: 'High contrast. Black and white, one accent.' },
+  { id: 'mono', label: 'Black and white', note: 'For e‑ink. No color or shading.' }
 ];
 
 export const ACCENTS: { id: Accent; label: string }[] = [
@@ -110,6 +108,9 @@ export const sizeLabel = (s: Size) => `${Math.round(sizeScale(s) * 100)}%`;
 
 export const display = $state<Display & { configured: boolean }>({ ...structuredClone(DEFAULTS), configured: false });
 
+/** Themes that have been retired, and the one each reader of them moves to. Keep in step with app.html. */
+const RETIRED_PALETTES: Record<string, Palette> = { kingfisher: 'slate', graphite: 'slate', fog: 'slate' };
+
 const oneOf = <T extends string>(list: readonly { id: T }[], v: unknown, fallback: T): T =>
   list.some((x) => x.id === v) ? (v as T) : fallback;
 const isSize = (v: unknown): v is Size => Number.isInteger(v) && (v as number) >= SIZE_MIN && (v as number) <= SIZE_MAX;
@@ -124,7 +125,7 @@ function coerce(raw: unknown): Display {
   };
   return {
     appearance: oneOf(APPEARANCES, r.appearance, DEFAULTS.appearance),
-    palette: oneOf(PALETTES, r.palette, DEFAULTS.palette),
+    palette: oneOf(PALETTES, RETIRED_PALETTES[r.palette as string] ?? r.palette, DEFAULTS.palette),
     accent: oneOf(ACCENTS, r.accent, DEFAULTS.accent),
     fonts: { headings: role('headings'), reading: role('reading'), app: role('app') },
     reading: oneOf(READING_MODES, r.reading, DEFAULTS.reading),

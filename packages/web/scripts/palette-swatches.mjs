@@ -31,7 +31,7 @@ const CSS_PATH = join(__dirname, '../src/app.css');
 const OUT_PATH = join(__dirname, '../src/lib/generated/palette-swatches.ts');
 
 // Keep this list in sync with the `Palette` union in src/lib/display.svelte.ts.
-const PALETTE_IDS = ['default', 'kingfisher', 'slate', 'ember', 'parchment', 'graphite', 'fog', 'contrast', 'mono'];
+const PALETTE_IDS = ['default', 'slate', 'ember', 'parchment', 'plum', 'contrast', 'mono'];
 // Keep this list in sync with the `Accent` union in src/lib/display.svelte.ts.
 const ACCENT_IDS = ['blue', 'orange', 'green', 'purple'];
 

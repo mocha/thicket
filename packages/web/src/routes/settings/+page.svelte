@@ -5,7 +5,7 @@
   import Tiles from '$lib/components/display/Tiles.svelte';
   import ThemePicker from '$lib/components/display/ThemePicker.svelte';
   import FontTable from '$lib/components/display/FontTable.svelte';
-  import { APPEARANCE_ART, READING_ART, LAYOUT_ART, FRESH_ART } from '$lib/components/display/art';
+  import { appearanceArt, READING_ART, LAYOUT_ART, FRESH_ART } from '$lib/components/display/art';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
   import Button from '$lib/components/Button.svelte';
@@ -70,7 +70,7 @@
 <section class="card">
   <h2>Appearance</h2>
   <p class="help">Display settings are per device, so each screen you read on can differ. Changes immediately apply.</p>
-  <Tiles name="Appearance" options={APPEARANCES} value={display.appearance} art={APPEARANCE_ART} onchange={(v) => choose({ appearance: v }, 'appearance')} />
+  <Tiles name="Appearance" options={APPEARANCES} value={display.appearance} art={appearanceArt(display.palette, display.accent)} onchange={(v) => choose({ appearance: v }, 'appearance')} />
 </section>
 
 <section class="card">
