@@ -7,6 +7,7 @@
   import { site, loadSite, HANDLE_RULES } from '$lib/site.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
+  import Button from '$lib/components/Button.svelte';
 
   /**
    * Sign-up is a handle and a password, plus an email on readthicket.com (for
@@ -117,7 +118,7 @@
         {/snippet}
       </Field>
       {#if error && !errorOnField}<p class="bad" role="alert">{error.message}</p>{/if}
-      <button type="submit" disabled={busy || !canSubmit}>{busy ? 'Signing up…' : 'Sign up'}</button>
+      <Button type="submit" variant="primary" solid size="lg" disabled={busy || !canSubmit} loading={busy}>{busy ? 'Signing up…' : 'Sign up'}</Button>
     </form>
   {/if}
   <p class="alt">Already have an account? <a href="/login{page.url.search}">Log in</a></p>
@@ -134,8 +135,6 @@
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
   .lede { color: var(--text-2); margin: 0 0 var(--space-5); }
   form { display: flex; flex-direction: column; gap: var(--space-5); }
-  button { margin-top: var(--space-1); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
-  button:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .alt { margin: var(--space-5) 0 0; color: var(--text-2); }
   .what { margin: calc(var(--space-5) + var(--space-1)) 0 0; padding-top: var(--space-4); border-top: 1px solid var(--line); }

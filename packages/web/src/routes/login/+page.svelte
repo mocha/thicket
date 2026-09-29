@@ -7,6 +7,7 @@
   import { site, loadSite } from '$lib/site.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
+  import Button from '$lib/components/Button.svelte';
 
   let handle = $state('');
   let password = $state('');
@@ -58,7 +59,7 @@
       {/snippet}
     </Field>
     {#if error}<p class="bad" role="alert">{error}</p>{/if}
-    <button type="submit" disabled={busy || !handle.trim() || !password}>{busy ? 'Logging in…' : 'Log in'}</button>
+    <Button type="submit" variant="primary" solid size="lg" disabled={busy || !handle.trim() || !password} loading={busy}>{busy ? 'Logging in…' : 'Log in'}</Button>
   </form>
   <p class="alt">New here? <a href="/signup{page.url.search}">Sign up</a></p>
   <!-- readthicket.com emails a reset link. A self-hosted copy has no email, so its admin resets passwords. Nothing until we know which, so neither flashes. -->
@@ -73,8 +74,6 @@
   .auth { max-width: 380px; margin: calc(var(--space-6) + var(--space-2)) auto 0; }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-5); }
   form { display: flex; flex-direction: column; gap: var(--space-5); }
-  button { margin-top: var(--space-1); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
-  button:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .alt { margin: var(--space-5) 0 0; color: var(--text-2); }
   .alt a { color: var(--accent); font-weight: 600; }
