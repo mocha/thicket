@@ -15,6 +15,7 @@
   import Tabs from './Tabs.svelte';
   import Field from './Field.svelte';
   import Input from './Input.svelte';
+  import Button from './Button.svelte';
 
   let { initial = 'signup' }: { initial?: 'signup' | 'login' } = $props();
   // svelte-ignore state_referenced_locally
@@ -74,7 +75,7 @@
 <div class="box">
   {#if session.user}
     <p class="who">You’re logged in as @{session.user.handle}.</p>
-    <a class="go" href="/everything">Open thicket <span aria-hidden="true">→</span></a>
+    <div class="open"><Button href="/everything" variant="primary" solid size="lg">Open thicket <span aria-hidden="true">→</span></Button></div>
   {:else}
   <Tabs
     class="tabs"
@@ -136,9 +137,9 @@
           </Field>
         {/if}
         {#if error && !errorOnField}<p class="bad" role="alert">{error.message}</p>{/if}
-        <button type="submit" class="go" disabled={busy || (mode === 'signup' ? !canSignup : !handleClean || !password)}>
+        <Button type="submit" variant="primary" solid size="lg" disabled={busy || (mode === 'signup' ? !canSignup : !handleClean || !password)} loading={busy}>
           {busy ? (mode === 'signup' ? 'Signing up…' : 'Logging in…') : mode === 'signup' ? 'Sign up' : 'Log in'}
-        </button>
+        </Button>
       </form>
       <!-- This box is thicket's own marketing: sign ups there are always open, so it
            carries no notes about invites or closed sign ups, and no instance name. -->
@@ -156,11 +157,9 @@
   .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); }
   .box :global(.tabs) { margin-bottom: var(--space-4); }
   form { display: flex; flex-direction: column; gap: var(--space-5); }
-  /* 2px is an optical nudge that lifts the button off the last field. */
-    .go { margin-top: 2px; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
-  a.go { display: block; text-align: center; }
+  /* The signed-in link stretches the width of the box, like the form's button. */
+  .open { display: flex; flex-direction: column; }
   .who { margin: 0 0 var(--space-4); text-align: center; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text); }
-  .go:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   /* Body size in primary ink, centered: a line from thicket, not a field's help text. */
   .note { margin: var(--space-4) 0 0; text-align: center; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text); line-height: 1.4; }
