@@ -1,7 +1,9 @@
 <script lang="ts">
   /**
-   * First time on a new screen: three short steps that set how thicket looks
-   * here. Appearance, fonts, then how a post opens. Every choice applies as it
+   * First time on a new screen: four short steps that set how thicket looks
+   * here. Light or dark, color theme, fonts, then how a post opens. The theme
+   * gets its own step so a reader who needs Crisp or a Soft theme
+   * meets it on day one, not buried in Settings. Every choice applies as it
    * is made, so the page behind the dialog is the preview. Opening the dialog
    * writes this screen's record, which is what makes it a once-only thing:
    * closing it any way at all is the same as finishing it. The full set of
@@ -12,8 +14,9 @@
   import { api } from '$lib/api';
   import { display, markConfigured, setDisplay, APPEARANCES, READING_MODES } from '$lib/display.svelte';
   import Tiles from './Tiles.svelte';
+  import ThemePicker from './ThemePicker.svelte';
   import FontTable from './FontTable.svelte';
-  import { APPEARANCE_ART, READING_ART } from './art';
+  import { appearanceArt, READING_ART } from './art';
   import Button from '$lib/components/Button.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
@@ -21,6 +24,7 @@
   let step = $state(0);
   const STEPS = [
     { title: 'Light or dark?', lead: 'Pick what suits this screen. You can also let it follow the device’s own setting.' },
+    { title: 'Color theme', lead: 'Pick the colors thicket uses on this screen. Crisp has the most contrast; the Soft themes have the least.' },
     { title: 'Fonts', lead: 'Headlines, text and the app itself can each have their own face and size. Watch the page behind this box change.' },
     { title: 'Opening a post', lead: 'Read here, or on the post’s own site. Sites that only send a preview always get a link out.' }
   ];
@@ -52,8 +56,10 @@
 
       <div class="body">
         {#if step === 0}
-          <Tiles name="Appearance" options={APPEARANCES} value={display.appearance} art={APPEARANCE_ART} onchange={(v) => setDisplay({ appearance: v })} />
+          <Tiles name="Appearance" options={APPEARANCES} value={display.appearance} art={appearanceArt(display.palette, display.accent)} onchange={(v) => setDisplay({ appearance: v })} />
         {:else if step === 1}
+          <ThemePicker />
+        {:else if step === 2}
           <FontTable compact />
         {:else}
           <Tiles name="Opening a post" options={READING_MODES} value={display.reading} art={READING_ART} notes onchange={(v) => setDisplay({ reading: v })} />

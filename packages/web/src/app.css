@@ -180,31 +180,36 @@
 }
 :root[data-theme='light'] { color-scheme: light; }
 
-/* Colour themes. Six on a grid of temperature (cool / warm / neutral) by
-   intensity (vivid / moderate / low contrast), avoiding the default's own
-   cell, then two hard-edged ones. Every pair below clears WCAG AA for its
+/* Colour themes. Four beside the default: a neutral gray (slate), a vivid
+   warm (ember), and two soft low-contrast ones (parchment warm, plum cool),
+   then two hard-edged ones. Readers see them by what they are for (Neutral,
+   Vivid, Soft sepia, Soft plum, Crisp); the ids are older. The thicket logo
+   stays dark green on every theme, so no theme's accent may fight it: that
+   is why the vivid blue went, and why the three grays became one. Every
+   pair below clears WCAG AA for its
    role in both halves; the low-contrast pairs are soft, not faint. */
-:root[data-palette='kingfisher'] {
-  --l-bg: #eef3f7; --l-surface: #ffffff; --l-surface-2: #e1e9f0; --l-text: #10202e; --l-text-2: #46586a; --l-text-3: #63768b;
-  --l-accent: #0b5fa5; --l-accent-ink: #ffffff; --l-danger: #b3261e; --l-line: #d3dde6;
-  --l-danger-ink: #ffffff; --l-amber: #b56a0a; --l-toast-accent: var(--d-accent);
-  --l-shadow: 0 1px 2px rgba(10, 30, 60, 0.06), 0 6px 20px -12px rgba(10, 30, 60, 0.28);
-  --d-bg: #0d161f; --d-surface: #142030; --d-surface-2: #1c2b3d; --d-text: #e6eef6; --d-text-2: #a4b5c7; --d-text-3: #7a8ea6;
-  --d-accent: #5fb3ff; --d-accent-ink: #071527; --d-danger: #ff7b6b; --d-line: #253649;
-  --d-danger-ink: #2a0f0a; --d-amber: #ffb44d; --d-toast-accent: var(--l-accent);
-}
 :root[data-palette='slate'] {
-  --l-bg: #eceff2; --l-surface: #f8f9fb; --l-surface-2: #dfe4ea; --l-text: #1f262d; --l-text-2: #525c68; --l-text-3: #6e7885;
-  --l-accent: #3f5f7a; --l-accent-ink: #f4f7fa; --l-danger: #a33b3b; --l-line: #cfd6de;
+  --l-bg: #efefee; --l-surface: #fcfcfb; --l-surface-2: #e4e4e2; --l-text: #1e1f20; --l-text-2: #55575a; --l-text-3: #74767a;
+  --l-accent: #2f5d3a; --l-accent-ink: #f4f6f4; --l-danger: #a33b3b; --l-line: #d9d9d7;
   --l-danger-ink: #ffffff; --l-amber: #a3751f; --l-toast-accent: var(--d-accent);
-  --l-shadow: 0 1px 2px rgba(20, 30, 40, 0.06), 0 6px 20px -12px rgba(20, 30, 40, 0.25);
-  --d-bg: #15191e; --d-surface: #1c2229; --d-surface-2: #252d36; --d-text: #dfe5eb; --d-text-2: #a2adb9; --d-text-3: #7b8794;
-  --d-accent: #8fb0c9; --d-accent-ink: #0f171f; --d-danger: #e28080; --d-line: #2d3640;
+  --l-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 6px 20px -12px rgba(0, 0, 0, 0.25);
+  --d-bg: #161718; --d-surface: #1f2021; --d-surface-2: #292a2c; --d-text: #e6e6e6; --d-text-2: #a8a9ab; --d-text-3: #828487;
+  --d-accent: #7fb08a; --d-accent-ink: #10190f; --d-danger: #e28080; --d-line: #323335;
   --d-danger-ink: #2a0f0a; --d-amber: #d9a85c; --d-toast-accent: var(--l-accent);
+}
+:root[data-palette='plum'] {
+  --l-bg: #e9e1e6; --l-surface: #f2ecf0; --l-surface-2: #e0d5dc; --l-text: #45313f; --l-text-2: #66525f; --l-text-3: #7d6a77;
+  --l-accent: #7a3d68; --l-accent-ink: #faf3f7; --l-danger: #9a3434; --l-line: #d6c8d1;
+  /* Soft like parchment, so it names its toast action color outright too. */
+  --l-danger-ink: #ffffff; --l-amber: #86621e; --l-toast-accent: #e7c3dc;
+  --l-shadow: 0 1px 2px rgba(50, 20, 40, 0.05), 0 6px 20px -12px rgba(50, 20, 40, 0.2);
+  --d-bg: #231c21; --d-surface: #2b2328; --d-surface-2: #342b31; --d-text: #d4c6cf; --d-text-2: #ab9ca6; --d-text-3: #8c7d87;
+  --d-accent: #c894b8; --d-accent-ink: #22121d; --d-danger: #d88080; --d-line: #3d333a;
+  --d-danger-ink: #2a0f0a; --d-amber: #c9a266; --d-toast-accent: #5c2a4d;
 }
 :root[data-palette='ember'] {
   --l-bg: #fbf4ec; --l-surface: #fffaf4; --l-surface-2: #f3e6d6; --l-text: #23170f; --l-text-2: #5f4d3a; --l-text-3: #8a7761;
-  --l-accent: #b93c0a; --l-accent-ink: #fff7ef; --l-danger: #9f1d1d; --l-line: #e8d9c6;
+  --l-accent: #b53802; --l-accent-ink: #fff7ef; --l-danger: #9f1d1d; --l-line: #e8d9c6;
   --l-danger-ink: #ffffff; --l-amber: #9a7605; --l-toast-accent: var(--d-accent);
   --d-bg: #1a120c; --d-surface: #241a12; --d-surface-2: #30241a; --d-text: #f4e9dc; --d-text-2: #c0ad96; --d-text-3: #8c7a63;
   --d-accent: #ff8a4c; --d-accent-ink: #1f0f05; --d-danger: #ff7a6b; --d-line: #3a2c20;
@@ -218,30 +223,10 @@
   --l-danger-ink: #ffffff; --l-amber: #8a5f22; --l-toast-accent: #dfcba8;
   --l-shadow: 0 1px 2px rgba(60, 40, 10, 0.05), 0 6px 20px -12px rgba(60, 40, 10, 0.2);
   --d-bg: #26211a; --d-surface: #2d2820; --d-surface-2: #363027; --d-text: #cfc2ad; --d-text-2: #a89b86; --d-text-3: #8a7d68;
-  --d-accent: #c09a6b; --d-accent-ink: #211a10; --d-danger: #d0806c; --d-line: #3e372c;
+  --d-accent: #c59f70; --d-accent-ink: #211a10; --d-danger: #d0806c; --d-line: #3e372c;
   --d-danger-ink: #2a0f0a; --d-amber: #c9a266; --d-toast-accent: #5a3a18;
 }
-:root[data-palette='graphite'] {
-  --l-bg: #f0f0ef; --l-surface: #fafaf9; --l-surface-2: #e4e4e2; --l-text: #1c1c1c; --l-text-2: #525256; --l-text-3: #6f6f74;
-  --l-accent: #465a7c; --l-accent-ink: #f6f7fa; --l-danger: #a63232; --l-line: #d6d6d4;
-  --l-danger-ink: #ffffff; --l-amber: #8f6a1c; --l-toast-accent: var(--d-accent);
-  --l-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 6px 20px -12px rgba(0, 0, 0, 0.25);
-  --d-bg: #161616; --d-surface: #1e1e1e; --d-surface-2: #282828; --d-text: #e8e8e6; --d-text-2: #adadaa; --d-text-3: #84848a;
-  --d-accent: #9db0d0; --d-accent-ink: #101318; --d-danger: #e57f7f; --d-line: #313131;
-  --d-danger-ink: #2a0f0a; --d-amber: #d8ab5a; --d-toast-accent: var(--l-accent);
-}
-:root[data-palette='fog'] {
-  --l-bg: #e6e7e6; --l-surface: #ededec; --l-surface-2: #dcdddc; --l-text: #3f4241; --l-text-2: #5c605f; --l-text-3: #6f7372;
-  --l-accent: #556a67; --l-accent-ink: #eef1f0; --l-danger: #8e4545; --l-line: #cdcfce;
-  /* Fog is deliberately low contrast, so its accents cannot carry the inverted
-     toast either; its action color is named outright, like parchment's. */
-  --l-danger-ink: #ffffff; --l-amber: #7d6430; --l-toast-accent: #bdcfcb;
-  --l-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px -12px rgba(0, 0, 0, 0.16);
-  --d-bg: #202322; --d-surface: #272a29; --d-surface-2: #303433; --d-text: #c4c8c6; --d-text-2: #9a9f9d; --d-text-3: #7f8483;
-  --d-accent: #8fa6a2; --d-accent-ink: #161918; --d-danger: #cf8383; --d-line: #383c3b;
-  --d-danger-ink: #2a0f0a; --d-amber: #c3a271; --d-toast-accent: #364a47;
-}
-/* High contrast: no tints, no shadows, rules drawn in ink. Accent is one of four
+/* Crisp (high contrast): no tints, no shadows, rules drawn in ink. Accent is one of four
    colour-blind-safe hues (Okabe–Ito, darkened to pass on white). */
 :root[data-palette='contrast'] {
   --l-bg: #ffffff; --l-surface: #ffffff; --l-surface-2: #f2f2f2; --l-text: #000000; --l-text-2: #000000; --l-text-3: #2b2b2b;

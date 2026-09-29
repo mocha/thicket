@@ -21,6 +21,8 @@
 				if (raw) {
 					var d = JSON.parse(raw) || {}, f = d.fonts || {};
 					if (d.appearance === 'light' || d.appearance === 'dark') ds.theme = d.appearance;
+					// Retired themes; the store moves them the same way. Keep in step with RETIRED_PALETTES.
+					if (d.palette === 'kingfisher' || d.palette === 'graphite' || d.palette === 'fog') d.palette = 'slate';
 					if (d.palette && d.palette !== 'default') ds.palette = d.palette;
 					if (d.palette === 'contrast' && d.accent) ds.accent = d.accent;
 					if (d.layout === 'paged') ds.layout = 'paged';
