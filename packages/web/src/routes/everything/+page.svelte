@@ -41,7 +41,7 @@
        Explore's search box, then the starter collections as the other way in. -->
   <header class="top welcome">
     <h1>Welcome{session.user?.displayName ? `, ${session.user.displayName}` : ''}</h1>
-    <p class="sub">Add a feed to start seeing posts here.</p>
+    <p class="sub">Add a feed to start seeing posts here</p>
     <div class="first">
       <Button variant="primary" size="lg" onclick={() => openAddFeed({ via: 'welcome' })}><span class="plus" aria-hidden="true">+</span> Add your first feed</Button>
     </div>
