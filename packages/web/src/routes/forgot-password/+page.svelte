@@ -33,7 +33,7 @@
 <section class="auth">
   {#if sent}
     <h1>Check your email</h1>
-    <p class="lede">If that account has a confirmed email, we’ve sent it a link to reset your password. The link expires in 1 hour.</p>
+    <p class="lede">If your account has a confirmed email, a reset link is on its way. It expires in 1 hour.</p>
     <p class="lede">No email on your account? We can’t confirm it’s yours, so we can’t reset your password.</p>
   {:else}
     <h1>Reset your password</h1>
