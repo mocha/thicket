@@ -47,7 +47,7 @@
     </div>
   </header>
   <hr class="split" />
-  <div class="copy-start"><StarterPacks heading="… or start by copying a collection" lede="" /></div>
+  <div class="copy-start"><StarterPacks heading="… or get started by copying a collection" lede="" /></div>
 {:else}
   <header class="top">
     <div class="titlerow">

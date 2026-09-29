@@ -96,10 +96,11 @@
   /* With no lede, the heading needs its own room above the cards. */
   h2 + ul { margin-top: var(--space-4); }
   .lede { margin: 0 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); max-width: 60ch; }
-  /* As many columns as fit, with every card at least as wide as its button's
-     label. Counted from the space the list really has, not the window, so the
-     sidebar can't squeeze three cards into room for two. */
-  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(14rem * var(--size-app))), 1fr)); }
+  /* As many columns as fit, with every card wide enough for its button's
+     label and its small line of icons, count, and name. Counted from the space
+     the list really has, not the window, so the sidebar can't squeeze three
+     cards into room for two. */
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(17rem * var(--size-app))), 1fr)); }
   ul :global(.pack) { display: flex; flex-direction: column; }
   /* Pressing the button presses the button, not the card: the card's own
      press shrink is for opening the collection. */
