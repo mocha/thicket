@@ -10,7 +10,7 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
-import { INSTANCE_NAME, PUBLIC_URL, SIGNUPS_DEFAULT } from "./config.js";
+import { HOSTED, INSTANCE_NAME, PUBLIC_URL, SIGNUPS_DEFAULT } from "./config.js";
 
 export type SignupPolicy = "open" | "invite" | "closed";
 
@@ -56,9 +56,9 @@ export async function siteName(): Promise<string> {
   return (await getSetting<string>("name")) ?? INSTANCE_NAME;
 }
 
-/** What the sign-up page needs to render itself. Public. */
+/** What the sign-up page needs to render itself. Public. `hosted`: this is readthicket.com (see HOSTED in config.ts). */
 export async function publicStatus() {
-  return { name: await siteName(), url: PUBLIC_URL, signups: await signupPolicy(), visitorLimit: await visitorsLimited() };
+  return { name: await siteName(), url: PUBLIC_URL, signups: await signupPolicy(), visitorLimit: await visitorsLimited(), hosted: HOSTED };
 }
 
 /** Self-healing: if nobody is admin, the oldest account is. Runs at boot and after the first sign-up. */

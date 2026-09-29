@@ -20,6 +20,13 @@ export const TRACK_ACTIVITY = (env("TRACK_ACTIVITY") ?? "true") !== "false";
 /** Seed value for the sign-up policy on a fresh instance: open | invite | closed. */
 export const SIGNUPS_DEFAULT = (env("SIGNUPS") as "open" | "invite" | "closed" | undefined) ?? "invite";
 export const INSTANCE_NAME = env("INSTANCE_NAME") ?? new URL(PUBLIC_URL).hostname;
+/**
+ * True only on readthicket.com, thicket's own hosted service. Some things
+ * belong to that service alone — its landing page, public sign up, account
+ * email and password reset — because a self-hoster runs their own users.
+ * Off unless set, so a copy of thicket never turns them on by accident.
+ */
+export const HOSTED = env("HOSTED") === "true";
 
 /**
  * Retention windows, in days. 0 disables a window entirely.

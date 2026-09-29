@@ -98,6 +98,7 @@ with comments. Only `DATABASE_URL` and `PUBLIC_URL` are required.
 | `RETAIN_FETCH_LOG_DAYS` | `90` | Delete fetch-log rows older than this |
 | `RETAIN_EVENTS_DAYS` | `90` | Delete analytics events older than this |
 | `PORT` | `3000` | Listen port |
+| `HOSTED` | unset | readthicket.com only; leave unset on your own copy. Turns on what belongs to thicket's hosted service: its landing page, public sign up, account email, and password reset |
 | `WEB_DIR` | set in the image | Built web app to serve; unset = API only |
 
 ## Building the image yourself
