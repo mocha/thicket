@@ -30,9 +30,9 @@
 </script>
 
 {#if emailNudge === 'add'}
-  <div class="nudge"><Banner tone="warning" title="Add an email to your account">If you forget your password, an email is the only way back in. <a href="/account">Add one on your Account page</a>.</Banner></div>
+  <div class="nudge"><Banner tone="warning" title="Add an email to your account" href="/account">If you forget your password, an email is the only way back in.</Banner></div>
 {:else if emailNudge === 'confirm'}
-  <div class="nudge"><Banner tone="info" title="Confirm your email">We sent a link to {me?.email}. Until you click it, you can’t reset your password. <a href="/account">Resend it from your Account page</a>.</Banner></div>
+  <div class="nudge"><Banner tone="info" title="Confirm your email" href="/account">We sent a link to {me?.email}. Until you click it, you can’t reset your password.</Banner></div>
 {/if}
 
 {#if brandNew}
@@ -61,7 +61,6 @@
 
 <style>
   .nudge { margin-bottom: var(--space-4); }
-  .nudge a { color: var(--accent); font-weight: 600; }
   .top { margin-bottom: calc(var(--space-5) + var(--space-1)); }
   .titlerow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; min-width: 0; }
