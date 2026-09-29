@@ -1,0 +1,184 @@
+<script lang="ts">
+  import { authApi, ApiError } from '$lib/api';
+  import { session, setMe } from '$lib/session.svelte';
+  import { site, loadSite } from '$lib/site.svelte';
+  import Field from '$lib/components/Field.svelte';
+  import Input from '$lib/components/Input.svelte';
+  import Button from '$lib/components/Button.svelte';
+  import Badge from '$lib/components/Badge.svelte';
+  import { showToast } from '$lib/toast.svelte';
+
+  /**
+   * How you get into your account, and back in: your email and your password.
+   * Settings is for how thicket reads; this page is for the account itself.
+   *
+   * The Email section is readthicket.com only. Self-hosted copies don't ask for
+   * email (their admin runs their users), so there this page is just the
+   * password.
+   *
+   * Unlike Settings, nothing here saves as you type: each change asks you to
+   * confirm it with your password or a button.
+   */
+  const me = $derived(session.user!);
+  $effect(() => { if (!site.status) void loadSite(); });
+  const hosted = $derived(site.status?.hosted ?? false);
+  const confirmed = $derived(!!me.emailConfirmedAt);
+
+  type Err = { message: string; field?: string } | null;
+  const toErr = (e: unknown): Err => (e instanceof ApiError ? { message: e.message, field: e.field } : { message: e instanceof Error ? e.message : String(e) });
+
+  // ---- email ----
+  let editing = $state(false);
+  let email = $state('');
+  let emailPw = $state('');
+  let emailError = $state<Err>(null);
+  let emailBusy = $state(false);
+  /** Shown even when no form is open: the address saved but its confirmation didn't send. */
+  let sendError = $state<string | null>(null);
+  const formOpen = $derived(editing || !me.email);
+
+  function startEdit() { editing = true; email = ''; emailPw = ''; emailError = null; }
+  function cancelEdit() { editing = false; emailError = null; }
+
+  async function saveEmail() {
+    if (emailBusy) return;
+    emailBusy = true; emailError = null; sendError = null;
+    const had = confirmed ? me.email : null;
+    try {
+      const r = await authApi.setEmail(email.trim(), emailPw);
+      setMe(r.me);
+      editing = false; emailPw = '';
+      if (!r.sent) sendError = r.error ?? null;
+      else showToast(had ? `Check ${email.trim()} for a confirmation link. Until you confirm it, reset links still go to ${had}.` : 'Check your inbox for a link to confirm your email.');
+    } catch (e) {
+      emailError = toErr(e);
+    } finally {
+      emailBusy = false;
+    }
+  }
+
+  let resendBusy = $state(false);
+  async function resend() {
+    if (resendBusy) return;
+    resendBusy = true; sendError = null;
+    try {
+      const r = await authApi.resendEmail();
+      showToast(`We sent another link to ${r.email}.`);
+    } catch (e) {
+      sendError = e instanceof Error ? e.message : String(e);
+    } finally {
+      resendBusy = false;
+    }
+  }
+
+  // ---- password (moved from Settings) ----
+  let current = $state('');
+  let next = $state('');
+  /* The server says which of the two boxes is wrong — a mistyped current
+     password, or a new one that's too short — so the message lands on that
+     box. Anything else (the network, say) is about neither, so it sits under
+     the pair. */
+  let pwError = $state<Err>(null);
+  let pwBusy = $state(false);
+  async function changePassword() {
+    if (pwBusy) return;
+    pwBusy = true; pwError = null;
+    try {
+      await authApi.changePassword(current, next);
+      current = ''; next = '';
+      showToast('Password changed. Other devices were signed out.');
+    } catch (e) {
+      pwError = toErr(e);
+    } finally {
+      pwBusy = false;
+    }
+  }
+</script>
+
+<svelte:head><title>Account · thicket</title></svelte:head>
+
+<header class="top">
+  <h1>Account</h1>
+</header>
+
+{#if hosted}
+  <section class="card">
+    <h2>Email</h2>
+    <p class="help">If you forget your password, we’ll email you a link to reset it. We won’t send you anything else, and no one else can see this address.</p>
+
+    {#if me.email}
+      <div class="address">
+        <span class="addr">{me.email}</span>
+        {#if !confirmed}<Badge>Not confirmed</Badge>{/if}
+      </div>
+      {#if !confirmed}
+        <p class="note">We sent a link to {me.email}. Resets won’t work until you click it. The link expires after 24 hours.</p>
+      {:else if me.pendingEmail}
+        <p class="note">Waiting for you to confirm {me.pendingEmail}. Until then, reset links still go to {me.email}.</p>
+      {:else}
+        <p class="note">If you forget your password, we’ll send a reset link here.</p>
+      {/if}
+    {/if}
+
+    {#if sendError}<p class="bad" role="alert">{sendError}</p>{/if}
+
+    {#if formOpen}
+      <form onsubmit={(e) => { e.preventDefault(); void saveEmail(); }}>
+        <Field label={me.email ? 'New email address' : 'Email address'} error={emailError?.field === 'email' ? emailError.message : null}>
+          {#snippet children({ id, describedBy, invalid })}
+            <Input {id} aria-describedby={describedBy} {invalid} inset type="email" bind:value={email} autocomplete="email" required />
+          {/snippet}
+        </Field>
+        <Field label="Current password" hint="So no one else can change where your reset links go." error={emailError?.field === 'password' ? emailError.message : null}>
+          {#snippet children({ id, describedBy, invalid })}
+            <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={emailPw} autocomplete="current-password" required />
+          {/snippet}
+        </Field>
+        {#if emailError && !emailError.field}<p class="bad" role="alert">{emailError.message}</p>{/if}
+        <div class="row">
+          {#if me.email}<Button variant="ghost" onclick={cancelEdit}>Cancel</Button>{/if}
+          <Button type="submit" variant="primary" disabled={emailBusy || !email.trim() || !emailPw} loading={emailBusy}>{me.email ? 'Save new email' : 'Add email'}</Button>
+        </div>
+      </form>
+    {:else}
+      <div class="row">
+        {#if !confirmed || me.pendingEmail}<Button onclick={resend} disabled={resendBusy} loading={resendBusy}>Resend link</Button>{/if}
+        <Button onclick={startEdit}>Change email</Button>
+      </div>
+    {/if}
+  </section>
+{/if}
+
+<section class="card">
+  <h2>Change password</h2>
+  <form onsubmit={(e) => { e.preventDefault(); void changePassword(); }}>
+    <Field label="Current password" error={pwError?.field === 'current' ? pwError.message : null}>
+      {#snippet children({ id, describedBy, invalid })}
+        <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={current} autocomplete="current-password" required />
+      {/snippet}
+    </Field>
+    <Field label="New password" hint="At least 8 characters." error={pwError?.field === 'next' ? pwError.message : null}>
+      {#snippet children({ id, describedBy, invalid })}
+        <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={next} autocomplete="new-password" required minlength={8} />
+      {/snippet}
+    </Field>
+    {#if pwError && !pwError.field}<p class="bad" role="alert">{pwError.message}</p>{/if}
+    <div class="row"><Button type="submit" disabled={pwBusy || !current || next.length < 8} loading={pwBusy}>{pwBusy ? 'Changing…' : 'Change password'}</Button></div>
+  </form>
+</section>
+
+<style>
+  .top { margin-bottom: var(--space-4); }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
+  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
+  h2 + .help { margin-top: calc(-1 * var(--space-2)); }
+  .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .address { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1); }
+  .addr { font-weight: 600; overflow-wrap: anywhere; }
+  .note { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
+  form { display: flex; flex-direction: column; gap: var(--space-5); }
+  .row { display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; }
+  .bad { color: var(--danger); margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  form .bad { margin: 0; }
+</style>

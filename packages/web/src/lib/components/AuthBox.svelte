@@ -22,6 +22,7 @@
   let handle = $state('');
   let password = $state('');
   let inviteCode = $state('');
+  let email = $state('');
   let busy = $state(false);
   let error = $state<{ message: string; field?: string } | null>(null);
 
@@ -32,9 +33,11 @@
   const status = $derived(site.status);
   const needsInvite = $derived(status?.signups === 'invite');
   const closed = $derived(status?.signups === 'closed');
+  /** readthicket.com asks for an email, for password resets only. */
+  const hosted = $derived(status?.hosted ?? false);
   // An error about a field this form isn't showing still has to be seen, so it goes under the form.
-  const errorOnField = $derived(error?.field === 'handle' || error?.field === 'password' || (error?.field === 'inviteCode' && mode === 'signup' && needsInvite));
-  const canSignup = $derived(handleOk && password.length >= 8 && (!needsInvite || inviteCode.trim().length > 0));
+  const errorOnField = $derived(error?.field === 'handle' || error?.field === 'password' || (error?.field === 'email' && mode === 'signup' && hosted) || (error?.field === 'inviteCode' && mode === 'signup' && needsInvite));
+  const canSignup = $derived(handleOk && password.length >= 8 && (!hosted || email.trim().length > 0) && (!needsInvite || inviteCode.trim().length > 0));
   const TABS = $derived([
     { value: 'signup', label: 'Sign up', disabled: closed },
     { value: 'login', label: 'Log in' }
@@ -49,7 +52,7 @@
     busy = true; error = null;
     try {
       if (mode === 'signup') {
-        setMe(await authApi.signup(handleClean, password, undefined, inviteCode.trim() || undefined));
+        setMe(await authApi.signup(handleClean, password, undefined, inviteCode.trim() || undefined, hosted ? email.trim() : undefined));
         api.event('signed_up', { via: 'home' });
       } else {
         setMe(await authApi.login(handleClean, password));
@@ -125,6 +128,13 @@
             <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={password} autocomplete={mode === 'signup' ? 'new-password' : 'current-password'} required minlength={mode === 'signup' ? 8 : undefined} />
           {/snippet}
         </Field>
+        {#if mode === 'signup' && hosted}
+          <Field label="Email" hint="Only for resetting your password if you forget it. We’ll send you a link to confirm it." error={error?.field === 'email' ? error.message : null}>
+            {#snippet children({ id, describedBy, invalid })}
+              <Input {id} aria-describedby={describedBy} {invalid} inset type="email" bind:value={email} autocomplete="email" required />
+            {/snippet}
+          </Field>
+        {/if}
         {#if error && !errorOnField}<p class="bad" role="alert">{error.message}</p>{/if}
         <button type="submit" class="go" disabled={busy || (mode === 'signup' ? !canSignup : !handleClean || !password)}>
           {busy ? (mode === 'signup' ? 'Signing up…' : 'Logging in…') : mode === 'signup' ? 'Sign up' : 'Log in'}
@@ -133,7 +143,9 @@
       <!-- This box is thicket's own marketing: sign ups there are always open, so it
            carries no notes about invites or closed sign ups, and no instance name. -->
       {#if mode === 'signup'}
-        <p class="note">All you need is<br />a handle and a password.</p>
+        <p class="note">{#if hosted}All you need is a handle,<br />a password, and an email.{:else}All you need is<br />a handle and a password.{/if}</p>
+      {:else if hosted}
+        <p class="note"><a href="/forgot-password">Forgot your password?</a></p>
       {/if}
     {/if}
   </div>
@@ -152,4 +164,5 @@
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   /* Body size in primary ink, centered: a line from thicket, not a field's help text. */
   .note { margin: var(--space-4) 0 0; text-align: center; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text); line-height: 1.4; }
+  .note a { color: var(--accent); font-weight: 600; }
 </style>

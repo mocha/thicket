@@ -35,9 +35,10 @@ export const notesFrom = pgEnum("notes_from", ["none", "following", "everyone"])
 export const shareLevel = pgEnum("share_level", ["private", "friends", "public"]);
 
 /**
- * A person on this instance. Handle + password, no email: identity here is the
- * handle, and the instance is small enough that recovery is "ask the admin".
- * Everything on the profile is optional. Visibility is layered: the profile as
+ * A person on this instance. Identity is the handle; you log in with handle +
+ * password. On readthicket.com (HOSTED) every account also has an email, used
+ * only to reset a forgotten password. Self-hosted copies never ask for one, so
+ * recovery there is "ask the admin". Everything on the profile is optional. Visibility is layered: the profile as
  * a whole, then notes / bookmarks / collections as sections with their own
  * audience, then each collection (collections.visibility), which can only ever
  * narrow its section. A private profile still counts toward follower numbers;
@@ -74,11 +75,39 @@ export const users = pgTable("users", {
   hideShortsByDefault: boolean("hide_shorts_by_default").notNull().default(false),
   /** The first account on an instance is the admin; admins can promote others later. */
   isAdmin: boolean("is_admin").notNull().default(false),
+  /**
+   * Where password-reset links go, readthicket.com only. Null on self-hosted
+   * copies and on hosted accounts from before email was required. Not unique:
+   * a "that address is taken" error would reveal who has an account, so one
+   * address can sit on several accounts and a reset by email reaches each.
+   */
+  email: text("email"),
+  /** When the owner clicked the confirmation link. Resets only go to a confirmed address. */
+  emailConfirmedAt: timestamp("email_confirmed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   /** Trigram GIN for fuzzy handle search (drizzle/0007). */
   index("users_handle_trgm_idx").using("gin", t.handle.op("gin_trgm_ops")),
+  /** "Forgot password" looks accounts up by address, ignoring case. */
+  index("users_email_idx").on(sql`lower(${t.email})`),
 ]);
+
+/**
+ * Single-use links we email: confirming an address, and resetting a password.
+ * Like sessions, the link carries a random token and we keep only its sha256,
+ * so a copy of the database can't be used to click one. `email` is the address
+ * a confirm link is for — a change of address waits here, with the old address
+ * still in charge of resets, until the new one is confirmed.
+ */
+export const emailTokens = pgTable("email_tokens", {
+  id: text("id").primaryKey(),
+  userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  purpose: text("purpose").$type<"confirm" | "reset">().notNull(),
+  email: text("email").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+}, (t) => [index("email_tokens_user_idx").on(t.userId)]);
 
 /**
  * Instance-wide settings an admin can change at runtime, as one JSON row per

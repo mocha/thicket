@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
-   * The account menu: three plain doors that used to be scattered. Your
-   * profile (your public page), Settings (your private preferences), and Log
-   * out — which used to hide at the bottom of Settings.
+   * The account menu: four plain doors. Your profile (your public page),
+   * Settings (your reading preferences), Account (your email and password —
+   * how you get in, and back in), and Log out.
    *
    * On desktop it hangs off the avatar block at the foot of the sidebar,
    * opening upward from it, the way an account menu should. On the phone, where
@@ -93,6 +93,10 @@
     <a role="menuitem" href="/settings" onclick={onclose}>
       <Icon name="gear" size={20} />
       <span>Settings</span>
+    </a>
+    <a role="menuitem" href="/account" onclick={onclose}>
+      <Icon name="key" size={20} />
+      <span>Account</span>
     </a>
     <button type="button" role="menuitem" class="out" onclick={logout}>
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 12H4M11 8l-4 4 4 4M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4" /></svg>

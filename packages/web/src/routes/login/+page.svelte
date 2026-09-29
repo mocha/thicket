@@ -61,7 +61,12 @@
     <button type="submit" disabled={busy || !handle.trim() || !password}>{busy ? 'Logging in…' : 'Log in'}</button>
   </form>
   <p class="alt">New here? <a href="/signup{page.url.search}">Sign up</a></p>
-  <p class="hint">Forgot your password? Ask whoever runs {site.status?.name ?? 'this site'} to reset it. thicket never asks for your email, so it can’t send you a reset link.</p>
+  <!-- readthicket.com emails a reset link. A self-hosted copy has no email, so its admin resets passwords. Nothing until we know which, so neither flashes. -->
+  {#if site.status?.hosted}
+    <p class="hint"><a href="/forgot-password">Forgot your password?</a></p>
+  {:else if site.status}
+    <p class="hint">Forgot your password? Ask whoever runs {site.status.name} to reset it. thicket never asks for your email, so it can’t send you a reset link.</p>
+  {/if}
 </section>
 
 <style>
@@ -74,4 +79,5 @@
   .alt { margin: var(--space-5) 0 0; color: var(--text-2); }
   .alt a { color: var(--accent); font-weight: 600; }
   .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .hint a { color: var(--accent); font-weight: 600; }
 </style>

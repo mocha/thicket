@@ -28,14 +28,17 @@ import { marks } from "./routes/marks.js";
 import { imports } from "./routes/imports.js";
 import { startScheduler } from "./feeds/scheduler.js";
 import { attachUser, pruneSessions } from "./lib/auth.js";
+import { pruneEmailTokens } from "./lib/email-tokens.js";
 import { startRetention } from "./lib/retention.js";
 import { ensureAdmin, publicStatus } from "./lib/instance.js";
 import { runMigrations } from "./db/migrate.js";
 import { headForPath } from "./lib/meta.js";
-import { FETCH_CONCURRENCY, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
+import { FETCH_CONCURRENCY, HOSTED, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, SMTP_URL, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
 
 await runMigrations();
 await ensureAdmin();
+// Loud on purpose: without mail, readthicket.com can't confirm emails or send reset links.
+if (HOSTED && !SMTP_URL) console.warn("[mail] HOSTED is on but SMTP_URL is unset: emails will be printed to this log, not sent.");
 
 const app = new Hono();
 app.use(logger());
@@ -64,6 +67,7 @@ const scheduler = SCHEDULER
   ? startScheduler({ tickMs: SCHEDULER_TICK_MS, concurrency: FETCH_CONCURRENCY, log: (m) => console.log(`[fetch] ${m}`) })
   : null;
 setInterval(() => void pruneSessions().catch(() => {}), 3600_000).unref();
+setInterval(() => void pruneEmailTokens().catch(() => {}), 3600_000).unref();
 startRetention();
 
 app.get("/api/health", async (c) => c.json({

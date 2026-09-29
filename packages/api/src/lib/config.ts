@@ -27,6 +27,14 @@ export const INSTANCE_NAME = env("INSTANCE_NAME") ?? new URL(PUBLIC_URL).hostnam
  * Off unless set, so a copy of thicket never turns them on by accident.
  */
 export const HOSTED = env("HOSTED") === "true";
+/**
+ * Outgoing mail, HOSTED only: smtp://user:pass@host:587 (or smtps:// for port
+ * 465), from whichever email provider readthicket.com uses. Unset in dev: each
+ * message is printed to the log instead, links and all. See lib/mail.ts.
+ */
+export const SMTP_URL = env("SMTP_URL");
+/** The From line on every message. */
+export const MAIL_FROM = env("MAIL_FROM") ?? "thicket <no-reply@readthicket.com>";
 
 /**
  * Retention windows, in days. 0 disables a window entirely.

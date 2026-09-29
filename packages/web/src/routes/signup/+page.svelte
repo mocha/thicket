@@ -9,13 +9,15 @@
   import Input from '$lib/components/Input.svelte';
 
   /**
-   * Sign-up is a handle and a password. Everything on the profile is optional
+   * Sign-up is a handle and a password, plus an email on readthicket.com (for
+   * password resets only). Everything on the profile is optional
    * and can be filled in later (or never), so a new person lands on an empty
    * Everything with the one thing that matters: Add a feed.
    */
   let handle = $state('');
   let password = $state('');
   let displayName = $state('');
+  let email = $state('');
   let busy = $state(false);
   const status = $derived(site.status);
   let inviteCode = $state('');
@@ -30,7 +32,7 @@
     if (busy) return;
     busy = true; error = null;
     try {
-      const me = await authApi.signup(handleClean, password, displayName.trim() || undefined, inviteCode.trim() || undefined);
+      const me = await authApi.signup(handleClean, password, displayName.trim() || undefined, inviteCode.trim() || undefined, hosted ? email.trim() : undefined);
       setMe(me);
       api.event('signed_up');
       // Back to whatever brought you here (someone's collection, say), else Everything.
@@ -49,16 +51,17 @@
     void loadSite();
   });
   const needsInvite = $derived(status?.signups === 'invite');
+  const hosted = $derived(status?.hosted ?? false);
   // An error about a field this form isn't showing still has to be seen, so it goes under the form.
-  const errorOnField = $derived(error?.field === 'handle' || error?.field === 'password' || (error?.field === 'inviteCode' && needsInvite));
-  const canSubmit = $derived(handleOk && password.length >= 8 && (!needsInvite || inviteCode.trim().length > 0));
+  const errorOnField = $derived(error?.field === 'handle' || error?.field === 'password' || (error?.field === 'email' && hosted) || (error?.field === 'inviteCode' && needsInvite));
+  const canSubmit = $derived(handleOk && password.length >= 8 && (!hosted || email.trim().length > 0) && (!needsInvite || inviteCode.trim().length > 0));
 </script>
 
 <svelte:head><title>Sign up · thicket</title></svelte:head>
 
 <section class="auth">
   <h1>Sign up for thicket</h1>
-  <p class="lede">All you need is a handle and a password. You can start following feeds right away.</p>
+  <p class="lede">{hosted ? 'All you need is a handle, a password, and an email.' : 'All you need is a handle and a password.'} You can start following feeds right away.</p>
   {#if !status}
     <p class="lede">Loading…</p>
   {:else if status.signups === 'closed'}
@@ -101,6 +104,13 @@
           <Input {id} aria-describedby={describedBy} {invalid} type="password" bind:value={password} autocomplete="new-password" required minlength="8" />
         {/snippet}
       </Field>
+      {#if hosted}
+        <Field label="Email" hint="Only for resetting your password if you forget it. We’ll send you a link to confirm it." error={error?.field === 'email' ? error.message : null}>
+          {#snippet children({ id, describedBy, invalid })}
+            <Input {id} aria-describedby={describedBy} {invalid} type="email" bind:value={email} autocomplete="email" required />
+          {/snippet}
+        </Field>
+      {/if}
       <Field label="Display name" optional hint="The name people see instead of your handle. You can change it at any time.">
         {#snippet children({ id, describedBy, invalid })}
           <Input {id} aria-describedby={describedBy} {invalid} bind:value={displayName} autocomplete="name" />
