@@ -332,8 +332,11 @@ export type Me = {
   avatarUpdatedAt: string | null;
 };
 export type SignupPolicy = 'open' | 'invite' | 'closed';
-/** `visitorLimit`: visitors without an account see only the newest items of anything a page lists. */
-export type InstanceStatus = { name: string; url: string; signups: SignupPolicy; visitorLimit: boolean };
+/**
+ * `visitorLimit`: visitors without an account see only the newest items of anything a page lists.
+ * `hosted`: this is readthicket.com, thicket's own service, not a self-hosted copy.
+ */
+export type InstanceStatus = { name: string; url: string; signups: SignupPolicy; visitorLimit: boolean; hosted: boolean };
 export type Invite = { code: string; url: string; note: string | null; createdAt: string; expiresAt: string | null; usedAt: string | null; usedByHandle: string | null; createdByHandle: string };
 
 export const authApi = {
