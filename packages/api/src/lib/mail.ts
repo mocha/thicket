@@ -4,8 +4,9 @@
  * when it changes, a reset link, and "your password was changed". thicket
  * sends nothing else.
  *
- * Plain SMTP, so any provider works. With no SMTP_URL (dev), the message is
- * printed to the log so the links can be clicked while testing.
+ * Plain SMTP, so any provider works. There is no fallback that prints
+ * messages to the log: they carry live reset links. In dev, point SMTP_URL at
+ * a local mail catcher (docs/testing.md).
  *
  * send() never throws. A message that didn't go out returns false and logs the
  * provider's own reason, so support can see why; the caller tells the person.
@@ -19,8 +20,8 @@ export type Message = { to: string; subject: string; text: string };
 
 export async function send(msg: Message): Promise<boolean> {
   if (!transport) {
-    console.log(`[mail] (not sent: no SMTP_URL) to ${msg.to}\nSubject: ${msg.subject}\n\n${msg.text}\n`);
-    return true;
+    console.error(`[mail] sending "${msg.subject}" to ${msg.to} failed: SMTP_URL is unset`);
+    return false;
   }
   try {
     await transport.sendMail({ from: MAIL_FROM, ...msg });
