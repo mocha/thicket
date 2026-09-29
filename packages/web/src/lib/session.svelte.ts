@@ -66,6 +66,8 @@ setUnauthorizedHandler(() => {
  */
 export function isPublicPath(pathname: string): boolean {
   if (pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname === '/design-system' || pathname.startsWith('/@')) return true;
+  // Getting back in: someone who forgot their password isn't signed in, and a confirmation link is often opened on another device.
+  if (pathname === '/forgot-password' || pathname === '/reset-password' || pathname === '/confirm-email') return true;
   // /feeds/:id, /feeds/:id/:slug, and a post under it: /feeds/:id/:slug/:item/:itemslug.
   return /^\/feeds\/\d+(\/(?!settings\/?$)[^/]+(\/\d+(\/[^/]*)?)?)?\/?$/.test(pathname);
 }

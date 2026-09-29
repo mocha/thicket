@@ -7,15 +7,18 @@
   import { site, loadSite, HANDLE_RULES } from '$lib/site.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
+  import Button from '$lib/components/Button.svelte';
 
   /**
-   * Sign-up is a handle and a password. Everything on the profile is optional
+   * Sign-up is a handle and a password, plus an email on readthicket.com (for
+   * password resets only). Everything on the profile is optional
    * and can be filled in later (or never), so a new person lands on an empty
    * Everything with the one thing that matters: Add a feed.
    */
   let handle = $state('');
   let password = $state('');
   let displayName = $state('');
+  let email = $state('');
   let busy = $state(false);
   const status = $derived(site.status);
   let inviteCode = $state('');
@@ -30,7 +33,7 @@
     if (busy) return;
     busy = true; error = null;
     try {
-      const me = await authApi.signup(handleClean, password, displayName.trim() || undefined, inviteCode.trim() || undefined);
+      const me = await authApi.signup(handleClean, password, displayName.trim() || undefined, inviteCode.trim() || undefined, hosted ? email.trim() : undefined);
       setMe(me);
       api.event('signed_up');
       // Back to whatever brought you here (someone's collection, say), else Everything.
@@ -49,16 +52,17 @@
     void loadSite();
   });
   const needsInvite = $derived(status?.signups === 'invite');
+  const hosted = $derived(status?.hosted ?? false);
   // An error about a field this form isn't showing still has to be seen, so it goes under the form.
-  const errorOnField = $derived(error?.field === 'handle' || error?.field === 'password' || (error?.field === 'inviteCode' && needsInvite));
-  const canSubmit = $derived(handleOk && password.length >= 8 && (!needsInvite || inviteCode.trim().length > 0));
+  const errorOnField = $derived(error?.field === 'handle' || error?.field === 'password' || (error?.field === 'email' && hosted) || (error?.field === 'inviteCode' && needsInvite));
+  const canSubmit = $derived(handleOk && password.length >= 8 && (!hosted || email.trim().length > 0) && (!needsInvite || inviteCode.trim().length > 0));
 </script>
 
 <svelte:head><title>Sign up · thicket</title></svelte:head>
 
 <section class="auth">
   <h1>Sign up for thicket</h1>
-  <p class="lede">All you need is a handle and a password. You can start following feeds right away.</p>
+  <p class="lede">{hosted ? 'All you need is a handle, a password, and an email.' : 'All you need is a handle and a password.'} You can start following feeds right away.</p>
   {#if !status}
     <p class="lede">Loading…</p>
   {:else if status.signups === 'closed'}
@@ -101,13 +105,20 @@
           <Input {id} aria-describedby={describedBy} {invalid} type="password" bind:value={password} autocomplete="new-password" required minlength="8" />
         {/snippet}
       </Field>
+      {#if hosted}
+        <Field label="Email" hint="Only for resetting your password if you forget it. We’ll send you a link to confirm it." error={error?.field === 'email' ? error.message : null}>
+          {#snippet children({ id, describedBy, invalid })}
+            <Input {id} aria-describedby={describedBy} {invalid} type="email" bind:value={email} autocomplete="email" required />
+          {/snippet}
+        </Field>
+      {/if}
       <Field label="Display name" optional hint="The name people see instead of your handle. You can change it at any time.">
         {#snippet children({ id, describedBy, invalid })}
           <Input {id} aria-describedby={describedBy} {invalid} bind:value={displayName} autocomplete="name" />
         {/snippet}
       </Field>
       {#if error && !errorOnField}<p class="bad" role="alert">{error.message}</p>{/if}
-      <button type="submit" disabled={busy || !canSubmit}>{busy ? 'Signing up…' : 'Sign up'}</button>
+      <Button type="submit" variant="primary" solid size="lg" disabled={busy || !canSubmit} loading={busy}>{busy ? 'Signing up…' : 'Sign up'}</Button>
     </form>
   {/if}
   <p class="alt">Already have an account? <a href="/login{page.url.search}">Log in</a></p>
@@ -124,8 +135,6 @@
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
   .lede { color: var(--text-2); margin: 0 0 var(--space-5); }
   form { display: flex; flex-direction: column; gap: var(--space-5); }
-  button { margin-top: var(--space-1); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
-  button:disabled { opacity: 0.5; }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .alt { margin: var(--space-5) 0 0; color: var(--text-2); }
   .what { margin: calc(var(--space-5) + var(--space-1)) 0 0; padding-top: var(--space-4); border-top: 1px solid var(--line); }

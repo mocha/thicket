@@ -330,6 +330,12 @@ export type Me = {
   hideShortsByDefault: boolean;
   /** When my profile picture was last set, or null for none. The UI hangs a ?v= off it so a change shows at once. */
   avatarUpdatedAt: string | null;
+  /**
+   * readthicket.com only: where password-reset links go, and when it was confirmed
+   * (null = waiting on the link). `pendingEmail` is a new address waiting on its
+   * link while the confirmed one still gets resets.
+   */
+  email: string | null; emailConfirmedAt: string | null; pendingEmail: string | null;
 };
 export type SignupPolicy = 'open' | 'invite' | 'closed';
 /**
@@ -342,11 +348,18 @@ export type Invite = { code: string; url: string; note: string | null; createdAt
 export const authApi = {
   me: () => j<Me>('/api/auth/me'),
   status: () => j<InstanceStatus>('/api/auth/status'),
-  signup: (handle: string, password: string, displayName?: string, inviteCode?: string) => j<Me>('/api/auth/signup', { method: 'POST', body: JSON.stringify({ handle, password, displayName, inviteCode }) }),
+  signup: (handle: string, password: string, displayName?: string, inviteCode?: string, email?: string) => j<Me>('/api/auth/signup', { method: 'POST', body: JSON.stringify({ handle, password, displayName, inviteCode, email }) }),
   login: (handle: string, password: string) => j<Me>('/api/auth/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   logout: () => j<void>('/api/auth/logout', { method: 'POST' }),
   update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'activityVisibility' | 'notesFrom' | 'trackActivity' | 'hideShortsByDefault'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
   changePassword: (current: string, next: string) => j<void>('/api/auth/me/password', { method: 'POST', body: JSON.stringify({ current, next }) }),
+  /** readthicket.com only, like the four below. `sent: false` means the address saved but the confirmation didn't go out; `error` says so. */
+  setEmail: (email: string, password: string) => j<{ me: Me; sent: boolean; error?: string }>('/api/auth/me/email', { method: 'PUT', body: JSON.stringify({ email, password }) }),
+  resendEmail: () => j<{ email: string }>('/api/auth/me/email/resend', { method: 'POST' }),
+  confirmEmail: (token: string) => j<void>('/api/auth/confirm-email', { method: 'POST', body: JSON.stringify({ token }) }),
+  /** Always succeeds the same way whether or not an account matched. */
+  forgotPassword: (who: string) => j<void>('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ who }) }),
+  resetPassword: (token: string, password: string) => j<Me>('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
   /** Upload a new profile picture. The blob is the already-cropped square; the server re-encodes it. */
   uploadAvatar: (blob: Blob) => { const fd = new FormData(); fd.append('avatar', blob, 'avatar.webp'); return j<{ hasAvatar: boolean; avatarUpdatedAt: string }>('/api/users/me/avatar', { method: 'POST', body: fd, headers: {} }); },
   removeAvatar: () => j<void>('/api/users/me/avatar', { method: 'DELETE' })

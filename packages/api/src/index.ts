@@ -28,11 +28,18 @@ import { marks } from "./routes/marks.js";
 import { imports } from "./routes/imports.js";
 import { startScheduler } from "./feeds/scheduler.js";
 import { attachUser, pruneSessions } from "./lib/auth.js";
+import { pruneEmailTokens } from "./lib/email-tokens.js";
 import { startRetention } from "./lib/retention.js";
 import { ensureAdmin, publicStatus } from "./lib/instance.js";
 import { runMigrations } from "./db/migrate.js";
 import { headForPath } from "./lib/meta.js";
-import { FETCH_CONCURRENCY, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
+import { EMAIL_REQUIRED, FETCH_CONCURRENCY, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, SMTP_URL, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
+
+// Every account has an email so it can reset its password; without mail, nobody could.
+if (EMAIL_REQUIRED && !SMTP_URL) {
+  console.error("[mail] SMTP_URL is unset, but this instance requires email (HOSTED=true). Set SMTP_URL; see docs/DEPLOY.md.");
+  process.exit(1);
+}
 
 await runMigrations();
 await ensureAdmin();
@@ -64,6 +71,7 @@ const scheduler = SCHEDULER
   ? startScheduler({ tickMs: SCHEDULER_TICK_MS, concurrency: FETCH_CONCURRENCY, log: (m) => console.log(`[fetch] ${m}`) })
   : null;
 setInterval(() => void pruneSessions().catch(() => {}), 3600_000).unref();
+setInterval(() => void pruneEmailTokens().catch(() => {}), 3600_000).unref();
 startRetention();
 
 app.get("/api/health", async (c) => c.json({

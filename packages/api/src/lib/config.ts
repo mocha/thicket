@@ -27,6 +27,20 @@ export const INSTANCE_NAME = env("INSTANCE_NAME") ?? new URL(PUBLIC_URL).hostnam
  * Off unless set, so a copy of thicket never turns them on by accident.
  */
 export const HOSTED = env("HOSTED") === "true";
+/**
+ * Every account must have an email, so password reset always works. Today
+ * that's readthicket.com alone; self-hosted copies don't ask for email.
+ */
+export const EMAIL_REQUIRED = HOSTED;
+/**
+ * Outgoing mail: smtp://user:pass@host:587 (or smtps:// for port 465), from
+ * whichever email provider you use. Required when EMAIL_REQUIRED; thicket
+ * won't start without it. In dev, point it at a local mail catcher (see
+ * docs/testing.md). See lib/mail.ts.
+ */
+export const SMTP_URL = env("SMTP_URL");
+/** The From line on every message. */
+export const MAIL_FROM = env("MAIL_FROM") ?? "thicket <no-reply@readthicket.com>";
 
 /**
  * Retention windows, in days. 0 disables a window entirely.

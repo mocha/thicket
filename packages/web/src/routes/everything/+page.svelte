@@ -9,6 +9,8 @@
   import { session } from '$lib/session.svelte';
   import { loadCollections } from '$lib/collections.svelte';
   import { recall, keepOnLeave } from '$lib/listmemory';
+  import { site, loadSite } from '$lib/site.svelte';
+  import Banner from '$lib/components/Banner.svelte';
   type Stats = { feeds: number; collections: number; posts24h: number; feeds24h: number };
   /** Kept for Back like the list below it, so the line under the title is the same height when the scroll is put back. */
   let stats = $state<Stats | null>(recall<Stats>('everything-stats') ?? null);
@@ -17,7 +19,21 @@
   const n = (v: number, one: string, many: string) => `${v} ${v === 1 ? one : many}`;
   /** Following nothing is a different page, not an empty one: the first screen has to offer a first move. */
   const brandNew = $derived(stats !== null && stats.feeds === 0);
+  /**
+   * readthicket.com: an account without a confirmed email can't get back in
+   * after a forgotten password, so say so here until it has one. Accounts from
+   * before email was required have none; new ones are waiting on the link.
+   */
+  $effect(() => { if (!site.status) void loadSite(); });
+  const me = $derived(session.user);
+  const emailNudge = $derived(site.status?.hosted && me && !me.emailConfirmedAt ? (me.email ? 'confirm' : 'add') : null);
 </script>
+
+{#if emailNudge === 'add'}
+  <div class="nudge"><Banner tone="warning" title="Add an email to your account" href="/account">If you forget your password, an email is the only way back in.</Banner></div>
+{:else if emailNudge === 'confirm'}
+  <div class="nudge"><Banner tone="info" title="Confirm your email" href="/account">We sent a link to {me?.email}. Until you click it, you can’t reset your password.</Banner></div>
+{/if}
 
 {#if brandNew}
   <header class="top">
@@ -44,6 +60,7 @@
 {/if}
 
 <style>
+  .nudge { margin-bottom: var(--space-4); }
   .top { margin-bottom: calc(var(--space-5) + var(--space-1)); }
   .titlerow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; min-width: 0; }
