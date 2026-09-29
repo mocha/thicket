@@ -84,6 +84,8 @@
     { name: 'text-3', use: 'Quiet ink, hints and counts' },
     { name: 'accent', use: 'The one action color' },
     { name: 'accent-ink', use: 'Lettering on a filled accent' },
+    { name: 'accent-soft', use: 'The secondary button’s pale wash' },
+    { name: 'accent-soft-ink', use: 'Lettering on that wash' },
     { name: 'danger', use: 'Destructive and errors' },
     { name: 'amber', use: 'Warnings and caution' },
     { name: 'line', use: 'Hairline borders' }
@@ -94,7 +96,7 @@
   const palettes = [
     { id: 'default', label: 'Thicket', note: 'The default. Cream and green.', bg: '#f6f1e8', accent: '#2f5d3a' },
     { id: 'slate', label: 'Neutral', note: 'No cream tint. Gray and green.', bg: '#efefee', accent: '#2f5d3a' },
-    { id: 'ember', label: 'Vivid', note: 'Bolder color. Ivory and orange.', bg: '#fbf4ec', accent: '#b53802' },
+    { id: 'ember', label: 'Vivid', note: 'Bolder color. Ivory and orange.', bg: '#fbf4ec', accent: '#a05100' },
     { id: 'parchment', label: 'Soft sepia', note: 'Low contrast. Warm sepia.', bg: '#eadfcb', accent: '#7a5535' },
     { id: 'plum', label: 'Soft plum', note: 'Low contrast. Cool mauve.', bg: '#e9e1e6', accent: '#7a3d68' },
     { id: 'contrast', label: 'Crisp', note: 'High contrast. Black and white, one accent.', bg: '#ffffff', accent: '#0050a0' },
@@ -103,6 +105,7 @@
 
   /* The type ladder: seven named interface sizes, plus the reading size. */
   const typeScale = [
+    { name: 'text-3xl', px: 36, use: 'Welcome headline on an empty screen' },
     { name: 'text-2xl', px: 26, use: 'Page headings' },
     { name: 'text-xl', px: 21, use: 'Section headings' },
     { name: 'text-lg', px: 20, use: 'Card titles' },
@@ -254,7 +257,7 @@
   <!-- ============================== TYPE =============================== -->
   <section id="type" aria-labelledby="type-h">
     <h2 id="type-h">Type</h2>
-    <p class="section-lede">One ladder of seven interface sizes; every piece of text in the app is one rung. A reader can scale any of three roles — headlines, reading text, the interface — and the whole ladder moves with them.</p>
+    <p class="section-lede">One ladder of eight sizes; every piece of text in the app is one rung. A reader can scale any of three roles — headlines, reading text, the interface — and the whole ladder moves with them.</p>
 
     <div class="type-scale">
       {#each typeScale as t}
@@ -321,13 +324,14 @@
   <!-- ============================= BUTTONS ============================= -->
   <section id="buttons" aria-labelledby="buttons-h">
     <h2 id="buttons-h">Buttons</h2>
-    <p class="section-lede">One button, three looks. Primary for the main move, ghost for everything else, danger for the destructive one. Three sizes; a solid fill for when a ghost needs more presence.</p>
+    <p class="section-lede">One button, four looks. Primary for the main move, secondary for a move a screen offers many times over (one per card), ghost for everything else, danger for the destructive one. Three sizes. Danger has a solid fill too, for the final confirm of something that can’t be undone.</p>
 
     <div class="row">
       <Button variant="primary">Primary</Button>
+      <Button variant="secondary">Secondary</Button>
       <Button variant="ghost">Ghost</Button>
       <Button variant="danger">Danger</Button>
-      <Button variant="primary" solid>Solid</Button>
+      <Button variant="danger" solid>Danger, solid</Button>
     </div>
     <div class="row">
       <Button variant="primary" size="sm">Small</Button>
