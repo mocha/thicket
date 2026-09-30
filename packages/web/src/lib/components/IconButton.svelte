@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from './Icon.svelte';
+  import { modality } from '$lib/focus.svelte';
 
   /**
    * The one icon-only button. A round tap target with a single glyph and no
@@ -19,6 +20,11 @@
    * like the page-turn strips down each side of the screen. The button's click
    * area grows to fill its nearest positioned container while the circle stays
    * the same size, so there is still one real button to focus and announce.
+   *
+   * The focus ring shows only when focus arrived by keyboard. A Sheet or
+   * dialog hands focus to its first control as it opens, often its close
+   * button, and some browsers (Safari on iPad) would ring it even though the
+   * reader tapped to open it.
    */
   interface Props {
     icon: 'gear' | 'pencil' | 'close' | 'caret' | 'back' | 'dots' | 'bookmark' | 'note';
@@ -36,6 +42,7 @@
     type?: 'button' | 'submit' | 'reset';
     disabled?: boolean;
     onclick?: (e: MouseEvent) => void;
+    onfocus?: (e: FocusEvent) => void;
     class?: string;
     [key: string]: unknown;
   }
@@ -53,6 +60,7 @@
     type = 'button',
     disabled = false,
     onclick,
+    onfocus,
     class: klass = '',
     ...rest
   }: Props = $props();
@@ -61,6 +69,13 @@
   const scale = { sm: 14, md: 18, lg: 20 } as const;
   const glyph = $derived(iconSize ?? scale[size]);
   const toggle = $derived(pressed !== undefined);
+
+  /* Read once as focus lands, the same way text fields do. */
+  let byKeyboard = $state(false);
+  function focused(e: FocusEvent) {
+    byKeyboard = modality.keyboard;
+    onfocus?.(e);
+  }
 </script>
 
 {#if href}
@@ -69,10 +84,12 @@
     class:on={pressed}
     class:toggle
     class:stretch
+    class:kb={byKeyboard}
     href={disabled ? undefined : href}
     aria-disabled={disabled ? 'true' : undefined}
     aria-label={label}
     onclick={disabled ? undefined : onclick}
+    onfocus={focused}
     {...rest}
   >
     <Icon name={icon} size={glyph} fill={pressed} {dir} />
@@ -83,11 +100,13 @@
     class:on={pressed}
     class:toggle
     class:stretch
+    class:kb={byKeyboard}
     {type}
     {disabled}
     aria-label={label}
     aria-pressed={toggle ? pressed : undefined}
     {onclick}
+    onfocus={focused}
     {...rest}
   >
     <Icon name={icon} size={glyph} fill={pressed} {dir} />
@@ -134,7 +153,8 @@
      so a stretched one keeps the shadow but doesn't lift. */
   .stretch:hover { transform: none; }
 
-  .ib:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .ib:focus-visible { outline: none; }
+  .ib.kb:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
   .ib:disabled,
   .ib[aria-disabled='true'] {

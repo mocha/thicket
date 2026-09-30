@@ -133,8 +133,10 @@
   .spacer { flex: 1; }
   .link { display: block; padding: var(--space-2) var(--card-pad) var(--card-pad); -webkit-tap-highlight-color: transparent; }
   @media (hover: hover) { .link:hover h2 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
+  /* Edge to edge: wider than the text by the card's inset on each side. The app-wide
+     "never wider than your container" rule for pictures would cut it short on the right. */
   .hero {
-    width: calc(100% + var(--card-pad) * 2); margin: 0 calc(var(--card-pad) * -1) var(--space-3); aspect-ratio: 16 / 9; object-fit: cover;
+    width: calc(100% + var(--card-pad) * 2); max-width: none; margin: 0 calc(var(--card-pad) * -1) var(--space-3); aspect-ratio: 16 / 9; object-fit: cover;
     background: var(--surface-2);
   }
   footer { margin-top: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
