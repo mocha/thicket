@@ -1,30 +1,19 @@
 <script lang="ts">
   /**
-   * The front door for people who are not signed in. Shows before it tells:
-   * the first screen is the headline, one line, the sign-up box, and a live
-   * slice of a real public collection that visibly stops, because a list that
-   * ends is the thing a social feed can't show. Then real collections to open,
-   * then the four differences in a line each, then three things you do.
+   * The front door for people who are not signed in. The first screen is the
+   * headline, one line, and the sign-up box, which must never need a scroll.
+   * Then real collections to open, then the four differences in a line each,
+   * then three things you do.
    * Words chosen for people who have never heard of RSS: "sites" and "posts",
    * never "feeds".
    */
   import { onMount } from 'svelte';
-  import { api, exploreApi, type RiverItem } from '$lib/api';
+  import { api } from '$lib/api';
   import AuthBox from './AuthBox.svelte';
   import StarterPacks from './StarterPacks.svelte';
-  import ItemCard from './ItemCard.svelte';
   import Card from './Card.svelte';
 
-  /** The newest few posts from the first featured collection. Empty (and hidden) if there isn't one. */
-  let preview = $state<RiverItem[]>([]);
-
-  onMount(() => {
-    api.event('home_view');
-    exploreApi.featured()
-      .then((r) => (r.collections[0] ? api.river({ collection: r.collections[0].id, limit: 3 }) : null))
-      .then((p) => { if (p) preview = p.items.slice(0, 3); })
-      .catch(() => {});
-  });
+  onMount(() => api.event('home_view'));
 
   const apart = [
     { title: 'Newest first, nothing reordered', body: 'No ranking decides what you see.' },
@@ -40,19 +29,11 @@
   ];
 </script>
 
-<section class="hero" class:with-preview={preview.length > 0}>
+<section class="hero">
   <div class="pitch">
     <h1>Read the web on your own terms.</h1>
     <p class="sub">Follow the sites you like and read everything they publish in one place.</p>
   </div>
-  {#if preview.length}
-    <div class="preview">
-      <ol>
-        {#each preview as item (item.id)}<li><ItemCard {item} compact /></li>{/each}
-      </ol>
-      <p class="end" role="separator"><span>Then it ends</span></p>
-    </div>
-  {/if}
   <div class="auth"><AuthBox /></div>
 </section>
 
@@ -91,17 +72,10 @@
 </footer>
 
 <style>
-  .hero { display: grid; gap: var(--space-5); padding: var(--space-5) 0 var(--space-2); grid-template-areas: 'pitch' 'auth' 'preview'; }
-  .pitch { grid-area: pitch; }
-  .auth { grid-area: auth; align-self: start; max-width: 26rem; }
-  .preview { grid-area: preview; min-width: 0; }
+  .hero { display: grid; gap: var(--space-6); padding: var(--space-5) 0 var(--space-2); }
+  .auth { align-self: start; }
   h1 { font-family: var(--font-headings); font-size: clamp(34px, 5vw, 52px); line-height: 1.08; margin: 0 0 var(--space-4); letter-spacing: -0.015em; }
   .sub { font-size: clamp(18px, 2.2vw, 22px); color: var(--text-2); margin: 0; line-height: 1.35; max-width: 32ch; }
-  .preview ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
-  /* The list visibly stops: the same accent rule that marks the end of what's new in Everything. */
-  .end { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-4) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
-  .end::before, .end::after { content: ''; flex: 1; border-top: 2px solid var(--accent); }
-  .end span { flex: none; }
   hr { border: 0; border-top: 1px solid var(--line); margin: calc(var(--space-6) + var(--space-1)) 0; }
   h2 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-4); }
   .apart ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
@@ -115,9 +89,7 @@
   footer p { margin: 0; max-width: 70ch; }
   footer a { color: var(--accent); font-weight: 600; }
   @media (min-width: 820px) {
-    .hero { padding: calc(var(--space-6) + var(--space-1)) 0 var(--space-4); grid-template-areas: 'pitch' 'auth'; }
-    /* With a preview: pitch and sign up on the left, the live list on the right. */
-    .hero.with-preview { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; grid-template-areas: 'pitch preview' 'auth preview'; column-gap: calc(var(--space-6) + var(--space-4)); }
+    .hero { grid-template-columns: 2fr 1fr; align-items: center; gap: calc(var(--space-6) + var(--space-4)); padding: calc(var(--space-6) + var(--space-1)) 0 var(--space-4); }
     .apart ul { grid-template-columns: repeat(2, 1fr); gap: var(--space-5) calc(var(--space-6) + var(--space-1)); }
     .features ul { grid-template-columns: repeat(3, 1fr); }
   }
