@@ -20,6 +20,19 @@ const PER_CATEGORY = 20;
 const PER_PUBLISHER = 2;
 const SMALL_WEB = 1300;
 
+/**
+ * Left out on purpose (2026-09-30). The big-web list comes from an Indian
+ * publisher and leaned on Indian national news, and most early readers are in
+ * the US. Cricket goes as a topic; these outlets go wherever they appear. Other
+ * India-related feeds stay. seeds/dropped-2026-09-30.txt is the same cut, for
+ * removing what an earlier seed already put in the index.
+ */
+const SKIP_TOPICS = new Set(['Cricket']);
+const SKIP_FEEDS = [
+  /timesofindia\.indiatimes\.com/, /economictimes\.indiatimes\.com/, /indianexpress\.com/,
+  /thehindu\.com/, /feedburner\.com\/ndtv/
+];
+
 let seed = 20260913;
 const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
 const shuffle = (a) => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
@@ -28,8 +41,9 @@ const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } 
 // Big web: an even slice per topic, so browsing has range rather than 41 tech feeds.
 const big = [];
 const perPublisher = new Map();
-for (const f of readdirSync(opmlDir).filter((f) => f.endsWith('.opml'))) {
-  const urls = [...readFileSync(join(opmlDir, f), 'utf8').matchAll(/xmlUrl="([^"]+)"/g)].map((m) => m[1].replace(/&amp;/g, '&'));
+for (const f of readdirSync(opmlDir).filter((f) => f.endsWith('.opml') && !SKIP_TOPICS.has(f.slice(0, -5)))) {
+  const urls = [...readFileSync(join(opmlDir, f), 'utf8').matchAll(/xmlUrl="([^"]+)"/g)].map((m) => m[1].replace(/&amp;/g, '&'))
+    .filter((u) => !SKIP_FEEDS.some((re) => re.test(u)));
   let taken = 0;
   for (const u of shuffle(urls)) {
     if (taken >= PER_CATEGORY) break;

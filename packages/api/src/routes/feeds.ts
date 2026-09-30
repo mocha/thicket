@@ -50,7 +50,7 @@ function shape(row: any) {
 
 /**
  * The index. ?q= searches title/description/url (and the caller's own name for a feed),
- * ?following=1|0 restricts to feeds the user does or does not follow, ?sort= recent|title|followers|posts|added.
+ * ?following=1|0 restricts to feeds the user does or does not follow, ?sort= popular|recent|title|posts|added.
  * Offset paginated; fine at tens of thousands, revisit past that.
  */
 feeds.get("/", async (c) => {
@@ -59,7 +59,10 @@ feeds.get("/", async (c) => {
   const following = c.req.query("following"); // "1" = only followed, "0" = only not followed, else all
   const network = c.req.query("network"); // "1" = people I follow, "2" = them and the people they follow
   const since = c.req.query("since"); // 24h | week | month | year: when the feed was added to this instance
-  const sort = c.req.query("sort") ?? "recent";
+  // Popular by default: most recent post first put whoever posts fifty times a day on top forever.
+  // "followers" is the old name for popular, kept so saved links still work.
+  const sortParam = c.req.query("sort") ?? "popular";
+  const sort = sortParam === "followers" ? "popular" : sortParam;
   const limit = Math.min(200, Math.max(1, Number(c.req.query("limit") ?? 50)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
 
@@ -96,7 +99,9 @@ feeds.get("/", async (c) => {
     : sql`, null::int as "networkFollowers"`;
   const order =
     sort === "title" ? sql`lower(coalesce(x.title, x.url)) asc`
-    : sort === "followers" ? sql`"followerCount" desc, "lastItemAt" desc nulls last`
+    // Ties (on a young instance, most of the index) go to feeds that posted this week, then
+    // to a fixed shuffle. Never to how often a feed posts: that is the firehose again.
+    : sort === "popular" ? sql`"followerCount" desc, ("lastItemAt" > now() - interval '7 days') desc nulls last, md5(x.id::text)`
     : sort === "posts" ? sql`"postsLast30d" desc, "lastItemAt" desc nulls last`
     : sort === "added" ? sql`"createdAt" desc`
     : sql`"lastItemAt" desc nulls last, x.id desc`;

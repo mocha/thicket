@@ -22,6 +22,7 @@ import { eq, sql } from "drizzle-orm";
 import { db, pool, schema } from "../db/client.js";
 import { normalizeFeedUrl } from "../feeds/normalize.js";
 import { refreshFeed } from "../feeds/refresh.js";
+import { otherScheme } from "../feeds/twins.js";
 
 const args = process.argv.slice(2);
 const file = args.find((a) => !a.startsWith("--"));
@@ -54,7 +55,9 @@ for (const raw of readFileSync(file, "utf8").split("\n")) {
   const bare = line.replace(/\s+#.*$/, "");
   let url: string;
   try { url = normalizeFeedUrl(bare); } catch { continue; }
-  if (!/^https?:\/\//i.test(url) || seen.has(url)) continue;
+  // http and https of one address are one feed, in the file and against the index.
+  const flipped = otherScheme(url);
+  if (!/^https?:\/\//i.test(url) || seen.has(url) || (flipped && seen.has(flipped))) continue;
   seen.add(url);
   urls.push(url);
   if (urls.length >= limit) break;
@@ -63,7 +66,7 @@ for (const raw of readFileSync(file, "utf8").split("\n")) {
 const known = new Set(
   (await db.execute<{ url: string }>(sql`select url from feeds`)).rows.map((r) => r.url),
 );
-const fresh = urls.filter((u) => !known.has(u));
+const fresh = urls.filter((u) => !known.has(u) && !known.has(otherScheme(u) ?? u));
 console.log(`${urls.length} urls in ${file}; ${urls.length - fresh.length} already in the index; ${fresh.length} to try`);
 if (dry || fresh.length === 0) {
   console.log(dry ? "dry run, stopping here" : "nothing to do");
@@ -71,7 +74,7 @@ if (dry || fresh.length === 0) {
   process.exit(0);
 }
 
-const stats = { added: 0, empty: 0, failed: 0 };
+const stats = { added: 0, duplicate: 0, empty: 0, failed: 0 };
 const failures = new Map<string, number>();
 const busyHost = new Map<string, number>();
 let cursor = 0;
@@ -86,6 +89,8 @@ async function ingest(url: string) {
   if (!row) return; // someone else added it between the check and now
   const r = await refreshFeed(row.id).catch((e) => ({ error: String(e), itemsNew: 0 }));
   const [after] = await db.select().from(schema.feeds).where(eq(schema.feeds.id, row.id));
+  // Folded into a feed the index already had under another address (feeds/twins.ts).
+  if (!after && "mergedFrom" in r && r.mergedFrom) { stats.duplicate++; return; }
   const ageDays = after?.lastItemAt ? (Date.now() - after.lastItemAt.getTime()) / 86_400_000 : null;
   const reason = r.error ? shorten(r.error)
     : !after?.title ? "no title"
@@ -94,7 +99,8 @@ async function ingest(url: string) {
     : ageDays > maxAgeDays ? `silent ${Math.max(1, Math.round(ageDays / 365))}y`
     : null;
   if (reason) {
-    await db.delete(schema.feeds).where(eq(schema.feeds.id, row.id));
+    // Never one somebody follows: this row may have absorbed an older twin that had followers.
+    await db.delete(schema.feeds).where(sql`id = ${row.id} and not exists(select 1 from collection_feeds cf where cf.feed_id = ${row.id})`);
     if (reason.startsWith("no ") || reason.startsWith("silent")) stats.empty++;
     else stats.failed++;
     failures.set(reason, (failures.get(reason) ?? 0) + 1);
@@ -140,7 +146,7 @@ await new Promise<void>((resolve) => {
   pump();
 });
 
-console.log(`\n${stats.added} added, ${stats.empty} empty or abandoned, ${stats.failed} failed`);
+console.log(`\n${stats.added} added, ${stats.duplicate} already here under another address, ${stats.empty} empty or abandoned, ${stats.failed} failed`);
 const why = [...failures.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
 if (why.length) console.log("why not:", why.map(([k, n]) => `${k} ${n}`).join(", "));
 const [{ n }] = (await db.execute<{ n: number }>(sql`select count(*)::int as n from feeds`)).rows;

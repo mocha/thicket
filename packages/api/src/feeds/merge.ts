@@ -17,7 +17,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 
-export async function mergeFeeds(fromId: number, intoId: number): Promise<void> {
+export async function mergeFeeds(fromId: number, intoId: number, why = "both fetch the same address"): Promise<void> {
   if (fromId === intoId) return;
   await db.transaction(async (tx) => {
     await tx.execute(sql`
@@ -57,5 +57,5 @@ export async function mergeFeeds(fromId: number, intoId: number): Promise<void> 
       from feeds f where g.id = ${intoId} and f.id = ${fromId}`);
     await tx.execute(sql`delete from feeds where id = ${fromId}`);
   });
-  console.log(`[merge] feed ${fromId} folded into feed ${intoId}: both fetch the same address`);
+  console.log(`[merge] feed ${fromId} folded into feed ${intoId}: ${why}`);
 }
