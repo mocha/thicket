@@ -13,12 +13,13 @@
    *   between collections is a run of small, reversible tweaks. A "Saved"
    *   note by the heading confirms each one, and Done just closes. Unfollow
    *   takes it out of every collection at once, worth one click when a feed
-   *   sits in five.
+   *   sits in five. It is a red text link under Done, not a button beside
+   *   it: side by side they read as two equal ways to close the sheet.
    *
    * So "Follow" means the same thing in both sheets: press it to start.
    */
   import { api, collectionsApi } from '$lib/api';
-  import { loadCollections, placeName, whereItGoes } from '$lib/collections.svelte';
+  import { collectionStore, loadCollections, placeName, whereItGoes } from '$lib/collections.svelte';
   import { showToast } from '$lib/toast.svelte';
   import Sheet from './Sheet.svelte';
   import CollectionList from './CollectionList.svelte';
@@ -87,26 +88,26 @@
 </script>
 
 <Sheet title={adding || !following ? `Follow ${name}` : `Following ${name}`} bind:dialog {onclose}>
-  <div class="eyebrow"><span>Put it in a collection</span>{#if !adding}<SavedNote show={saved} />{/if}</div>
+  <!-- What the list is for, above it: where a new follow will go (updating as you tick), or the rule for one you already follow. -->
+  {#if adding}{#if collectionStore.loaded}<div class="lede"><p>{whereItGoes(picked)}</p></div>{/if}
+  {:else}<div class="lede"><p>Every feed you follow lives in at least one collection.</p><SavedNote show={saved} /></div>{/if}
   {#if adding}
-    <CollectionList ids={picked} hint={whereItGoes(picked)} via="follow_sheet" disabled={busy} ontoggle={pick} oncreated={(id) => (picked = [...picked, id])} />
+    <CollectionList ids={picked} via="follow_sheet" disabled={busy} ontoggle={pick} oncreated={(id) => (picked = [...picked, id])} />
   {:else}
-    <CollectionCheckList {feedId} bind:ids bind:saved {name} {onchange} />
+    <CollectionCheckList {feedId} bind:ids bind:saved {name} {onchange} showHint={false} />
   {/if}
   {#snippet footer()}
     {#if adding}
       <button type="button" class="sheet-action" onclick={follow} disabled={busy}>{busy ? 'Following…' : 'Follow'}</button>
     {:else}
-      <div class="actions">
-        {#if following}<Button variant="danger" size="lg" onclick={unfollow}>Unfollow</Button>{/if}
-        <button type="button" class="sheet-action" onclick={() => dialog?.close()}>Done</button>
-      </div>
+      <button type="button" class="sheet-action" onclick={() => dialog?.close()}>Done</button>
+      {#if following}<span class="unfollow"><Button variant="danger" link onclick={unfollow}>Unfollow</Button></span>{/if}
     {/if}
   {/snippet}
 </Sheet>
 
 <style>
-  .eyebrow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: var(--space-1); }
-  .actions { display: flex; gap: var(--space-2); align-items: stretch; }
-  .actions :global(.sheet-action) { flex: 1; }
+  .lede { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-1); }
+  .lede p { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .unfollow { align-self: center; }
 </style>

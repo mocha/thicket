@@ -636,7 +636,7 @@
      Every kind of row keeps that button at the right, so they all line up. */
   @media (max-width: 560px) {
     li > :global(.row) { flex-basis: 100%; }
-    li > :global(.split), li > .follow, li > .save { margin-left: auto; }
+    li > :global(.follow), li > .save { margin-left: auto; }
   }
   li:first-child { border-top: 0; }
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }

@@ -324,7 +324,7 @@
   <!-- ============================= BUTTONS ============================= -->
   <section id="buttons" aria-labelledby="buttons-h">
     <h2 id="buttons-h">Buttons</h2>
-    <p class="section-lede">One button, four looks. Primary for the main move, secondary for a move a screen offers many times over (one per card), ghost for everything else, danger for the destructive one. Three sizes. Danger has a solid fill too, for the final confirm of something that can’t be undone.</p>
+    <p class="section-lede">One button, four looks. Primary for the main move, secondary for a move a screen offers many times over (one per card), ghost for everything else, danger for the destructive one. Three sizes. Danger has a solid fill too, for the final confirm of something that can’t be undone. Any look can also be a link, just its words, for a quiet second action under the main one.</p>
 
     <div class="row">
       <Button variant="primary">Primary</Button>
@@ -332,6 +332,10 @@
       <Button variant="ghost">Ghost</Button>
       <Button variant="danger">Danger</Button>
       <Button variant="danger" solid>Danger, solid</Button>
+    </div>
+    <div class="row">
+      <Button link>Link</Button>
+      <Button variant="danger" link>Danger link</Button>
     </div>
     <div class="row">
       <Button variant="primary" size="sm">Small</Button>

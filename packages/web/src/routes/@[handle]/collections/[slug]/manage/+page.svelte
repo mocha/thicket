@@ -8,7 +8,6 @@
   import { feedListName } from '$lib/feedname';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
-  import FollowControl from '$lib/components/FollowControl.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
@@ -47,15 +46,11 @@
       await goto(session.user ? profileHref(session.user.handle) : '/', { replaceState: true });
     }
   }
-  let memberships = $state<Record<number, number[]>>({});
   async function load() {
     if (id === null) return;
     col = await collectionsApi.get(id);
     name = col.name;
     description = col.description ?? '';
-    // Which of my collections hold each feed, for the ▾ checklist. One small request per feed; lists are short.
-    const pairs = await Promise.all(col.feeds.map(async (f) => [f.id, (await api.feed(f.id)).myCollectionIds] as const));
-    memberships = Object.fromEntries(pairs);
   }
 
   /* Rename: a small link under the title turns into a field with Save / Cancel. Renaming changes the slug, so the address changes too. */
@@ -349,7 +344,7 @@
       <AddFeedButton collectionIds={[col!.id]} via="manage" />
     </div>
     {#if col.feeds.length === 0}
-      <p class="status">Nothing in here yet. Add a feed above, or file one from any feed’s Follow menu.</p>
+      <p class="status">Nothing in here yet. Add a feed above, or file one from any feed’s Follow button.</p>
     {:else}
       <ul class="list">
         {#each col.feeds as f (f.id)}
@@ -359,12 +354,7 @@
               <a class="title" href="/feeds/{f.id}">{feedListName(f)}</a>
               <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · last post {relativeTime(f.lastItemAt)}{/if}{#if f.consecutiveFailures > 0} · <span class="bad">failing</span>{/if}</div>
             </div>
-            {#if memberships[f.id]}
-              <FollowControl feedId={f.id} ids={memberships[f.id]} name={f.title ?? hostOf(f.url)} compact mainLabel="Remove from {col.name}" onmain={() => removeFeed(f)}
-                onchange={(next) => { memberships[f.id] = next; if (!next.includes(col!.id)) void load(); void loadCollections(true); }} />
-            {:else}
-              <button class="chip" onclick={() => removeFeed(f)} aria-label="Remove {f.title ?? hostOf(f.url)}">Remove from {col.name}</button>
-            {/if}
+            <Button size="sm" onclick={() => removeFeed(f)} aria-label="Remove {f.title ?? hostOf(f.url)} from {col.name}">Remove from {col.name}</Button>
           </li>
         {/each}
       </ul>
