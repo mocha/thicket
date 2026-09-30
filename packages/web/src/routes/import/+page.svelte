@@ -218,7 +218,7 @@
   .help { margin: 0 0 12px; font-size: calc(14px * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
   .lede { margin: 0 0 10px; color: var(--text-2); line-height: 1.45; max-width: 66ch; }
   .fine { margin: 0 0 12px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
-  .row { display: flex; justify-content: flex-end; }
+  .row { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
   .linkrow { display: flex; align-items: center; gap: var(--space-2); }
   .linkrow :global(.link) { flex: 1; min-width: 0; }
   input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
