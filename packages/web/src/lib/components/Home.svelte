@@ -2,7 +2,7 @@
   /**
    * The front door for people who are not signed in. The first screen is the
    * headline, one line, and the sign-up box, which must never need a scroll.
-   * Then real collections to open, then the four differences in a line each,
+   * Then the four differences in a line each, then real collections to open,
    * then three things you do.
    * Words chosen for people who have never heard of RSS: "sites" and "posts",
    * never "feeds".
@@ -39,10 +39,6 @@
 
 <hr />
 
-<StarterPacks heading="Peek inside" lede="Open one and read it, no account needed." />
-
-<hr />
-
 <section class="apart">
   <h2>Unlike a social feed</h2>
   <ul>
@@ -51,6 +47,10 @@
     {/each}
   </ul>
 </section>
+
+<hr />
+
+<StarterPacks heading="Peek inside" lede="Open one and read it, no account needed." />
 
 <hr />
 
