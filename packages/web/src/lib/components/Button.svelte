@@ -5,11 +5,15 @@
    * The one button. Renders a <button>, or an <a> when given href. Four looks
    * (primary / secondary / ghost / danger) and three sizes, all built on the shared spacing,
    * type, and color tokens so every button in the app matches by default.
+   * `link` strips the pill down to its words, for a secondary action that
+   * should sit quietly beside the main one (Unfollow under Done). It keeps the
+   * variant's color, so `variant="danger" link` is a red text button.
    */
   interface Props {
     variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
     size?: 'sm' | 'md' | 'lg';
     solid?: boolean;
+    link?: boolean;
     href?: string;
     type?: 'button' | 'submit' | 'reset';
     disabled?: boolean;
@@ -23,6 +27,7 @@
     variant = 'ghost',
     size = 'md',
     solid = false,
+    link = false,
     href,
     type = 'button',
     disabled = false,
@@ -41,6 +46,7 @@
     class="btn {variant} {size}"
     class:loading
     class:solid
+    class:link
     href={off ? undefined : href}
     aria-disabled={off ? 'true' : undefined}
     onclick={off ? undefined : onclick}
@@ -50,7 +56,7 @@
     {@render children()}
   </a>
 {:else}
-  <button class="btn {variant} {size}" class:loading class:solid {type} disabled={off} {onclick} {...rest}>
+  <button class="btn {variant} {size}" class:loading class:solid class:link {type} disabled={off} {onclick} {...rest}>
     {#if loading}<span class="spin" aria-hidden="true"></span>{/if}
     {@render children()}
   </button>
@@ -138,6 +144,27 @@
     background: color-mix(in srgb, var(--danger) 84%, #000);
     border-color: color-mix(in srgb, var(--danger) 84%, #000);
     color: var(--danger-ink);
+  }
+
+  /* Link: just the words. Color comes from the variant; ghost reads as accent. */
+  .btn.link {
+    background: none;
+    border-color: transparent;
+    padding: var(--space-1) var(--space-2);
+    color: var(--accent);
+    /* A link can carry a name ("Unfollow The Long Feed Title"), so it wraps. */
+    white-space: normal;
+    text-align: center;
+  }
+  .btn.link.danger {
+    color: var(--danger);
+  }
+  .btn.link:hover {
+    background: none;
+    box-shadow: none;
+    transform: none;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 
   .btn:disabled,

@@ -13,13 +13,15 @@
    * save puts the boxes back and says why.
    * The list itself (filter, seven-row scroll, new-collection box) is the
    * shared one the Add a feed sheet uses; this adds saving on each tick.
+   * `showHint={false}` leaves out the line under the list, for a surface that
+   * says it elsewhere (the Follow sheet puts it at the top).
    */
   import { api, collectionsApi } from '$lib/api';
   import { loadCollections, namedCollections, placeName } from '$lib/collections.svelte';
   import { showToast } from '$lib/toast.svelte';
   import CollectionList from './CollectionList.svelte';
 
-  let { feedId, ids = $bindable(), name = 'this feed', saved = $bindable(false), onchange }: { feedId: number; ids: number[]; name?: string; saved?: boolean; onchange?: (ids: number[]) => void } = $props();
+  let { feedId, ids = $bindable(), name = 'this feed', saved = $bindable(false), showHint = true, onchange }: { feedId: number; ids: number[]; name?: string; saved?: boolean; showHint?: boolean; onchange?: (ids: number[]) => void } = $props();
   /** Collection ids whose count just went up; drives the green flash. */
   let flash = $state<Set<number>>(new Set());
   function flashCount(id: number) {
@@ -90,7 +92,7 @@
 
 <!-- A column that can shrink inside a Sheet, so the list scrolls rather than the Sheet overflowing. -->
 <div class="col">
-  <CollectionList {ids} {flash} {hint} via="checklist" ontoggle={(id) => void toggle(id)} oncreated={(id) => void toggle(id)} />
+  <CollectionList {ids} {flash} hint={showHint ? hint : undefined} via="checklist" ontoggle={(id) => void toggle(id)} oncreated={(id) => void toggle(id)} />
 </div>
 
 <style>
