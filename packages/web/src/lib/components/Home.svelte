@@ -1,7 +1,9 @@
 <script lang="ts">
   /**
    * The front door for people who are not signed in. The first screen is the
-   * headline, one line, and the sign-up box, which must never need a scroll.
+   * headline, one line, and the sign-up box, which must never need a scroll
+   * (signed in, the same box is the one-click way into Everything), beside a
+   * phone scrolling through real posts.
    * Then the four differences in a line each, then real collections to open,
    * then three things you do.
    * Words chosen for people who have never heard of RSS: "sites" and "posts",
@@ -12,6 +14,7 @@
   import AuthBox from './AuthBox.svelte';
   import StarterPacks from './StarterPacks.svelte';
   import Card from './Card.svelte';
+  import PhoneFeed from './PhoneFeed.svelte';
 
   onMount(() => api.event('home_view'));
 
@@ -33,8 +36,9 @@
   <div class="pitch">
     <h1>Read the web on your own terms</h1>
     <p class="sub">Follow the sites you like and read everything they publish in one place</p>
+    <div class="auth"><AuthBox /></div>
   </div>
-  <div class="auth"><AuthBox /></div>
+  <div class="picture"><PhoneFeed /></div>
 </section>
 
 <hr />
@@ -72,8 +76,10 @@
 </footer>
 
 <style>
-  .hero { display: grid; gap: var(--space-6); padding: var(--space-5) 0 var(--space-2); }
-  .auth { align-self: start; }
+  .hero { display: grid; gap: var(--space-5); padding: var(--space-5) 0 var(--space-2); }
+  .pitch { display: flex; flex-direction: column; }
+  .auth { margin-top: var(--space-5); max-width: 24rem; }
+  .picture { min-width: 0; }
   h1 { font-family: var(--font-headings); font-size: clamp(34px, 5vw, 52px); line-height: 1.08; margin: 0 0 var(--space-4); letter-spacing: -0.015em; }
   .sub { font-size: clamp(18px, 2.2vw, 22px); color: var(--text-2); margin: 0; line-height: 1.35; max-width: 32ch; }
   hr { border: 0; border-top: 1px solid var(--line); margin: calc(var(--space-6) + var(--space-1)) 0; }
@@ -91,7 +97,7 @@
   footer p { margin: 0; max-width: 70ch; }
   footer a { color: var(--accent); font-weight: 600; }
   @media (min-width: 820px) {
-    .hero { grid-template-columns: 2fr 1fr; align-items: center; gap: calc(var(--space-6) + var(--space-4)); padding: calc(var(--space-6) + var(--space-1)) 0 var(--space-4); }
+    .hero { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-6); padding: var(--space-5) 0 0; }
     .apart ul { grid-template-columns: repeat(2, 1fr); gap: var(--space-5) calc(var(--space-6) + var(--space-1)); }
     .features ul { grid-template-columns: repeat(3, 1fr); }
   }
