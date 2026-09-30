@@ -8,6 +8,15 @@
    * writes this screen's record, which is what makes it a once-only thing:
    * closing it any way at all is the same as finishing it. The full set of
    * options stays on the Settings page.
+   *
+   * Someone who follows nothing yet gets an import step first, because
+   * bringing their feeds is the thing that matters most on day one and it
+   * shouldn't wait behind four appearance questions. Picking a file says what
+   * was found, then the appearance steps go by while the feeds are checked in
+   * the background, and the last step opens the review instead of starting to
+   * read. The
+   * dialog opens once per screen, not per account, so a second device only
+   * asks when there is still nothing followed.
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
@@ -18,30 +27,49 @@
   import FontTable from './FontTable.svelte';
   import { appearanceArt, READING_ART } from './art';
   import Button from '$lib/components/Button.svelte';
+  import ImportHelp from '$lib/components/ImportHelp.svelte';
+  import Icon from '$lib/components/Icon.svelte';
+  import { imp } from '$lib/importer.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let open = $state(false);
   let step = $state(0);
-  const STEPS = [
-    { title: 'Light or dark?', lead: 'Pick what suits this screen. You can also let it follow the device’s own setting.' },
-    { title: 'Color theme', lead: 'Pick the colors thicket uses on this screen. Crisp has the most contrast; the Soft themes have the least.' },
-    { title: 'Fonts', lead: 'Headlines, text and the app itself can each have their own face and size. Watch the page behind this box change.' },
-    { title: 'Opening a post', lead: 'Read here, or on the post’s own site. Sites that only send a preview always get a link out.' }
+  let withImport = $state(false);
+  const IMPORT = { key: 'import', title: 'Import your feeds', lead: 'Coming from another reader?' };
+  const DISPLAY = [
+    { key: 'appearance', title: 'Light or dark?', lead: 'Pick what suits this screen. You can also let it follow the device’s own setting.' },
+    { key: 'theme', title: 'Color theme', lead: 'Pick the colors thicket uses on this screen. Crisp has the most contrast; the Soft themes have the least.' },
+    { key: 'fonts', title: 'Fonts', lead: 'Headlines, text and the app itself can each have their own face and size. Watch the page behind this box change.' },
+    { key: 'reading', title: 'Opening a post', lead: 'Read here, or on the post’s own site. Sites that only send a preview always get a link out.' }
   ];
+  const STEPS = $derived(withImport ? [IMPORT, ...DISPLAY] : DISPLAY);
+  const current = $derived(STEPS[step]);
+  /** A file has been read, so the last step leads to its review. */
+  const importing = $derived(withImport && imp.step === 'review');
 
   onMount(() => {
-    if (display.configured) return;
-    open = true;
+    // In development, ?setup opens the walkthrough again on a screen that has already seen it.
+    const again = import.meta.env.DEV && new URLSearchParams(location.search).has('setup');
+    if (display.configured && !again) return;
     markConfigured();
-    api.event('display_setup_shown');
-    queueMicrotask(() => dialog?.showModal());
+    // Only ask about importing when nothing is followed yet. If that can't be
+    // found out, the dialog opens without it rather than not at all.
+    api.riverStats()
+      .then((s) => { withImport = s.feeds === 0; })
+      .catch(() => {})
+      .finally(() => {
+        open = true;
+        api.event('display_setup_shown', { withImport });
+        queueMicrotask(() => dialog?.showModal());
+      });
   });
 
-  function finish(how: 'done' | 'dismissed' | 'advanced') {
-    api.event('display_setup_closed', { how, step });
+  function finish(how: 'done' | 'dismissed' | 'advanced' | 'review') {
+    api.event('display_setup_closed', { how, step: current.key, withImport });
     open = false;
     dialog?.close();
     if (how === 'advanced') void goto('/settings#display');
+    if (how === 'review') void goto('/import');
   }
 </script>
 
@@ -49,29 +77,47 @@
   <dialog bind:this={dialog} onclose={() => { if (open) finish('dismissed'); }} onclick={(e) => { if (e.target === dialog) finish('dismissed'); }} aria-labelledby="setup-title">
     <div class="box">
       <header>
-        <p class="eyebrow">Set up this screen · {step + 1} of {STEPS.length}</p>
-        <h2 id="setup-title">{STEPS[step].title}</h2>
-        <p class="lead">{STEPS[step].lead}</p>
+        <p class="eyebrow">{withImport ? 'Get started' : 'Set up this screen'} · {step + 1} of {STEPS.length}</p>
+        <h2 id="setup-title">{current.title}</h2>
+        <p class="lead">{current.lead}</p>
       </header>
 
       <div class="body">
-        {#if step === 0}
+        {#if current.key === 'import'}
+          {#if importing && imp.preview}
+            {@const feeds = new Set(imp.groups.flatMap((g) => g.feeds.map((f) => f.url))).size}
+            <div class="found" role="status">
+              <Icon name="check" size={22} />
+              <div>
+                <p class="count">{feeds} {feeds === 1 ? 'feed' : 'feeds'} in {imp.groups.length} {imp.groups.length === 1 ? 'folder' : 'folders'}</p>
+                <p class="then">You’ll choose which to bring in at the end</p>
+              </div>
+            </div>
+          {:else}
+            <ImportHelp via="setup" />
+          {/if}
+        {:else if current.key === 'appearance'}
           <Tiles name="Appearance" options={APPEARANCES} value={display.appearance} art={appearanceArt(display.palette, display.accent)} onchange={(v) => setDisplay({ appearance: v })} />
-        {:else if step === 1}
+        {:else if current.key === 'theme'}
           <ThemePicker />
-        {:else if step === 2}
+        {:else if current.key === 'fonts'}
           <FontTable compact />
         {:else}
           <Tiles name="Opening a post" options={READING_MODES} value={display.reading} art={READING_ART} notes onchange={(v) => setDisplay({ reading: v })} />
         {/if}
+        {#if importing && imp.checking && current.key !== 'import'}<p class="status" aria-live="polite">Checking your feeds</p>{/if}
       </div>
 
       <footer>
-        <button type="button" class="link" onclick={() => finish('advanced')}>Advanced options</button>
+        {#if current.key !== 'import'}<button type="button" class="link" onclick={() => finish('advanced')}>Advanced options</button>{/if}
         <span class="spacer"></span>
         {#if step > 0}<Button onclick={() => step--}>Back</Button>{/if}
-        {#if step < STEPS.length - 1}
+        {#if current.key === 'import' && !importing}
+          <Button onclick={() => step++}>Skip</Button>
+        {:else if step < STEPS.length - 1}
           <Button variant="primary" onclick={() => step++}>Next</Button>
+        {:else if importing}
+          <Button variant="primary" onclick={() => finish('review')}>Review your feeds</Button>
         {:else}
           <Button variant="primary" onclick={() => finish('done')}>Start reading</Button>
         {/if}
@@ -97,6 +143,13 @@
   .lead { margin: var(--space-1) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 56ch; }
   .body { padding: var(--space-4) var(--space-5) var(--space-1); overflow-y: auto; min-height: 0; }
   footer { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-4) var(--space-5) calc(var(--space-4) + var(--safe-b)); border-top: 1px solid var(--line); margin-top: var(--space-3); }
+  .found { display: flex; gap: var(--space-3); align-items: flex-start; color: var(--accent); }
+  .found p { margin: 0; }
+  /* 4px lines the check up with the middle of the first line, an optical nudge. */
+  .found :global(svg) { flex: none; margin-top: 4px; }
+  .count { font-size: calc(var(--text-lg) * var(--size-app)); font-weight: 600; color: var(--text); }
+  .found .then { margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .status { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .spacer { flex: 1; }
   footer button { padding: var(--space-3) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); }
   footer button.link { border: 0; padding: var(--space-3) var(--space-1); color: var(--accent); }

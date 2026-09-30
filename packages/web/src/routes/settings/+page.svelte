@@ -6,8 +6,7 @@
   import ThemePicker from '$lib/components/display/ThemePicker.svelte';
   import FontTable from '$lib/components/display/FontTable.svelte';
   import { appearanceArt, READING_ART, LAYOUT_ART, FRESH_ART } from '$lib/components/display/art';
-  import Button from '$lib/components/Button.svelte';
-  import { showToast } from '$lib/toast.svelte';
+    import { showToast } from '$lib/toast.svelte';
 
   /**
    * Your private preferences: reading, whose notes you see, feed defaults,
@@ -124,11 +123,6 @@
   </section>
 {/if}
 
-<section class="card">
-  <h2>Bring your feeds in</h2>
-  <p class="help">Coming from Feedly or another reader? Export your subscriptions as an OPML file there, and bring them in here. Each folder becomes a collection.</p>
-  <div class="row"><Button href="/import">Import from OPML</Button></div>
-</section>
 
 {#if me.isAdmin}
   <section class="card admin">
@@ -146,7 +140,6 @@
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
   .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
   .fine { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
-  .row { display: flex; justify-content: flex-end; }
   fieldset { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
   .radio input, .switch input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }

@@ -1,8 +1,9 @@
 <script lang="ts">
   /**
-   * The account menu: four plain doors. Your profile (your public page),
+   * The account menu: five plain doors. My page (the page at your address, showing what you share),
    * Settings (your reading preferences), Account (your email and password —
-   * how you get in, and back in), and Log out.
+   * how you get in, and back in), Import feeds (bringing a whole reader's
+   * worth over, which is too big a thing to tuck inside Add a feed), and Log out.
    *
    * On desktop it hangs off the avatar block at the foot of the sidebar,
    * opening upward from it, the way an account menu should. On the phone, where
@@ -88,7 +89,7 @@
     {/if}
     <a role="menuitem" href={profileHref(me.handle)} onclick={onclose}>
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
-      <span>My profile</span>
+      <span>My page</span>
     </a>
     <a role="menuitem" href="/settings" onclick={onclose}>
       <Icon name="gear" size={20} />
@@ -97,6 +98,10 @@
     <a role="menuitem" href="/account" onclick={onclose}>
       <Icon name="key" size={20} />
       <span>Account</span>
+    </a>
+    <a role="menuitem" href="/import" onclick={onclose}>
+      <Icon name="import" size={20} />
+      <span>Import feeds</span>
     </a>
     <button type="button" role="menuitem" class="out" onclick={logout}>
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 12H4M11 8l-4 4 4 4M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4" /></svg>
