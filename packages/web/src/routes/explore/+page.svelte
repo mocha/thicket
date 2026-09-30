@@ -74,7 +74,8 @@
    */
   const narrowToNetwork = $derived(page.url.searchParams.get('by') === 'following');
   const since = $derived(page.url.searchParams.get('since'));
-  const sort = $derived(page.url.searchParams.get('sort') ?? 'recent');
+  // 'followers' is the old name for 'popular'; saved links still land on it.
+  const sort = $derived(((s) => (s === 'followers' ? 'popular' : s))(page.url.searchParams.get('sort') ?? 'popular'));
   let followsAnyone = $state<boolean | null>(null);
   const feedsNetwork = $derived(narrowToNetwork ? '1' : null);
 
@@ -177,8 +178,8 @@
   let feedsAll = $state(0);
   let feedsNext = $state<number | null>(null);
   const sorts = [
+    { id: 'popular', label: 'Popular' },
     { id: 'recent', label: 'Recent posts' },
-    { id: 'followers', label: 'Followers' },
     { id: 'posts', label: 'Most active' },
     { id: 'title', label: 'A–Z' },
     { id: 'added', label: 'Newest here' }
@@ -417,7 +418,7 @@
         size="sm"
         value={sort}
         options={sorts.map((s) => ({ value: s.id, label: s.label }))}
-        onchange={(e) => setParams({ sort: e.currentTarget.value === 'recent' ? null : e.currentTarget.value })}
+        onchange={(e) => setParams({ sort: e.currentTarget.value === 'popular' ? null : e.currentTarget.value })}
       />
     {/if}
   </div>

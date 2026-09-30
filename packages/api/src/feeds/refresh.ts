@@ -10,6 +10,7 @@ import { ICON_RECHECK_MS, refreshIcon } from "./icons.js";
 import { HostCoolingDown, coolingUntil, feedOutcome, hostKey } from "./hosts.js";
 import { normalizeFeedUrl } from "./normalize.js";
 import { mergeFeeds } from "./merge.js";
+import { findTwin } from "./twins.js";
 import { markRepeats } from "./repeats.js";
 
 const MIN_INTERVAL_S = 15 * 60;
@@ -101,6 +102,13 @@ export async function storeItems(feedId: number, parsed: ParsedFeed, opts: { fir
   return { inserted: fresh.length, newestAt };
 }
 
+/**
+ * How long after a feed is added its refreshes also look for a twin (feeds/twins.ts).
+ * Every way in — following, importing, seeding — is refreshed within that time, and
+ * feeds already in the index are covered by `pnpm dedupe-feeds`.
+ */
+const TWIN_CHECK_MS = 2 * 24 * 60 * 60 * 1000;
+
 /** A little after a pause ends, so a host's feeds don't all return in the same second. */
 const afterPause = (until: Date) => new Date(until.getTime() + Math.random() * 5 * 60_000);
 
@@ -170,7 +178,7 @@ export async function refreshFeed(feedId: number): Promise<RefreshResult> {
     }
     const lastItemAt = newestAt && (!feed.lastItemAt || newestAt > feed.lastItemAt) ? newestAt : feed.lastItemAt;
     const interval = chooseInterval(lastItemAt);
-    return done(
+    const result = await done(
       {
         kind: parsed.kind,
         title: feed.title ?? parsed.title,
@@ -187,6 +195,16 @@ export async function refreshFeed(feedId: number): Promise<RefreshResult> {
       },
       { status: res.status, itemsNew: inserted, error: null },
     );
+    // A new feed that turns out to be one thicket already has, under another address:
+    // fold them together now, before it shows up twice in Explore.
+    if (Date.now() - feed.createdAt.getTime() < TWIN_CHECK_MS) {
+      const twin = await findTwin(feedId).catch((e) => { console.error(`[twins] feed ${feedId}:`, e); return null; });
+      if (twin) {
+        await mergeFeeds(twin.drop, twin.keep, twin.why);
+        if (twin.drop === feedId) return { ...result, feedId: twin.keep, mergedFrom: feedId };
+      }
+    }
+    return result;
   } catch (err) {
     // Nothing was requested: the host is paused, or its queue is long. Not a fetch, not a failure; just come back later.
     if (err instanceof HostCoolingDown) {

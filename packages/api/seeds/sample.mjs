@@ -20,6 +20,13 @@ const PER_CATEGORY = 20;
 const PER_PUBLISHER = 2;
 const SMALL_WEB = 1300;
 
+/**
+ * Left out on purpose (2026-09-30): the Cricket topic, the only one that
+ * served a single country's audience. seeds/dropped-2026-09-30.txt lists its
+ * feeds, for removing what an earlier seed already put in the index.
+ */
+const SKIP_TOPICS = new Set(['Cricket']);
+
 let seed = 20260913;
 const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
 const shuffle = (a) => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
@@ -30,8 +37,11 @@ const big = [];
 const perPublisher = new Map();
 for (const f of readdirSync(opmlDir).filter((f) => f.endsWith('.opml'))) {
   const urls = [...readFileSync(join(opmlDir, f), 'utf8').matchAll(/xmlUrl="([^"]+)"/g)].map((m) => m[1].replace(/&amp;/g, '&'));
+  // Shuffled even when skipped, so every other topic draws exactly what it drew on 2026-09-13.
+  const order = shuffle(urls);
+  if (SKIP_TOPICS.has(f.slice(0, -5))) continue;
   let taken = 0;
-  for (const u of shuffle(urls)) {
+  for (const u of order) {
     if (taken >= PER_CATEGORY) break;
     const h = host(u);
     if (!h || (perPublisher.get(h) ?? 0) >= PER_PUBLISHER) continue;

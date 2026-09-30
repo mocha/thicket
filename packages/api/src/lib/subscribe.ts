@@ -5,10 +5,15 @@ import { discover, type Discovery } from "../feeds/discover.js";
 import { normalizeFeedUrl } from "../feeds/normalize.js";
 import { storeItems, chooseInterval } from "../feeds/refresh.js";
 import { backfillFeed } from "../feeds/backfill.js";
+import { existingFeedId } from "../feeds/twins.js";
+
+const feedById = async (id: number) => (await db.select().from(schema.feeds).where(eq(schema.feeds.id, id)))[0];
 
 /** Get-or-create a global feed row from a discovery result and store its first batch of items. */
 export async function ensureFeedFromDiscovery(d: Extract<Discovery, { status: "feed" }>) {
-  const [existing] = await db.select().from(schema.feeds).where(eq(schema.feeds.url, d.url));
+  // Over either scheme: following http://x when thicket has https://x follows the one it has.
+  const known = await existingFeedId(d.url);
+  const existing = known === null ? undefined : await feedById(known);
   if (existing) return existing;
   const { newestAt } = { newestAt: d.parsed.items.reduce<Date | null>((m, i) => (i.publishedAt && (!m || i.publishedAt > m) ? i.publishedAt : m), null) };
   const interval = chooseInterval(newestAt);
@@ -47,6 +52,8 @@ export async function ensureFeedFromDiscovery(d: Extract<Discovery, { status: "f
 /** Register a feed URL without fetching it (bulk seeding). The scheduler will pick it up. */
 export async function ensureFeedLazy(url: string) {
   const normalized = normalizeFeedUrl(url);
+  const known = await existingFeedId(normalized);
+  if (known !== null) return feedById(known);
   const [row] = await db.insert(schema.feeds).values({ url: normalized, nextFetchAt: new Date() }).onConflictDoNothing().returning();
   return row ?? (await db.select().from(schema.feeds).where(eq(schema.feeds.url, normalized)))[0];
 }
