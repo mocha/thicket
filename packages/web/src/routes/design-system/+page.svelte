@@ -348,7 +348,7 @@
     </div>
 
     <h3 class="sub">Icon buttons</h3>
-    <p class="section-lede">A round tap target with one glyph and no words. Plain, or bordered for the one that sits beside a page title.</p>
+    <p class="section-lede">A round tap target with one glyph and no words. Plain, or bordered for the one that sits beside a page title. Its focus ring shows only for someone arriving by keyboard, so a Sheet that opens with focus on its close button doesn't ring it after a tap.</p>
     <div class="row">
       <IconButton icon="gear" label="Settings" />
       <IconButton icon="pencil" label="Edit" />
