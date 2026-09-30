@@ -50,7 +50,7 @@
 
 <hr />
 
-<StarterPacks heading="Peek inside" lede="Open one and read it, no account needed." />
+<div class="peek"><StarterPacks heading="Peek inside" lede="Open one and read it, no account needed." /></div>
 
 <hr />
 
@@ -77,7 +77,9 @@
   h1 { font-family: var(--font-headings); font-size: clamp(34px, 5vw, 52px); line-height: 1.08; margin: 0 0 var(--space-4); letter-spacing: -0.015em; }
   .sub { font-size: clamp(18px, 2.2vw, 22px); color: var(--text-2); margin: 0; line-height: 1.35; max-width: 32ch; }
   hr { border: 0; border-top: 1px solid var(--line); margin: calc(var(--space-6) + var(--space-1)) 0; }
-  h2 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-4); }
+  h2 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-4); text-align: center; }
+  /* The collections section brings its own heading and intro line; center both to match. */
+  .peek :global(h2), .peek :global(.lede) { text-align: center; margin-inline: auto; }
   .apart ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
   .apart h3 { margin: 0 0 var(--space-1); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; }
   .apart p { margin: 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.45; }
