@@ -45,6 +45,7 @@
     <div class="first">
       <Button variant="primary" size="lg" onclick={() => openAddFeed({ via: 'welcome' })}><span class="plus" aria-hidden="true">+</span> Add your first feed</Button>
     </div>
+    <p class="switch">Switching readers? <a href="/import">Import feeds</a></p>
   </header>
   <hr class="split" />
   <div class="copy-start"><StarterPacks heading="… or get started by copying a collection" lede="" /></div>
@@ -77,6 +78,8 @@
   .welcome h1 { font-size: calc(var(--text-3xl) * var(--size-headings)); }
   .welcome .sub { margin: var(--space-2) auto 0; color: var(--text-2); font-size: calc(var(--text-xl) * var(--size-app)); }
   .first { margin-top: var(--space-5); }
+  .switch { margin: var(--space-3) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .switch a { color: var(--accent); font-weight: 600; }
   /* Serif is kept for the one welcome headline; the second way in reads
      exactly like the line under it. */
   .copy-start :global(.packs h2) { font-family: var(--font); font-size: calc(var(--text-xl) * var(--size-app)); font-weight: 400; color: var(--text-2); }
