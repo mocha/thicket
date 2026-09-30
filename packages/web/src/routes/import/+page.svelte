@@ -185,12 +185,12 @@
   {#if imp.error}<p class="bad" role="alert">{imp.error}</p>{/if}
 
   <div class="footer">
-    <button class="btn" onclick={startOver} disabled={imp.busy}>Choose a different file</button>
-    <button class="btn primary" onclick={() => commitImport(kept)} disabled={imp.busy || imp.checking || !kept.length || !keptFeeds}>
+    <Button onclick={startOver} disabled={imp.busy}>Choose a different file</Button>
+    <Button variant="primary" onclick={() => commitImport(kept)} disabled={imp.busy || imp.checking || !kept.length || !keptFeeds}>
       {#if imp.busy}Bringing them in…
       {:else if imp.checking}Checking feeds…
       {:else}Bring in {kept.length} {kept.length === 1 ? 'collection' : 'collections'}, {keptFeeds} {keptFeeds === 1 ? 'feed' : 'feeds'}{/if}
-    </button>
+    </Button>
   </div>
 {:else if imp.step === 'done'}
   <section class="card">
@@ -204,7 +204,7 @@
         </li>
       {/each}
     </ul>
-    <div class="row"><button class="btn" onclick={startOver}>Import another</button></div>
+    <div class="row"><Button onclick={startOver}>Import another</Button></div>
   </section>
 {/if}
 
@@ -219,9 +219,6 @@
   .lede { margin: 0 0 10px; color: var(--text-2); line-height: 1.45; max-width: 66ch; }
   .fine { margin: 0 0 12px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
   .row { display: flex; justify-content: flex-end; }
-  .btn { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  .btn:disabled { opacity: 0.5; }
   .linkrow { display: flex; align-items: center; gap: var(--space-2); }
   .linkrow :global(.link) { flex: 1; min-width: 0; }
   input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -256,10 +253,18 @@
   .count { flex: none; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
   .more { margin-top: 8px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--accent); }
 
-  .footer { position: sticky; bottom: calc(12px + var(--safe-b, 0px)); display: flex; justify-content: flex-end; gap: 8px; padding: 10px 12px; margin-top: 4px; background: var(--surface); border-radius: 999px; box-shadow: var(--shadow); }
+  /* Pinned to the bottom while a long review scrolls, so the main action is always in reach. On a
+     phone it sits on top of the tab bar; from 900px up there is no tab bar. */
+  .footer {
+    position: sticky; bottom: calc(var(--nav-h) + var(--safe-b, 0px)); z-index: 5;
+    display: flex; justify-content: flex-end; gap: var(--space-2);
+    padding: var(--space-3) 0; margin-top: var(--space-2);
+    background: var(--bg);
+  }
+  @media (min-width: 900px) { .footer { bottom: 0; padding-bottom: calc(var(--space-3) + var(--safe-b, 0px)); } }
   @media (max-width: 520px) {
     .refused li { flex-direction: column; gap: 4px; }
     /* Two long labels don't fit side by side on a phone: stack them, main action on top. */
-    .footer { flex-direction: column-reverse; border-radius: var(--radius-lg); }
+    .footer { flex-direction: column-reverse; }
   }
 </style>
