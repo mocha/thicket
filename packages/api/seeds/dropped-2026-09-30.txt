@@ -1,27 +1,17 @@
-# Feeds removed from the seed on 2026-09-30: the whole Cricket topic, and five
-# Indian national news outlets wherever they appeared. See sample.mjs.
+# Feeds removed from the seed on 2026-09-30: the Cricket topic. See sample.mjs.
 # Used with: pnpm drop-feeds seeds/dropped-2026-09-30.txt
 http://feeds.bbci.co.uk/sport/cricket/rss.xml
 http://feeds.feedburner.com/cantbowlcantthrow
-http://feeds.feedburner.com/ndtvnews-world-news
 http://feeds.feedburner.com/ndtvsports-cricket
 http://www.espncricinfo.com/rss/content/story/feeds/0.xml
-https://economictimes.indiatimes.com/rssfeedsdefault.cms
 https://feeds.megaphone.fm/ESP9247246951
 https://indianexpress.com/section/sports/cricket/feed/
-https://indianexpress.com/section/sports/feed/
-https://indianexpress.com/section/sports/tennis/feed/
 https://podcasts.files.bbci.co.uk/p02gsrmh.rss
 https://podcasts.files.bbci.co.uk/p02nrsl2.rss
 https://podcasts.files.bbci.co.uk/p02pcb4w.rss
-https://timesofindia.indiatimes.com/rssfeeds/2647163.cms
-https://timesofindia.indiatimes.com/rssfeeds/296589292.cms
-https://timesofindia.indiatimes.com/rssfeeds/4719148.cms
 https://timesofindia.indiatimes.com/rssfeeds/54829575.cms
 https://www.reddit.com/r/Cricket/.rss
 https://www.theguardian.com/sport/cricket/rss
-https://www.thehindu.com/sport/football/feeder/default.rss
-https://www.thehindu.com/sport/tennis/feeder/default.rss
 https://www.theroar.com.au/cricket/feed/
 https://www.wisden.com/feed
 https://www.youtube.com/feeds/videos.xml?channel_id=UCSRQXk5yErn4e14vN76upOw

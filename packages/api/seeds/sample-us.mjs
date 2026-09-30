@@ -23,13 +23,9 @@ const SKIP_TOPICS = new Set(['Freedom From Accounts', 'Guns']);
 /**
  * Not feeds a person would follow: Google News search results, Reddit (rate
  * limited, and a subreddit is a different thing), YouTube (followed by channel,
- * not by topic). Plus what sample.mjs already leaves out.
+ * not by topic).
  */
-const SKIP_FEEDS = [
-  /news\.google\.com/, /reddit\.com/, /youtube\.com/,
-  /timesofindia\.indiatimes\.com/, /economictimes\.indiatimes\.com/, /indianexpress\.com/,
-  /thehindu\.com/, /feedburner\.com\/ndtv/
-];
+const SKIP_FEEDS = [/news\.google\.com/, /reddit\.com/, /youtube\.com/];
 
 let seed = 20260930;
 const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);

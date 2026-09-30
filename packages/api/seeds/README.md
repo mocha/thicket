@@ -46,14 +46,9 @@ site from the small-web list (that list is the long tail, not sections).
 
 ## What was cut on 2026-09-30
 
-The big-web list comes from an Indian publisher, and it leaned on Indian
-national news: Times of India, Economic Times, Indian Express, NDTV, and The
-Hindu turned up across News, Sports, and Business, plus a whole Cricket topic.
-Most early readers are in the US, so `sample.mjs` now leaves out the Cricket
-topic and those five outlets. Other India-related feeds stay.
-
-`dropped-2026-09-30.txt` lists the same feeds, for an index an earlier seed
-already filled:
+`sample.mjs` now leaves out the Cricket topic, the only one that served a
+single country's audience. `dropped-2026-09-30.txt` lists its feeds, for an
+index an earlier seed already filled:
 
     pnpm drop-feeds seeds/dropped-2026-09-30.txt            # list what would go
     pnpm drop-feeds seeds/dropped-2026-09-30.txt --apply    # remove it
