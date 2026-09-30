@@ -32,7 +32,7 @@
 <section class="hero">
   <div class="pitch">
     <h1>Read the web on your own terms</h1>
-    <p class="sub">Follow the sites you like and read everything they publish in one place.</p>
+    <p class="sub">Follow the sites you like and read everything they publish in one place</p>
   </div>
   <div class="auth"><AuthBox /></div>
 </section>
