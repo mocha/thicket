@@ -154,7 +154,7 @@
     /* No native arrow: we draw our own so it matches every other caret here. */
     appearance: none;
     -webkit-appearance: none;
-    border: 1px solid var(--line);
+    border: 1px solid var(--field-line);
     /* A picker, not a text field — see the note at the top of this file. */
     border-radius: var(--radius-sm);
     background: var(--surface);

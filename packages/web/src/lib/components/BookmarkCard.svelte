@@ -22,7 +22,7 @@
   import NoteBlock from './NoteBlock.svelte';
   import NoteEditor from './NoteEditor.svelte';
 
-  let { b, mine = false, author = null, onopen, onnote, action }: {
+  let { b, mine = false, author = null, onopen, onnote, action, heading = 'h3' }: {
     b: Bookmark | PublicBookmark;
     /** My own list: the note is mine to write, edit and delete. */
     mine?: boolean;
@@ -32,6 +32,8 @@
     /** The note was written, edited or deleted here. `had`: whether there was one before. */
     onnote?: (note: Note | null, had: boolean) => void;
     action?: { label: string; title?: string; on: boolean; run: () => void; kind: 'remove' | 'save' };
+    /** The title's heading level: h3 under a section heading (a profile), h2 straight under the page title. */
+    heading?: 'h2' | 'h3';
   } = $props();
 
   let editing = $state(false);
@@ -88,7 +90,7 @@
   <a class="body" href={savedHref(b.url) ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
     <div class="text" class:two={mine && action}>
       <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} />
-      <h3 class="card-title">{noOrphan(b.title ?? b.url)}</h3>
+      <svelte:element this={heading} class="card-title">{noOrphan(b.title ?? b.url)}</svelte:element>
       {#if b.summary}<p class="card-summary">{b.summary}</p>{/if}
       <div class="saved">Saved <time datetime={b.savedAt} title={new Date(b.savedAt).toLocaleString()}>{relativeTime(b.savedAt)}</time></div>
     </div>
@@ -129,9 +131,9 @@
   .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); padding-right: var(--space-6); }
   /* Room for two corner buttons: the note, then remove. */
   .text.two { padding-right: calc(var(--space-6) * 2); }
-  @media (hover: hover) { .body:hover h3 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
+  @media (hover: hover) { .body:hover :global(.card-title) { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   p { --summary-lines: 2; }
-  .saved { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .saved { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .card-extralink { display: inline-block; margin: calc(-1 * var(--space-2)) var(--card-pad) var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
   @media (hover: hover) { .card-extralink:hover { text-decoration: underline; text-underline-offset: 3px; } }
   .thumb { flex: none; width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--surface-2); }

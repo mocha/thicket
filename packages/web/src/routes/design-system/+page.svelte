@@ -80,15 +80,17 @@
     { name: 'surface', use: 'A card lifted off the page' },
     { name: 'surface-2', use: 'A sunken well or inset track' },
     { name: 'text', use: 'Primary ink' },
-    { name: 'text-2', use: 'Secondary ink' },
-    { name: 'text-3', use: 'Quiet ink, hints and counts' },
+    { name: 'text-2', use: 'Secondary ink, hints and counts' },
+    { name: 'text-3', use: 'Decoration only, too faint for words' },
     { name: 'accent', use: 'The one action color' },
     { name: 'accent-ink', use: 'Lettering on a filled accent' },
     { name: 'accent-soft', use: 'The secondary button’s pale wash' },
+    { name: 'accent-tint', use: 'The wash behind something chosen or on' },
     { name: 'accent-soft-ink', use: 'Lettering on that wash' },
     { name: 'danger', use: 'Destructive and errors' },
     { name: 'amber', use: 'Warnings and caution' },
-    { name: 'line', use: 'Hairline borders' }
+    { name: 'line', use: 'Hairline borders' },
+    { name: 'field-line', use: 'The outline of a box you type or pick in' }
   ];
 
   /* The seven palettes, with a representative light-mode swatch so the whole set
@@ -433,7 +435,7 @@
     </div>
 
     <h3 class="sub">Toast</h3>
-    <p class="section-lede">A brief message at the edge of the screen, often carrying an undo — the app's main safety net.</p>
+    <p class="section-lede">A brief message, often carrying an undo — the app's main safety net. It appears at the top on a desktop, centered over the posts, and at the bottom on a phone, in reach of a thumb. A plain one stays 6 seconds and one with a button stays 10; the countdown waits while the pointer or keyboard focus is on it. While an Undo toast is showing, Cmd+Z (Ctrl+Z off a Mac) presses its Undo.</p>
     <div class="row">
       <Button variant="ghost" onclick={() => showToast('Feed removed', { label: 'Undo', run: () => showToast('Feed restored') })}>Show a toast</Button>
     </div>
@@ -498,7 +500,7 @@
   .masthead { margin-bottom: var(--space-6); }
   .eyebrow {
     margin: 0 0 var(--space-2); text-transform: uppercase; letter-spacing: 0.08em;
-    font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 700; color: var(--text-3);
+    font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 700; color: var(--text-2);
   }
   h1 {
     font-family: var(--font-headings); font-weight: 700; letter-spacing: -0.01em;
@@ -512,7 +514,7 @@
   .controls { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-5); }
   .ctl { display: flex; flex-direction: column; gap: var(--space-2); }
   .ctl-label {
-    font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 700; color: var(--text-3);
+    font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 700; color: var(--text-2);
     text-transform: uppercase; letter-spacing: 0.06em;
   }
 
@@ -555,7 +557,7 @@
   .swatch { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: var(--space-2); align-items: center; }
   .chip { grid-row: 1 / 3; width: 34px; height: 34px; border-radius: var(--radius-sm); display: block; }
   .swatch-name { font-family: ui-monospace, monospace; font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; }
-  .swatch-use { color: var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); line-height: 1.3; }
+  .swatch-use { color: var(--text-2); font-size: calc(var(--text-xs) * var(--size-app)); line-height: 1.3; }
 
   .palettes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
   .palette {
@@ -570,49 +572,49 @@
   }
   .palette-dot { width: 16px; height: 16px; border-radius: var(--radius-pill); }
   .palette-label { font-weight: 700; font-size: calc(var(--text-sm) * var(--size-app)); margin-top: var(--space-1); }
-  .palette-note { color: var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); line-height: 1.3; }
+  .palette-note { color: var(--text-2); font-size: calc(var(--text-xs) * var(--size-app)); line-height: 1.3; }
 
   /* ---- Type ---- */
   .type-scale { display: flex; flex-direction: column; gap: var(--space-3); }
   .type-row { display: flex; flex-direction: column; gap: 2px; }
   .type-sample { font-family: var(--font-headings); line-height: 1.1; color: var(--text); }
-  .type-meta { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
+  .type-meta { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-2); }
   .type-meta code, .bar-meta code, .corner-name code, .elevation-name code { font-family: ui-monospace, monospace; }
 
   .faces { display: flex; flex-direction: column; gap: var(--space-4); }
   .face { display: flex; flex-direction: column; gap: 2px; }
   .face-sample { font-size: calc(var(--text-lg) * var(--size-app)); color: var(--text); }
-  .face-meta { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .face-meta { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
 
   /* ---- Space + corners ---- */
   .bars { display: flex; flex-direction: column; gap: var(--space-2); }
   .bar-row { display: flex; align-items: center; gap: var(--space-3); }
   .bar { height: 16px; background: var(--accent); border-radius: var(--radius-xs); flex: none; }
-  .bar-meta { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
+  .bar-meta { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-2); }
 
   .corners { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-4); margin-top: var(--space-3); }
   .corner { display: flex; flex-direction: column; gap: var(--space-1); }
   .corner-box { height: 60px; background: var(--surface-2); border: 1px solid var(--line); }
   .corner-name { font-size: calc(var(--text-xs) * var(--size-app)); }
-  .corner-use { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); line-height: 1.3; }
+  .corner-use { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-2); line-height: 1.3; }
 
   /* ---- Elevation ---- */
   .elevations { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-5); padding: var(--space-2) 0; }
   .elevation { display: flex; flex-direction: column; gap: var(--space-2); }
   .elevation-box { height: 64px; background: var(--surface); border-radius: var(--radius); }
   .elevation-name { font-size: calc(var(--text-xs) * var(--size-app)); }
-  .elevation-use { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
+  .elevation-use { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-2); }
 
   /* ---- Component demos ---- */
   .row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin-bottom: var(--space-3); }
   .row.baseline { align-items: center; }
   .strip-demo { position: relative; display: grid; place-items: center; width: var(--pager-w); height: 160px; border: 1px solid var(--line); }
   .stack { display: flex; flex-direction: column; gap: var(--space-4); max-width: 460px; }
-  .prefix { color: var(--text-3); }
+  .prefix { color: var(--text-2); }
   .dot-demo { display: inline-flex; align-items: center; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
 
   /* ---- Footer ---- */
-  .ds-foot { margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--line); color: var(--text-3); }
+  .ds-foot { margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--line); color: var(--text-2); }
   .ds-foot p { margin: 0 0 var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 60ch; line-height: 1.5; }
   .ds-foot code { font-family: ui-monospace, monospace; }
   .ds-foot a { color: var(--accent); font-weight: 600; }

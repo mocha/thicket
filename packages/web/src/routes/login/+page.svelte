@@ -77,6 +77,6 @@
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .alt { margin: var(--space-5) 0 0; color: var(--text-2); }
   .alt a { color: var(--accent); font-weight: 600; }
-  .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .hint a { color: var(--accent); font-weight: 600; }
 </style>

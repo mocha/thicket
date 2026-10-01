@@ -306,7 +306,7 @@
 <style>
   .back { display: inline-flex; align-items: center; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); padding: var(--space-2) 0; margin-bottom: var(--space-2); }
   .top { margin-bottom: var(--space-2); }
-  .pre { margin: 0; font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+  .pre { margin: 0; font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 2px 0 0; /* 2px is an optical nudge: the title sits on the label's line. */ overflow-wrap: anywhere; }
   hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-4) 0; }
   section > h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 var(--space-3); }
@@ -314,7 +314,7 @@
   .opt { margin-bottom: var(--space-4); }
   h3 { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; margin: 0 0 var(--space-2); }
   .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
-  .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
+  .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
   .hint.inline { margin: 0; }
   .radios { display: flex; flex-direction: column; gap: var(--space-2); }
   .radios label { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
@@ -322,7 +322,7 @@
   .radios input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-3); }
   .admin { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; }
   .admin > h2 { margin: 0; }
@@ -341,6 +341,6 @@
   .facts ul { margin: var(--space-3) 0 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .facts li { overflow-wrap: anywhere; }
   .facts strong { color: var(--text); font-weight: 600; }
-  .facts .none { color: var(--text-3); }
-  .status { text-align: center; color: var(--text-3); padding: var(--space-5) 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .facts .none { color: var(--text-2); }
+  .status { text-align: center; color: var(--text-2); padding: var(--space-5) 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>

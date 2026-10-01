@@ -15,6 +15,7 @@
   import Textarea from '$lib/components/Textarea.svelte';
   import Select from '$lib/components/Select.svelte';
   import { modality } from '$lib/focus.svelte';
+  import { menu } from '$lib/menu';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -278,7 +279,7 @@
       <div class="menu" bind:this={menuAnchor}>
         <IconButton icon="dots" variant="bordered" size="lg" aria-haspopup="menu" aria-expanded={menuOpen} label="More collection actions" onclick={() => (menuOpen = !menuOpen)} />
         {#if menuOpen}
-          <div class="menupanel" role="menu" bind:this={menuPanel}>
+          <div class="menupanel" role="menu" aria-label="More collection actions" bind:this={menuPanel} use:menu={{ anchor: menuAnchor, onclose: () => (menuOpen = false) }}>
             <a class="mi" role="menuitem" href={collectionsApi.opmlUrl(col.id)} download="{col.slug}.opml" onclick={() => { api.event('opml_exported', { collectionId: col?.id }); menuOpen = false; }} title="Save this collection as a file other readers can open">Export collection to file</a>
             <button class="mi" role="menuitem" onclick={() => { menuOpen = false; askMerge(); }}>Merge into another collection</button>
             <button class="mi danger" role="menuitem" onclick={() => { menuOpen = false; askDelete(); }}>Delete this collection</button>
@@ -369,8 +370,8 @@
     {/if}
   </section>
 
-  <dialog bind:this={mergeEl} onclick={(e) => { if (e.target === mergeEl) mergeEl?.close(); }}>
-    <div class="sheet" role="alertdialog" aria-labelledby="merge-title">
+  <dialog bind:this={mergeEl} onclick={(e) => { if (e.target === mergeEl) mergeEl?.close(); }} role="alertdialog" aria-labelledby="merge-title">
+    <div class="sheet">
       <h2 id="merge-title">Merging collection “{col.name}”</h2>
       {#if mergeTargets.length === 0}
         <p>You don’t have another collection to merge this one into.</p>
@@ -403,9 +404,9 @@
   <p class="status">Loading…</p>
 {/if}
 
-<dialog bind:this={confirmEl} onclick={(e) => { if (e.target === confirmEl) confirmEl?.close(); }}>
+<dialog bind:this={confirmEl} onclick={(e) => { if (e.target === confirmEl) confirmEl?.close(); }} role="alertdialog" aria-labelledby="del-title">
   {#if col}
-    <div class="sheet" role="alertdialog" aria-labelledby="del-title">
+    <div class="sheet">
       <h2 id="del-title">Deleting collection “{col.name}”</h2>
       {#if orphans === null}
         <p>Checking which feeds would be affected…</p>
@@ -452,7 +453,7 @@
   .orphans li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
   .orphans li:first-child { border-top: 0; }
   .oname { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .hint { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .hint { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .sheet :global(.pick) { margin: var(--space-1) 0 var(--space-3); }
   .sheet .row { margin-top: var(--space-4); }
   .back { display: inline-flex; align-items: center; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); padding: var(--space-2) 0; margin-bottom: var(--space-2); }
@@ -462,17 +463,17 @@
   .titlerow { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
   .rename { flex: 1; }
   .rename { margin-top: var(--space-1); }
-  .rename input { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); font-weight: 600; width: 100%; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); transition: border-color 0.12s ease; }
+  .rename input { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); font-weight: 600; width: 100%; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); border: 1px solid var(--field-line); background: var(--surface); color: var(--text); transition: border-color 0.12s ease; }
   /* Same manners as every other field: quiet edge however you got here, the ring only for someone tabbing. */
   .rename input:focus { outline: none; border-color: var(--accent); }
   .rename input.kb:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-4) 0; }
   .opt { margin-bottom: var(--space-4); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
-  h3 { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin: var(--space-4) 0 var(--space-2); }
+  h3 { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); margin: var(--space-4) 0 var(--space-2); }
   .info { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); }
   .info a { color: var(--accent); font-weight: 600; }
-  .subtle { margin: calc(-1 * var(--space-1)) 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .subtle { margin: calc(-1 * var(--space-1)) 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .radios { display: flex; flex-direction: column; gap: var(--space-2); }
   /* Side by side once there is room for three; stacked on a phone, where they would be three slivers. */
   @media (min-width: 620px) { .vis { display: grid; grid-template-columns: repeat(3, 1fr); align-items: stretch; } }
@@ -487,7 +488,7 @@
   .radios input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
   .feedhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
   .feedhead h2 { margin: 0; }
@@ -506,16 +507,16 @@
   /* On a phone the button just says Remove, so the feed's name gets the row;
      the page heading and the confirming toast both name the collection. */
   @media (max-width: 699px) { .from { display: none; } }
-  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bad { color: var(--danger); }
   .chip { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-pill); border: 1px solid var(--line); }
-  .count, .chev { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .chev { font-size: calc(var(--text-xl) * var(--size-app)); }
+  .count { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   .menu { position: relative; flex: none; }
   /* Hangs below the button, right-aligned, from its spot in the header. */
   .menupanel { position: absolute; top: calc(100% + var(--space-2)); right: 0; z-index: 60; min-width: 244px; background: var(--surface); border-radius: var(--radius-md); padding: var(--space-2); box-shadow: var(--shadow-menu); display: flex; flex-direction: column; }
   .mi { display: block; width: 100%; text-align: left; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
   .mi:hover { background: var(--surface-2); }
   .mi.danger { color: var(--danger); }
-  .status { text-align: center; color: var(--text-3); padding: var(--space-5) 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .status { text-align: center; color: var(--text-2); padding: var(--space-5) 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>

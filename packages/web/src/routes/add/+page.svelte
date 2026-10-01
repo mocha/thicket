@@ -16,6 +16,8 @@
   });
 </script>
 
+<svelte:head><title>Add a feed · thicket</title></svelte:head>
+
 <h1>Add a feed</h1>
 <p class="lede">Paste the address of a site, a blog, or a feed.</p>
 

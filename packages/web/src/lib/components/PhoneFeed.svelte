@@ -115,7 +115,7 @@
   .brand { display: flex; align-items: center; gap: var(--space-2); color: var(--text); }
   /* Like the app's bottom bar on a phone; its labels are the one place the app goes below 12px. */
   .tabs { flex: none; display: flex; padding: var(--space-2) var(--space-1) var(--space-4); border-top: 1px solid var(--line); background: var(--surface); }
-  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; color: var(--text-3); }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; color: var(--text-2); }
   .tab.on { color: var(--accent); }
   .viewport { flex: 1; min-height: 0; overflow: hidden; padding: 0 var(--space-3); }
   .track { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); will-change: transform; }

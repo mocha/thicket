@@ -48,6 +48,8 @@
   });
 </script>
 
+<svelte:head><title>{feed ? feedName(feed) : 'Feed'} · thicket</title></svelte:head>
+
 {#if session.user}<nav class="crumbs"><a class="tap" href="/explore">Explore</a> <span aria-hidden="true">›</span></nav>{/if}
 
 {#if feed}
@@ -101,7 +103,7 @@
 </div>
 
 <style>
-  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); margin-bottom: var(--space-2); }
+  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); margin-bottom: var(--space-2); }
   .crumbs a { color: var(--accent); font-weight: 600; }
   .profile { display: flex; gap: var(--space-4); align-items: flex-start; }
   .who { flex: 1; min-width: 0; }
@@ -119,9 +121,9 @@
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: var(--space-3) var(--space-2); margin: var(--space-4) 0 0; padding: var(--space-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   /* 2px between a label and its number is optical, not a spacing step. */
   .stats div { display: flex; flex-direction: column; gap: 2px; }
-  dt { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+  dt { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); }
   dd { margin: 0; font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .banners { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }
   .river { margin-top: var(--space-4); }
-  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
+  .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
 </style>

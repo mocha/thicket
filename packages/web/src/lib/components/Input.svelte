@@ -177,7 +177,7 @@
     min-width: 0;
     width: 100%;
     padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--line);
+    border: 1px solid var(--field-line);
     /* Single-line fields are pills, like buttons; Textarea keeps --radius-sm because a pill cannot wrap several lines. */
     border-radius: var(--radius-pill);
     background: var(--surface);
@@ -234,7 +234,9 @@
   /* Starting something new: the accent outline and an accent-colored
      placeholder say "this makes a thing" before you have typed anything. */
   .create { border-color: var(--accent); }
-  .create input::placeholder { color: var(--accent); opacity: 0.85; }
+  /* Full strength: thinned to 85% it fell under 4.5:1 in two of the warm themes. Soft sepia keeps the thinner one; it is low-contrast on purpose. */
+  .create input::placeholder { color: var(--accent); opacity: 1; }
+  :global(:root[data-palette='parchment']) .create input::placeholder { opacity: 0.85; }
 
   .invalid { border-color: var(--danger); }
 

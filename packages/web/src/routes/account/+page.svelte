@@ -1,15 +1,17 @@
 <script lang="ts">
-  import { authApi, ApiError } from '$lib/api';
+  import { api, authApi, bookmarksApi, ApiError } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { site, loadSite } from '$lib/site.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
   import Button from '$lib/components/Button.svelte';
   import Badge from '$lib/components/Badge.svelte';
+  import ApiTokens from '$lib/components/ApiTokens.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   /**
    * How you get into your account, and back in: your email and your password.
+   * And, at the bottom, how your own applications get in: API tokens.
    * Settings is for how thicket reads; this page is for the account itself.
    *
    * The Email section is readthicket.com only. Self-hosted copies don't ask for
@@ -18,8 +20,21 @@
    *
    * Unlike Settings, nothing here saves as you type: each change asks you to
    * confirm it with your password or a button.
+   *
+   * It is also where you take your things with you: Export my data, one row
+   * per thing you can download (issue #135). Bookmarks and notes are the
+   * first; collections get a row of their own when all of them can be
+   * exported at once, and until then a line says where to export each one.
    */
   const me = $derived(session.user!);
+
+  /**
+   * Who may turn on API tokens (issue #140). Everyone, today. This is the one
+   * line to change when that depends on something about the account: make it
+   * false, and pass `unavailable` to say why, and the section shows itself
+   * switched off.
+   */
+  const tokensAvailable = $derived(true);
   $effect(() => { if (!site.status) void loadSite(); });
   const hosted = $derived(site.status?.hosted ?? false);
   const confirmed = $derived(!!me.emailConfirmedAt);
@@ -70,6 +85,14 @@
       resendBusy = false;
     }
   }
+
+  // ---- export ----
+  /* How many bookmarks there are and the most one file holds, to say so when
+     an export would stop short. Until it answers, or if it can't, nothing is
+     said and the button still works. */
+  let exportInfo = $state<{ count: number; limit: number } | null>(null);
+  $effect(() => { void bookmarksApi.exportInfo().then((i) => (exportInfo = i)).catch(() => {}); });
+  const capped = $derived(exportInfo !== null && exportInfo.count > exportInfo.limit);
 
   // ---- password (moved from Settings) ----
   let current = $state('');
@@ -163,17 +186,37 @@
   </form>
 </section>
 
+<section class="card">
+  <h2>Export my data</h2>
+  <p class="help">What you save in thicket is yours to keep and to take elsewhere.</p>
+
+  <!-- One row per thing to download: what it is and what you get on the left,
+       its button on the right. The next export gets a row of its own here. -->
+  <div class="export">
+    <div class="what">
+      <h3>Bookmarks and notes</h3>
+      <p>Every bookmark and its note, as a file that browsers and other bookmark services can open.</p>
+      {#if capped && exportInfo}<p>Exports are limited to your most recent {exportInfo.limit.toLocaleString('en-US')} bookmarks.</p>{/if}
+    </div>
+    <Button href={bookmarksApi.exportUrl()} download="thicket-bookmarks.html" onclick={() => api.event('bookmarks_exported', { count: exportInfo?.count })}>Export bookmarks</Button>
+  </div>
+
+  <p class="note also">Collections are exported one at a time for now. Open a collection, press Manage, then choose “Export collection to file” from the menu next to its name.</p>
+</section>
+
+<ApiTokens available={tokensAvailable} />
+
 <style>
   .top { margin-bottom: var(--space-4); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
-  .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   .address { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   .who { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
   .addr { font-weight: 600; overflow-wrap: anywhere; }
-  .note { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .note { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   /* Resend reads as a link inside the sentence, like links in help text elsewhere. */
   .link { font: inherit; color: var(--accent); font-weight: 600; }
   .link:hover { text-decoration: underline; }
@@ -184,4 +227,11 @@
   .row { display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; }
   .bad { color: var(--danger); margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   form .bad { margin: 0; }
+  /* An export row: words on the left, the button on the right, the button
+     dropping under the words on a phone. */
+  .export { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  .what { flex: 1 1 260px; min-width: 0; }
+  h3 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; }
+  .what p { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
+  .also { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 </style>

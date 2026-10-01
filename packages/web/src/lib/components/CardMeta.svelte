@@ -77,5 +77,5 @@
     text-overflow: ellipsis;
   }
   .dot { color: var(--text-3); }
-  time { color: var(--text-3); white-space: nowrap; }
+  time { color: var(--text-2); white-space: nowrap; }
 </style>

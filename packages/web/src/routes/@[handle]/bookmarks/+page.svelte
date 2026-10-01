@@ -121,7 +121,7 @@
 {:else}
   <ul class="list">
     {#each list as b (b.id)}
-      <BookmarkCard {b} author={owner} onopen={() => api.event('bookmark_opened', { via: 'public_bookmarks' })}
+      <BookmarkCard {b} author={owner} heading="h2" onopen={() => api.event('bookmark_opened', { via: 'public_bookmarks' })}
         action={session.user && !isMe ? { kind: 'save', on: !!b.myBookmarkId, label: b.myBookmarkId ? 'Remove from my bookmarks' : 'Save to my bookmarks', run: () => toggle(b) } : undefined} />
     {/each}
   </ul>
@@ -132,17 +132,17 @@
 </div>
 
 <style>
-  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); margin-bottom: var(--space-1); }
+  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); margin-bottom: var(--space-1); }
   .crumbs a { color: var(--accent); font-weight: 600; }
   .top { margin-bottom: var(--space-3); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; overflow-wrap: anywhere; }
   /* 2px is an optical nudge under the title, not a spacing step. */
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
   /* The With notes choice gets the same air under it as on My Bookmarks. */
   .filters { margin-bottom: var(--space-3); }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
-  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; }
+  .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; }
 </style>

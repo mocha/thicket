@@ -16,7 +16,7 @@
   import { openAddFeed } from '$lib/addfeed.svelte';
   import { dayKey, dayLabel } from '$lib/time';
   import { session } from '$lib/session.svelte';
-  import { display } from '$lib/display.svelte';
+  import { display, sizeScale } from '$lib/display.svelte';
   import { marks, loadMarks, anchorFor, advance, begin, recount, countText } from '$lib/marks.svelte';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import VisitorMore from './VisitorMore.svelte';
@@ -46,6 +46,12 @@
   let loading = $state(false);
   let error = $state<string | null>(null);
   let hidden = $state(back?.hidden ?? 0);
+  /**
+   * What a screen reader is told when the list changes: one short line ("30
+   * more posts loaded"), not the list itself. The whole list used to be marked
+   * as "read out any change", which read every newly loaded card aloud.
+   */
+  let announce = $state('');
   /** Set when a visitor without an account has had all the instance lets visitors see; the number is that limit. */
   let cappedAt = $state<number | null>(back?.cappedAt ?? null);
   let sentinel = $state<HTMLElement | null>(null);
@@ -90,6 +96,12 @@
       done = pg.nextCursor === null;
       hidden = reset ? pg.hidden : hidden + pg.hidden;
       cappedAt = pg.cappedAt ?? null;
+      // Scrolling only: a page turn says its own page number, and the first load is the page arriving.
+      if (!reset && !paged) {
+        const n = pg.items.length;
+        // The running total keeps each line different from the last; a line repeated word for word is not read out again.
+        announce = [n ? `${n} more ${n === 1 ? 'post' : 'posts'} loaded, ${items.length} in all.` : '', done && !cappedAt ? 'That’s everything.' : ''].filter(Boolean).join(' ');
+      }
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -197,13 +209,18 @@
 
   /* ---- Paged layout ---- */
   const paged = $derived(display.layout === 'paged');
-  /** Compact cards are at least this tall, plus the gap; the frame is measured and divided. */
-  const CARD_H = 152;
-  /** A card grows to share out whatever height is left over, up to this. Past it a card is mostly air. */
-  const CARD_MAX_H = 230;
-  let cardH = $state(CARD_H);
+  /**
+   * Compact cards are this tall, plus the gap; the frame is measured and
+   * divided. The height is made of the card's parts, each grown by the text
+   * size the reader chose for it: the source line (fixed room for its buttons),
+   * two lines of title, two of summary, and the author. At the default sizes
+   * that comes to 148. A fixed height would slice bigger text in half.
+   */
+  const CARD_H = $derived(Math.round(40 + 54 * sizeScale(display.fonts.headings.size) + 34 * sizeScale(display.fonts.reading.size) + 20 * sizeScale(display.fonts.app.size)));
+  /** A card grows to share out whatever height is left over, up to half again its own. Past that a card is mostly air. */
+  let cardH = $state(148);
   const GAP = 12;
-  const PAGEHEAD_H = 34;
+  const PAGEHEAD_H = $derived(Math.round(34 * sizeScale(display.fonts.app.size)));
   /** Cards go side by side when the frame is wide enough for more than one of at least this width; narrower than this a card reads oddly. */
   const CARD_MIN_W = 500;
   let frame = $state<HTMLElement | null>(null);
@@ -219,7 +236,8 @@
   function measure() {
     if (!frame) return;
     const top = frame.getBoundingClientRect().top + window.scrollY;
-    const navH = 56 + Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-b')) || 56;
+    // The bottom bar as drawn: it grows with the text size too.
+    const navH = document.querySelector<HTMLElement>('nav[aria-label="Primary"]')?.offsetHeight ?? 56;
     // main keeps its usual bottom padding (nav + 24px); take it off so the page itself has nothing to scroll.
     const h = Math.max(CARD_H + PAGEHEAD_H, window.innerHeight - top - navH - 26);
     frameTop = top; frameH = h;
@@ -228,7 +246,7 @@
     // The height left after the last whole card is shared among the cards
     // rather than left as a blank band at the foot of the page: each gets a
     // little taller, which on a phone is room for another line of the summary.
-    cardH = Math.min(CARD_MAX_H, Math.max(CARD_H, Math.floor((h - PAGEHEAD_H - (rows - 1) * GAP) / rows)));
+    cardH = Math.min(Math.round(CARD_H * 1.5), Math.max(CARD_H, Math.floor((h - PAGEHEAD_H - (rows - 1) * GAP) / rows)));
     perPage = cols * rows;
   }
   $effect(() => {
@@ -271,9 +289,9 @@
 </script>
 
 {#if paged}
-  <section class="river paged" aria-live="polite" bind:this={frame} style:height="{frameH}px">
+  <section class="river paged" bind:this={frame} style:height="{frameH}px">
     {#if pageItems.length}
-      <div class="pagehead"><span class="when">{pageLabel}</span>{#if newAtOpen}<span class="newn">{newAtOpen} new{#if !caught} · <button type="button" onclick={caughtUp}>I’m caught up</button>{/if}</span>{/if}<span class="n">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
+      <div class="pagehead" style:height="{PAGEHEAD_H}px"><h2 class="when">{pageLabel}</h2>{#if newAtOpen}<span class="newn">{newAtOpen} new{#if !caught} · <button type="button" onclick={caughtUp}>I’m caught up</button>{/if}</span>{/if}<span class="n" role="status">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
       <div class="grid" style:grid-template-columns="repeat({cols}, minmax(0, 1fr))" style:grid-auto-rows="{cardH}px" style:gap="{GAP}px">
         {#each pageItems as item (item.id)}
           <ItemCard {item} {showSource} compact fresh={isFresh(item)} />
@@ -289,19 +307,21 @@
         </div>
       </div>
     {/if}
-    {#if error}<p class="status error">Couldn’t load posts: {error}</p>{/if}
+    {#if error}<p class="status error" role="alert">Couldn’t load posts: {error}</p>{/if}
     {#if loading && !pageItems.length}<p class="status">Loading…</p>{/if}
     {#if cappedAt && !canNext}<VisitorMore cap={cappedAt} />{/if}
   </section>
   <Pager {canPrev} {canNext} onprev={prevPage} onnext={nextPage} label="page of posts" top="{frameTop}px" bottom="calc(var(--nav-h) + var(--safe-b))" />
 {:else}
-  <section class="river" aria-live="polite">
+  <section class="river">
+    <p class="visually-hidden" role="status">{announce}</p>
     {#if newAtOpen}
       <div class="newtop"><span>{newAtOpen} new since your last visit</span>{#if !caught}<button type="button" onclick={caughtUp}>I’m caught up</button>{/if}</div>
     {/if}
     {#each groups as g (g.key)}
       <section class="day">
-        {#if g.key !== todayKey}<h2 class="dayhead">{g.label}</h2>{/if}
+        <!-- Today's posts need no heading to look at, but they keep one to be read out, so the headings run page, day, post with no step missing. -->
+        <h2 class={g.key === todayKey ? 'visually-hidden' : 'dayhead'}>{g.label}</h2>
         {#each g.items as item (item.id)}
           {#if item.id === boundaryId}
             <div class="divider" role="separator" aria-label="End of what is new since your last visit" bind:this={dividerEl}><span>That’s everything new since your last visit</span></div>
@@ -324,7 +344,7 @@
         </div>
       </div>
     {/if}
-    {#if error}<p class="status error">Couldn’t load posts: {error}</p>{/if}
+    {#if error}<p class="status error" role="alert">Couldn’t load posts: {error}</p>{/if}
     {#if loading}<p class="status">Loading…</p>{/if}
     {#if cappedAt}<VisitorMore cap={cappedAt} />{:else if done && items.length > 0}<p class="status">That’s everything.{#if hidden} {hidden} hidden by your blocks.{/if}</p>{/if}
     <div bind:this={sentinel} class="sentinel" aria-hidden="true"></div>
@@ -342,7 +362,7 @@
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
   .empty p { margin: 0 auto; max-width: 440px; }
   .ctas { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; margin-top: var(--space-4); }
-  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
+  .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
   .status.error { color: var(--danger); }
   .sentinel { height: 1px; }
 
@@ -356,8 +376,8 @@
   .newn { color: var(--accent); font-weight: 700; margin-left: var(--space-3); }
   .newn button, .newtop button { font: inherit; font-weight: 600; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
   .newtop { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: calc(-1 * var(--space-1)) 0 -2px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); font-weight: 600; }
-  .pagehead { display: flex; align-items: baseline; justify-content: space-between; height: 34px; padding: var(--space-2) 2px 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .pagehead .when { font-weight: 600; }
-  .pagehead .n { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .pagehead { display: flex; align-items: baseline; justify-content: space-between; padding: var(--space-2) 2px 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .pagehead .when { margin: 0; font: inherit; font-weight: 600; }
+  .pagehead .n { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-2); font-variant-numeric: tabular-nums; }
   .grid { display: grid; align-content: start; }
 </style>

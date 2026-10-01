@@ -43,6 +43,7 @@
    */
 
   import IconButton from './IconButton.svelte';
+  import { scrollBehavior } from '$lib/motion';
 
   interface Tab {
     value: string;
@@ -155,7 +156,7 @@
      two of overlap so the reader keeps their place. */
   function nudge(dir: 1 | -1) {
     if (!scroller) return;
-    scroller.scrollBy({ left: dir * scroller.clientWidth * 0.8, behavior: 'smooth' });
+    scroller.scrollBy({ left: dir * scroller.clientWidth * 0.8, behavior: scrollBehavior() });
   }
 
   function next(from: number, dir: 1 | -1) {

@@ -59,8 +59,9 @@
   /* The label does the clipping rather than the button, so the button's touch
      area (see `.tap` in app.css) can reach past its edges. */
   .lbl { display: block; overflow: hidden; text-overflow: ellipsis; }
-  .follow.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
+  .follow.on { background: var(--accent-tint); border-color: transparent; }
   .follow:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
-  .follow.on:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  /* Hover draws the outline back in rather than deepening the wash, which would dim the lettering on it. */
+  .follow.on:hover { background: var(--accent-tint); border-color: var(--accent); }
   .compact { padding: var(--space-1) var(--space-4); }
 </style>

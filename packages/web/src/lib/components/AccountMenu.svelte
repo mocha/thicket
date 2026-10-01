@@ -21,6 +21,7 @@
   import Icon from './Icon.svelte';
   import { navWidth } from '$lib/navwidth.svelte';
   import { display } from '$lib/display.svelte';
+  import { menu } from '$lib/menu';
 
   let { anchor, onclose }: { anchor: HTMLElement | null; onclose: () => void } = $props();
 
@@ -79,6 +80,7 @@
     class="panel"
     class:sheet
     bind:this={panel}
+    use:menu={{ anchor, onclose, modal: sheet }}
     role="menu"
     aria-label="Account"
     style:top={sheet ? undefined : `${pos.top}px`}
@@ -136,7 +138,7 @@
   .who { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3) var(--space-3); border-bottom: 1px solid var(--line); margin-bottom: var(--space-2); }
   .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
   .dn { font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .h { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .h { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .panel a, .panel button {
     display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3); border-radius: var(--radius-sm);
     font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text-2); text-align: left;

@@ -15,6 +15,7 @@
   import Badge from '$lib/components/Badge.svelte';
   import Button from '$lib/components/Button.svelte';
   import Field from '$lib/components/Field.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import Input from '$lib/components/Input.svelte';
 
   /**
@@ -200,7 +201,7 @@
           <li>
             <span class="note">{inv.note ?? 'Invite'}</span>
             <span class="exp">{inv.expiresAt ? `expires ${new Date(inv.expiresAt).toLocaleDateString()}` : ''}</span>
-            <Button size="sm" onclick={() => copyInvite(inv)}>Copy link</Button>
+            <Button size="sm" onclick={() => copyInvite(inv)}><Icon name="copy" size={16} />Copy link</Button>
             <Button variant="danger" size="sm" onclick={() => revoke(inv)}>Revoke</Button>
           </li>
         {/each}
@@ -247,7 +248,7 @@
       <div class="issued" role="status">
         <p><strong>Temporary password for @{issued.handle}:</strong> <code>{issued.password}</code></p>
         <p class="help">Pass it on however you like. It won’t be shown again; they should change it in Settings.</p>
-        <div class="row"><Button size="sm" onclick={copyIssued}>Copy</Button><Button size="sm" onclick={() => (issued = null)}>Done</Button></div>
+        <div class="row"><Button size="sm" onclick={copyIssued}><Icon name="copy" size={16} />Copy</Button><Button size="sm" onclick={() => (issued = null)}>Done</Button></div>
       </div>
     {/if}
     <ul class="users">
@@ -279,11 +280,11 @@
   .top { margin-bottom: var(--space-4); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
   /* 2px is an optical nudge under the title, not a spacing step. */
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   code { font-size: calc(var(--text-sm) * var(--size-app)); /* 1px vertical is optical: an inline code chip stays on the text's line. */ background: var(--surface-2); padding: 1px var(--space-2); border-radius: var(--radius-xs); }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
   h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 var(--space-3); display: flex; align-items: baseline; gap: var(--space-2); }
-  .help { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .help { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .inline { display: flex; gap: var(--space-2); align-items: flex-end; margin-bottom: var(--space-4); }
   /* The field takes the room the button beside it doesn't. */
   .inline :global(.grow), .mint :global(.grow) { flex: 1; min-width: 0; }
@@ -298,7 +299,7 @@
   .radio input:focus-visible, .packs input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radio span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .radio small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .radio small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .mint { display: flex; gap: var(--space-2); }
   .packs { list-style: none; margin: var(--space-3) 0; padding: 0; display: grid; gap: var(--space-2); }
   .packs li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); border: 1px solid transparent; }
@@ -306,12 +307,12 @@
   .packs label { display: flex; align-items: center; gap: var(--space-2); flex: 1; cursor: pointer; }
   .packs input { accent-color: var(--accent); }
   .pk { display: flex; flex-direction: column; }
-  .pk small { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .pk small { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   @media (min-width: 760px) { .packs { grid-template-columns: repeat(2, 1fr); } }
   .invites { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
   .invites li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); }
   .invites .note { flex: 1 1 8ch; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .invites .exp { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; }
+  .invites .exp { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; }
   .issued { background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); }
   .issued p { margin: 0 0 var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .issued code { font-size: calc(var(--text-base) * var(--size-app)); user-select: all; }
@@ -327,8 +328,8 @@
   .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
   .line { line-height: 1.4; }
   .name { font-weight: 600; }
-  .handle { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .facts { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .handle { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .facts { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .acts { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-1); }
-  .status { text-align: center; color: var(--text-3); padding: var(--space-6) 0; }
+  .status { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
 </style>

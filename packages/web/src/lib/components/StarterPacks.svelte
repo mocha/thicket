@@ -19,6 +19,7 @@
   import SourceIcon from './SourceIcon.svelte';
   import Card from './Card.svelte';
   import Button from './Button.svelte';
+  import Icon from './Icon.svelte';
 
   let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false }:
     { heading?: string; lede?: string; compact?: boolean } = $props();
@@ -77,7 +78,7 @@
           {#if session.user}
             <div class="take">
               <Button variant="secondary" size="sm" loading={copying === c.id} disabled={copied.has(c.id)} onclick={() => void copy(c)}>
-                {#if copied.has(c.id)}Added{:else if copying === c.id}Copying…{:else}<span aria-hidden="true">+</span> Copy to my collections{/if}
+                {#if copied.has(c.id)}Added{:else if copying === c.id}Copying…{:else}<Icon name="copy" size={16} />Copy to my collections{/if}
               </Button>
             </div>
           {/if}
@@ -124,7 +125,7 @@
   /* Pinned to the bottom so the buttons line up across a row of uneven cards,
      and lifted above the stretched link so a tap lands on the button. */
   .take { margin-top: auto; padding-top: var(--space-3); position: relative; z-index: 1; }
-  .from { margin: var(--space-4) 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; max-width: 62ch; }
+  .from { margin: var(--space-4) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; max-width: 62ch; }
   .from a { color: var(--accent); font-weight: 600; }
   .compact h2 { font-size: calc(var(--text-xl) * var(--size-app)); }
   .compact .card-summary { display: none; }
