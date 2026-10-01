@@ -3,7 +3,8 @@
  * place so each can be tuned from evidence: how often (LIMITS) and how long
  * (MAX_LENGTH). It began with the endpoints that guess or send (login,
  * sign-up, and the ones that email someone) and now also covers saving
- * bookmarks, writing notes and the import page (issue #136).
+ * bookmarks, writing notes and the import page (issue #136), and requests
+ * made with an API token (issue #140).
  *
  * In-process fixed windows in a Map. Deliberate shortcut, the same one the
  * scheduler makes: this instance is one process, so a shared store would be
@@ -49,6 +50,49 @@ export function hit(key: string, { limit, windowMs }: Limit, cost = 1): { ok: bo
   if (w.count > limit) return { ok: false, retryAfterS: Math.max(1, Math.ceil((w.resetAt - now) / 1000)) };
   return { ok: true, retryAfterS: 0 };
 }
+
+/**
+ * The same question asked of a rolling window: "how many in the last N
+ * seconds", measured back from this moment and not from when a fixed window
+ * happened to open. That is what API tokens are held to (issue #140), because
+ * a fixed window lets a script send its whole allowance twice across the
+ * boundary, and tells it to wait for the window instead of for its own
+ * requests to age out.
+ *
+ * One key can be held to several limits at once (a short one against bursts,
+ * a long one against steady automation). The request is counted only if every
+ * limit allows it, so a refused request never uses up allowance, and
+ * `retryAfterS` is exactly how long until one more would be allowed. `broke`
+ * is which limit refused it, so the message can say.
+ *
+ * Kept as the times of recent requests, never more than the largest limit, so
+ * the cost per key is bounded.
+ */
+const logs = new Map<string, number[]>();
+
+export function hitRolling(key: string, limits: Limit[]): { ok: boolean; retryAfterS: number; broke: Limit | null } {
+  const now = Date.now();
+  const longest = Math.max(...limits.map((l) => l.windowMs));
+  const log = (logs.get(key) ?? []).filter((t) => t > now - longest);
+  let waitMs = 0;
+  let broke: Limit | null = null;
+  for (const l of limits) {
+    const inWindow = log.filter((t) => t > now - l.windowMs);
+    if (inWindow.length < l.limit) continue;
+    // Room opens when enough of the oldest have aged out to leave limit - 1 behind.
+    const wait = inWindow[inWindow.length - l.limit] + l.windowMs - now;
+    if (wait > waitMs) { waitMs = wait; broke = l; }
+  }
+  if (!broke) log.push(now);
+  logs.set(key, log);
+  return broke ? { ok: false, retryAfterS: Math.max(1, Math.ceil(waitMs / 1000)), broke } : { ok: true, retryAfterS: 0, broke: null };
+}
+
+/** Drop logs with nothing recent in them. An hour is the longest rolling window there is. */
+setInterval(() => {
+  const cutoff = Date.now() - 3600_000;
+  for (const [k, log] of logs) if (!log.length || log[log.length - 1] <= cutoff) logs.delete(k);
+}, 60_000).unref();
 
 /** Forget a key's window. Called on a successful login so one good password clears the slate. */
 export function clear(key: string): void {
@@ -115,6 +159,15 @@ export const LIMITS = {
    * hour, which is 3,200 feeds.
    */
   importCheck: { limit: 600, windowMs: 60 * 60_000 } satisfies Limit,
+
+  // API tokens (issue #140). Per token, rolling (hitRolling), and counted apart
+  // from the browser session: reading in the web app never spends a token's
+  // allowance, and a script never slows the web app down. Room for a person's
+  // script or an assistant working through their reading; not for a crawler.
+  /** Against bursts: no more than 10 requests in any 10 seconds. */
+  tokenBurst: { limit: 10, windowMs: 10_000 } satisfies Limit,
+  /** Against steady automation: no more than 120 requests in any hour. */
+  tokenHourly: { limit: 120, windowMs: 60 * 60_000 } satisfies Limit,
 };
 
 /**

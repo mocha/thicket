@@ -6,6 +6,9 @@
  *   later without a migration (verify() dispatches on the prefix).
  * - Sessions: 32 random bytes in an HttpOnly cookie; the database holds the
  *   sha256 of the token. Sliding 30-day expiry, renewed on use.
+ * - API tokens (issue #140): a request with `Authorization: Bearer thk_…` is
+ *   its owner, within what a token may do. Checked here, in attachUser(), for
+ *   every route at once; lib/token-access.ts holds the rules.
  * - Middleware: attachUser() runs on every /api request and sets c.var.user
  *   (or null). Routes call currentUser(c) for a hard 401, or c.get("user")
  *   when anonymous access is fine (public profiles, icons).
@@ -18,6 +21,8 @@ import { HTTPException } from "hono/http-exception";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { IS_HTTPS, TRACK_ACTIVITY } from "./config.js";
+import { LIMITS, hitRolling } from "./ratelimit.js";
+import { bearerOf, hashToken, looksLikeToken, tokenMay, type TokenKind } from "./token-access.js";
 
 const scrypt = promisify(scryptCb);
 export const COOKIE = "thicket_session";
@@ -40,6 +45,8 @@ declare module "hono" {
   interface ContextVariableMap {
     user: SessionUser | null;
     sessionId: string | null;
+    /** Set when the request came with an API token instead of a session. */
+    token: { id: number; kind: TokenKind } | null;
   }
 }
 
@@ -104,31 +111,91 @@ function writeCookie(c: Context, token: string, expiresAt: Date) {
   setCookie(c, COOKIE, token, { path: "/", httpOnly: true, sameSite: "Lax", secure, expires: expiresAt });
 }
 
-/** Resolves the session cookie to a user once per request. Never rejects; routes decide. */
+type UserRow = {
+  id: number; handle: string; displayName: string | null; trackActivity: boolean | null; rootCollectionId: number | null;
+  defaultCollectionId: number | null;
+};
+/** The columns every request's user is made of, whichever credential named them. */
+const userColumns = sql`
+  u.id, u.handle, u.display_name as "displayName", u.track_activity as "trackActivity",
+  (select col.id from collections col where col.user_id = u.id and col.parent_id is null limit 1) as "rootCollectionId",
+  (select col.id from collections col where col.user_id = u.id and col.parent_id is not null order by col.id limit 1) as "defaultCollectionId"`;
+const toUser = (row: UserRow): SessionUser => ({
+  id: Number(row.id), handle: row.handle, displayName: row.displayName, rootCollectionId: Number(row.rootCollectionId),
+  defaultCollectionId: row.defaultCollectionId === null ? null : Number(row.defaultCollectionId),
+  trackActivity: row.trackActivity ?? trackingEnabled(),
+});
+
+/** How often a token's "last used" moves. */
+const TOKEN_SEEN_EVERY_MS = 60_000;
+
+/**
+ * A request carrying `Authorization: Bearer …` is a token request (issue
+ * #140) and nothing else: any cookie beside it is ignored. This is the one
+ * place a token is checked, so no route has to remember to. In order: is it a
+ * live token, is it within its rate limits, and may a token of its kind make
+ * this request at all (lib/token-access.ts). Returns the refusal, or null
+ * once the user is attached.
+ */
+async function attachTokenUser(c: Context, raw: string): Promise<Response | null> {
+  const refuse = (status: 401 | 403 | 429, error: string, extra: Record<string, unknown> = {}) => c.json({ error, ...extra }, status);
+  const BAD = "That API token doesn’t work. It may have been mistyped or revoked.";
+  if (!looksLikeToken(raw)) return refuse(401, BAD);
+  const row = (await db.execute<UserRow & { tokenId: number; kind: TokenKind; lastUsedAt: string | null }>(sql`
+    select ${userColumns}, t.id as "tokenId", t.kind, t.last_used_at as "lastUsedAt"
+    from api_tokens t join users u on u.id = t.user_id
+    where t.token_hash = ${hashToken(raw)}
+  `)).rows[0];
+  if (!row || row.rootCollectionId === null) return refuse(401, BAD);
+
+  const pace = hitRolling(`token:${row.tokenId}`, [LIMITS.tokenBurst, LIMITS.tokenHourly]);
+  if (!pace.ok) {
+    c.header("retry-after", String(pace.retryAfterS));
+    const mins = Math.ceil(pace.retryAfterS / 60);
+    const message = pace.broke === LIMITS.tokenBurst
+      ? `Too many requests at once. A token can make ${LIMITS.tokenBurst.limit} in any ${LIMITS.tokenBurst.windowMs / 1000} seconds. Try again in ${pace.retryAfterS === 1 ? "a second" : `${pace.retryAfterS} seconds`}.`
+      : `That’s a lot of requests for one hour. A token can make ${LIMITS.tokenHourly.limit} in any hour. Try again in ${mins === 1 ? "a minute" : `${mins} minutes`}.`;
+    return refuse(429, message, { retryAfterS: pace.retryAfterS });
+  }
+
+  const may = tokenMay(row.kind, c.req.method, c.req.path);
+  if (!may.ok) return refuse(403, may.error);
+
+  c.set("user", toUser(row));
+  c.set("token", { id: Number(row.tokenId), kind: row.kind });
+  if (!row.lastUsedAt || Date.now() - new Date(row.lastUsedAt).getTime() > TOKEN_SEEN_EVERY_MS) {
+    await db.update(schema.apiTokens).set({ lastUsedAt: new Date() }).where(eq(schema.apiTokens.id, Number(row.tokenId)));
+  }
+  return null;
+}
+
+/**
+ * Resolves the credential to a user once per request: an API token if the
+ * request carries one, else the session cookie. A request with neither, or
+ * with a cookie that no longer works, goes on as a visitor and routes decide.
+ * A token that doesn't work, or isn't allowed this request, is answered here.
+ */
 export const attachUser: MiddlewareHandler = async (c, next) => {
   c.set("user", null);
   c.set("sessionId", null);
+  c.set("token", null);
+  const bearer = bearerOf(c.req.header("authorization"));
+  if (bearer !== null) {
+    const refusal = await attachTokenUser(c, bearer);
+    if (refusal) return refusal;
+    return next();
+  }
   const token = getCookie(c, COOKIE);
   if (token) {
     const id = tokenId(token);
-    const rows = await db.execute<{
-      id: number; handle: string; displayName: string | null; trackActivity: boolean | null; rootCollectionId: number | null;
-      defaultCollectionId: number | null; lastSeenAt: string; expiresAt: string;
-    }>(sql`
-      select u.id, u.handle, u.display_name as "displayName", u.track_activity as "trackActivity",
-             (select col.id from collections col where col.user_id = u.id and col.parent_id is null limit 1) as "rootCollectionId",
-             (select col.id from collections col where col.user_id = u.id and col.parent_id is not null order by col.id limit 1) as "defaultCollectionId",
-             s.last_seen_at as "lastSeenAt", s.expires_at as "expiresAt"
+    const rows = await db.execute<UserRow & { lastSeenAt: string; expiresAt: string }>(sql`
+      select ${userColumns}, s.last_seen_at as "lastSeenAt", s.expires_at as "expiresAt"
       from sessions s join users u on u.id = s.user_id
       where s.id = ${id} and s.expires_at > now()
     `);
     const row = rows.rows[0];
     if (row && row.rootCollectionId !== null) {
-      c.set("user", {
-        id: Number(row.id), handle: row.handle, displayName: row.displayName, rootCollectionId: Number(row.rootCollectionId),
-        defaultCollectionId: row.defaultCollectionId === null ? null : Number(row.defaultCollectionId),
-        trackActivity: row.trackActivity ?? trackingEnabled(),
-      });
+      c.set("user", toUser(row));
       c.set("sessionId", id);
       // Sliding expiry, written at most once a day so reads stay reads.
       if (Date.now() - new Date(row.lastSeenAt).getTime() > RENEW_AFTER_MS) {

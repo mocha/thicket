@@ -347,6 +347,19 @@ export type SignupPolicy = 'open' | 'invite' | 'closed';
 export type InstanceStatus = { name: string; url: string; signups: SignupPolicy; visitorLimit: boolean; hosted: boolean };
 export type Invite = { code: string; url: string; note: string | null; createdAt: string; expiresAt: string | null; usedAt: string | null; usedByHandle: string | null; createdByHandle: string };
 
+/**
+ * An API token: a credential for my own scripts and assistants. At most one
+ * of each kind. `read` can only read; `full` can also change things.
+ */
+export type ApiTokenKind = 'read' | 'full';
+export type ApiToken = { kind: ApiTokenKind; token: string; createdAt: string; lastUsedAt: string | null };
+
+export const tokensApi = {
+  list: () => j<{ tokens: ApiToken[] }>('/api/tokens'),
+  enable: (kind: ApiTokenKind) => j<ApiToken>(`/api/tokens/${kind}`, { method: 'POST' }),
+  revoke: (kind: ApiTokenKind) => j<void>(`/api/tokens/${kind}`, { method: 'DELETE' }),
+};
+
 export const authApi = {
   me: () => j<Me>('/api/auth/me'),
   status: () => j<InstanceStatus>('/api/auth/status'),
