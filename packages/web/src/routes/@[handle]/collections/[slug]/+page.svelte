@@ -89,26 +89,31 @@
   <header class="top">
     <div class="titlerow">
       <h1>{col.name}</h1>
-      <div class="actions">
+      <!-- Signed out, the action moves under the byline (below): beside the
+           title it bunched up with the header's Log in and Sign up. -->
+      {#if session.user}<div class="actions">
         {#if col.isMe}
           <AddFeedButton collectionIds={[col!.id]} via="collection_page" />
           <IconButton icon="gear" variant="bordered" size="lg" href={manageCollectionHref(handle, slug)} label="Manage" title="Manage" />
         {:else if session.user}
           {#if existingCopy}
             <Button variant="primary" href={collectionHref(session.user.handle, existingCopy.slug)}>Open your copy</Button>
-            <Button onclick={() => confirmAgain?.showModal()} disabled={copying}>{copying ? 'Copying…' : 'Copy again'}</Button>
+            <Button onclick={() => confirmAgain?.showModal()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy again'}</Button>
           {:else}
-            <Button variant="primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</Button>
+            <Button variant="primary" onclick={copy} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy this collection'}</Button>
           {/if}
-        {:else}
-          <Button variant="primary" onclick={() => { api.event('copy_explainer_opened', { handle, slug }); explain?.showModal(); }}>Copy this collection</Button>
         {/if}
-      </div>
+      </div>{/if}
     </div>
     {#if col.description}<p class="desc">{col.description}</p>{/if}
     <p class="sub">
       {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> ·&nbsp;{/if}{#if col.isMe && audienceTag(col.visibility)}<Badge class="beforetext">{audienceTag(col.visibility)}</Badge>·&nbsp;{/if}<button class="reveal" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<Icon name="caret" size={14} stroke={2.4} dir={showFeeds ? 'down' : 'right'} /></button>
     </p>
+    {#if !session.user}
+      <!-- The header's Sign up is the one green button on the page, and Copy
+           leads there anyway, so Copy is just its words. -->
+      <div class="visitoraction"><Button link onclick={() => { api.event('copy_explainer_opened', { handle, slug }); explain?.showModal(); }}><Icon name="copy" size={16} />Copy this collection</Button></div>
+    {/if}
   </header>
 
   <!-- Signed-out visitor pressed Copy: two ways home, neither of which mentions file formats. -->
@@ -125,7 +130,7 @@
         <section>
           <h3>On another thicket?</h3>
           <p>Copying a collection between thickets by link is on its way. Keep this page’s link; it’s what you’ll paste.</p>
-          <Button onclick={copyLink}>Copy link</Button>
+          <Button onclick={copyLink}><Icon name="copy" size={16} />Copy link</Button>
         </section>
       </div>
       <IconButton class="close" icon="close" label="Close" onclick={() => explain?.close()} />
@@ -140,7 +145,7 @@
       <p>You already have a copy of this collection. Copying again makes a second, separate one — handy if you want to prune each down to different feeds.</p>
       <div class="confirmbtns">
         <Button onclick={() => confirmAgain?.close()}>Cancel</Button>
-        <Button variant="primary" disabled={copying} onclick={() => { confirmAgain?.close(); void copy(); }}>Copy again</Button>
+        <Button variant="primary" disabled={copying} onclick={() => { confirmAgain?.close(); void copy(); }}><Icon name="copy" size={16} />Copy again</Button>
       </div>
     </div>
   </dialog>
@@ -190,6 +195,8 @@
   .reveal { display: inline-flex; align-items: center; gap: var(--space-1); font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
   /* 2px of top padding is an optical nudge: the buttons sit on the title's line. */
   .actions { flex: none; display: flex; gap: var(--space-2); align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
+  /* The link keeps its own padding; pull it back so its words start at the title's left edge. */
+  .visitoraction { margin: var(--space-2) 0 0 calc(-1 * var(--space-2)); }
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
   dialog::backdrop { background: var(--scrim); }
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-5) var(--space-4) calc(var(--space-4) + var(--safe-b)); box-shadow: var(--shadow-sheet); }

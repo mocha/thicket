@@ -15,6 +15,7 @@
   import Badge from '$lib/components/Badge.svelte';
   import Button from '$lib/components/Button.svelte';
   import Field from '$lib/components/Field.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import Input from '$lib/components/Input.svelte';
 
   /**
@@ -200,7 +201,7 @@
           <li>
             <span class="note">{inv.note ?? 'Invite'}</span>
             <span class="exp">{inv.expiresAt ? `expires ${new Date(inv.expiresAt).toLocaleDateString()}` : ''}</span>
-            <Button size="sm" onclick={() => copyInvite(inv)}>Copy link</Button>
+            <Button size="sm" onclick={() => copyInvite(inv)}><Icon name="copy" size={16} />Copy link</Button>
             <Button variant="danger" size="sm" onclick={() => revoke(inv)}>Revoke</Button>
           </li>
         {/each}
@@ -247,7 +248,7 @@
       <div class="issued" role="status">
         <p><strong>Temporary password for @{issued.handle}:</strong> <code>{issued.password}</code></p>
         <p class="help">Pass it on however you like. It won’t be shown again; they should change it in Settings.</p>
-        <div class="row"><Button size="sm" onclick={copyIssued}>Copy</Button><Button size="sm" onclick={() => (issued = null)}>Done</Button></div>
+        <div class="row"><Button size="sm" onclick={copyIssued}><Icon name="copy" size={16} />Copy</Button><Button size="sm" onclick={() => (issued = null)}>Done</Button></div>
       </div>
     {/if}
     <ul class="users">

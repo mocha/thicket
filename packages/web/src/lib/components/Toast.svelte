@@ -1,8 +1,20 @@
 <script lang="ts">
-  import { toast, dismissToast, holdToast, releaseToast } from '$lib/toast.svelte';
+  import { toast, dismissToast, showToast, holdToast, releaseToast } from '$lib/toast.svelte';
 
   /** Whether the desktop sidebar is on screen, so the toast can center over the posts beside it rather than the whole window. */
   let { sidebar = false }: { sidebar?: boolean } = $props();
+
+  /* Run the toast's action (nearly always Undo). If it is refused, say why:
+     an Undo that quietly did nothing would look like it worked. */
+  async function act() {
+    const run = toast.current?.action?.run;
+    dismissToast();
+    try {
+      await run?.();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    }
+  }
 
   /**
    * The toast is the last thing on the page, so on a long list nobody tabbing
@@ -18,11 +30,7 @@
     const t = e.target as HTMLElement | null;
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     e.preventDefault();
-    undo();
-  }
-  function undo() {
-    toast.current?.action?.run();
-    dismissToast();
+    void act();
   }
 
   /* An open Sheet sits above everything the page can stack, and the browser
@@ -50,7 +58,7 @@
   <div class="toast" class:sidebar role="status" use:onTop={toast.current.id} onmouseenter={holdToast} onmouseleave={releaseToast} onfocusin={holdToast} onfocusout={releaseToast}>
     <span>{toast.current.message}</span>
     {#if toast.current.action}
-      <button class="action" onclick={undo}>{toast.current.action.label}</button>
+      <button class="action" onclick={act}>{toast.current.action.label}</button>
       <!-- Said after the message by a screen reader; there is nothing to see. -->
       {#if undoable}<span class="visually-hidden">Press {mac ? 'Command' : 'Control'} Z to undo.</span>{/if}
     {/if}

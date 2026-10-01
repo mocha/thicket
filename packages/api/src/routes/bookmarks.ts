@@ -15,9 +15,19 @@ import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { cleanNote, isSavedAddress, noteOf, snapshotOfItem } from "../lib/bookmarks.js";
 import { noteJson, othersNotesSql } from "../lib/notes.js";
+import { EXPORT_MAX, renderBookmarkFile, type ExportRow } from "../lib/bookmark-export.js";
 import { isHttpUrl } from "../feeds/normalize.js";
+import { fieldProblem } from "../lib/bookmark-fields.js";
+import { LIMITS, hit, tooManyFor } from "../lib/ratelimit.js";
 
 export const bookmarks = new Hono();
+
+/**
+ * What the daily limits say (LIMITS.savesPerDay, LIMITS.noteWritesPerDay). No
+ * reader meets them; they are there so an account can't be used as storage.
+ */
+export const SAVED_ENOUGH = "That is a lot of saving for one day. It will work again tomorrow.";
+export const NOTED_ENOUGH = "That is a lot of notes for one day. It will work again tomorrow.";
 
 /** When a bookmark last saw activity: saved, or its note written or edited. What the lists sort on. */
 export const activeAtSql = sql`greatest(b.saved_at, coalesce(b.note_updated_at, b.saved_at))`;
@@ -85,6 +95,40 @@ bookmarks.get("/sources", async (c) => {
   return c.json({ feeds: feeds.rows, collections: collections.rows, noted });
 });
 
+/**
+ * My bookmarks and notes as one file to keep or take elsewhere (issue #135):
+ * the bookmark file browsers and bookmark services read. Always the whole
+ * set, newest saved first, up to EXPORT_MAX of them, and for every account.
+ * `tz` is the reader's timezone as their browser names it, for the times
+ * written in each description; without a real one they are written in UTC.
+ * Sent as a download, and told never to run as a page here (its own
+ * stylesheet is all it may use): the text in it
+ * is escaped, and this is the second lock on the same door.
+ */
+bookmarks.get("/export", async (c) => {
+  const user = currentUser(c);
+  const rows = await db.execute<ExportRow>(sql`
+    select url, title, note, author, site_title as "siteTitle", published_at as "publishedAt", saved_at as "savedAt"
+    from bookmarks where user_id = ${user.id}
+    order by saved_at desc, id desc
+    limit ${EXPORT_MAX}
+  `);
+  const file = renderBookmarkFile(rows.rows, { handle: user.handle, timeZone: c.req.query("tz") });
+  c.header("content-type", "text/html; charset=utf-8");
+  c.header("content-disposition", `attachment; filename="thicket-bookmarks-${new Date().toISOString().slice(0, 10)}.html"`);
+  c.header("content-security-policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'");
+  c.header("x-content-type-options", "nosniff");
+  c.header("cache-control", "no-store");
+  return c.body(file);
+});
+
+/** What an export would hold: how many bookmarks I have, and the most one file carries. For the Account page. */
+bookmarks.get("/export/info", async (c) => {
+  const user = currentUser(c);
+  const [{ count }] = (await db.execute<{ count: number }>(sql`select count(*)::int as count from bookmarks where user_id = ${user.id}`)).rows;
+  return c.json({ count, limit: EXPORT_MAX });
+});
+
 type Restore = {
   itemId: number | null; feedId: number | null; url: string; title: string | null; summary: string | null; imageUrl: string | null;
   siteTitle: string | null; author: string | null; publishedAt: string | null; savedAt: string;
@@ -106,6 +150,8 @@ bookmarks.post("/", async (c) => {
     const r = body.restore;
     // The address comes back from the page, so it gets the same check as any
     // saved address: a web address, or a post's page here.
+    const problem = fieldProblem(r);
+    if (problem) return c.json({ error: problem }, 400);
     if (!r.url || !isSavedAddress(r.url)) return c.json({ error: "only http(s) URLs or a post's page here" }, 400);
     const note = r.note ? cleanNote(r.note) : null;
     if (note && "error" in note) return c.json({ error: note.error }, 400);
@@ -131,12 +177,17 @@ bookmarks.post("/", async (c) => {
     values = snap;
   } else if (body.url) {
     // A bookmark is a clickable card others may see, so only ever a web address.
+    const problem = fieldProblem({ url: body.url, title: body.title });
+    if (problem) return c.json({ error: problem }, 400);
     const url = body.url.trim();
     if (!isHttpUrl(url)) return c.json({ error: "only http(s) URLs" }, 400);
     values = { userId: user.id, url, title: body.title ?? null };
   } else {
     return c.json({ error: "itemId or url is required" }, 400);
   }
+  // Counted once it is known to be a real save, so a mistyped address costs nothing.
+  const pace = hit(`saves:${user.id}`, LIMITS.savesPerDay);
+  if (!pace.ok) return tooManyFor(c, pace.retryAfterS, SAVED_ENOUGH);
   const [saved] = await db
     .insert(schema.bookmarks)
     .values(values)
@@ -163,6 +214,8 @@ bookmarks.put("/:id/note", async (c) => {
   const payload = await c.req.json<{ body?: string }>().catch(() => ({} as { body?: string }));
   const clean = cleanNote(payload.body);
   if ("error" in clean) return c.json({ error: clean.error }, 400);
+  const pace = hit(`notes:${user.id}`, LIMITS.noteWritesPerDay);
+  if (!pace.ok) return tooManyFor(c, pace.retryAfterS, NOTED_ENOUGH);
   const [row] = await db.update(schema.bookmarks)
     .set({ note: clean.body, noteCreatedAt: sql`coalesce(${schema.bookmarks.noteCreatedAt}, now())`, noteUpdatedAt: sql`now()` })
     .where(and(eq(schema.bookmarks.id, id), eq(schema.bookmarks.userId, user.id)))
