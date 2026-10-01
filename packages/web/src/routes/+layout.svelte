@@ -14,6 +14,7 @@
   import { display, loadDisplay } from '$lib/display.svelte';
   import { watchMarks } from '$lib/marks.svelte';
   import { watchBackForward } from '$lib/listmemory';
+  import Wordmark from '$lib/components/Wordmark.svelte';
   let { children } = $props();
   watchBackForward();
 
@@ -61,7 +62,7 @@
     <Nav />
   {:else if session.loaded}
     <header class="anon" class:home={front} class:preview>
-      <a class="brand" href="/"><img src="/icon.svg" alt="" width="24" height="24" /><span>thicket</span></a>
+      <a class="brand" href="/"><img src="/icon.svg" alt="" width="32" height="32" /><Wordmark height={27} /></a>
       {#if preview}
         <!-- The redesigned landing page: one click into Everything for someone signed in;
              otherwise Log in, and Sign up, which jumps to the form at the end of the page. -->
@@ -114,7 +115,8 @@
     display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
     max-width: 640px; margin: 0 auto; padding: var(--space-4) var(--space-3) var(--space-1);
   }
-  .brand { display: flex; align-items: center; gap: var(--space-2); font-weight: 700; font-size: calc(var(--text-xl) * var(--size-app)); letter-spacing: -0.01em; }
+  /* The logo and the wordmark, the word's tall letters nearly as tall as the logo. */
+  .brand { display: flex; align-items: center; gap: calc(var(--space-2) + 2px); color: var(--text); }
   .auth { display: flex; gap: var(--space-2); align-items: center; }
   /* On the redesigned landing page, a hairline under the logo, running the full width of
      the window. Drawn as a border image pushed out past both sides: it paints edge to

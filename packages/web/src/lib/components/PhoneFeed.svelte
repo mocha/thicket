@@ -16,6 +16,7 @@
   import { showcasePosts } from '$lib/showcase';
   import ItemCard from './ItemCard.svelte';
   import Button from './Button.svelte';
+  import Wordmark from './Wordmark.svelte';
 
   /* The phone's tab bar, drawn like the app's own on a phone. Same glyphs as the real one. */
   const tabs = [
@@ -64,7 +65,7 @@
     <div class="screen" inert>
       <div class="status"><span>9:41</span><span class="island"></span></div>
       <div class="bar">
-        <div class="titlerow"><span class="brand"><img src="/icon.svg" alt="" width="22" height="22" />thicket</span><Button variant="primary" solid size="sm"><span aria-hidden="true">+</span> Add new feed</Button></div>
+        <div class="titlerow"><span class="brand"><img src="/icon.svg" alt="" width="22" height="22" /><Wordmark height={18} /></span><Button variant="primary" solid size="sm"><span aria-hidden="true">+</span> Add new feed</Button></div>
       </div>
       <div class="viewport">
         <ol class="track" bind:this={track}>
@@ -111,7 +112,7 @@
   .bar { flex: none; padding: var(--space-1) var(--space-4) var(--space-3); }
   .titlerow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
   /* The app's own name at the top, set like the logo in the page header. */
-  .brand { display: flex; align-items: center; gap: var(--space-2); font-weight: 700; font-size: calc(var(--text-lg) * var(--size-app)); letter-spacing: -0.01em; }
+  .brand { display: flex; align-items: center; gap: var(--space-2); color: var(--text); }
   /* Like the app's bottom bar on a phone; its labels are the one place the app goes below 12px. */
   .tabs { flex: none; display: flex; padding: var(--space-2) var(--space-1) var(--space-4); border-top: 1px solid var(--line); background: var(--surface); }
   .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; color: var(--text-3); }
