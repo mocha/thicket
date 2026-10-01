@@ -15,6 +15,7 @@ import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { cleanNote, isSavedAddress, noteOf, snapshotOfItem } from "../lib/bookmarks.js";
 import { noteJson, othersNotesSql } from "../lib/notes.js";
+import { renderBookmarkFile, type ExportRow } from "../lib/bookmark-export.js";
 import { isHttpUrl } from "../feeds/normalize.js";
 
 export const bookmarks = new Hono();
@@ -64,7 +65,7 @@ bookmarks.get("/", async (c) => {
   return c.json({ bookmarks: page, nextCursor: last ? `${new Date(last.activeAt).toISOString()}|${last.id}` : null });
 });
 
-/** Distinct sources present in the user's bookmarks, for the filter UI, and how many carry a note. */
+/** Distinct sources present in the user's bookmarks, for the filter UI, how many bookmarks there are in all, and how many carry a note. */
 bookmarks.get("/sources", async (c) => {
   const user = currentUser(c);
   const feeds = await db.execute(sql`
@@ -81,8 +82,32 @@ bookmarks.get("/sources", async (c) => {
     where b.user_id = ${user.id}
     group by col.id, col.name order by 3 desc, 2
   `);
-  const [{ noted }] = (await db.execute<{ noted: number }>(sql`select count(*)::int as noted from bookmarks where user_id = ${user.id} and note is not null`)).rows;
-  return c.json({ feeds: feeds.rows, collections: collections.rows, noted });
+  const [{ total, noted }] = (await db.execute<{ total: number; noted: number }>(sql`select count(*)::int as total, count(note)::int as noted from bookmarks where user_id = ${user.id}`)).rows;
+  return c.json({ feeds: feeds.rows, collections: collections.rows, total, noted });
+});
+
+/**
+ * All of my bookmarks and notes as one file to keep or take elsewhere (issue
+ * #135): the bookmark file browsers and bookmark services read. Always the
+ * whole set, whatever filter the page is showing, newest saved first, and
+ * for every account.
+ * Sent as a download, and told never to run as a page here: the text in it
+ * is escaped, and this is the second lock on the same door.
+ */
+bookmarks.get("/export", async (c) => {
+  const user = currentUser(c);
+  const rows = await db.execute<ExportRow>(sql`
+    select url, title, note, saved_at as "savedAt"
+    from bookmarks where user_id = ${user.id}
+    order by saved_at desc, id desc
+  `);
+  const file = renderBookmarkFile(rows.rows);
+  c.header("content-type", "text/html; charset=utf-8");
+  c.header("content-disposition", `attachment; filename="thicket-bookmarks-${new Date().toISOString().slice(0, 10)}.html"`);
+  c.header("content-security-policy", "sandbox; default-src 'none'");
+  c.header("x-content-type-options", "nosniff");
+  c.header("cache-control", "no-store");
+  return c.body(file);
 });
 
 type Restore = {

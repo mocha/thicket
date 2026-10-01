@@ -251,6 +251,8 @@ export const notesApi = {
 
 export type BookmarkSources = {
   feeds: { feedId: number; title: string | null; count: number }[]; collections: { id: number; name: string; count: number }[];
+  /** How many bookmarks I have in all, whatever filter is showing. */
+  total: number;
   /** How many of my bookmarks carry a note. */
   noted: number;
 };
@@ -273,6 +275,8 @@ export const bookmarksApi = {
     return j<{ bookmarks: Bookmark[]; nextCursor: string | null }>(`/api/bookmarks?${q}`);
   },
   sources: () => j<BookmarkSources>('/api/bookmarks/sources'),
+  /** Every bookmark and note as one file, in the format browsers and bookmark services read. */
+  exportUrl: '/api/bookmarks/export',
   saveItem: (itemId: number) => j<BookmarkRow>('/api/bookmarks', { method: 'POST', body: JSON.stringify({ itemId }) }),
   /** Copy someone's public bookmark, snapshot and all (not their note), into my own set. */
   saveFrom: (bookmarkId: number) => j<BookmarkRow>('/api/bookmarks', { method: 'POST', body: JSON.stringify({ bookmarkId }) }),

@@ -20,7 +20,7 @@
   let cursor = $state<string | null>(null);
   let done = $state(false);
   let loading = $state(false);
-  let sources = $state<BookmarkSources>({ feeds: [], collections: [], noted: 0 });
+  let sources = $state<BookmarkSources>({ feeds: [], collections: [], total: 0, noted: 0 });
   let sentinel = $state<HTMLElement | null>(null);
 
   // Filters live in the URL: ?c=<collection> or ?f=<feed>, one at a time so the pills stay honest,
@@ -95,12 +95,14 @@
     list = list.filter((x) => x.id !== b.id);
     const removed = await bookmarksApi.remove(b.id);
     api.event('bookmark_removed', { bookmarkId: b.id, via: 'bookmarks_page', hadNote: !!b.note });
+    sources.total--;
     if (b.note) sources.noted--;
     showToast(b.note ? 'Removed bookmark and note' : 'Removed bookmark', {
       label: 'Undo',
       run: async () => {
         const back = await bookmarksApi.restore(removed);
         list = snapshot.map((x) => (x.id === b.id ? { ...x, id: back.id, note: x.note && { ...x.note, id: back.id } } : x));
+        sources.total++;
         if (b.note) sources.noted++;
       }
     });
@@ -135,8 +137,24 @@
 </script>
 
 <header class="top">
-  <h1>My Bookmarks</h1>
-  <p class="sub">Posts you've saved, and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
+  <div class="words">
+    <h1>My Bookmarks</h1>
+    <p class="sub">Posts you've saved, and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
+  </div>
+  <!-- Always every bookmark, whatever filter is showing below, so it sits up
+       here with the page's title and not down among the filters. Nothing to
+       export, no button. -->
+  {#if sources.total > 0}
+    <div class="export">
+      <Button
+        size="sm"
+        href={bookmarksApi.exportUrl}
+        download="thicket-bookmarks.html"
+        onclick={() => api.event('bookmarks_exported', { count: sources.total })}
+        title="Save every bookmark and note as a file that browsers and other bookmark services can open"
+      >Export all bookmarks to file</Button>
+    </div>
+  {/if}
 </header>
 
 {#if hasFilters}
@@ -220,7 +238,11 @@
 </div>
 
 <style>
-  .top { margin-bottom: var(--space-3); }
+  /* Title and words on the left, the export button on the right; on a phone
+     the button drops under the words. */
+  .top { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-2) var(--space-4); margin-bottom: var(--space-3); }
+  .words { flex: 1 1 280px; min-width: 0; }
+  .export { flex: none; }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
   /* 2px is an optical nudge under the title, not a spacing step. */
   .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
