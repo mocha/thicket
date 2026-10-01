@@ -51,6 +51,8 @@
 </script>
 
 {#snippet pitch()}
+  <!-- Names the category for people who already use one; newcomers can skip it. -->
+  <p class="eyebrow">An RSS reader for everyone</p>
   <h1>{opt?.[0] ?? 'Read the web on your own terms'}</h1>
   <p class="sub">{#if opt}{opt[1]}{:else}<mark>Social feeds use algorithms to decide what you see, but <em>thicket</em> keeps it simple.</mark> Follow the websites you like, and read everything they publish in one place, newest first.{/if}</p>
 {/snippet}
@@ -141,6 +143,8 @@
   /* The form at the end, centered under its heading. */
   .join { display: flex; flex-direction: column; align-items: center; scroll-margin-top: var(--space-5); }
   .auth { width: 100%; max-width: 24rem; }
+  /* The small label over the headline, styled like the app's other eyebrows, in sage on the green. */
+  .eyebrow { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7fb08a; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
   h1 { font-family: var(--font-headings); font-size: clamp(34px, 5vw, 52px); line-height: 1.15; margin: 0 0 var(--space-5); letter-spacing: -0.015em; }
   .sub { font-size: clamp(18px, 2.2vw, 22px); color: var(--text-2); margin: 0; line-height: 1.6; max-width: 32ch; }
   /* Every section heading at the ladder's largest size, so each reads as its own section. */
