@@ -96,10 +96,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function j<T>(input: string, init?: RequestInit): Promise<T> {
   let res = await fetch(input, { headers: { 'content-type': 'application/json' }, ...init });
-  // thicket itself never answers 429 through this path (the one 429, refresh cooldown, uses raw fetch),
-  // so a 429 here means a proxy in front dropped the request before the server saw it. That makes it
-  // safe to retry any method. Back off 0.5s, 1s, 2s, 4s with jitter, honoring Retry-After if present.
-  for (let attempt = 0; res.status === 429 && attempt < 4; attempt++) {
+  // A 429 comes from one of two places. A proxy in front dropped the request before the server saw
+  // it: safe to retry any method, so back off 0.5s, 1s, 2s, 4s with jitter, honoring Retry-After if
+  // present. Or thicket itself said "that's enough" (too many sign-in tries, a day's worth of saving):
+  // its refusals carry their reason as JSON `error`, and asking again would only delay showing it.
+  const ownRefusal = async (r: Response) => typeof (await r.clone().json().catch(() => null))?.error === 'string';
+  for (let attempt = 0; res.status === 429 && attempt < 4 && !(await ownRefusal(res)); attempt++) {
     const hinted = Number(res.headers.get('retry-after') ?? 0) * 1000;
     await sleep(Math.min(6000, hinted || 500 * 2 ** attempt) + Math.random() * 300);
     res = await fetch(input, { headers: { 'content-type': 'application/json' }, ...init });
@@ -344,6 +346,19 @@ export type SignupPolicy = 'open' | 'invite' | 'closed';
  */
 export type InstanceStatus = { name: string; url: string; signups: SignupPolicy; visitorLimit: boolean; hosted: boolean };
 export type Invite = { code: string; url: string; note: string | null; createdAt: string; expiresAt: string | null; usedAt: string | null; usedByHandle: string | null; createdByHandle: string };
+
+/**
+ * An API token: a credential for my own scripts and assistants. At most one
+ * of each kind. `read` can only read; `full` can also change things.
+ */
+export type ApiTokenKind = 'read' | 'full';
+export type ApiToken = { kind: ApiTokenKind; token: string; createdAt: string; lastUsedAt: string | null };
+
+export const tokensApi = {
+  list: () => j<{ tokens: ApiToken[] }>('/api/tokens'),
+  enable: (kind: ApiTokenKind) => j<ApiToken>(`/api/tokens/${kind}`, { method: 'POST' }),
+  revoke: (kind: ApiTokenKind) => j<void>(`/api/tokens/${kind}`, { method: 'DELETE' }),
+};
 
 export const authApi = {
   me: () => j<Me>('/api/auth/me'),

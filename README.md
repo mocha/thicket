@@ -93,6 +93,26 @@ you scroll. Both are load-bearing; most of the data model follows from them.
 Plain JSON over a session cookie. Public reads (a profile, a public
 collection, its river) work signed out.
 
+**API tokens.** A person's own scripts and assistants can use the same API
+with a token from the Account page, sent as `Authorization: Bearer <token>`.
+There are two kinds, at most one of each per account: read-only (`thk_ro_…`),
+refused on anything that is not a read, and full access (`thk_rw_…`). No token
+can reach the admin routes, token management, sign-in and account settings,
+the import page or the usage log; `packages/api/src/lib/token-access.ts` is
+the whole rule. Each token can make 10 requests in any 10 seconds and 120 in
+any hour, apart from the browser session.
+
+`GET /api/openapi.json` is an OpenAPI 3 description of everything a token can
+reach, to point an application or an assistant at. It is kept by hand in
+`packages/api/src/lib/openapi.ts`, and a test fails if it and the routes drift
+apart.
+
+Every limit on how often and how much is a named entry in
+`packages/api/src/lib/ratelimit.ts`: sign-in tries, saving bookmarks and
+writing notes (500 a day each), the import page's feed check, and the longest
+each bookmark field may be. Past a limit the answer is `429` with
+`Retry-After`; an over-long field is a `400` that says which one.
+
 **Accounts and sessions**
 
 | Method | Path | Purpose |

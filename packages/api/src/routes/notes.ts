@@ -14,6 +14,8 @@ import { db } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { cleanNote, snapshotOfItem } from "../lib/bookmarks.js";
 import { postAddressSql } from "../lib/notes.js";
+import { LIMITS, hit, tooManyFor } from "../lib/ratelimit.js";
+import { NOTED_ENOUGH } from "./bookmarks.js";
 
 export const notes = new Hono();
 
@@ -26,6 +28,8 @@ notes.put("/items/:itemId", async (c) => {
   if ("error" in clean) return c.json({ error: clean.error }, 400);
   const snap = await snapshotOfItem(user.id, itemId);
   if (!snap) return c.json({ error: "not found" }, 404);
+  const pace = hit(`notes:${user.id}`, LIMITS.noteWritesPerDay);
+  if (!pace.ok) return tooManyFor(c, pace.retryAfterS, NOTED_ENOUGH);
   // Saving the note saves the post: a new bookmark, or the note added to the
   // one I already have. `created` is whether the note is new, not the bookmark.
   const [row] = (await db.execute<{ id: number; body: string; createdAt: string; updatedAt: string; created: boolean }>(sql`
