@@ -73,7 +73,8 @@
 
 <svelte:head><title>thicket</title></svelte:head>
 
-<span class="skip"><Button variant="primary" href="#content" onclick={skip}>Skip to content</Button></span>
+<!-- Not while a paged post covers the page: the page it skips to is switched off then. -->
+{#if !covered}<span class="skip"><Button variant="primary" href="#content" onclick={skip}>Skip to content</Button></span>{/if}
 
 {#if bare}
   <main class="bare" id="content" tabindex="-1" bind:this={content}>{@render children()}</main>
