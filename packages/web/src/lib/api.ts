@@ -235,6 +235,12 @@ export type Bookmark = {
   note: Note | null;
   /** Other people's notes on the same post that I may read. My own list only. */
   notes?: PublicNote[];
+  /**
+   * Where a search matched, on a searched list only: each field's text with
+   * the matched words fenced for `highlight` (lib/words.ts), or null when the
+   * match is not in that field. The summary is cut to the part around the match.
+   */
+  marks?: { title: string | null; site: string | null; summary: string | null; note: string | null } | null;
 };
 /** A bookmark as saving or removing one returns it: the stored row, note fields flat. Pass it back to `restore` to undo a removal. */
 export type BookmarkRow = {
@@ -251,8 +257,8 @@ export const notesApi = {
 
 export type BookmarkSources = {
   feeds: { feedId: number; title: string | null; count: number }[]; collections: { id: number; name: string; count: number }[];
-  /** How many of my bookmarks carry a note. */
-  noted: number;
+  /** How many bookmarks I have in all, and how many of them carry a note. */
+  total: number; noted: number;
 };
 
 export const itemsApi = {
@@ -263,8 +269,9 @@ export const itemsApi = {
 };
 
 export const bookmarksApi = {
-  list: (opts: { before?: string | null; feed?: number | null; collection?: number | null; notes?: boolean; limit?: number } = {}) => {
+  list: (opts: { before?: string | null; feed?: number | null; collection?: number | null; notes?: boolean; q?: string; limit?: number } = {}) => {
     const q = new URLSearchParams();
+    if (opts.q) q.set('q', opts.q);
     if (opts.before) q.set('before', opts.before);
     if (opts.notes) q.set('notes', '1');
     if (opts.feed) q.set('feed', String(opts.feed));

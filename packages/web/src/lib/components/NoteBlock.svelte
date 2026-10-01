@@ -3,17 +3,22 @@
    * One note under a post: mine ("My note:") or someone's ("@bob's note:").
    * Shows three lines, then "Show more" slides the rest out. Mine has Edit.
    * Rendering is our own safe Markdown subset (lib/markdown.ts).
+   *
+   * On a searched list the caller passes `marked`: the note's text with the
+   * matched words fenced (lib/words.ts). They are drawn highlighted, and if the
+   * three lines would hide every one of them the note opens by itself.
    */
   import type { Note, PublicNote } from '$lib/api';
   import { profileHref } from '$lib/api';
   import { renderMarkdown } from '$lib/markdown';
+  import { highlightHtml } from '$lib/words';
   import { relativeTime } from '$lib/time';
 
-  let { note, mine = false, onedit }: { note: Note | PublicNote; mine?: boolean; onedit?: () => void } = $props();
+  let { note, mine = false, marked = null, onedit }: { note: Note | PublicNote; mine?: boolean; marked?: string | null; onedit?: () => void } = $props();
   let expanded = $state(false);
   let body = $state<HTMLElement | null>(null);
   let overflows = $state(false);
-  const html = $derived(renderMarkdown(note.body));
+  const html = $derived(marked ? highlightHtml(renderMarkdown(marked)) : renderMarkdown(note.body));
   const edited = $derived(new Date(note.updatedAt).getTime() - new Date(note.createdAt).getTime() > 60_000);
   const author = $derived('author' in note ? note.author : null);
 
@@ -22,6 +27,12 @@
     void html;
     if (!body || expanded) return;
     overflows = body.scrollHeight > body.clientHeight + 2;
+    // A search matched only in the part the three lines hide: open the note so the match shows.
+    if (overflows && marked) {
+      const edge = body.getBoundingClientRect().bottom;
+      const hits = [...body.querySelectorAll('mark')];
+      if (hits.length && !hits.some((m) => m.getBoundingClientRect().top < edge)) expanded = true;
+    }
   });
 </script>
 
@@ -59,6 +70,8 @@
   .body :global(pre) { margin: 0 0 var(--space-2); padding: var(--space-2) var(--space-3); background: var(--surface-2); border-radius: var(--radius-sm); overflow-x: auto; }
   .body :global(pre code) { background: none; padding: 0; }
   .body :global(a) { color: var(--accent); font-weight: 600; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+  /* The words a search matched. The same highlight as a search result on Explore. */
+  .body :global(mark) { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
   .more { margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-3); }
   .more:hover { color: var(--accent); }
 </style>
