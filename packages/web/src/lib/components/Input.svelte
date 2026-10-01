@@ -90,6 +90,18 @@
 
   const glyph = $derived(size === 'sm' ? 15 : 20);
 
+  /* Password managers and browser autofill find a field by its name. A field
+     that says what it's for gets the matching name unless the caller gave one. */
+  const AUTOFILL_NAMES: Record<string, string> = {
+    username: 'username',
+    'current-password': 'password',
+    'new-password': 'new-password',
+    email: 'email',
+    name: 'name',
+    url: 'url'
+  };
+  const name = $derived((rest.name as string | undefined) ?? AUTOFILL_NAMES[rest.autocomplete as string]);
+
   /* Whether this focus arrived by keyboard. Read once as focus lands and kept,
      so typing in a field you clicked doesn't light the ring up mid-sentence. */
   let byKeyboard = $state(false);
@@ -143,6 +155,7 @@
     {readonly}
     aria-invalid={invalid ? 'true' : undefined}
     {...rest}
+    {name}
     oninput={typed}
     onfocus={focused}
     onblur={blurred}
