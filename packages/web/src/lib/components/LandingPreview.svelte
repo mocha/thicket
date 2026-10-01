@@ -134,6 +134,8 @@
   .peek :global(.lede), .peek :global(.from) { color: var(--forest-ink-2, var(--text-2)); }
   /* Its account link in full cream, like the footer's links: the usual green disappears on the green. */
   .peek :global(.packs .from a) { color: #f6f1e8; }
+  /* The same size as the intro line above the cards, so it doesn't read as small print. */
+  .peek :global(.packs .from) { font-size: calc(var(--text-base) * var(--size-app)); }
   /* The collection cards stay light, so their words go back to the usual dark ink. */
   .peek :global(.card) { color: var(--text); }
   /* The form at the end, centered under its heading. */
