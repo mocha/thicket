@@ -92,7 +92,8 @@ bookmarks.get("/sources", async (c) => {
  * set, newest saved first, up to EXPORT_MAX of them, and for every account.
  * `tz` is the reader's timezone as their browser names it, for the times
  * written in each description; without a real one they are written in UTC.
- * Sent as a download, and told never to run as a page here: the text in it
+ * Sent as a download, and told never to run as a page here (its own
+ * stylesheet is all it may use): the text in it
  * is escaped, and this is the second lock on the same door.
  */
 bookmarks.get("/export", async (c) => {
@@ -106,7 +107,7 @@ bookmarks.get("/export", async (c) => {
   const file = renderBookmarkFile(rows.rows, { handle: user.handle, timeZone: c.req.query("tz") });
   c.header("content-type", "text/html; charset=utf-8");
   c.header("content-disposition", `attachment; filename="thicket-bookmarks-${new Date().toISOString().slice(0, 10)}.html"`);
-  c.header("content-security-policy", "sandbox; default-src 'none'");
+  c.header("content-security-policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'");
   c.header("x-content-type-options", "nosniff");
   c.header("cache-control", "no-store");
   return c.body(file);
