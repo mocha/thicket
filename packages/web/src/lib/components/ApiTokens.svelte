@@ -146,7 +146,7 @@
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
-  .help, .how { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .help, .how { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   .unavailable { margin: 0 0 var(--space-3); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
 
   .kinds { list-style: none; margin: 0; padding: 0; }
@@ -154,7 +154,7 @@
   .head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
   .what { min-width: 0; }
   h3 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; line-height: 1.3; }
-  .can { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .can { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   /* Off: the two kinds read as not on offer, while the explanation above stays at full strength. */
   .off .what { opacity: 0.6; }
 
@@ -168,7 +168,7 @@
   /* Shown, the whole token has to be readable and selectable, so it wraps instead of trailing off. */
   .value.revealed { white-space: normal; overflow-wrap: anywhere; color: var(--text); }
   .actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-  .used { margin: var(--space-2) 0 0; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); }
+  .used { margin: var(--space-2) 0 0; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-2); }
 
   .confirm { margin-top: var(--space-3); padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--danger); }
   .confirm p { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }

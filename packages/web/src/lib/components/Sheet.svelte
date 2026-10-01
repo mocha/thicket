@@ -17,12 +17,13 @@
   let { title, dialog = $bindable(null), onclose, children, footer }: {
     title: string; dialog?: HTMLDialogElement | null; onclose?: () => void; children: Snippet; footer?: Snippet;
   } = $props();
+  const titleId = $props.id();
 </script>
 
-<dialog bind:this={dialog} {onclose} onclick={(e) => { if (e.target === dialog) dialog?.close(); }}>
+<dialog bind:this={dialog} {onclose} onclick={(e) => { if (e.target === dialog) dialog?.close(); }} aria-labelledby={titleId}>
   <div class="sheet">
     <header>
-      <h2>{title}</h2>
+      <h2 id={titleId}>{title}</h2>
       <IconButton icon="close" label="Close" onclick={() => dialog?.close()} />
     </header>
     {@render children()}

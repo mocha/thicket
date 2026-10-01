@@ -108,6 +108,6 @@
 
 <style>
   .lede { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-1); }
-  .lede p { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .lede p { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .unfollow { align-self: center; }
 </style>

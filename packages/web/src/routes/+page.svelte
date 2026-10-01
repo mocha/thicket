@@ -3,4 +3,6 @@
   import Landing from '$lib/components/Landing.svelte';
 </script>
 
+<svelte:head><title>thicket · Read the web on your own terms</title></svelte:head>
+
 <Landing />

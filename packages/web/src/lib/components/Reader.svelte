@@ -20,6 +20,7 @@
   import Pager from './Pager.svelte';
   import ReadOnSiteLink from './ReadOnSiteLink.svelte';
   import { display } from '$lib/display.svelte';
+  import { scrollBehavior } from '$lib/motion';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let scroller = $state<HTMLElement | null>(null);
@@ -56,6 +57,19 @@
     return () => { ro.disconnect(); sheet?.removeEventListener('load', onload, true); clearTimeout(late); };
   });
   $effect(() => { void content; void editing; if (paged) requestAnimationFrame(measurePages); });
+  /**
+   * Tabbing through an article reaches links on pages that haven't been turned
+   * to yet. Turn to the page the focused thing is on, so focus is never
+   * somewhere off the side of the screen. The browser also tries to slide the
+   * frame over to show it; that is put straight back, since the page turn is
+   * what brings it into view here.
+   */
+  function follow(e: FocusEvent) {
+    if (!paged || !sheet || !scroller || !pageW) return;
+    scroller.scrollLeft = 0; scroller.scrollTop = 0;
+    const at = (e.target as HTMLElement).getBoundingClientRect().left - sheet.getBoundingClientRect().left;
+    pageIndex = Math.max(0, Math.min(pageCount - 1, Math.floor((at + 1) / pageW)));
+  }
   function nextPage() { if (pageIndex < pageCount - 1) pageIndex++; }
   function prevPage() { if (pageIndex > 0) pageIndex--; }
   let content = $state<ItemContent | null>(null);
@@ -118,7 +132,7 @@
 
   function noteButton() {
     editing = !editing;
-    if (editing) { api.event('note_editor_opened', { itemId: item!.id, existing: !!item!.myNote, via: 'reader' }); scroller?.scrollTo({ top: 0, behavior: 'smooth' }); }
+    if (editing) { api.event('note_editor_opened', { itemId: item!.id, existing: !!item!.myNote, via: 'reader' }); scroller?.scrollTo({ top: 0, behavior: scrollBehavior() }); }
   }
   function noteSaved(n: SavedNote) { if (!item) return; showToast(noteToast(item)); item.myNote = n; item.bookmarkId = n.bookmarkId; editing = false; }
 
@@ -139,7 +153,7 @@
       </header>
 
       <div class="scroll" class:paged bind:this={scroller}>
-        <div class="page" bind:this={sheet} style:column-count={paged && pageW ? cols : undefined} style:height={paged && pageH ? `${pageH}px` : undefined} style:transform={paged ? `translateX(${-pageIndex * pageW}px)` : undefined}>
+        <div class="page" bind:this={sheet} onfocusin={follow} style:column-count={paged && pageW ? cols : undefined} style:height={paged && pageH ? `${pageH}px` : undefined} style:transform={paged ? `translateX(${-pageIndex * pageW}px)` : undefined}>
           {#if editing}
             <NoteEditor itemId={item.id} note={item.myNote} onsaved={noteSaved} ondeleted={() => { if (item) item.myNote = null; editing = false; }} oncancel={() => (editing = false)} />
           {/if}
@@ -202,16 +216,16 @@
   }
   .source { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
   .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  header time { color: var(--text-3); white-space: nowrap; }
+  header time { color: var(--text-2); white-space: nowrap; }
   .spacer { flex: 1; }
 
   .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .page { max-width: 680px; margin: 0 auto; padding: var(--space-5) var(--space-4) calc(var(--space-5) + var(--safe-b)); }
   h1 { margin: 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
-  .byline { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .byline { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: flex; gap: var(--space-2); flex-wrap: wrap; }
   .hero { width: 100%; border-radius: var(--radius-sm); margin-top: var(--space-4); background: var(--surface-2); }
   .teaser { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: var(--space-4) 0 0; }
-  .loading, .nobody { margin: var(--space-5) 0 0; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
+  .loading, .nobody { margin: var(--space-5) 0 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); }
 
   /* The article. Publisher HTML, sanitized to a known set of tags, set in the reading face. */
   .body { margin-top: var(--space-5); font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text); overflow-wrap: anywhere; }
@@ -222,7 +236,7 @@
   .body :global(a:hover) { text-decoration-color: var(--accent); }
   .body :global(img), .body :global(video) { max-width: 100%; height: auto; border-radius: var(--radius-sm); margin: 0.4em auto; background: var(--surface-2); }
   .body :global(figure) { margin-left: 0; margin-right: 0; }
-  .body :global(figcaption) { font-size: 0.85em; color: var(--text-3); text-align: center; margin-top: 0.3em; }
+  .body :global(figcaption) { font-size: 0.85em; color: var(--text-2); text-align: center; margin-top: 0.3em; }
   .body :global(blockquote) { border-left: 3px solid var(--line); padding-left: 1em; color: var(--text-2); }
   .body :global(pre) { overflow-x: auto; padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 0.85em; line-height: 1.5; }
   .body :global(code) { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
@@ -247,7 +261,7 @@
   .scroll.paged .body :global(img), .scroll.paged .hero { max-height: 55vh; width: auto; max-width: 100%; margin-left: auto; margin-right: auto; break-inside: avoid; }
   .scroll.paged .body :global(p), .scroll.paged .body :global(li) { orphans: 2; widows: 2; }
   .scroll.paged .body :global(figure), .scroll.paged .body :global(pre), .scroll.paged .body :global(blockquote), .scroll.paged .body :global(table) { break-inside: avoid; }
-  .pagenum { position: absolute; left: 50%; bottom: var(--space-2); transform: translateX(-50%); font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); font-variant-numeric: tabular-nums; z-index: 31; pointer-events: none; }
+  .pagenum { position: absolute; left: 50%; bottom: var(--space-2); transform: translateX(-50%); font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-2); font-variant-numeric: tabular-nums; z-index: 31; pointer-events: none; }
   /* Paged: the reader is a fixed sheet above the bottom bar (which stays clickable, since the dialog is not modal), full width at every size. */
   dialog.paged { position: fixed; top: 0; left: 0; right: 0; bottom: calc(var(--nav-h) + var(--safe-b)); width: auto; height: auto; max-height: none; z-index: 35; background: var(--surface); }
   dialog.paged .reader { position: absolute; inset: 0; transform: none; width: auto; border-radius: 0; box-shadow: none; border: 0; }

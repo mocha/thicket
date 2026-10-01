@@ -117,9 +117,9 @@
   </header>
 
   <!-- Signed-out visitor pressed Copy: two ways home, neither of which mentions file formats. -->
-  <dialog bind:this={explain} onclick={(e) => { if (e.target === explain) explain?.close(); }}>
+  <dialog bind:this={explain} onclick={(e) => { if (e.target === explain) explain?.close(); }} aria-labelledby="copy-explain-title">
     <div class="sheet">
-      <h2>Take this collection with you</h2>
+      <h2 id="copy-explain-title">Take this collection with you</h2>
       <div class="ways">
         <section>
           <h3>New here?</h3>
@@ -139,9 +139,9 @@
 
   <!-- You already have a copy: making another is fine (you might prune each
        differently), but say so first so it isn't an accident. -->
-  <dialog bind:this={confirmAgain} onclick={(e) => { if (e.target === confirmAgain) confirmAgain?.close(); }}>
+  <dialog bind:this={confirmAgain} onclick={(e) => { if (e.target === confirmAgain) confirmAgain?.close(); }} aria-labelledby="copy-again-title">
     <div class="sheet confirm">
-      <h2>Make another copy?</h2>
+      <h2 id="copy-again-title">Make another copy?</h2>
       <p>You already have a copy of this collection. Copying again makes a second, separate one — handy if you want to prune each down to different feeds.</p>
       <div class="confirmbtns">
         <Button onclick={() => confirmAgain?.close()}>Cancel</Button>
@@ -185,10 +185,10 @@
 
 <style>
   .top { margin-bottom: var(--space-4); }
-  .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+  .titlerow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-3); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1; }
   .desc { margin: var(--space-2) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); overflow-wrap: anywhere; }
-  .sub { margin: var(--space-1) 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .sub { margin: var(--space-1) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
   /* The pill sits in a line of text, so it carries its own gap to the separator after it. */
   .sub :global(.beforetext) { margin-right: var(--space-2); }
@@ -220,10 +220,10 @@
   .children .name { flex: 1; font-weight: 600; }
   .meta { flex: 1; min-width: 0; }
   .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .count, .chev { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .chev { font-size: calc(var(--text-xl) * var(--size-app)); }
-  .status { text-align: center; color: var(--text-3); padding: var(--space-6) 0; }
+  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .count { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
+  .status { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
   .empty h1 { font-size: calc(var(--text-2xl) * var(--size-app)); margin-bottom: var(--space-2); }
 </style>

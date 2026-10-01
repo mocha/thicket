@@ -83,6 +83,19 @@
   --line: var(--l-line);
   --shadow: var(--l-shadow);
 
+  /* The wash behind something chosen or switched on: the picked option in a
+     row of choices, a Following button. Mixed over the card color so it is the
+     same wash wherever it sits. It used to be see-through, and on a tinted
+     strip or the page behind it the accent lettering on top fell under 4.5:1 in
+     the softer themes. At 12% over the card it clears that in every theme. */
+  --accent-tint: color-mix(in srgb, var(--accent) 12%, var(--surface));
+
+  /* The outline of a box you type or pick in. A hairline in --line is far too
+     faint to show where such a box is (about 1.3:1 against the card), and its
+     outline is the only thing that says it is there. The decoration gray clears
+     the 3:1 a control's edge needs, on the page and on a card, in every theme. */
+  --field-line: var(--text-3);
+
   /* Corner ladder. Every rounded corner in the app is one of these.
      xs     inline code and highlight marks, too small for a bigger curve
      sm     controls, rows, inputs, small tiles
@@ -151,7 +164,12 @@
   --size-reading: 1;
   --size-app: 1;
 
-  --nav-h: 56px;
+  /* How far the bottom bar's labels follow the App text size. All the way on a
+     wide screen; on a phone five tabs share the width, so past a quarter
+     bigger the labels would run into each other, and they stop there. */
+  --bar-scale: var(--size-app);
+  /* Room for a tab's icon plus one line of its label; 56px at the default size. */
+  --nav-h: calc(38px + 18px * var(--bar-scale));
   /* Width of the sidebar on desktop: the nav itself, the account menu that
      hangs off it, and the page's left margin all measure from this. The reader
      can drag it between 200 and 360; their choice is set on <html> and wins. */
@@ -254,6 +272,11 @@
   --d-accent: #c59f70; --d-accent-ink: #211a10; --d-danger: #d0806c; --d-line: #3e372c;
   --d-danger-ink: #2a0f0a; --d-amber: #c9a266; --d-toast-accent: #5a3a18;
   --d-soft-mix: 25%; --d-accent-soft-ink: #dcbb8f;
+  /* Soft sepia keeps the see-through wash behind a chosen option, as it always
+     had. It is a low-contrast theme on purpose, so the wash isn't raised to the
+     4.5:1 the others meet; Crisp and Black and white are the themes for anyone
+     who needs strong contrast. */
+  --accent-tint: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 /* Crisp (high contrast): no tints but the secondary button's wash, no shadows, rules drawn in ink. Accent is one of four
    colour-blind-safe hues (Okabe–Ito, darkened to pass on white). */
@@ -278,7 +301,7 @@
   --d-danger-ink: #000000; --d-amber: #ffffff; --d-toast-accent: var(--l-accent);
 }
 /* Cards on the two hard-edged palettes are outlined, since there is no shadow or tint to separate them from the page. */
-:root[data-palette='contrast'], :root[data-palette='mono'] { --card-border: 1px solid var(--line); }
+:root[data-palette='contrast'], :root[data-palette='mono'] { --card-border: 1px solid var(--line); --field-line: var(--line); }
 /* Crisp's secondary button keeps the wash but draws its edge in the accent,
    like every other rule on that theme. 16% is as deep as the light wash can
    go before the orange accent stops reading on it. Black and white has no
@@ -311,6 +334,7 @@
 :root[data-font-app='dyslexic'] { --font: var(--font-dyslexic); }
 
 @media (max-width: 480px) { :root { --pager-w: 36px; } }
+@media (max-width: 600px) { :root { --bar-scale: min(var(--size-app), 1.25); } }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
@@ -325,6 +349,12 @@ body {
 }
 /* On e-ink there is no such thing as a smooth transition; on black and white there is nothing to animate. */
 :root[data-palette='mono'] *, :root[data-palette='mono'] *::before, :root[data-palette='mono'] *::after { transition: none !important; animation: none !important; }
+/* Someone who has asked their device for less motion gets none here either:
+   no fades, lifts or slides, and scrolling jumps rather than glides. States
+   still change, just at once. (Scrolling done in code checks lib/motion.ts.) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
 a { color: inherit; text-decoration: none; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 input { font: inherit; }

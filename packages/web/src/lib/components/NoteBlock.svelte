@@ -47,7 +47,7 @@
   .mine .who { color: var(--accent); }
   .who a { color: inherit; }
   .who a:hover { text-decoration: underline; }
-  .when { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); flex: 1; }
+  .when { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); flex: 1; }
   .edit { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
   .body { color: var(--text); line-height: 1.5; overflow-wrap: anywhere; }
   .body.clamped { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -59,6 +59,6 @@
   .body :global(pre) { margin: 0 0 var(--space-2); padding: var(--space-2) var(--space-3); background: var(--surface-2); border-radius: var(--radius-sm); overflow-x: auto; }
   .body :global(pre code) { background: none; padding: 0; }
   .body :global(a) { color: var(--accent); font-weight: 600; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); }
-  .more { margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-3); }
+  .more { margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .more:hover { color: var(--accent); }
 </style>

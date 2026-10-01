@@ -46,6 +46,26 @@
     else if (signedIn && (path === '/login' || path === '/signup')) void goto(page.url.searchParams.get('next') || '/everything', { replaceState: true });
   });
   const show = $derived(session.loaded && (signedIn || isPublic));
+  /**
+   * Paged layout keeps the bottom bar live while a post is open, so the reader
+   * can't shut the whole page out the way it does when scrolling. The list it
+   * covers is switched off instead, so Tab and a screen reader never wander
+   * into posts that can't be seen.
+   */
+  /**
+   * "Skip to content": the first thing Tab lands on, hidden until then. It
+   * jumps past the sidebar (or the bottom bar, which also comes first in Tab
+   * order) straight to the page, so nobody tabs through every collection on
+   * every page. It moves focus itself rather than changing the address.
+   */
+  let content = $state<HTMLElement | null>(null);
+  function skip(e: MouseEvent) {
+    e.preventDefault();
+    content?.focus();
+    content?.scrollIntoView({ block: 'start' });
+  }
+
+  const covered = $derived(inApp && display.layout === 'paged' && page.state.reader !== undefined);
 
   // "What's new" counts, only while this device has the option on and someone is signed in.
   $effect(() => { if (signedIn && display.fresh) return watchMarks(); });
@@ -53,8 +73,11 @@
 
 <svelte:head><title>thicket</title></svelte:head>
 
+<!-- Not while a paged post covers the page: the page it skips to is switched off then. -->
+{#if !covered}<span class="skip"><Button variant="primary" href="#content" onclick={skip}>Skip to content</Button></span>{/if}
+
 {#if bare}
-  <main class="bare">{@render children()}</main>
+  <main class="bare" id="content" tabindex="-1" bind:this={content}>{@render children()}</main>
 {:else}
   {#if inApp}
     <Nav />
@@ -75,7 +98,7 @@
     </header>
   {/if}
 
-  <main class:anon={!inApp} class:home={front} class:paged={inApp && display.layout === 'paged'}>
+  <main class:anon={!inApp} class:home={front} class:paged={inApp && display.layout === 'paged'} inert={covered} id="content" tabindex="-1" bind:this={content}>
     {#if show}{@render children()}
     {:else if session.unreachable}
       <div class="unreachable" role="status">
@@ -87,9 +110,14 @@
   {#if inApp && addFeed.open}<AddFeedSheet />{/if}
   {#if inApp}<Reader /><Configurator />{/if}
 {/if}
-<Toast />
+<Toast sidebar={inApp && !bare && display.layout !== 'paged'} />
 
 <style>
+  /* Off the top of the screen until Tab reaches it, then in the top corner above everything. */
+  .skip { position: fixed; top: var(--space-2); left: var(--space-2); z-index: 100; transform: translateY(-300%); }
+  .skip:focus-within { transform: none; }
+  /* Focus lands on the page itself after a skip; a ring around the whole page would say nothing. */
+  main:focus { outline: none; }
   main {
     max-width: 640px; margin: 0 auto;
     padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) var(--space-3) calc(var(--nav-h) + var(--safe-b) + var(--space-5));

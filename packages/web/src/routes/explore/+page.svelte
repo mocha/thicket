@@ -148,6 +148,9 @@
    * a reset) waits its turn and stops at the end.
    */
   let latestLoad = 0;
+  /** Said to a screen reader when scrolling brings in more rows: "25 more loaded, 50 in all." The rows themselves aren't read out. */
+  let loadedSaid = $state('');
+  const shown = () => (searching ? more.length : browseAs === 'feeds' ? feeds.length : browseAs === 'collections' ? cols.length : users.length);
   async function load<T>(reset: boolean, hasMore: boolean, request: () => Promise<T>, apply: (r: T) => void) {
     if (!reset && (loading || !hasMore)) return;
     const key = loadedKey;
@@ -156,7 +159,12 @@
     loading = true; error = null;
     try {
       const r = await request();
-      if (isCurrent()) apply(r);
+      if (isCurrent()) {
+        const before = shown();
+        apply(r);
+        const now = shown();
+        loadedSaid = !reset && now > before ? `${(now - before).toLocaleString()} more loaded, ${now.toLocaleString()} in all.` : '';
+      }
     } catch (e) { if (isCurrent()) error = e instanceof Error ? e.message : String(e); } finally { if (isCurrent()) loading = false; }
   }
 
@@ -327,6 +335,20 @@
       : (browseAs === 'feeds' ? feeds.length : browseAs === 'collections' ? cols.length : users.length) === 0)
   );
   const scopeLabel = $derived(SCOPES.find((s) => s.id === scope)?.label ?? '');
+
+  /**
+   * What a screen reader is told when a search comes back: how many results,
+   * and of what. The results redraw as you type, and without this nothing says
+   * so. Empty while a search is still on its way, so only the answer is read.
+   */
+  const KINDS: Record<Exclude<SearchScope, 'all'>, [string, string]> = { feeds: ['feed', 'feeds'], collections: ['collection', 'collections'], posts: ['post', 'posts'], people: ['person', 'people'] };
+  const said = $derived.by(() => {
+    if (!searching || loading || !res) return '';
+    if (scope !== 'all') return res[scope].total === 0 ? `No ${KINDS[scope][1]} match “${q}”.` : `${plural(res[scope].total, ...KINDS[scope])} for “${q}”.`;
+    if (found === 0) return `Nothing matches “${q}”.`;
+    const parts = (Object.keys(KINDS) as Exclude<SearchScope, 'all'>[]).filter((k) => res![k].total > 0).map((k) => plural(res![k].total, ...KINDS[k]));
+    return `${plural(found, 'result')} for “${q}”: ${parts.join(', ')}.`;
+  });
 </script>
 
 <svelte:head><title>{searching ? `${q} · Explore` : 'Explore'} · thicket</title></svelte:head>
@@ -363,8 +385,11 @@
     value={scope}
     onchange={(v) => setScope(v as SearchScope)}
     label="What to search"
+    panel="explore-results"
     fill
   />
+  <p class="visually-hidden" role="status">{said}</p>
+  <p class="visually-hidden" role="status">{loadedSaid}</p>
 </section>
 
 <!-- The filters that act on a browse list. Rendered as the list card's header
@@ -518,8 +543,10 @@
   </li>
 {/snippet}
 
+<!-- What the tabs above switch between. -->
+<div id="explore-results" role="tabpanel" aria-label={scopeLabel}>
 {#if error}
-  <p class="status error">Couldn’t load: {error}</p>
+  <p class="status error" role="alert">Couldn’t load: {error}</p>
 {:else if nothing}
   {@render filterBar()}
   <div class="empty">
@@ -584,16 +611,19 @@
   <div class="browse">{@render filterBar()}<ul class="list">{#each users as u (u.handle)}{@render personRow(u, null)}{/each}</ul></div>
 {/if}
 
+</div>
+
 {#if loading}<p class="status">Loading…</p>{/if}
 <div bind:this={sentinel} aria-hidden="true"></div>
 
 <style>
   .top { margin-bottom: var(--space-3); }
-  .titlerow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  /* Wraps: at a big text size on a phone the button drops under the title instead of sliding beneath it. */
+  .titlerow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; min-width: 0; }
   /* text-wrap: pretty keeps a lone last word from stranding on its own line. */
   /* 2px is an optical nudge under the title, not a spacing step. */
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 62ch; text-wrap: pretty; }
+  .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 62ch; text-wrap: pretty; }
   /* On a phone the subtitle drops its "all in one search" tail to stay one tidy line. */
   @media (max-width: 560px) { .sub .tail { display: none; } }
   .pane { margin-bottom: var(--space-2); }
@@ -643,7 +673,7 @@
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .handle { font-weight: 400; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-left: var(--space-1); }
+  .handle { font-weight: 400; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin-left: var(--space-1); }
   /* Wraps rather than truncates: every part of it is a fact someone is deciding on.
      --text-2, not --text-3, because these facts are read, and --text-3 falls short
      of readable contrast in most themes. The gap sets it apart from the
@@ -678,9 +708,9 @@
   .stack :global(> :nth-child(3)) { left: 18px; z-index: 1; }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   .follow, .save { flex: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
-  .follow.on, .save.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
+  .follow.on, .save.on { background: var(--accent-tint); border-color: transparent; }
   .follow:disabled, .save:disabled { opacity: 0.6; }
-  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
+  .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
   .status.error { color: var(--danger); }
   .empty { text-align: center; color: var(--text-2); padding: calc(var(--space-6) + var(--space-1)) var(--space-4); font-size: calc(var(--text-base) * var(--size-app)); }
   .empty p { margin: 0 auto; max-width: 480px; }

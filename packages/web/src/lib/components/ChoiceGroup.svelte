@@ -201,7 +201,7 @@
      the accent color over its neighbors' — so it is not color alone that
      says which one is on. */
   .cg button.on {
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    background: var(--accent-tint);
     color: var(--accent);
     border-color: var(--accent);
     position: relative;

@@ -56,8 +56,9 @@
 <style>
   /* A collection name can be long; the button gives it room, then ellipsis. */
   .follow { flex: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); background: var(--surface); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; white-space: nowrap; max-width: 20ch; overflow: hidden; text-overflow: ellipsis; }
-  .follow.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
+  .follow.on { background: var(--accent-tint); border-color: transparent; }
   .follow:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
-  .follow.on:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  /* Hover draws the outline back in rather than deepening the wash, which would dim the lettering on it. */
+  .follow.on:hover { background: var(--accent-tint); border-color: var(--accent); }
   .compact { padding: var(--space-1) var(--space-4); }
 </style>

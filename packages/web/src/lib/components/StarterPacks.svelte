@@ -125,7 +125,7 @@
   /* Pinned to the bottom so the buttons line up across a row of uneven cards,
      and lifted above the stretched link so a tap lands on the button. */
   .take { margin-top: auto; padding-top: var(--space-3); position: relative; z-index: 1; }
-  .from { margin: var(--space-4) 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; max-width: 62ch; }
+  .from { margin: var(--space-4) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; max-width: 62ch; }
   .from a { color: var(--accent); font-weight: 600; }
   .compact h2 { font-size: calc(var(--text-xl) * var(--size-app)); }
   .compact .card-summary { display: none; }

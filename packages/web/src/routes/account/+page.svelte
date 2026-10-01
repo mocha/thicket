@@ -212,11 +212,11 @@
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
-  .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   .address { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   .who { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
   .addr { font-weight: 600; overflow-wrap: anywhere; }
-  .note { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .note { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   /* Resend reads as a link inside the sentence, like links in help text elsewhere. */
   .link { font: inherit; color: var(--accent); font-weight: 600; }
   .link:hover { text-decoration: underline; }
@@ -232,6 +232,6 @@
   .export { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
   .what { flex: 1 1 260px; min-width: 0; }
   h3 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; }
-  .what p { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .what p { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   .also { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 </style>
