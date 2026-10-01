@@ -36,7 +36,7 @@
 
   const apart = [
     { title: 'Newest first, always', body: 'The latest posts come first, and nothing is reordered.' },
-    { title: 'No recommendations, no infinite scroll', body: 'You reach the end of what’s new, and then you’re done.' },
+    { title: 'No algorithms, no infinite scroll', body: 'You reach the end of what’s new, and then you’re done.' },
     { title: 'No ads, no tracking, nothing to sell', body: 'What you read is your business.' },
     { title: 'Your collections are yours', body: 'Download them anytime and take them to any feed reader.' }
   ];
@@ -132,6 +132,8 @@
   .peek, .join { margin-top: calc(var(--space-6) * 3); }
   /* On the green, the collections' intro and small print read in cream. */
   .peek :global(.lede), .peek :global(.from) { color: var(--forest-ink-2, var(--text-2)); }
+  /* Its account link in full cream, like the footer's links: the usual green disappears on the green. */
+  .peek :global(.packs .from a) { color: #f6f1e8; }
   /* The collection cards stay light, so their words go back to the usual dark ink. */
   .peek :global(.card) { color: var(--text); }
   /* The form at the end, centered under its heading. */
