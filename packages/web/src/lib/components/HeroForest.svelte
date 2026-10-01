@@ -15,15 +15,35 @@
   import FrondFrame from './FrondFrame.svelte';
   import ThicketEdges from './ThicketEdges.svelte';
 
-  // TEMPORARY: which leaves to show while comparing (fronds, edges, or the saved thicket).
+  // TEMPORARY: which leaves to show while comparing: the hand-drawn fronds (default), the code-drawn ferns, the edges only, or the saved thicket.
   /** `aside`: what sits beside the pitch. Without it, the scrolling phone. */
   let { pitch, aside, below, leaves = 'fronds' }: { pitch: Snippet; aside?: Snippet; below?: Snippet; leaves?: string } = $props();
+
+  /* Where the headline and intro sit, measured whenever the section changes
+     size, so the fronds can keep clear of them at any width. */
+  let section = $state<HTMLElement>();
+  let words = $state<HTMLElement>();
+  let clear = $state<{ x: number; y: number; w: number; h: number } | null>(null);
+  $effect(() => {
+    if (!section || !words) return;
+    const measure = () => {
+      const s = section!.getBoundingClientRect();
+      const boxes = [...words!.children].map((c) => c.getBoundingClientRect());
+      const x = Math.min(...boxes.map((b) => b.left)), y = Math.min(...boxes.map((b) => b.top));
+      const r = Math.max(...boxes.map((b) => b.right)), btm = Math.max(...boxes.map((b) => b.bottom));
+      clear = { x: x - s.left, y: y - s.top, w: r - x, h: btm - y };
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(section);
+    ro.observe(words);
+    return () => ro.disconnect();
+  });
 </script>
 
-<section class="forest">
-  {#if leaves === 'edges'}<ThicketEdges />{:else if leaves === 'thicket'}<ThicketFrame />{:else}<FrondFrame />{/if}
+<section class="forest" bind:this={section}>
+  {#if leaves === 'edges'}<ThicketEdges />{:else if leaves === 'thicket'}<ThicketFrame />{:else}<FrondFrame hand={leaves !== 'ferns'} {clear} />{/if}
   <div class="inner">
-    <div class="pitch">{@render pitch()}</div>
+    <div class="pitch" bind:this={words}>{@render pitch()}</div>
     <div class="picture">{#if aside}{@render aside()}{:else}<PhoneFeed />{/if}</div>
   </div>
   {#if below}<div class="below">{@render below()}</div>{/if}
@@ -62,7 +82,7 @@
     -webkit-box-decoration-break: clone; box-decoration-break: clone;
   }
   .picture { min-width: 0; }
-  .below { position: relative; padding-bottom: calc(var(--space-6) * 2); }
+  .below { position: relative; padding-bottom: var(--space-6); }
   @media (min-width: 820px) {
     /* The height it had with the phone beside the words, kept whatever sits there,
        so the headline lands in the same spot with the same room around it. */
