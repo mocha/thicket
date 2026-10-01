@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
-   * The landing page's green top section, dressed with a couple dozen large fern
-   * fronds, each placed on purpose: clustered in the corners, a few reaching in
+   * The landing page's green, dressed with Christie's hand-drawn fronds (see
+   * $lib/fronds), each placed on purpose: clustered in the corners, a few reaching in
    * behind the phone, none near the words. Nothing is random, so resizing the
    * window only slides the fronds along with the edge or the center they're
    * pinned to.
@@ -16,9 +16,8 @@
    */
   import { HAND_FRONDS, LONG_FRONDS, SHORT_FRONDS } from '$lib/fronds';
 
-  // TEMPORARY: `hand` (the default on the page) uses Christie's hand-drawn fronds; off, the code-drawn ferns, kept for comparison.
   /** `clear`: where the headline and intro sit in the section; no frond reaches into it. */
-  let { hand = false, clear = null }: { hand?: boolean; clear?: { x: number; y: number; w: number; h: number } | null } = $props();
+  let { clear = null }: { clear?: { x: number; y: number; w: number; h: number } | null } = $props();
 
   type Layer = 'deep' | 'back' | 'front';
   /** `fromBottom`: `y` counts up from the bottom of the section instead of down from the top. */
@@ -139,46 +138,6 @@
 
   const r = (n: number) => Math.round(n);
 
-  /**
-   * One frond: a gently curved stem with pairs of leaflets along it. Leaflets
-   * start small at the base, are longest about a third of the way up, and
-   * taper to the tip, each sweeping forward toward the tip.
-   */
-  function frond(f: Frond, width: number, height: number) {
-    const baseX = f.pin === 'left' ? f.x : f.pin === 'right' ? width + f.x : width / 2 + f.x;
-    let angle = (f.angle * Math.PI) / 180;
-    const steps = 44, step = f.length / steps;
-    let x = baseX, y = f.fromBottom ? height - f.y : f.y;
-    const stem = [`M${r(x)} ${r(y)}`];
-    const leaves: string[] = [];
-    for (let i = 1; i <= steps; i++) {
-      angle += (f.bend * 2) / steps;
-      x += Math.cos(angle) * step; y += Math.sin(angle) * step;
-      stem.push(`L${r(x)} ${r(y)}`);
-      if (i % 2 || i < 3) continue;
-      const t = i / steps;
-      /* Grows quickly from the base, then tapers steadily, still a fifth of its longest at the tip. */
-      const size = f.length * 0.2 * Math.min(1, t * 3.5) * (1 - t * 0.8) + 4;
-      for (const side of [-1, 1]) {
-        const a = angle + side * 1.0;
-        const cx = Math.cos(a), cy = Math.sin(a), bulge = size * 0.22;
-        const tx = x + cx * size, ty = y + cy * size;
-        const mx = x + cx * size * 0.5, my = y + cy * size * 0.5;
-        leaves.push(`M${r(x)} ${r(y)}Q${r(mx - cy * bulge)} ${r(my + cx * bulge)} ${r(tx)} ${r(ty)}Q${r(mx + cy * bulge)} ${r(my - cx * bulge)} ${r(x)} ${r(y)}Z`);
-      }
-    }
-    return { stem: stem.join(''), leaves: leaves.join('') };
-  }
-
-  function draw(list: Frond[]) {
-    const out: Record<Layer, { stems: string; leaves: string }> = { deep: { stems: '', leaves: '' }, back: { stems: '', leaves: '' }, front: { stems: '', leaves: '' } };
-    for (const f of list) {
-      const d = frond(f, w, h);
-      out[f.layer].stems += d.stem;
-      out[f.layer].leaves += d.leaves;
-    }
-    return out;
-  }
 
   const fronds = $derived.by(() => {
     if (!w || !h) return null;
@@ -214,10 +173,8 @@
     return f;
   }
 
-  const drawn = $derived(fronds && !hand ? draw(fronds) : null);
-
   /*
-   * The hand-drawn frond, placed where a code-drawn one would be: its base on
+   * Each frond's drawing, placed by its entry in the lists above: its base on
    * the frond's starting point, turned to the frond's angle, scaled to its
    * length. Short fronds get the short, full drawing; the long drawings take
    * turns on the rest. One drawn tip-left is flipped to point
@@ -237,7 +194,7 @@
 </script>
 
 <div class="frame" bind:clientWidth={w} bind:clientHeight={h} aria-hidden="true">
-  {#if hand && fronds}
+  {#if fronds}
     <svg width={w} height={h} viewBox="0 0 {w} {h}">
       <defs>
         {#each HAND_FRONDS as d, n (n)}
@@ -256,12 +213,6 @@
         </g>
       {/each}
     </svg>
-  {:else if drawn}
-    <svg width={w} height={h} viewBox="0 0 {w} {h}">
-      {#each ['deep', 'back', 'front'] as const as layer (layer)}
-        <g class={layer}><path class="stem" d={drawn[layer].stems} /><path class="leaf" d={drawn[layer].leaves} /></g>
-      {/each}
-    </svg>
   {/if}
 </div>
 
@@ -274,9 +225,7 @@
   .deep { --leaf: #0c1b11; }
   .back { opacity: 0.3; }
   .front { opacity: 0.6; }
-  .stem { fill: none; stroke: var(--leaf); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .leaf { fill: var(--leaf); }
-  /* The hand-drawn frond: the silhouette in the layer's green, its shadows a
+  /* Each frond: the silhouette in the layer's green, its shadows a
      shade darker, its veins a shade lighter. */
   .h-shape { fill: var(--leaf); }
   .h-shadow { fill: color-mix(in srgb, var(--leaf) 62%, #0c1b11); }
