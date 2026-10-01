@@ -1,8 +1,6 @@
 <script lang="ts">
   /**
-   * The redesigned front door, shown at the unlinked /preview/landing while it's
-   * reviewed; the live home page (Home.svelte) is unchanged until it replaces it.
-   * The front door for people who are not signed in. The first screen is the
+   * The front door, thicket's landing page at /. The first screen is the
    * headline and one line, in a top section with a picture of reading in
    * thicket; the header carries the way in (Sign up, or for someone signed in,
    * one click into Everything). The green carries on to the end of the page,
@@ -16,23 +14,12 @@
   import { api } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import SignUpForm from './SignUpForm.svelte';
-    import StarterPacks from './StarterPacks.svelte';
+  import StarterPacks from './StarterPacks.svelte';
   import Card from './Card.svelte';
   import HeroForest from './HeroForest.svelte';
-  import HeroTable from './HeroTable.svelte';
 
   onMount(() => api.event('home_view'));
 
-  // TEMPORARY: headline options for review (?v=a|b|c). Remove before the PR.
-  import { page } from '$app/state';
-  const OPTIONS: Record<string, [string, string]> = {
-    a: ['Read the web on your own terms', 'No algorithm deciding what you see. Just everything from the sites you choose, newest first.'],
-    b: ['Read the web, not the algorithm', 'Social feeds show you more of what you already believe. thicket shows you everything from the sites you choose, in the order it was published.'],
-    c: ['Step outside the bubble', 'Algorithms feed you more of the same, and the angriest version of it. thicket shows you everything from the sites you choose, newest first.']
-  };
-  const opt = $derived(OPTIONS[page.url.searchParams.get('v') ?? ''] ?? null);
-  // TEMPORARY: two looks for the top section (?hero=table for the scattered cards). Remove before the PR.
-  const table = $derived(page.url.searchParams.get('hero') === 'table');
 
   const apart = [
     { title: 'Newest first, always', body: 'The latest posts come first, and nothing is reordered.' },
@@ -51,8 +38,10 @@
 </script>
 
 {#snippet pitch()}
-  <h1>{opt?.[0] ?? 'Read the web on your own terms'}</h1>
-  <p class="sub">{#if opt}{opt[1]}{:else}<mark>Social feeds use algorithms to decide what you see, but <em>thicket</em> keeps it simple.</mark> Follow the websites you like, and read everything they publish in one place, newest first.{/if}</p>
+  <!-- Names the category for people who already use one; newcomers can skip it. -->
+  <p class="eyebrow">An RSS reader for everyone</p>
+  <h1>Read the web on your own terms</h1>
+  <p class="sub"><mark>Social feeds use algorithms to decide what you see, but <em>thicket</em> keeps it simple.</mark> Follow the websites you like, and read everything they publish in one place, newest first.</p>
 {/snippet}
 
 <!-- How it works, why thicket is different, collections to open, then (signed
@@ -101,14 +90,7 @@
 </footer>
 {/snippet}
 
-<div class="top">
-  {#if table}
-    <HeroTable {pitch} />
-    {@render below()}
-  {:else}
-    <HeroForest {pitch} {below} leaves={page.url.searchParams.get('leaves') ?? 'fronds'} />
-  {/if}
-</div>
+<div class="top"><HeroForest {pitch} {below} /></div>
 
 <style>
   /* The top section's color starts right under the line below the logo. */
@@ -134,11 +116,15 @@
   .peek :global(.lede), .peek :global(.from) { color: var(--forest-ink-2, var(--text-2)); }
   /* Its account link in full cream, like the footer's links: the usual green disappears on the green. */
   .peek :global(.packs .from a) { color: #f6f1e8; }
+  /* The same size as the intro line above the cards, so it doesn't read as small print. */
+  .peek :global(.packs .from) { font-size: calc(var(--text-base) * var(--size-app)); }
   /* The collection cards stay light, so their words go back to the usual dark ink. */
   .peek :global(.card) { color: var(--text); }
   /* The form at the end, centered under its heading. */
   .join { display: flex; flex-direction: column; align-items: center; scroll-margin-top: var(--space-5); }
   .auth { width: 100%; max-width: 24rem; }
+  /* The small label over the headline, styled like the app's other eyebrows, in sage on the green. */
+  .eyebrow { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7fb08a; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
   h1 { font-family: var(--font-headings); font-size: clamp(34px, 5vw, 52px); line-height: 1.15; margin: 0 0 var(--space-5); letter-spacing: -0.015em; }
   .sub { font-size: clamp(18px, 2.2vw, 22px); color: var(--text-2); margin: 0; line-height: 1.6; max-width: 32ch; }
   /* Every section heading at the ladder's largest size, so each reads as its own section. */

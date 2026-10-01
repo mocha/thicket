@@ -144,6 +144,33 @@ export const sessions = pgTable("sessions", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 }, (t) => [index("sessions_user_idx").on(t.userId)]);
 
+/**
+ * API tokens (issue #140): a credential a person hands to their own scripts
+ * and assistants, used as `Authorization: Bearer …`. At most one of each kind
+ * per account: "read" can only read, "full" can also change things. Revoking
+ * deletes the row.
+ *
+ * Unlike a session, the token itself is kept, not only its sha256: the Account
+ * page shows it again whenever its owner asks, which a hash could not do. So a
+ * copy of this table is a set of working credentials, each limited to what a
+ * token may do (lib/token-access.ts) and revocable by its owner. The hash is
+ * what requests are looked up by, and is all that would remain if tokens were
+ * ever changed to be shown once.
+ */
+export const apiTokens = pgTable("api_tokens", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").$type<"read" | "full">().notNull(),
+  token: text("token").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Moved at most once a minute, so a busy script does not turn every read into a write. */
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+}, (t) => [
+  uniqueIndex("api_tokens_user_kind_uq").on(t.userId, t.kind),
+  uniqueIndex("api_tokens_hash_uq").on(t.tokenHash),
+]);
+
 export const feeds = pgTable("feeds", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   /** Normalized feed URL. Uniqueness is on this. See feeds/normalize.ts. */

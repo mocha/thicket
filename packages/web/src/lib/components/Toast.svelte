@@ -1,5 +1,17 @@
 <script lang="ts">
-  import { toast, dismissToast } from '$lib/toast.svelte';
+  import { toast, dismissToast, showToast } from '$lib/toast.svelte';
+
+  /* Run the toast's action (nearly always Undo). If it is refused, say why:
+     an Undo that quietly did nothing would look like it worked. */
+  async function act() {
+    const run = toast.current?.action?.run;
+    dismissToast();
+    try {
+      await run?.();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    }
+  }
 
   /* An open Sheet sits above everything the page can stack, and the browser
      ignores clicks outside it, so an ordinary toast would land behind it and
@@ -24,7 +36,7 @@
   <div class="toast" role="status" use:onTop={toast.current.id}>
     <span>{toast.current.message}</span>
     {#if toast.current.action}
-      <button class="action" onclick={() => { toast.current?.action?.run(); dismissToast(); }}>{toast.current.action.label}</button>
+      <button class="action" onclick={act}>{toast.current.action.label}</button>
     {/if}
   </div>
 {/if}

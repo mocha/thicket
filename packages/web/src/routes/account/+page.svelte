@@ -6,10 +6,12 @@
   import Input from '$lib/components/Input.svelte';
   import Button from '$lib/components/Button.svelte';
   import Badge from '$lib/components/Badge.svelte';
+  import ApiTokens from '$lib/components/ApiTokens.svelte';
   import { showToast } from '$lib/toast.svelte';
 
   /**
    * How you get into your account, and back in: your email and your password.
+   * And, at the bottom, how your own applications get in: API tokens.
    * Settings is for how thicket reads; this page is for the account itself.
    *
    * The Email section is readthicket.com only. Self-hosted copies don't ask for
@@ -25,6 +27,14 @@
    * exported at once, and until then a line says where to export each one.
    */
   const me = $derived(session.user!);
+
+  /**
+   * Who may turn on API tokens (issue #140). Everyone, today. This is the one
+   * line to change when that depends on something about the account: make it
+   * false, and pass `unavailable` to say why, and the section shows itself
+   * switched off.
+   */
+  const tokensAvailable = $derived(true);
   $effect(() => { if (!site.status) void loadSite(); });
   const hosted = $derived(site.status?.hosted ?? false);
   const confirmed = $derived(!!me.emailConfirmedAt);
@@ -193,6 +203,8 @@
 
   <p class="note also">Collections are exported one at a time for now. Open a collection, press Manage, then choose “Export collection to file” from the menu next to its name.</p>
 </section>
+
+<ApiTokens available={tokensAvailable} />
 
 <style>
   .top { margin-bottom: var(--space-4); }

@@ -28,9 +28,10 @@
 import { sql, type SQL } from "drizzle-orm";
 import { allowsSql } from "./visibility.js";
 import { feedSlugSql } from "./slug.js";
+import { MAX_LENGTH } from "./ratelimit.js";
 
-/** Two pages of a Word document, roughly. Enough for a margin note, not an essay. */
-export const NOTE_MAX = 2000;
+/** Enough for a margin note, not an essay. The number lives with every other limit (lib/ratelimit.ts). */
+export const NOTE_MAX = MAX_LENGTH.note;
 /** Others' notes shown per post. More than this and the post is a comment thread, which this is not. */
 export const NOTES_PER_ITEM = 8;
 

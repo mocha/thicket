@@ -11,13 +11,9 @@
    */
   import type { Snippet } from 'svelte';
   import PhoneFeed from './PhoneFeed.svelte';
-  import ThicketFrame from './ThicketFrame.svelte';
   import FrondFrame from './FrondFrame.svelte';
-  import ThicketEdges from './ThicketEdges.svelte';
 
-  // TEMPORARY: which leaves to show while comparing: the hand-drawn fronds (default), the code-drawn ferns, the edges only, or the saved thicket.
-  /** `aside`: what sits beside the pitch. Without it, the scrolling phone. */
-  let { pitch, aside, below, leaves = 'fronds' }: { pitch: Snippet; aside?: Snippet; below?: Snippet; leaves?: string } = $props();
+  let { pitch, below }: { pitch: Snippet; below?: Snippet } = $props();
 
   /* Where the headline and intro sit, measured whenever the section changes
      size, so the fronds can keep clear of them at any width. */
@@ -41,10 +37,10 @@
 </script>
 
 <section class="forest" bind:this={section}>
-  {#if leaves === 'edges'}<ThicketEdges />{:else if leaves === 'thicket'}<ThicketFrame />{:else}<FrondFrame hand={leaves !== 'ferns'} {clear} />{/if}
+  <FrondFrame {clear} />
   <div class="inner">
     <div class="pitch" bind:this={words}>{@render pitch()}</div>
-    <div class="picture">{#if aside}{@render aside()}{:else}<PhoneFeed />{/if}</div>
+    <div class="picture"><PhoneFeed /></div>
   </div>
   {#if below}<div class="below">{@render below()}</div>{/if}
 </section>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import Wordmark from './Wordmark.svelte';
   import { goto } from '$app/navigation';
   import { api, collectionsApi, collectionHref, profileHref } from '$lib/api';
   import { collectionStore, loadCollections, namedCollections, topLevelCollections, childrenOf, navOpen, loadNavOpen, toggleNavOpen, collectionsOpen, loadCollectionsOpen, toggleCollectionsOpen } from '$lib/collections.svelte';
@@ -143,7 +144,7 @@
 
 <!-- Paged layout keeps the bottom bar at every width: a sidebar is a scrolling thing. -->
 <nav aria-label="Primary" class:paged={display.layout === 'paged'}>
-  <a class="brand" href="/everything"><img src="/icon.svg" alt="" width="28" height="28" /><span>thicket</span></a>
+  <a class="brand" href="/everything"><img src="/icon.svg" alt="" width="28" height="28" /><Wordmark height={23} /></a>
   <ul>
     <!-- Mobile-only tabs. On desktop, Everything and My collections live in the li.collections block below. -->
     <li class="mobile-only">
@@ -322,7 +323,7 @@
       display: flex; flex-direction: column;
       border-top: 0; border-right: 1px solid var(--line); background: var(--bg); backdrop-filter: none;
     }
-    nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-3); font-weight: 700; font-size: calc(var(--text-xl) * var(--size-app)); padding: var(--space-1) var(--space-3) var(--space-5); letter-spacing: -0.01em; }
+    nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-5); }
     nav:not(.paged) .long { display: inline; }
     nav:not(.paged) .shortl, nav:not(.paged) li.mobile-only { display: none; }
     /* The only scrolling part, so the account block below it never drifts up into the list. */
