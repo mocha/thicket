@@ -35,7 +35,7 @@
 
 <div class="meta {klass}" {...rest}>
   {#if onsource}
-    <button class="source" onclick={onsource} title="About {name}">
+    <button class="source tap" onclick={onsource} title="About {name}">
       <SourceIcon {feedId} {hasIcon} {name} size={ICON} />
       <span class="name">{name}</span>
     </button>

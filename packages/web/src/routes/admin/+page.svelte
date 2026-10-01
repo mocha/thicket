@@ -257,7 +257,7 @@
           <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={36} v={u.avatarUpdatedAt} />
           <div class="who">
             <div class="line">
-              <a class="name" href={profileHref(u.handle)}>{u.displayName ?? u.handle}</a><span class="handle">{' · '}@{u.handle}{#if u.isAdmin}{' · '}<Badge>Admin</Badge>{/if}{#if u.profileVisibility === 'private'}{' · '}<Badge>Private</Badge>{/if}{#if u.id === me?.id}{' · '}<Badge>You</Badge>{/if}</span>
+              <a class="name tap" href={profileHref(u.handle)}>{u.displayName ?? u.handle}</a><span class="handle">{' · '}@{u.handle}{#if u.isAdmin}{' · '}<Badge>Admin</Badge>{/if}{#if u.profileVisibility === 'private'}{' · '}<Badge>Private</Badge>{/if}{#if u.id === me?.id}{' · '}<Badge>You</Badge>{/if}</span>
             </div>
             <div class="facts">{u.following} {u.following === 1 ? 'feed' : 'feeds'} · {u.collections} {u.collections === 1 ? 'collection' : 'collections'} · {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'} · joined {relativeTime(u.createdAt)}{#if u.invitedBy}{' via @'}{u.invitedBy}{/if}{#if u.lastSeenAt}{' · '}{lastActive(u.lastSeenAt)}{/if}</div>
             {#if u.id !== me?.id}
@@ -310,8 +310,8 @@
   .pk small { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   @media (min-width: 760px) { .packs { grid-template-columns: repeat(2, 1fr); } }
   .invites { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
-  .invites li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .invites .note { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .invites li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .invites .note { flex: 1 1 8ch; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .invites .exp { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; }
   .issued { background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); }
   .issued p { margin: 0 0 var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); }

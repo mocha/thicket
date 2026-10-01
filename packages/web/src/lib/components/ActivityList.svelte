@@ -152,7 +152,7 @@
       {/each}
     </ul>
       {#if cursor || shown < entries.length}
-        <div class="foot"><button class="more" onclick={more} disabled={busy}>{busy ? 'Loading…' : 'Show more'}</button></div>
+        <div class="foot"><button class="more tap" onclick={more} disabled={busy}>{busy ? 'Loading…' : 'Show more'}</button></div>
       {:else if cappedAt}
         <div class="foot"><VisitorMore cap={cappedAt} /></div>
       {/if}
@@ -166,7 +166,10 @@
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--surface-2); }
   .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
-  .cardhead :global(.cg) { flex: none; width: min(320px, 100%); }
+  /* At least 320px so the options aren't cramped, wider when larger text needs
+     it, and never wider than the strip. A fixed 320px made the control fall
+     back to its dropdown at larger text sizes with empty room beside it. */
+  .cardhead :global(.cg) { flex: none; width: fit-content; min-width: min(320px, 100%); max-width: 100%; }
   .pad { padding: var(--space-4); }
   .foot { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin: 0; }

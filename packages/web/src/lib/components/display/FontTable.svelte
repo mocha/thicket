@@ -31,9 +31,9 @@
           onchange={(v) => family(r.id, v as Family)}
         />
         <div class="stepper" role="group" aria-label="{r.label} size">
-          <button type="button" onclick={() => step(r.id, -1)} disabled={display.fonts[r.id].size <= SIZE_MIN} aria-label="Smaller {r.label.toLowerCase()}">−</button>
+          <button type="button" class="tap" onclick={() => step(r.id, -1)} disabled={display.fonts[r.id].size <= SIZE_MIN} aria-label="Smaller {r.label.toLowerCase()}">−</button>
           <output>{sizeLabel(display.fonts[r.id].size)}</output>
-          <button type="button" onclick={() => step(r.id, 1)} disabled={display.fonts[r.id].size >= SIZE_MAX} aria-label="Larger {r.label.toLowerCase()}">+</button>
+          <button type="button" class="tap" onclick={() => step(r.id, 1)} disabled={display.fonts[r.id].size >= SIZE_MAX} aria-label="Larger {r.label.toLowerCase()}">+</button>
         </div>
       </div>
     {/each}
@@ -66,6 +66,9 @@
   .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; background: var(--bg); justify-self: end; }
   .stepper button { width: 30px; height: 32px; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
   .stepper button:disabled { opacity: 0.35; }
+  /* The rounded box would clip the − and +'s touch area (see `.tap` in app.css)
+     back to what's drawn; nothing inside it needs the clipping. */
+  @media (pointer: coarse) { .stepper { overflow: visible; } }
   .stepper output { min-width: 5.5ch; text-align: center; font-size: calc(var(--text-sm) * var(--size-app)); font-variant-numeric: tabular-nums; color: var(--text-2); }
   /* Narrow: the name and the size share the first line, and the three faces
      take the whole of the next one, where their names fit at full size. */
@@ -76,6 +79,13 @@
     .stepper { grid-column: 2; grid-row: 1; }
     .row :global(.faces) { grid-column: 1 / -1; justify-self: start; }
     .stepper button { width: 26px; }
+    /* The three face names are single words, so they can't wrap. They follow
+       the App size up to what the row can hold, then stop growing: the row's
+       width, less the options' padding and borders, over the names' combined
+       width (about 16.2em, measured). */
+    .row :global(.faces) { --face-size: min(calc(var(--text-sm) * var(--size-app)), calc((100cqw - 52px) / 16.2)); }
+    .row :global(.faces button) { font-size: var(--face-size); padding-inline: var(--space-2); }
+    .row :global(.faces button[data-face='dyslexic']) { font-size: calc(var(--face-size) * 0.857); }
   }
 
   /* The preview is set in the live tokens, so it is not a mock-up: it is the app. */

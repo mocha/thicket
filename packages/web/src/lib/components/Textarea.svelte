@@ -167,4 +167,9 @@
   }
   .counter.near { color: var(--text); }
   .counter.over { color: var(--danger); font-weight: 700; }
+  /* On a touchscreen a field's text is never under 16px: iOS Safari zooms the
+     whole page in when a smaller field takes focus, and doesn't zoom back out. */
+  @media (pointer: coarse) {
+    textarea { font-size: max(16px, calc(var(--text-base) * var(--size-app))); }
+  }
 </style>

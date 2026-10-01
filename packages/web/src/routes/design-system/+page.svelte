@@ -326,7 +326,7 @@
   <!-- ============================= BUTTONS ============================= -->
   <section id="buttons" aria-labelledby="buttons-h">
     <h2 id="buttons-h">Buttons</h2>
-    <p class="section-lede">One button, four looks. Primary for the main move, secondary for a move a screen offers many times over (one per card), ghost for everything else, danger for the destructive one. Three sizes. Danger has a solid fill too, for the final confirm of something that can’t be undone. Any look can also be a link, just its words, for a quiet second action under the main one.</p>
+    <p class="section-lede">One button, four looks. Primary for the main move, secondary for a move a screen offers many times over (one per card), ghost for everything else, danger for the destructive one. Three sizes. Danger has a solid fill too, for the final confirm of something that can’t be undone. Any look can also be a link, just its words, for a quiet second action under the main one. On a touchscreen every button, tab, and choice can be tapped across at least 44 by 44, whatever size it’s drawn: an invisible area reaches past its edges to make up the difference. Anything else small and tappable gets the same by taking the <code>tap</code> class.</p>
 
     <div class="row">
       <Button variant="primary">Primary</Button>
@@ -370,7 +370,7 @@
   <!-- ============================== FORMS ============================= -->
   <section id="forms" aria-labelledby="forms-h">
     <h2 id="forms-h">Forms</h2>
-    <p class="section-lede">A field is the label, the note that explains it, the control, and any error beneath the control. The note sits above the box so it’s read before typing. Every text box is the same rounded rectangle, with a focus ring that only thickens for someone arriving by keyboard.</p>
+    <p class="section-lede">A field is the label, the note that explains it, the control, and any error beneath the control. The note sits above the box so it’s read before typing. Every text box is the same rounded rectangle, with a focus ring that only thickens for someone arriving by keyboard. On a touchscreen the text inside a field is never smaller than 16px, even in the small size, so an iPhone doesn’t zoom in when you tap one.</p>
 
     <div class="stack">
       <Field label="Display name" hint="Shown on your notes and profile.">
@@ -460,7 +460,7 @@
     />
 
     <h3 class="sub">Choice group</h3>
-    <p class="section-lede">Pick one, and it takes effect at once — a setting, not a tab. Nothing else on the page moves.</p>
+    <p class="section-lede">Pick one, and it takes effect at once — a setting, not a tab. Nothing else on the page moves. When the options can’t sit on one line in the space they have (a small phone, large text), the group becomes a dropdown with the same choices. It never wraps and never slides sideways.</p>
     <ChoiceGroup
       options={[
         { value: 'cozy', label: 'Cozy' },

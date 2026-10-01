@@ -254,7 +254,7 @@
 <svelte:head><title>{col ? `Managing ${col.name}` : 'Manage'} · thicket</title></svelte:head>
 
 {#if col}
-  <a class="back" href={collectionHref(handle, slug)}>
+  <a class="back tap" href={collectionHref(handle, slug)}>
     <Icon name="back" size={16} stroke={2.4} />
     Back to {col.name} collection
   </a>
@@ -352,10 +352,10 @@
           <li>
             <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={36} />
             <div class="meta">
-              <a class="title" href="/feeds/{f.id}">{feedListName(f)}</a>
+              <a class="title tap" href="/feeds/{f.id}">{feedListName(f)}</a>
               <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · last post {relativeTime(f.lastItemAt)}{/if}{#if f.consecutiveFailures > 0} · <span class="bad">failing</span>{/if}</div>
             </div>
-            <Button size="sm" onclick={() => removeFeed(f)} aria-label="Remove {f.title ?? hostOf(f.url)} from {col.name}">Remove from {col.name}</Button>
+            <Button size="sm" onclick={() => removeFeed(f)} aria-label="Remove {f.title ?? hostOf(f.url)} from {col.name}"><span>Remove<span class="from">&nbsp;from {col.name}</span></span></Button>
           </li>
         {/each}
       </ul>
@@ -415,7 +415,7 @@
           {#if orphans.length === 0}Every feed in it is also in another of your collections, so nothing will stop being followed.
           {:else}The {orphans.length} {orphans.length === 1 ? 'feed that is' : 'feeds that are'} only in this collection will no longer be followed.{/if}</p>
         {#if orphans.length > 0}
-          <button class="reveal" onclick={() => (showOrphans = !showOrphans)} aria-expanded={showOrphans}>
+          <button class="reveal tap" onclick={() => (showOrphans = !showOrphans)} aria-expanded={showOrphans}>
             View the {orphans.length} {orphans.length === 1 ? 'feed' : 'feeds'} which will be removed
             <Icon name="caret" size={14} stroke={2.4} dir={showOrphans ? 'up' : 'down'} />
           </button>
@@ -490,7 +490,7 @@
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
-  .feedhead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+  .feedhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
   .feedhead h2 { margin: 0; }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .list li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
@@ -500,6 +500,13 @@
   .children .name { flex: 1; font-weight: 600; }
   .meta { flex: 1; min-width: 0; }
   .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* The name clips itself to trail off, which would clip its touch area (see
+     `.tap` in app.css) too. Padding inside the clip, cancelled by the margin,
+     makes it 44 tall to a finger without moving the row. */
+  @media (pointer: coarse) { .title { padding-block: 11px; margin-block: -11px; } }
+  /* On a phone the button just says Remove, so the feed's name gets the row;
+     the page heading and the confirming toast both name the collection. */
+  @media (max-width: 699px) { .from { display: none; } }
   .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bad { color: var(--danger); }
   .chip { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-pill); border: 1px solid var(--line); }

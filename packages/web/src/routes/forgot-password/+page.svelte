@@ -48,7 +48,7 @@
       <Button type="submit" variant="primary" solid size="lg" disabled={busy || !who.trim()} loading={busy}>Send reset link</Button>
     </form>
   {/if}
-  <p class="alt"><a href="/login">Back to log in</a></p>
+  <p class="alt"><a class="tap" href="/login">Back to log in</a></p>
 </section>
 
 <style>

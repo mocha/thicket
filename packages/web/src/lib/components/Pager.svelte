@@ -41,6 +41,7 @@
     display: grid; place-items: center; -webkit-tap-highlight-color: transparent;
     background: color-mix(in srgb, var(--bg) 70%, transparent);
   }
-  .prev { left: 0; border-right: 1px solid var(--line); }
-  .next { right: 0; border-left: 1px solid var(--line); }
+  /* Clear of the notch and rounded corners when a phone is on its side. */
+  .prev { left: env(safe-area-inset-left, 0px); border-right: 1px solid var(--line); }
+  .next { right: env(safe-area-inset-right, 0px); border-left: 1px solid var(--line); }
 </style>

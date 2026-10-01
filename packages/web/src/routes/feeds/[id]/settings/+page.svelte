@@ -189,7 +189,7 @@
 <svelte:head><title>{feed ? `Managing ${feedName(feed)}` : 'Feed settings'} · thicket</title></svelte:head>
 
 {#if feed}
-  <a class="back" href={feedHref(feed)}>
+  <a class="back tap" href={feedHref(feed)}>
     <Icon name="back" size={16} stroke={2.4} />
     Back to feed
   </a>
@@ -266,7 +266,7 @@
     {/if}
 
     <details class="facts">
-      <summary>
+      <summary class="tap">
         Feed metadata
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
       </summary>
@@ -283,7 +283,7 @@
     <section class="admin">
       <h2>Admin</h2>
       <p class="hint">Feeds are shared. Removing this one takes it away from everyone on this instance: its posts and its place in every collection. Bookmarks, and the notes on them, keep their saved copy. Use it for spam, abuse, or a feed that should never have been indexed.</p>
-      <Button variant="danger" onclick={askRemove}>Remove this feed from thicket</Button>
+      <Button variant="danger" onclick={askRemove}>Remove from thicket</Button>
     </section>
 
     <dialog bind:this={removeDialog} class="remove" onclick={(e) => { if (e.target === removeDialog) removeDialog?.close(); }} aria-labelledby="remove-title">

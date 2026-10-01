@@ -77,7 +77,8 @@
      edge of a tall screen. Beside the sidebar it centers over the posts; inside
      a Sheet or dialog it centers on the window, like the Sheet itself. On a
      phone it stays at the bottom, in reach of a thumb. */
-  @media (min-width: 900px) {
+  /* "Desktop" here is wherever the sidebar shows; the same condition as in Nav.svelte. */
+  @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) {
     .toast { top: calc(env(safe-area-inset-top, 0px) + var(--space-4)); bottom: auto; }
     .toast.sidebar { left: var(--nav-w); }
     :global(dialog) .toast.sidebar { left: 0; }

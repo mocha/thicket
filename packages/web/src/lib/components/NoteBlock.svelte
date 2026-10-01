@@ -31,11 +31,11 @@
       {#if mine}My note:{:else if author}<a href={profileHref(author.handle)}>{author.displayName ?? `@${author.handle}`}</a>’s note:{/if}
     </span>
     <span class="when" title={new Date(note.createdAt).toLocaleString()}>{relativeTime(note.createdAt)}{#if edited} · edited {relativeTime(note.updatedAt)}{/if}</span>
-    {#if mine && onedit}<button class="edit" onclick={onedit}>Edit</button>{/if}
+    {#if mine && onedit}<button class="edit tap" onclick={onedit}>Edit</button>{/if}
   </div>
   <div class="body" class:clamped={!expanded} bind:this={body}>{@html html}</div>
   {#if overflows || expanded}
-    <button class="more" onclick={() => (expanded = !expanded)} aria-expanded={expanded}>{expanded ? 'Show less' : 'Show more'}</button>
+    <button class="more tap" onclick={() => (expanded = !expanded)} aria-expanded={expanded}>{expanded ? 'Show less' : 'Show more'}</button>
   {/if}
 </div>
 
