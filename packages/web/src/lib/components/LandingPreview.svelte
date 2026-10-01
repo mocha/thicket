@@ -5,9 +5,10 @@
    * The front door for people who are not signed in. The first screen is the
    * headline and one line, in a top section with a picture of reading in
    * thicket; the header carries the way in (Sign up, or for someone signed in,
-   * one click into Everything). The green carries on below it, holding a
-   * panel of three things you do and then the sign-up form beside the four
-   * differences. Then real collections to open.
+   * one click into Everything). The green carries on to the end of the page,
+   * holding a panel of the things you do, the four differences, real
+   * collections to open, the sign-up form (the header's Sign up jumps
+   * there), and the footer.
    * Words chosen for people who have never heard of RSS: "sites" and "posts",
    * never "feeds".
    */
@@ -15,8 +16,7 @@
   import { api } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import SignUpForm from './SignUpForm.svelte';
-  import PhoneFeed from './PhoneFeed.svelte';
-  import StarterPacks from './StarterPacks.svelte';
+    import StarterPacks from './StarterPacks.svelte';
   import Card from './Card.svelte';
   import HeroForest from './HeroForest.svelte';
   import HeroTable from './HeroTable.svelte';
@@ -55,16 +55,8 @@
   <p class="sub">{#if opt}{opt[1]}{:else}<mark>Social feeds use algorithms to decide what you see, but <em>thicket</em> keeps it simple.</mark> Follow the websites you like, and read everything they publish in one place, newest first.{/if}</p>
 {/snippet}
 
-<!-- How it works, then why thicket is different with the phone beside it on the right. Signed in, the
-     phone stays at the top and the differences stand alone. All of it sits on
-     the same green as the top. -->
-<!-- Signed out, the form sits beside the headline (the header's Sign up jumps
-     here) and the phone moves down beside why thicket is different. -->
-{#snippet signUp()}
-  <section id="sign-up" class="join" aria-label="Sign up">
-    <div class="auth"><SignUpForm /></div>
-  </section>
-{/snippet}
+<!-- How it works, why thicket is different, collections to open, then (signed
+     out) the sign-up form. All of it sits on the same green as the top. -->
 
 {#snippet below()}
 <section class="features">
@@ -83,8 +75,7 @@
   </ul>
 </section>
 
-<div class="pair" class:solo={!!session.user}>
-  <section class="apart">
+<section class="apart">
     <h2>thicket replaces your social feed</h2>
     <ul>
       {#each apart as a (a.title)}
@@ -95,28 +86,29 @@
         </li>
       {/each}
     </ul>
+</section>
+
+<div class="peek"><StarterPacks heading="Peek inside" lede="Open a collection and start reading now. No account needed." /></div>
+
+{#if !session.user}
+  <section id="sign-up" class="join" aria-labelledby="sign-up-heading">
+    <h2 id="sign-up-heading">Sign up</h2>
+    <div class="auth"><SignUpForm /></div>
   </section>
-  {#if !session.user}
-    <div class="phone-spot"><PhoneFeed /></div>
-  {/if}
-</div>
+{/if}
+<footer>
+  <p>thicket is free, open-source software under the <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener">AGPL</a>.<br /><a href="https://github.com/mocha/thicket" rel="noopener">Read the source</a> or run your own thicket site.</p>
+</footer>
 {/snippet}
 
 <div class="top">
   {#if table}
     <HeroTable {pitch} />
-    {#if !session.user}{@render signUp()}{/if}
     {@render below()}
   {:else}
-    <HeroForest {pitch} aside={session.user ? undefined : signUp} {below} leaves={page.url.searchParams.get('leaves') ?? 'fronds'} />
+    <HeroForest {pitch} {below} leaves={page.url.searchParams.get('leaves') ?? 'fronds'} />
   {/if}
 </div>
-
-<div class="peek"><StarterPacks heading="Peek inside" lede="Open a collection and start reading now. No account needed." /></div>
-
-<footer>
-  <p>thicket is free, open-source software under the <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener">AGPL</a>.<br /><a href="https://github.com/mocha/thicket" rel="noopener">Read the source</a> or run your own thicket site.</p>
-</footer>
 
 <style>
   /* The top section's color starts right under the line below the logo. */
@@ -136,20 +128,24 @@
     border-radius: calc(var(--radius-lg) * 1.6);
   }
   .features :global(.card) { color: var(--text); }
-  /* The ladder's largest heading size, so the panel reads as its own section. */
-  .features h2 { font-size: calc(var(--text-3xl) * var(--size-headings)); }
-  .peek { margin-top: calc(var(--space-6) * 2); }
-  .pair { display: grid; gap: calc(var(--space-6) * 2); }
-  .join { display: flex; flex-direction: column; scroll-margin-top: var(--space-5); }
-  .phone-spot { min-width: 0; align-self: center; }
-  /* Beside the form, the heading lines up with the points under it. */
-  .pair:not(.solo) .apart h2 { text-align: left; }
+  /* The sections below How it works get the same generous room between them. */
+  .peek, .join { margin-top: calc(var(--space-6) * 3); }
+  /* On the green, the collections' intro and small print read in cream. */
+  .peek :global(.lede), .peek :global(.from) { color: var(--forest-ink-2, var(--text-2)); }
+  /* The collection cards stay light, so their words go back to the usual dark ink. */
+  .peek :global(.card) { color: var(--text); }
+  /* The form at the end, centered under its heading. */
+  .join { display: flex; flex-direction: column; align-items: center; scroll-margin-top: var(--space-5); }
   .auth { width: 100%; max-width: 24rem; }
   h1 { font-family: var(--font-headings); font-size: clamp(34px, 5vw, 52px); line-height: 1.15; margin: 0 0 var(--space-5); letter-spacing: -0.015em; }
   .sub { font-size: clamp(18px, 2.2vw, 22px); color: var(--text-2); margin: 0; line-height: 1.6; max-width: 32ch; }
-  h2 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-5); text-align: center; }
+  /* Every section heading at the ladder's largest size, so each reads as its own section. */
+  h2, .peek :global(h2) { font-family: var(--font-headings); font-size: calc(var(--text-3xl) * var(--size-headings)); margin: 0 0 var(--space-5); text-align: center; }
   /* The collections section brings its own heading and intro line; center both to match. */
   .peek :global(h2), .peek :global(.lede) { text-align: center; margin-inline: auto; }
+  /* Its intro line sits close under the heading, the cards a step below. */
+  .peek :global(h2) { margin-bottom: var(--space-2); }
+  .peek :global(.lede) { margin-bottom: var(--space-5); }
   .apart ul { list-style: none; margin: 0; padding: 0; display: grid; gap: calc(var(--space-5) + var(--space-1)); }
   /* The leaf sits beside the title, the text in a column of its own beside it. */
   .apart li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-3); align-items: start; }
@@ -163,14 +159,14 @@
   .features svg { flex: none; color: var(--accent); }
   .features h3 { margin: 0; color: var(--accent); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; }
   .features p { margin: 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.45; }
-  footer { margin: calc(var(--space-6) * 2) 0 0; padding-top: var(--space-5); border-top: 1px solid var(--line); color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  /* The last thing on the green, in quiet cream under a faint cream rule. */
+  footer { position: relative; margin: calc(var(--space-6) * 3) 0 0; padding-top: var(--space-5); border-top: 1px solid color-mix(in srgb, #f6f1e8 18%, transparent); color: color-mix(in srgb, #f6f1e8 65%, transparent); font-size: calc(var(--text-sm) * var(--size-app)); }
   /* One sentence to a line. */
   footer p { margin: 0; text-wrap: pretty; }
-  footer a { color: var(--accent); font-weight: 600; }
+  footer a { color: #f6f1e8; font-weight: 600; }
   @media (min-width: 820px) {
-    /* Side by side: the form, then the differences in one column. Alone, the differences take two. */
-    .pair:not(.solo) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: calc(var(--space-6) + var(--space-5)); align-items: center; }
-    .solo .apart ul { grid-template-columns: repeat(2, 1fr); gap: var(--space-5) calc(var(--space-6) + var(--space-1)); }
+    /* The differences in two columns. */
+    .apart ul { grid-template-columns: repeat(2, 1fr); gap: var(--space-5) calc(var(--space-6) + var(--space-1)); }
     /* Five cards: three across, then the last two centered under them. */
     .features ul { grid-template-columns: repeat(6, 1fr); }
     .features ul > :global(li) { grid-column: span 2; }

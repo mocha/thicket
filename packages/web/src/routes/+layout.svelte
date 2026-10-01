@@ -64,9 +64,9 @@
       <a class="brand" href="/"><img src="/icon.svg" alt="" width="24" height="24" /><span>thicket</span></a>
       {#if preview}
         <!-- The redesigned landing page: one click into Everything for someone signed in;
-             otherwise Log in, and Sign up, which jumps to the form on the page. -->
+             otherwise Log in, and Sign up, which jumps to the form at the end of the page. -->
         {#if signedIn}
-          <span class="auth"><Button variant="primary" solid href="/everything">Open thicket <span aria-hidden="true">→</span></Button></span>
+          <span class="auth"><Button link size="lg" href="/everything">You’re already logged in <span aria-hidden="true">→</span></Button></span>
         {:else}
           <span class="auth"><Button href="/login">Log in</Button><Button variant="primary" href="#sign-up">Sign up</Button></span>
         {/if}
@@ -76,7 +76,7 @@
     </header>
   {/if}
 
-  <main class:anon={!inApp} class:home={front} class:paged={inApp && display.layout === 'paged'}>
+  <main class:anon={!inApp} class:home={front} class:preview class:paged={inApp && display.layout === 'paged'}>
     {#if show}{@render children()}
     {:else if session.unreachable}
       <div class="unreachable" role="status">
@@ -98,6 +98,8 @@
   main.anon { padding-bottom: calc(var(--space-6) + var(--space-2)); }
   /* The design system runs on its own, without the app's chrome. A wider column
      than the reading app uses, so a gallery of swatches and controls has room. */
+  /* The redesigned landing page's green runs right to the bottom edge. */
+  main.anon.preview { padding-bottom: 0; }
   main.bare {
     max-width: 900px;
     padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) var(--space-4) calc(var(--space-6) + var(--space-5));
