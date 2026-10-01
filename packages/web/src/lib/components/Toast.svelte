@@ -36,7 +36,7 @@
     background: var(--text); color: var(--bg); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm);
     box-shadow: var(--shadow); font-size: calc(var(--text-base) * var(--size-app)); z-index: 50;
   }
-  @media (min-width: 900px) { .toast { bottom: var(--space-5); } }
+  @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) { .toast { bottom: var(--space-5); } }
   /* The toast is an inverted chip, so the action word uses the toast color the
      theme picked for that ground, not the page accent (which lands on its own
      background here and disappears). */

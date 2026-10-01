@@ -48,7 +48,7 @@
   });
 </script>
 
-{#if session.user}<nav class="crumbs"><a href="/explore">Explore</a> <span aria-hidden="true">›</span></nav>{/if}
+{#if session.user}<nav class="crumbs"><a class="tap" href="/explore">Explore</a> <span aria-hidden="true">›</span></nav>{/if}
 
 {#if feed}
   <header class="profile">
@@ -63,7 +63,7 @@
           </div>
         {/if}
       </div>
-      <a class="host" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
+      <a class="host tap" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
       {#if feed.description}<p class="desc">{feed.description}</p>{/if}
     </div>
   </header>
@@ -108,9 +108,12 @@
   /* The title takes what room it needs; the buttons sit to its right and drop underneath when the row runs out. */
   .titlerow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-2) var(--space-3); }
   h1 { flex: 1 1 14ch; min-width: 0; font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
-  .actions { display: flex; gap: var(--space-2); align-items: center; flex: none; }
+  .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; flex: 0 1 auto; max-width: 100%; }
   /* 2px is an optical nudge under the title, not a spacing step. */
-  .host { display: inline-block; margin-top: 2px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
+  .host { display: inline-block; max-width: 100%; overflow-wrap: anywhere; margin-top: 2px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
+  /* The site link sits right under the follow and settings buttons, so its
+     touch area grows downward only and leaves theirs whole. */
+  @media (pointer: coarse) { .host::after { top: 0; } }
   .desc { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   /* 132px is the narrowest column that keeps the longest label, "Users following", on one line. */
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: var(--space-3) var(--space-2); margin: var(--space-4) 0 0; padding: var(--space-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }

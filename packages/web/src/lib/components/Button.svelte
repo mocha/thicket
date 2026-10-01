@@ -43,7 +43,7 @@
 
 {#if href}
   <a
-    class="btn {variant} {size}"
+    class="btn tap {variant} {size}"
     class:loading
     class:solid
     class:link
@@ -56,7 +56,7 @@
     {@render children()}
   </a>
 {:else}
-  <button class="btn {variant} {size}" class:loading class:solid class:link {type} disabled={off} {onclick} {...rest}>
+  <button class="btn tap {variant} {size}" class:loading class:solid class:link {type} disabled={off} {onclick} {...rest}>
     {#if loading}<span class="spin" aria-hidden="true"></span>{/if}
     {@render children()}
   </button>
@@ -76,7 +76,14 @@
     font-size: calc(var(--text-sm) * var(--size-app));
     font-weight: 600;
     color: var(--text-2);
-    white-space: nowrap;
+    /* One line, always, unless the label alone is wider than the space the
+       button sits in (large text on a small phone). Then it wraps rather than
+       pushing the page sideways. It never shrinks to make room for a
+       neighbor, so in a row it stays on one line as before. */
+    flex-shrink: 0;
+    max-width: 100%;
+    text-align: center;
+    text-wrap: balance;
     cursor: pointer;
     text-decoration: none;
     transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;

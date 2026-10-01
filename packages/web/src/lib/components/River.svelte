@@ -197,8 +197,11 @@
 
   /* ---- Paged layout ---- */
   const paged = $derived(display.layout === 'paged');
-  /** Compact cards are this tall, plus the gap; the frame is measured and divided. */
-  const CARD_H = 148;
+  /** Compact cards are at least this tall, plus the gap; the frame is measured and divided. */
+  const CARD_H = 152;
+  /** A card grows to share out whatever height is left over, up to this. Past it a card is mostly air. */
+  const CARD_MAX_H = 230;
+  let cardH = $state(CARD_H);
   const GAP = 12;
   const PAGEHEAD_H = 34;
   /** Cards go side by side when the frame is wide enough for more than one of at least this width; narrower than this a card reads oddly. */
@@ -221,7 +224,12 @@
     const h = Math.max(CARD_H + PAGEHEAD_H, window.innerHeight - top - navH - 26);
     frameTop = top; frameH = h;
     cols = Math.max(1, Math.floor((frame.clientWidth + GAP) / (CARD_MIN_W + GAP)));
-    perPage = cols * Math.max(1, Math.floor((h - PAGEHEAD_H) / (CARD_H + GAP)));
+    const rows = Math.max(1, Math.floor((h - PAGEHEAD_H + GAP) / (CARD_H + GAP)));
+    // The height left after the last whole card is shared among the cards
+    // rather than left as a blank band at the foot of the page: each gets a
+    // little taller, which on a phone is room for another line of the summary.
+    cardH = Math.min(CARD_MAX_H, Math.max(CARD_H, Math.floor((h - PAGEHEAD_H - (rows - 1) * GAP) / rows)));
+    perPage = cols * rows;
   }
   $effect(() => {
     if (!paged || !frame) return;
@@ -266,7 +274,7 @@
   <section class="river paged" aria-live="polite" bind:this={frame} style:height="{frameH}px">
     {#if pageItems.length}
       <div class="pagehead"><span class="when">{pageLabel}</span>{#if newAtOpen}<span class="newn">{newAtOpen} new{#if !caught} · <button type="button" onclick={caughtUp}>I’m caught up</button>{/if}</span>{/if}<span class="n">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
-      <div class="grid" style:grid-template-columns="repeat({cols}, minmax(0, 1fr))" style:grid-auto-rows="{CARD_H}px" style:gap="{GAP}px">
+      <div class="grid" style:grid-template-columns="repeat({cols}, minmax(0, 1fr))" style:grid-auto-rows="{cardH}px" style:gap="{GAP}px">
         {#each pageItems as item (item.id)}
           <ItemCard {item} {showSource} compact fresh={isFresh(item)} />
         {/each}
@@ -329,7 +337,7 @@
   /* Sticky within its own day, so the next day's heading pushes it away instead of piling on. Bleeds into main's side padding so card shadows don't peek past it. */
   .dayhead { position: sticky; top: 0; z-index: 5; margin: 0 calc(-1 * var(--space-3)); padding: var(--space-3) var(--space-3) var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text-2); background: var(--bg); }
   .dayhead::after { content: ''; position: absolute; left: 0; right: 0; bottom: calc(-1 * var(--space-2)); height: 8px; background: linear-gradient(var(--bg), transparent); pointer-events: none; }
-  @media (min-width: 900px) { .dayhead { margin: 0 calc(-1 * var(--space-5)); padding-left: var(--space-5); padding-right: var(--space-5); } }
+  @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) { .dayhead { margin: 0 calc(-1 * var(--space-5)); padding-left: var(--space-5); padding-right: var(--space-5); } }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
   .empty p { margin: 0 auto; max-width: 440px; }

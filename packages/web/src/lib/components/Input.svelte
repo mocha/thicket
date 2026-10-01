@@ -240,4 +240,11 @@
 
   .disabled { opacity: 0.55; }
   .disabled input { cursor: default; }
+  /* On a touchscreen a field's text is never under 16px: iOS Safari zooms the
+     whole page in when a smaller field takes focus, and doesn't zoom back out. */
+  @media (pointer: coarse) {
+    /* And the small size is still a full 44px to tap. */
+    .wrap.sm { min-height: 44px; }
+    input, .sm input { font-size: max(16px, calc(var(--text-base) * var(--size-app))); }
+  }
 </style>

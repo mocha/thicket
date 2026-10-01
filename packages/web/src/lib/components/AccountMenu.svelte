@@ -1,9 +1,11 @@
 <script lang="ts">
   /**
-   * The account menu: five plain doors. My page (the page at your address, showing what you share),
+   * The account menu: plain doors. My page (the page at your address, showing what you share),
    * Settings (your reading preferences), Account (your email and password —
    * how you get in, and back in), Import feeds (bringing a whole reader's
    * worth over, which is too big a thing to tuck inside Add a feed), and Log out.
+   * An admin also gets Admin here wherever the bottom bar is the navigation (a
+   * phone, or the paged layout), because the sidebar that holds it isn't there.
    *
    * On desktop it hangs off the avatar block at the foot of the sidebar,
    * opening upward from it, the way an account menu should. On the phone, where
@@ -18,6 +20,7 @@
   import Avatar from './Avatar.svelte';
   import Icon from './Icon.svelte';
   import { navWidth } from '$lib/navwidth.svelte';
+  import { display } from '$lib/display.svelte';
 
   let { anchor, onclose }: { anchor: HTMLElement | null; onclose: () => void } = $props();
 
@@ -36,7 +39,8 @@
   }
 
   $effect(() => {
-    sheet = !window.matchMedia('(min-width: 900px)').matches;
+    // The same condition the sidebar appears under; see Nav.svelte.
+    sheet = !window.matchMedia('(min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine)').matches;
     if (!sheet) place();
     const onDoc = (e: MouseEvent) => { if (!panel?.contains(e.target as Node) && !anchor?.contains(e.target as Node)) onclose(); };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onclose(); };
@@ -103,6 +107,12 @@
       <Icon name="import" size={20} />
       <span>Import feeds</span>
     </a>
+    {#if me.isAdmin && (sheet || display.layout === 'paged')}
+      <a role="menuitem" href="/admin" onclick={onclose}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z" /></svg>
+        <span>Admin</span>
+      </a>
+    {/if}
     <button type="button" role="menuitem" class="out" onclick={logout}>
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 12H4M11 8l-4 4 4 4M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4" /></svg>
       <span>Log out</span>
@@ -120,7 +130,7 @@
   }
   .panel.sheet {
     top: auto; left: 0; right: 0; bottom: 0; width: auto; max-width: none;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-3) var(--space-3) calc(var(--space-3) + var(--safe-b));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-3) max(var(--space-3), env(safe-area-inset-right, 0px)) calc(var(--space-3) + var(--safe-b)) max(var(--space-3), env(safe-area-inset-left, 0px));
     box-shadow: var(--shadow-sheet);
   }
   .who { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3) var(--space-3); border-bottom: 1px solid var(--line); margin-bottom: var(--space-2); }
@@ -131,7 +141,9 @@
     display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3); border-radius: var(--radius-sm);
     font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text-2); text-align: left;
   }
-  .panel a:hover, .panel button:hover { background: var(--surface-2); }
+  /* Only where there's a pointer: on a touchscreen the tap that opens the menu
+     lands where Log out appears, and would leave it looking selected. */
+  @media (hover: hover) { .panel a:hover, .panel button:hover { background: var(--surface-2); } }
   .panel svg { flex: none; color: var(--text-3); }
   .panel .out { color: var(--danger); }
   .panel .out svg { color: var(--danger); }

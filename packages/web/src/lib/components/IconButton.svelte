@@ -84,6 +84,7 @@
     class:on={pressed}
     class:toggle
     class:stretch
+    class:tap={!stretch}
     class:kb={byKeyboard}
     href={disabled ? undefined : href}
     aria-disabled={disabled ? 'true' : undefined}
@@ -100,6 +101,7 @@
     class:on={pressed}
     class:toggle
     class:stretch
+    class:tap={!stretch}
     class:kb={byKeyboard}
     {type}
     {disabled}

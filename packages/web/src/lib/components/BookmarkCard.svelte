@@ -96,7 +96,7 @@
   </a>
   {#if webHref(b.linkUrl) && b.linkLabel}
     <!-- The source post's discussion-style link (e.g. Hacker News's "Comments"), outside the body's own link. -->
-    <a class="card-extralink" href={webHref(b.linkUrl)} target="_blank" rel="noopener">{b.linkLabel} →</a>
+    <a class="card-extralink tap" href={webHref(b.linkUrl)} target="_blank" rel="noopener">{b.linkLabel} →</a>
   {/if}
   <div class="corner">
     {#if mine}

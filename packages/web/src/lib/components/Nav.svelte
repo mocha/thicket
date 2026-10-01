@@ -34,7 +34,7 @@
   const colHref = (slug: string) => (me ? collectionHref(me.handle, slug) : '/');
   const onCollection = (slug: string) => path === colHref(slug) || path.startsWith(colHref(slug) + '/');
   /** The phone's Collections tab opens your profile, which lists them, so it is current there too. */
-  const onAnyCollection = $derived(!!me && (path === meHref || path.startsWith(meHref + '/collections/')));
+  const onAnyCollection = $derived(!!me && (path === '/collections' || path.startsWith(meHref + '/collections/')));
   const current = (href: string) => path === href || (href !== '/' && path.startsWith(href + '/'));
   /**
    * An open post's address is under /feeds/, but reading one is not the same as
@@ -151,16 +151,20 @@
       <a href="/everything" aria-current={path === '/everything' ? 'page' : undefined}><span class="ic">{@render icon(icons.everything)}{#if fresh && rootMark?.count}<Badge variant="dot" class="pin" aria-label="New posts" />{/if}</span><span class="shortl">Everything</span></a>
     </li>
     <li class="mobile-only">
-      <a href={meHref} aria-current={onAnyCollection ? 'page' : undefined}><span class="ic">{@render icon(icons.collections)}{#if anyColNew}<Badge variant="dot" class="pin" aria-label="New posts" />{/if}</span><span class="shortl">Collections</span></a>
+      <a href="/collections" aria-current={onAnyCollection ? 'page' : undefined}><span class="ic">{@render icon(icons.collections)}{#if anyColNew}<Badge variant="dot" class="pin" aria-label="New posts" />{/if}</span><span class="shortl">Collections</span></a>
     </li>
     <li class="collections">
       <!-- Everything: the whole stream, its own item now — the job the old italic "All collections" row did. -->
       <a class="readall" href="/everything" aria-current={path === '/everything' ? 'page' : undefined}>{@render icon(icons.everything)}<span>Everything</span>{#if fresh && rootMark?.count}<Badge tone="accent" class="tail">{countText(rootMark)}</Badge>{/if}</a>
-      <!-- My collections: a group you can fold away. Your collections sit under it. -->
-      <button type="button" class="heading" aria-expanded={collectionsOpen.open} aria-controls="my-collections" onclick={toggleCollectionsOpen}>
-        {@render icon(icons.collections)}<span>Collections</span>
-        <span class="groupcaret"><Icon name="caret" size={14} stroke={2.5} dir={collectionsOpen.open ? 'down' : 'right'} /></span>
-      </button>
+      <!-- My collections: a group you can fold away. Your collections sit under it.
+           The word opens the Collections screen (the same one the bottom bar's
+           tab opens on a phone); the caret beside it folds the list. -->
+      <div class="heading" class:current={path === '/collections'}>
+        <a class="headlink" href="/collections" aria-current={path === '/collections' ? 'page' : undefined}>{@render icon(icons.collections)}<span>Collections</span></a>
+        <button type="button" class="groupcaret" aria-expanded={collectionsOpen.open} aria-controls="my-collections" aria-label={collectionsOpen.open ? 'Hide your collections' : 'Show your collections'} onclick={toggleCollectionsOpen}>
+          <Icon name="caret" size={14} stroke={2.5} dir={collectionsOpen.open ? 'down' : 'right'} />
+        </button>
+      </div>
       {#if collectionsOpen.open}
       <ul class="cols" id="my-collections" aria-label="Your collections">
         {#if showFilter}
@@ -294,16 +298,29 @@
   nav {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
     height: calc(var(--nav-h) + var(--safe-b)); padding-bottom: var(--safe-b);
+    /* On its side, a phone's notch and rounded corners eat into the ends of the bar. */
+    padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
     background: color-mix(in srgb, var(--surface) 88%, transparent);
     backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
     border-top: 1px solid var(--line);
   }
   .brand, .account, .long, li.admin, li.collections, .resize { display: none; }
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
-  li { flex: 1; min-width: 0; }
+  /* Each tab is as wide as its label plus an even share of the spare room, so
+     "Collections" gets more than "You" and none of them touch. Never narrower
+     than a finger. */
+  li { flex: 1 1 auto; min-width: 44px; }
+  /* How wide the five labels are in total, in ems of their own text, per app
+     font (measured). The labels follow the App size setting up to the point
+     where they'd collide on this screen, then stop growing: the window, less
+     an 8px gap per tab, shared out over that many ems. OpenDyslexic runs so
+     wide that on a small phone this takes it below its usual size. */
+  nav { --bar-em: 21; }
+  :global(:root[data-font-app='serif']) nav { --bar-em: 22; }
+  :global(:root[data-font-app='dyslexic']) nav { --bar-em: 29.5; }
   li > a, li.you > .tab {
     display: flex; width: 100%; flex-direction: column; align-items: center; justify-content: center; /* 2px is an optical gap between a tab's icon and its label. */ gap: 2px;
-    height: 100%; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
+    height: 100%; font-size: min(calc(var(--text-xs) * var(--size-app)), calc((100vw - 40px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) / var(--bar-em))); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
   }
   li > a[aria-current='page'] { color: var(--accent); }
   .mono { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; }
@@ -316,12 +333,16 @@
   nav :global(.inrow) { box-shadow: none; margin-right: var(--space-1); }
   li.you > .tab[aria-expanded='true'] .mono { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-  /* Desktop: the sidebar. */
-  @media (min-width: 900px) {
+  /* Desktop: the sidebar. A phone turned on its side can be wider than 900px
+     (the largest are 932 and up) but it is still a phone: short, and worked by
+     touch. It keeps the bottom bar. So the sidebar needs the width and either
+     some height or a mouse. The same condition is repeated wherever something
+     depends on the sidebar being there (search for "min-height: 501px"). */
+  @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) {
     nav:not(.paged) {
       top: 0; bottom: auto; right: auto; width: var(--nav-w); height: 100vh; height: 100dvh; padding: var(--space-4) var(--space-3) 0; overflow: hidden;
       display: flex; flex-direction: column;
-      border-top: 0; border-right: 1px solid var(--line); background: var(--bg); backdrop-filter: none;
+      border-top: 0; border-right: 1px solid var(--line); background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none;
     }
     nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-5); }
     nav:not(.paged) .long { display: inline; }
@@ -338,9 +359,12 @@
     /* Breathing room under the expanded list only; collapsed, the row spaces like its neighbors. */
     nav:not(.paged) li.collections .cols { margin-bottom: var(--space-2); }
     /* "My collections": a header you can click to fold the list away. Looks like a row, reads like a heading. */
-    nav:not(.paged) .heading { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); text-align: left; }
-    nav:not(.paged) .heading:hover { background: var(--surface-2); }
-    nav:not(.paged) .groupcaret { flex: none; margin-left: auto; display: flex; color: var(--text-3); }
+    /* One row, two things to press: the word is a link, the caret folds the list. */
+    nav:not(.paged) .heading { display: flex; align-items: center; width: 100%; border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); }
+    nav:not(.paged) .heading:hover, nav:not(.paged) .heading.current { background: var(--surface-2); }
+    nav:not(.paged) .headlink { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0 var(--space-2) var(--space-3); border-radius: var(--radius-sm); color: inherit; }
+    nav:not(.paged) .groupcaret { flex: none; display: grid; place-items: center; width: 32px; align-self: stretch; margin-right: var(--space-1); border-radius: var(--radius-sm); color: var(--text-3); }
+    nav:not(.paged) .groupcaret:hover { color: var(--text); }
     /* The filter box draws itself; the row only holds it off the list below. */
     nav:not(.paged) .cols .filterrow { margin-bottom: var(--space-1); }
     nav:not(.paged) .cols .nomatch { padding: var(--space-2) var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }

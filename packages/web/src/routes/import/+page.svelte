@@ -163,7 +163,7 @@
             {/each}
           </ul>
           {#if !g.open && ok.length > SHOWN}
-            <button class="more" onclick={() => (g.open = true)}>Show all {ok.length}</button>
+            <button class="more tap" onclick={() => (g.open = true)}>Show all {ok.length}</button>
           {/if}
         {/if}
 
@@ -254,14 +254,14 @@
   .more { margin-top: 8px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--accent); }
 
   /* Pinned to the bottom while a long review scrolls, so the main action is always in reach. On a
-     phone it sits on top of the tab bar; from 900px up there is no tab bar. */
+     phone it sits on top of the tab bar; where the sidebar shows there is no tab bar. */
   .footer {
     position: sticky; bottom: calc(var(--nav-h) + var(--safe-b, 0px)); z-index: 5;
     display: flex; justify-content: flex-end; gap: var(--space-2);
     padding: var(--space-3) 0; margin-top: var(--space-2);
     background: var(--bg);
   }
-  @media (min-width: 900px) { .footer { bottom: 0; padding-bottom: calc(var(--space-3) + var(--safe-b, 0px)); } }
+  @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) { .footer { bottom: 0; padding-bottom: calc(var(--space-3) + var(--safe-b, 0px)); } }
   @media (max-width: 520px) {
     .refused li { flex-direction: column; gap: 4px; }
     /* Two long labels don't fit side by side on a phone: stack them, main action on top. */

@@ -107,7 +107,7 @@
     </div>
     {#if col.description}<p class="desc">{col.description}</p>{/if}
     <p class="sub">
-      {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> ·&nbsp;{/if}{#if col.isMe && audienceTag(col.visibility)}<Badge class="beforetext">{audienceTag(col.visibility)}</Badge>·&nbsp;{/if}<button class="reveal" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<Icon name="caret" size={14} stroke={2.4} dir={showFeeds ? 'down' : 'right'} /></button>
+      {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> ·&nbsp;{/if}{#if col.isMe && audienceTag(col.visibility)}<Badge class="beforetext">{audienceTag(col.visibility)}</Badge>·&nbsp;{/if}<button class="reveal tap" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<Icon name="caret" size={14} stroke={2.4} dir={showFeeds ? 'down' : 'right'} /></button>
     </p>
   </header>
 
@@ -152,7 +152,7 @@
           <li>
             <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={36} />
             <div class="meta">
-              <a class="title" href={feedHref(f)}>{feedListName(f)}</a>
+              <a class="title tap" href={feedHref(f)}>{feedListName(f)}</a>
               <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · {relativeTime(f.lastItemAt)}{/if} · {f.followerCount} {f.followerCount === 1 ? 'follower' : 'followers'}</div>
             </div>
             {#if session.user}
@@ -180,8 +180,8 @@
 
 <style>
   .top { margin-bottom: var(--space-4); }
-  .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1; }
+  .titlerow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1 1 8ch; }
   .desc { margin: var(--space-2) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); overflow-wrap: anywhere; }
   .sub { margin: var(--space-1) 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
@@ -189,7 +189,7 @@
   .sub :global(.beforetext) { margin-right: var(--space-2); }
   .reveal { display: inline-flex; align-items: center; gap: var(--space-1); font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
   /* 2px of top padding is an optical nudge: the buttons sit on the title's line. */
-  .actions { flex: none; display: flex; gap: var(--space-2); align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
+  .actions { flex: 0 1 auto; max-width: 100%; display: flex; gap: var(--space-2); align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
   dialog::backdrop { background: var(--scrim); }
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-5) var(--space-4) calc(var(--space-4) + var(--safe-b)); box-shadow: var(--shadow-sheet); }
@@ -213,6 +213,10 @@
   .children .name { flex: 1; font-weight: 600; }
   .meta { flex: 1; min-width: 0; }
   .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* The name clips itself to trail off, which would clip its touch area (see
+     `.tap` in app.css) too. Padding inside the clip, cancelled by the margin,
+     makes it 44 tall to a finger without moving the row. */
+  @media (pointer: coarse) { .title { padding-block: 11px; margin-block: -11px; } }
   .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .count, .chev { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
   .chev { font-size: calc(var(--text-xl) * var(--size-app)); }

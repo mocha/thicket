@@ -34,7 +34,7 @@
     {/if}
   </svg>
   <div class="body">
-    {#if title}<p class="title">{#if href}<a {href}>{title}</a>{:else}{title}{/if}</p>{/if}
+    {#if title}<p class="title">{#if href}<a class="tap" {href}>{title}</a>{:else}{title}{/if}</p>{/if}
     {#if children}<div class="text">{@render children()}</div>{/if}
   </div>
   {#if dismissible}

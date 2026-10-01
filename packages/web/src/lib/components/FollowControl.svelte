@@ -47,7 +47,7 @@
   $effect(() => { if (following) void loadCollections(); });
 </script>
 
-<button class="follow" class:on={following} class:compact onclick={show} aria-haspopup="dialog" aria-expanded={open}>{label}</button>
+<button class="follow tap" class:on={following} class:compact onclick={show} aria-haspopup="dialog" aria-expanded={open}><span class="lbl">{label}</span></button>
 
 {#if open}
   <FollowSheet {feedId} bind:ids {name} {onchange} onclose={() => (open = false)} />
@@ -55,7 +55,10 @@
 
 <style>
   /* A collection name can be long; the button gives it room, then ellipsis. */
-  .follow { flex: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); background: var(--surface); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; white-space: nowrap; max-width: 20ch; overflow: hidden; text-overflow: ellipsis; }
+  .follow { flex: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); background: var(--surface); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; white-space: nowrap; max-width: min(20ch, 100%); }
+  /* The label does the clipping rather than the button, so the button's touch
+     area (see `.tap` in app.css) can reach past its edges. */
+  .lbl { display: block; overflow: hidden; text-overflow: ellipsis; }
   .follow.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
   .follow:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
   .follow.on:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }

@@ -52,6 +52,11 @@
     --forest: #1f3b29; --forest-deep: #15291c; --cream: #f6f1e8;
     --forest-ink-2: color-mix(in srgb, var(--cream) 80%, transparent);
     position: relative; color: var(--cream);
+    /* On a small phone the tilted phone picture is wider than the screen. The
+       body rule above stops the scrolling, but the page still measures as
+       wider than the window, and phone browsers will pan or zoom out to that
+       width. Clipped here, the page is exactly as wide as the window. */
+    overflow-x: clip;
     /* Full width of the window, while what's inside keeps the page's column. */
     margin-inline: calc(50% - 50vw); padding-inline: calc(50vw - 50%);
     /* One continuous green: a glow behind the phone up top and another lower left, fading to the deep edges. */

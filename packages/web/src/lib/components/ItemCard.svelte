@@ -48,6 +48,33 @@
     api.event('source_opened', { feedId: item.feedId, via: 'card' });
     popover = true;
   }
+
+  /**
+   * A compact card is a fixed height, so its summary gets whatever room the
+   * title and byline leave, which is rarely a whole number of lines. This
+   * shows only as many lines as fit whole (none, if there isn't room for
+   * one), so the last line is never sliced through the middle.
+   */
+  function wholeLines(node: HTMLElement, on: boolean) {
+    if (!on) return;
+    const fit = () => {
+      const lh = Number.parseFloat(getComputedStyle(node).lineHeight);
+      if (!lh) return;
+      // Measure the room with the paragraph's own caps off (it then takes all
+      // the height the card can give it), then cap it to whole lines: cutting the text at a line count alone would still let
+      // the next line show in whatever space was left over.
+      node.style.maxHeight = '';
+      node.style.setProperty('--summary-lines', '9');
+      const lines = Math.floor((node.clientHeight + 1) / lh);
+      node.style.setProperty('--summary-lines', String(Math.max(1, lines)));
+      node.style.maxHeight = `${Math.max(1, lines) * lh}px`;
+      node.style.visibility = lines < 1 ? 'hidden' : '';
+    };
+    const ro = new ResizeObserver(fit);
+    ro.observe(node);
+    fit();
+    return { destroy: () => ro.disconnect() };
+  }
 </script>
 
 <!--
@@ -77,7 +104,7 @@
     {/if}
     <h2 class="card-title" class:tight={compact}>{noOrphan(item.title ?? item.summary ?? item.url)}</h2>
     {#if item.title && item.summary && item.summary !== item.title}
-      <p class="card-summary" class:tight={compact}>{item.summary}</p>
+      <p class="card-summary" class:tight={compact} use:wholeLines={compact}>{item.summary}</p>
     {/if}
     {#if item.author}
       <footer>{item.author}</footer>
@@ -88,7 +115,7 @@
     <!-- The feed's whole description was a link elsewhere (e.g. Hacker News's
          discussion thread). It lives outside the body's link, since a link can't
          nest inside another. -->
-    <a class="card-extralink" class:compact href={webHref(item.linkUrl)} target="_blank" rel="noopener">{item.linkLabel} →</a>
+    <a class="card-extralink tap" class:compact href={webHref(item.linkUrl)} target="_blank" rel="noopener">{item.linkLabel} →</a>
   {/if}
 
   {#if compact && (myNote || others.length)}

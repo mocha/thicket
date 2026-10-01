@@ -64,7 +64,7 @@
   <p class="alt">New here? <a href="/signup{page.url.search}">Sign up</a></p>
   <!-- readthicket.com emails a reset link. A self-hosted copy has no email, so its admin resets passwords. Nothing until we know which, so neither flashes. -->
   {#if site.status?.hosted}
-    <p class="hint"><a href="/forgot-password">Forgot your password?</a></p>
+    <p class="hint"><a class="tap" href="/forgot-password">Forgot your password?</a></p>
   {:else if site.status}
     <p class="hint">Forgot your password? Ask whoever runs {site.status.name} to reset it. thicket never asks for your email, so it can’t send you a reset link.</p>
   {/if}

@@ -329,4 +329,15 @@ a { color: inherit; text-decoration: none; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 input { font: inherit; }
 img { display: block; max-width: 100%; }
+/* Tap targets. On a touchscreen a control can be tapped across at least 44×44
+   however small it is drawn: an invisible layer reaches past its edges to make
+   up the difference, and adds nothing to one already that big. Button and
+   IconButton carry `tap` themselves; anything else tappable and small takes
+   the class. Zero specificity, so a control that positions itself keeps its
+   own position. A control that clips its own overflow would clip the layer
+   too; clip an inner element instead. */
+@media (pointer: coarse) {
+  :where(.tap) { position: relative; }
+  :where(.tap)::after { content: ''; position: absolute; inset: min(0px, calc((100% - 44px) / 2)); }
+}
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

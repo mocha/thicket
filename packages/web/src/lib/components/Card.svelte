@@ -98,5 +98,7 @@
     -webkit-line-clamp: var(--summary-lines, 3);
     line-clamp: var(--summary-lines, 3);
     overflow: hidden;
+    /* A summary is often a bare web address; it wraps instead of running off the card. */
+    overflow-wrap: anywhere;
   }
 </style>

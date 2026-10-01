@@ -60,7 +60,7 @@
     <Nav />
   {:else if session.loaded}
     <header class="anon" class:home={front}>
-      <a class="brand" href="/"><img src="/icon.svg" alt="" width="32" height="32" /><Wordmark height={27} /></a>
+      <a class="brand tap" href="/"><img src="/icon.svg" alt="" width="32" height="32" /><Wordmark height={27} /></a>
       {#if front}
         <!-- The landing page: one click into Everything for someone signed in;
              otherwise Log in, and Sign up, which jumps to the form at the end of the page. -->
@@ -92,7 +92,7 @@
 <style>
   main {
     max-width: 640px; margin: 0 auto;
-    padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) var(--space-3) calc(var(--nav-h) + var(--safe-b) + var(--space-5));
+    padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) max(var(--space-3), env(safe-area-inset-right, 0px)) calc(var(--nav-h) + var(--safe-b) + var(--space-5)) max(var(--space-3), env(safe-area-inset-left, 0px));
   }
   main.anon { padding-bottom: calc(var(--space-6) + var(--space-2)); }
   /* The design system runs on its own, without the app's chrome. A wider column
@@ -104,7 +104,7 @@
     padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) var(--space-4) calc(var(--space-6) + var(--space-5));
   }
   /* Paged: room for the page-turn strips down both sides. */
-  main.paged { max-width: none; padding-left: calc(var(--pager-w) + var(--space-2)); padding-right: calc(var(--pager-w) + var(--space-2)); }
+  main.paged { max-width: none; padding-left: calc(env(safe-area-inset-left, 0px) + var(--pager-w) + var(--space-2)); padding-right: calc(env(safe-area-inset-right, 0px) + var(--pager-w) + var(--space-2)); }
   /* 80px is how far down the offline notice sits, a layout drop rather than a spacing step. */
   .unreachable { text-align: center; padding: 80px var(--space-5); color: var(--text-2); }
   .unreachable h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-2); color: var(--text); }
@@ -120,9 +120,12 @@
      the window. Drawn as a border image pushed out past both sides: it paints edge to
      edge but, unlike a wider box, can't make the page scroll sideways. */
   header.anon.home { padding-bottom: var(--space-4); border-bottom: 1px solid; border-image: linear-gradient(var(--line), var(--line)) 0 0 1 0 / 0 0 1px 0 / 0 100vw; }
-  @media (min-width: 900px) {
+  /* Where the sidebar shows; the same condition as in Nav.svelte. */
+  @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) {
     /* The left margin is column math, not spacing: the sidebar plus half of what's left over. */
     main:not(.anon):not(.paged):not(.bare) { margin-left: calc(var(--nav-w) + max(24px, (100vw - var(--nav-w) - 640px) / 2)); padding: calc(var(--space-5) + var(--space-1)) var(--space-5) calc(var(--space-6) + var(--space-5)); }
+  }
+  @media (min-width: 900px) {
     main.anon, header.anon { max-width: 680px; }
     main.home, header.anon.home { max-width: 1040px; }
     main.anon { padding: var(--space-5) var(--space-5) calc(var(--space-6) + var(--space-5)); }

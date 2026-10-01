@@ -92,11 +92,11 @@
 </script>
 
 {#if item}
-  <nav class="crumbs"><a href={backHref}>{source}</a> <span aria-hidden="true">›</span></nav>
+  <nav class="crumbs"><a class="tap" href={backHref}>{source}</a> <span aria-hidden="true">›</span></nav>
 
   <article class="post">
     <header>
-      <a class="who" href={backHref}>
+      <a class="who tap" href={backHref}>
         <SourceIcon feedId={item.feedId} hasIcon={item.hasIcon} name={source} />
         <span class="name">{source}</span>
       </a>
@@ -159,7 +159,7 @@
   h1 { margin: var(--space-4) 0 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
   .byline { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); display: flex; gap: var(--space-2); flex-wrap: wrap; }
   .hero { width: 100%; border-radius: var(--radius-sm); margin-top: var(--space-4); background: var(--surface-2); }
-  .summary { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: var(--space-4) 0 0; }
+  .summary { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: var(--space-4) 0 0; overflow-wrap: anywhere; }
 
   footer { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); }
   .note { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.5; }

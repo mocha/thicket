@@ -207,6 +207,7 @@
     <div bind:this={root} class="track" role="tablist" aria-label={label}>
       {#each tabs as t, i (t.value)}
         <button
+          class="tap"
           bind:this={btns[i]}
           type="button"
           role="tab"

@@ -1,7 +1,13 @@
 <script lang="ts">
-  /** /collections no longer exists: your profile lists your collections. Old links land there. */
-  import { goto } from '$app/navigation';
+  /**
+   * Your collections, on their own: the screen the Collections tab opens. It is
+   * the Collections section of your profile and nothing else of it, so it is
+   * drawn by the same component and can't drift from what the profile shows.
+   */
   import { session } from '$lib/session.svelte';
-  import { profileHref } from '$lib/api';
-  $effect(() => { if (session.loaded) void goto(session.user ? profileHref(session.user.handle) : '/', { replaceState: true }); });
+  import ProfilePage from '$lib/components/ProfilePage.svelte';
 </script>
+
+{#if session.user}
+  <ProfilePage handle={session.user.handle} only="collections" />
+{/if}

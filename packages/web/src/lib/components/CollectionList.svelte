@@ -108,7 +108,7 @@
     {/snippet}
   </Field>
 {/if}
-<div class="frame">
+<div class="frame" style:--floor-rows={visible.length > 2 ? 2.5 : visible.length || (filter.trim() ? 1 : 0)}>
   <div class="scroll" bind:this={list}>
     <ul class="checks">
       {#each visible as c (c.id)}
@@ -150,7 +150,7 @@
           {/snippet}
         </Field>
       {:else}
-        <button type="button" class="start" onclick={startNaming} {disabled}>
+        <button type="button" class="start tap" onclick={startNaming} {disabled}>
           <span class="plus" aria-hidden="true">+</span>
           <span class="name">Add a new collection</span>
         </button>
@@ -161,8 +161,13 @@
 {#if hint && collectionStore.loaded}<p class="hint">{hint}</p>{/if}
 
 <style>
-  /* The border holds both the scrolling rows and the pinned new-collection row. */
-  .frame { display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+  /* The border holds both the scrolling rows and the pinned new-collection row.
+     On a short screen (keyboard up, phone on its side) the list gives up height
+     so its Sheet fits, but only down to two and a half rows (--floor-rows; 48px
+     is a row, 53px the pinned row and its line): the third row is cut through
+     its name, which says "there's more" the same way the desktop cap below
+     does. Past that, whatever holds it scrolls. */
+  .frame { display: flex; flex-direction: column; min-height: calc(var(--floor-rows) * 48px * var(--size-app) + 53px); flex: 0 1 auto; border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
   .scroll { overflow-y: auto; min-height: 0; flex: 0 1 auto; max-height: 38vh; padding: 0 var(--space-3); }
   /* Desktop cap. Must come after the base .scroll rule above: same specificity,
      so source order decides, and the list should top out at ~7 rows and scroll,
