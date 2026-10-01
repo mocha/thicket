@@ -1,6 +1,9 @@
 /**
- * Rate limiting for the endpoints that guess or send: login, sign-up, and the
- * ones that email someone (forgot password, confirmation links).
+ * Every limit thicket puts on what an account or an address may do, in one
+ * place so each can be tuned from evidence: how often (LIMITS) and how long
+ * (MAX_LENGTH). It began with the endpoints that guess or send (login,
+ * sign-up, and the ones that email someone) and now also covers saving
+ * bookmarks, writing notes and the import page (issue #136).
  *
  * In-process fixed windows in a Map. Deliberate shortcut, the same one the
  * scheduler makes: this instance is one process, so a shared store would be
@@ -30,15 +33,19 @@ setInterval(() => {
 
 export type Limit = { limit: number; windowMs: number };
 
-/** Count one attempt against a key. `ok: false` once the window is used up. */
-export function hit(key: string, { limit, windowMs }: Limit): { ok: boolean; retryAfterS: number } {
+/**
+ * Count one attempt against a key. `ok: false` once the window is used up.
+ * `cost` is for a request that stands for several things at once (a batch of
+ * feeds to check): it counts as that many.
+ */
+export function hit(key: string, { limit, windowMs }: Limit, cost = 1): { ok: boolean; retryAfterS: number } {
   const now = Date.now();
-  const w = windows.get(key);
+  let w = windows.get(key);
   if (!w || w.resetAt <= now) {
-    windows.set(key, { count: 1, resetAt: now + windowMs });
-    return { ok: true, retryAfterS: 0 };
+    w = { count: 0, resetAt: now + windowMs };
+    windows.set(key, w);
   }
-  w.count++;
+  w.count += cost;
   if (w.count > limit) return { ok: false, retryAfterS: Math.max(1, Math.ceil((w.resetAt - now) / 1000)) };
   return { ok: true, retryAfterS: 0 };
 }
@@ -78,6 +85,63 @@ export const LIMITS = {
   forgotTarget: { limit: 3, windowMs: 60 * 60_000 } satisfies Limit,
   /** Per account. Confirmation links sent from the Account page. */
   emailSend: { limit: 5, windowMs: 60 * 60_000 } satisfies Limit,
+
+  // Safety limits on saving (issue #136). Bookmarks are unlimited and kept for
+  // good, so these are what stops an account being used as free storage. They
+  // are the same for every account and set far above anything a reader does.
+  /**
+   * Per account. Bookmarks saved in a day, by any route: from a post, from an
+   * address, copied from someone's page, or put back with Undo. A heavy reader
+   * saves tens a day.
+   *
+   * Counted here, in memory, and not by counting the day's rows: an Undo sends
+   * its own saved-at time back from the browser, so a count of "rows saved
+   * today" could be walked around by dating them last year. The cost is that a
+   * restart starts the day again, which loosens the limit by one more day's
+   * worth per restart and no further.
+   */
+  savesPerDay: { limit: 500, windowMs: 24 * 3600_000 } satisfies Limit,
+  /** Per account. Notes written or rewritten in a day; every save of the editor is one. */
+  noteWritesPerDay: { limit: 500, windowMs: 24 * 3600_000 } satisfies Limit,
+
+  // The import page. Both make thicket fetch an address somebody else supplied.
+  /** Per account. Lists of feeds fetched by link. */
+  importLink: { limit: 30, windowMs: 60 * 60_000 } satisfies Limit,
+  /**
+   * Per account, counted per feed checked (a request checks up to eight). A
+   * real import of a few hundred feeds, with its second tries, fits in one go.
+   * Past it the import still works: the unchecked feeds are added and the
+   * scheduler finds out about them at its own pace. It was 400 requests an
+   * hour, which is 3,200 feeds.
+   */
+  importCheck: { limit: 600, windowMs: 60 * 60_000 } satisfies Limit,
+};
+
+/**
+ * How long each thing a browser sends for a bookmark may be, in characters.
+ * Longer is refused with a message, never cut short. Each is set well above
+ * the longest real one seen in feeds (in brackets), because putting a removed
+ * bookmark back sends the post's own words back, and that must never fail.
+ */
+export const MAX_LENGTH = {
+  /** A bookmark's address [653]. */
+  url: 4_000,
+  /** [2,469: some feeds put the whole post in the title.] */
+  title: 5_000,
+  /** [280: thicket trims a post's summary when it reads the feed.] */
+  summary: 2_000,
+  /** [1,725: a paper with every author listed.] */
+  author: 5_000,
+  /** The feed's name [143]. */
+  siteTitle: 500,
+  /**
+   * The picture's address. Nearly all are short, but a few feeds put the
+   * picture itself in the address (a data: URI) [382,274], and a bookmark of
+   * one of those has to survive Undo.
+   */
+  imageUrl: 500_000,
+  /** A note is a margin note, not a post. Two pages of a Word document, roughly. */
+  note: 2_000,
 };
 
 /** The 429 body, shaped like every other auth error so the web client renders it unchanged. */
@@ -85,4 +149,10 @@ export function tooMany(c: Context, retryAfterS: number, message: string) {
   c.header("retry-after", String(retryAfterS));
   const mins = Math.ceil(retryAfterS / 60);
   return c.json({ error: `${message} Try again in ${mins === 1 ? "a minute" : `${mins} minutes`}.` }, 429);
+}
+
+/** The same, for a limit whose message already says when it ends: a day is too long to count in minutes. */
+export function tooManyFor(c: Context, retryAfterS: number, message: string) {
+  c.header("retry-after", String(retryAfterS));
+  return c.json({ error: message, retryAfterS }, 429);
 }

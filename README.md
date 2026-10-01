@@ -93,6 +93,12 @@ you scroll. Both are load-bearing; most of the data model follows from them.
 Plain JSON over a session cookie. Public reads (a profile, a public
 collection, its river) work signed out.
 
+Every limit on how often and how much is a named entry in
+`packages/api/src/lib/ratelimit.ts`: sign-in tries, saving bookmarks and
+writing notes (500 a day each), the import page's feed check, and the longest
+each bookmark field may be. Past a limit the answer is `429` with
+`Retry-After`; an over-long field is a `400` that says which one.
+
 **Accounts and sessions**
 
 | Method | Path | Purpose |
