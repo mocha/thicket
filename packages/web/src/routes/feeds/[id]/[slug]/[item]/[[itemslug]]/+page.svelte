@@ -144,7 +144,7 @@
 {/if}
 
 <style>
-  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); margin: 0 0 var(--space-3); }
+  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); margin: 0 0 var(--space-3); }
   .crumbs a { color: var(--text-2); }
   .crumbs a:hover { color: var(--text); }
 
@@ -153,11 +153,11 @@
   .who { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: inherit; }
   .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dot { color: var(--text-3); }
-  header time { color: var(--text-3); white-space: nowrap; }
+  header time { color: var(--text-2); white-space: nowrap; }
   .spacer { flex: 1; }
 
   h1 { margin: var(--space-4) 0 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
-  .byline { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .byline { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: flex; gap: var(--space-2); flex-wrap: wrap; }
   .hero { width: 100%; border-radius: var(--radius-sm); margin-top: var(--space-4); background: var(--surface-2); }
   .summary { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: var(--space-4) 0 0; }
 
@@ -165,6 +165,6 @@
   .note { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.5; }
   .note a { color: var(--accent); }
 
-  .empty { color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
+  .empty { color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); }
   .empty a { color: var(--accent); }
 </style>

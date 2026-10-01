@@ -4,6 +4,11 @@
    * person chose, lets them drag to reposition and zoom, then sends the square
    * they framed.
    *
+   * Dragging is never the only way: four arrow buttons move the photo a step
+   * at a time, for anyone using a keyboard or who can't hold and drag, and the
+   * slider does the zooming. It is a real dialog, so focus moves into it, stays
+   * in it, and goes back to where it was when it closes; Escape cancels.
+   *
    * The cropping library is loaded only once this dialog opens (a dynamic
    * import), so it never weighs down the rest of the app — most people never
    * change their picture. While it downloads, we show a short "Preparing…".
@@ -14,6 +19,8 @@
   import type { Component } from 'svelte';
   import { authApi, ApiError } from '$lib/api';
   import { showToast } from '$lib/toast.svelte';
+  import IconButton from './IconButton.svelte';
+  import Button from './Button.svelte';
 
   let { file, onclose, onsaved }: { file: File; onclose: () => void; onsaved: (avatarUpdatedAt: string) => void } = $props();
 
@@ -29,6 +36,26 @@
   // The framed square, in the source image's own pixels. Set as they drag.
   let area = $state<{ x: number; y: number; width: number; height: number } | null>(null);
   let saving = $state(false);
+  let dialog = $state<HTMLDialogElement | null>(null);
+  let stage = $state<HTMLElement | null>(null);
+
+  $effect(() => { dialog?.showModal(); });
+
+  /**
+   * One press of an arrow. The photo can't be pushed so far that the circle
+   * runs off its edge — the same limit dragging has, worked out from the
+   * photo and the circle as drawn.
+   */
+  const STEP = 16;
+  function nudge(dx: number, dy: number) {
+    const img = stage?.querySelector<HTMLImageElement>('.svelte-easy-crop-image');
+    const ring = stage?.querySelector<HTMLElement>('.svelte-easy-crop-area');
+    if (!img || !ring) return;
+    const maxX = Math.max(0, (img.width * zoom - ring.offsetWidth) / 2);
+    const maxY = Math.max(0, (img.height * zoom - ring.offsetHeight) / 2);
+    const clamp = (v: number, max: number) => Math.min(max, Math.max(-max, v));
+    crop = { x: clamp(crop.x + dx * STEP, maxX), y: clamp(crop.y + dy * STEP, maxY) };
+  }
 
   $effect(() => {
     const u = URL.createObjectURL(file);
@@ -66,6 +93,8 @@
     try {
       const blob = await croppedBlob();
       const { avatarUpdatedAt } = await authApi.uploadAvatar(blob);
+      // Closed first, so focus goes back to where it was before the dialog is taken away.
+      dialog?.close();
       onsaved(avatarUpdatedAt);
     } catch (e) {
       // A dropped session is the picture's fault, not the person's — say so.
@@ -78,12 +107,12 @@
   }
 </script>
 
-<div class="scrim" role="presentation" onclick={onclose}></div>
-<div class="panel" role="dialog" aria-modal="true" aria-label="Position your photo">
-  <h2>Position your photo</h2>
-  <p class="help">Drag to move, and pinch or use the slider to zoom. What’s in the circle is your picture.</p>
+<dialog bind:this={dialog} {onclose} oncancel={(e) => { if (saving) e.preventDefault(); }} onclick={(e) => { if (e.target === dialog && !saving) dialog?.close(); }} aria-labelledby="crop-title">
+<div class="panel">
+  <h2 id="crop-title">Position your photo</h2>
+  <p class="help">Drag or use the arrows to move, and pinch or use the slider to zoom. What’s in the circle is your picture.</p>
 
-  <div class="stage">
+  <div class="stage" bind:this={stage}>
     {#if Cropper}
       <Cropper image={url} bind:crop bind:zoom aspect={1} cropShape="round" showGrid={false} oncropcomplete={(e: { pixels: typeof area }) => (area = e.pixels)} />
     {:else if loadError}
@@ -93,35 +122,46 @@
     {/if}
   </div>
 
-  <label class="zoom">
+  <div class="ctrl" role="group" aria-label="Move photo">
+    <span aria-hidden="true">Move</span>
+    <div class="arrows">
+      <IconButton icon="caret" dir="left" variant="bordered" label="Move photo left" disabled={!Cropper} onclick={() => nudge(-1, 0)} />
+      <IconButton icon="caret" dir="up" variant="bordered" label="Move photo up" disabled={!Cropper} onclick={() => nudge(0, -1)} />
+      <IconButton icon="caret" dir="down" variant="bordered" label="Move photo down" disabled={!Cropper} onclick={() => nudge(0, 1)} />
+      <IconButton icon="caret" dir="right" variant="bordered" label="Move photo right" disabled={!Cropper} onclick={() => nudge(1, 0)} />
+    </div>
+  </div>
+
+  <label class="ctrl">
     <span>Zoom</span>
     <input type="range" min="1" max="3" step="0.01" bind:value={zoom} disabled={!Cropper} />
   </label>
 
   <div class="row">
-    <button type="button" class="ghost" onclick={onclose} disabled={saving}>Cancel</button>
-    <button type="button" class="save" onclick={save} disabled={saving || !area}>{saving ? 'Saving…' : 'Save photo'}</button>
+    <Button onclick={() => dialog?.close()} disabled={saving}>Cancel</Button>
+    <Button variant="primary" onclick={save} disabled={saving || !area}>{saving ? 'Saving…' : 'Save photo'}</Button>
   </div>
 </div>
+</dialog>
 
 <style>
-  .scrim { position: fixed; inset: 0; z-index: 70; background: var(--scrim); }
+  dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
+  dialog::backdrop { background: var(--scrim); }
   .panel {
-    position: fixed; z-index: 71; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
     width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto;
     background: var(--surface); color: var(--text); border-radius: var(--radius); padding: var(--space-4);
     box-shadow: var(--shadow-dialog), 0 0 0 1px var(--line);
   }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-2); }
-  .help { margin: 0 0 var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .help { margin: 0 0 var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   /* The cropper fills this box; it needs an explicit height to lay itself out. */
   .stage { position: relative; width: 100%; height: 300px; border-radius: var(--radius-md); overflow: hidden; background: var(--bg); }
-  .status { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: 0 var(--space-4); text-align: center; }
-  .zoom { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-4) 0 var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .zoom input { flex: 1; accent-color: var(--accent); }
-  .row { display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-4); }
-  button { padding: var(--space-3) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .ghost { color: var(--text-2); background: var(--surface); }
-  .save { color: var(--accent-ink); background: var(--accent); border-color: transparent; }
-  button:disabled { opacity: 0.5; }
+  .status { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: 0 var(--space-4); text-align: center; }
+  /* Move and Zoom: a name on the left, its control after it, the two names the same width so the controls line up. */
+  .ctrl { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  .ctrl > span { flex: none; width: 3.2em; }
+  .ctrl input { flex: 1; accent-color: var(--accent); }
+  .arrows { display: flex; gap: var(--space-2); }
+  .row { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4); }
 </style>

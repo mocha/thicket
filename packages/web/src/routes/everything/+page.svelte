@@ -30,6 +30,8 @@
   const emailNudge = $derived(site.status?.hosted && me && !me.emailConfirmedAt ? (me.email ? 'confirm' : 'add') : null);
 </script>
 
+<svelte:head><title>Everything · thicket</title></svelte:head>
+
 {#if emailNudge === 'add'}
   <div class="nudge"><Banner tone="warning" title="Add an email to your account" href="/account">If you forget your password, an email is the only way back in.</Banner></div>
 {:else if emailNudge === 'confirm'}
@@ -67,10 +69,11 @@
 <style>
   .nudge { margin-bottom: var(--space-4); }
   .top { margin-bottom: calc(var(--space-5) + var(--space-1)); }
-  .titlerow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  /* Wraps: at a big text size on a phone the button drops under the title instead of sliding beneath it. */
+  .titlerow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; min-width: 0; }
   /* 2px is an optical nudge under the title, not a spacing step. */
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 62ch; }
+  .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 62ch; }
   /* The welcome block breathes more than a regular page top: room above the
      headline, a real pause before the button, and a clear break before the
      second way in. */

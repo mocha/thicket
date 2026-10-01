@@ -118,9 +118,17 @@
   {/if}
 
   {#if imp.checking || imp.toCheck}
-    <div class="progress" aria-live="polite">
-      <div class="bar"><span style="width: {imp.toCheck ? Math.round((imp.checked / imp.toCheck) * 100) : 100}%"></span></div>
-      <span>
+    <!-- The bar says how far along it is to anyone who asks; the count beside it
+         ticks up once per feed, which is too much to read out, so only each
+         change of stage is announced (the hidden line below). -->
+    <div class="progress">
+      <div class="bar" role="progressbar" aria-label="Checking feeds" aria-valuemin={0} aria-valuemax={imp.toCheck || 1} aria-valuenow={imp.toCheck ? imp.checked : 1}><span style="width: {imp.toCheck ? Math.round((imp.checked / imp.toCheck) * 100) : 100}%"></span></div>
+      <span class="visually-hidden" role="status">
+        {#if imp.retrying}Trying {imp.retrying} {imp.retrying === 1 ? 'feed' : 'feeds'} again that didn’t answer.
+        {:else if imp.checking}Checking {imp.toCheck} {imp.toCheck === 1 ? 'feed' : 'feeds'}.
+        {:else}Checked {imp.toCheck} {imp.toCheck === 1 ? 'feed' : 'feeds'} thicket hadn’t seen before.{/if}
+      </span>
+      <span aria-hidden="true">
         {#if imp.retrying}Trying {imp.retrying} {imp.retrying === 1 ? 'feed' : 'feeds'} again that didn’t answer… {imp.checked} of {imp.toCheck}
         {:else if imp.checking}Checking feeds… {imp.checked} of {imp.toCheck}
         {:else}Checked {imp.toCheck} {imp.toCheck === 1 ? 'feed' : 'feeds'} thicket hadn’t seen before.{/if}
@@ -215,16 +223,16 @@
   h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
   h2 + .help { margin-top: -8px; }
   h3 { font-size: calc(14px * var(--size-app)); margin: 16px 0 8px; color: var(--text-2); }
-  .help { margin: 0 0 12px; font-size: calc(14px * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
+  .help { margin: 0 0 12px; font-size: calc(14px * var(--size-app)); color: var(--text-2); line-height: 1.45; max-width: 66ch; }
   .lede { margin: 0 0 10px; color: var(--text-2); line-height: 1.45; max-width: 66ch; }
-  .fine { margin: 0 0 12px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .fine { margin: 0 0 12px; font-size: calc(13px * var(--size-app)); color: var(--text-2); }
   .row { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
   .linkrow { display: flex; align-items: center; gap: var(--space-2); }
   .linkrow :global(.link) { flex: 1; min-width: 0; }
   input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .bad { color: var(--danger); margin: 0 0 14px; font-size: calc(14px * var(--size-app)); }
 
-  .progress { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .progress { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; font-size: calc(13px * var(--size-app)); color: var(--text-2); }
   .bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
   .bar span { display: block; height: 100%; background: var(--accent); transition: width 200ms ease; }
 
@@ -233,24 +241,25 @@
   .keep { display: flex; align-items: center; gap: 8px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); cursor: pointer; }
   .keep input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
   .gname { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-  .name { font-size: calc(18px * var(--size-app)); font-weight: 700; padding: 6px 8px; margin-left: -8px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--text); font-family: inherit; width: 100%; }
-  .name:hover:not(:disabled) { border-color: var(--line); }
-  .gname small { font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .name { font-size: calc(18px * var(--size-app)); font-weight: 700; padding: 6px 8px; margin-left: -8px; border-radius: 8px; border: 1px solid var(--field-line); background: transparent; color: var(--text); font-family: inherit; width: 100%; }
+  /* A folder that's switched off isn't being named, so its box goes back to plain text. */
+  .name:disabled { border-color: transparent; }
+  .gname small { font-size: calc(13px * var(--size-app)); color: var(--text-2); }
 
   .feeds { list-style: none; margin: 12px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; }
   .feeds li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-top: 1px solid var(--line); font-size: calc(14px * var(--size-app)); }
   .feeds li:first-child { border-top: 0; }
-  .feeds li.why { border-top: 0; padding-top: 0; font-size: calc(12px * var(--size-app)); color: var(--text-3); }
+  .feeds li.why { border-top: 0; padding-top: 0; font-size: calc(12px * var(--size-app)); color: var(--text-2); }
   .fname { flex: 1; min-width: 0; display: flex; flex-direction: column; font-weight: 600; overflow-wrap: anywhere; color: var(--text); }
-  .fname small { font-weight: 400; font-size: calc(12px * var(--size-app)); color: var(--text-3); }
-  .tag { flex: none; font-size: calc(12px * var(--size-app)); font-weight: 600; color: var(--text-3); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }
+  .fname small { font-weight: 400; font-size: calc(12px * var(--size-app)); color: var(--text-2); }
+  .tag { flex: none; font-size: calc(12px * var(--size-app)); font-weight: 600; color: var(--text-2); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }
   .tag.good { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
   .tag.unsure { color: var(--text-2); border-style: dashed; }
   .tag.wait { border-color: transparent; }
   .refused { border-color: color-mix(in srgb, var(--danger) 30%, var(--line)); }
   .refused li { align-items: flex-start; }
   .reason { flex: 1.2; min-width: 0; font-size: calc(13px * var(--size-app)); color: var(--text-2); }
-  .count { flex: none; font-size: calc(13px * var(--size-app)); color: var(--text-3); }
+  .count { flex: none; font-size: calc(13px * var(--size-app)); color: var(--text-2); }
   .more { margin-top: 8px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--accent); }
 
   /* Pinned to the bottom while a long review scrolls, so the main action is always in reach. On a

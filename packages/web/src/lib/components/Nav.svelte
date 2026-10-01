@@ -303,9 +303,15 @@
   li { flex: 1; min-width: 0; }
   li > a, li.you > .tab {
     display: flex; width: 100%; flex-direction: column; align-items: center; justify-content: center; /* 2px is an optical gap between a tab's icon and its label. */ gap: 2px;
-    height: 100%; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-3); -webkit-tap-highlight-color: transparent; white-space: nowrap;
+    height: 100%; font-size: calc(var(--text-xs) * var(--bar-scale)); color: var(--text-2); -webkit-tap-highlight-color: transparent; white-space: nowrap;
   }
-  li > a[aria-current='page'] { color: var(--accent); }
+  /* Bold as well as green, so the current tab still stands out for someone who can't tell the green from the gray. */
+  li > a[aria-current='page'] { color: var(--accent); font-weight: 700; }
+  /* A label too long for its tab trails off rather than running into its neighbor. */
+  .shortl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  /* Drawn just inside the tab, in the accent color like the kit's other rings:
+     the browser's own ring sits outside it, where the screen edge cuts it off. */
+  li > a:focus-visible, li.you > .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius-sm); }
   .mono { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; }
   /* "What's new": a dot on a tab, a count in the sidebar. */
   .ic { position: relative; display: grid; place-items: center; }
@@ -343,7 +349,7 @@
     nav:not(.paged) .groupcaret { flex: none; margin-left: auto; display: flex; color: var(--text-3); }
     /* The filter box draws itself; the row only holds it off the list below. */
     nav:not(.paged) .cols .filterrow { margin-bottom: var(--space-1); }
-    nav:not(.paged) .cols .nomatch { padding: var(--space-2) var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+    nav:not(.paged) .cols .nomatch { padding: var(--space-2) var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
     /* The Everything row is a normal-height row: undo the full-height stretch the bottom-bar tabs use. */
     nav:not(.paged) .readall { height: auto; }
     /* It carries the whole stream's "what's new" count, pushed to the row's end. */
@@ -369,7 +375,7 @@
     nav:not(.paged) .who:hover { background: var(--surface-2); }
     nav:not(.paged) .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
     nav:not(.paged) .dn { font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    nav:not(.paged) .h { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    nav:not(.paged) .h { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     nav:not(.paged) .who .chev { flex: none; margin-left: auto; display: flex; color: var(--text-3); }
 
     /* The drag handle: an 8px strip along the sidebar's edge. The edge's own

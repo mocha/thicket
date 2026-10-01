@@ -179,11 +179,11 @@
   /* No browser margin, so the box and the + in the last row share one column. */
   .checks input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
   .name { flex: 1; font-weight: 500; }
-  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); transition: color 300ms; }
+  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); transition: color 300ms; }
   .count.flash { color: var(--accent); font-weight: 700; animation: pop 1.2s ease-out; }
   @keyframes pop { 0% { transform: scale(1.4); } 30% { transform: scale(1); } 100% { transform: scale(1); } }
-  .nomatch { margin: 0; padding: var(--space-3) var(--space-2); color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .hint { margin: calc(-1 * var(--space-1)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .nomatch { margin: 0; padding: var(--space-3) var(--space-2); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .hint { margin: calc(-1 * var(--space-1)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   /* Lined up with the rows above: the + sits where a checkbox would. */
   .new { display: flex; align-items: center; gap: var(--space-3); margin: 0 var(--space-3); padding: var(--space-2) var(--space-1); min-height: 52px; border-top: 1px solid var(--line); }
   .new.alone { border-top: 0; }

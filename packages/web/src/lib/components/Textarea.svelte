@@ -130,7 +130,7 @@
     display: flex;
     min-width: 0;
     padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--line);
+    border: 1px solid var(--field-line);
     border-radius: var(--radius-sm);
     background: var(--surface);
     transition: border-color 0.12s ease;

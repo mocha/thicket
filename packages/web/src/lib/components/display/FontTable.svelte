@@ -56,7 +56,7 @@
   .row + .row { border-top: 1px solid var(--line); }
   /* 2px is an optical gap between the role name and its note, not spacing. */
   .who { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); min-width: 0; }
-  .who small { font-weight: 400; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.3; }
+  .who small { font-weight: 400; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.3; }
   /* The face row sits at the right-hand end, and each option is set in the
      face it offers. OpenDyslexic runs large, so it is knocked down a size. */
   .row :global(.faces) { justify-self: end; }
@@ -82,7 +82,7 @@
   .preview { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: var(--space-5) var(--space-4) var(--space-4); border-radius: var(--radius-sm); background: var(--bg); border: 1px dashed var(--text-3); }
   /* top: -9px straddles the tag on the dashed border, sized to the tag's own height, not the spacing scale.
      1px of its padding is the same kind of optical nudge. */
-  .tag { position: absolute; top: -9px; left: var(--space-3); padding: 1px var(--space-2); border-radius: var(--radius-pill); background: var(--surface); border: 1px dashed var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); }
+  .tag { position: absolute; top: -9px; left: var(--space-3); padding: 1px var(--space-2); border-radius: var(--radius-pill); background: var(--surface); border: 1px dashed var(--text-3); font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); }
   .preview p { margin: 0; }
   .h { font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.01em; }
   .t { font-family: var(--font-reading); font-size: calc(var(--text-sm) * var(--size-reading)); line-height: 1.45; color: var(--text-2); }

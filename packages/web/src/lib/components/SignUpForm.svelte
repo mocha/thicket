@@ -94,15 +94,16 @@
   /* No card of its own: the form sits straight on the landing page's green,
      so the labels and small lines read in cream. The fields stay light, so
      they're still plainly fields. */
-  .box { --on-green: #f6f1e8; --on-green-2: color-mix(in srgb, #f6f1e8 78%, transparent); color: var(--on-green); }
+  .box { --on-green: #f6f1e8; --on-green-2: color-mix(in srgb, #f6f1e8 78%, transparent); --on-green-danger: #e38c7d; color: var(--on-green); }
   .box :global(label) { color: var(--on-green); }
-  /* The dark theme's danger red: the light one is too dim on the green. */
-  .box :global(.note.bad) { color: var(--d-danger); }
+  /* The dark theme's danger red, a shade paler: the light theme's is too dim on
+     the green, and the dark one's fell just short of 4.5:1 on the green's lighter patches. */
+  .box :global(.note.bad) { color: var(--on-green-danger); }
   form { display: flex; flex-direction: column; gap: var(--space-4); }
   .go { display: flex; flex-direction: column; --accent: var(--d-accent); --accent-ink: var(--d-accent-ink); }
   /* The address being built sits in front of what's typed, in quiet ink. */
-  .prefix { color: var(--text-3); white-space: nowrap; }
-  .bad { color: var(--d-danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .prefix { color: var(--text-2); white-space: nowrap; }
+  .bad { color: var(--on-green-danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .after { margin-top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--on-green-2); }
   .after p { margin: 0; }
   .after a { color: var(--on-green); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }

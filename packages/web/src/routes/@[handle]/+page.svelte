@@ -24,6 +24,7 @@
   import { loadCollections } from '$lib/collections.svelte';
   import { marks, countText } from '$lib/marks.svelte';
   import { display } from '$lib/display.svelte';
+  import { menu } from '$lib/menu';
 
   /** On your own profile the Collections section is also where you make one. */
   let creating = $state(false);
@@ -276,7 +277,7 @@
           </span>
         </button>
         {#if photoMenuOpen}
-          <div class="menupanel" role="menu" aria-label="Profile picture" bind:this={photoMenuPanel}>
+          <div class="menupanel" role="menu" aria-label="Profile picture" bind:this={photoMenuPanel} use:menu={{ anchor: photoMenuAnchor, onclose: () => (photoMenuOpen = false) }}>
             <button type="button" class="mi" role="menuitem" onclick={() => { photoMenuOpen = false; pickPhoto(); }}>Change photo</button>
             {#if profile.avatarUpdatedAt}
               <button type="button" class="mi danger" role="menuitem" onclick={() => { photoMenuOpen = false; void removePhoto(); }}>Remove photo</button>
@@ -502,7 +503,7 @@
   /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* 2px is an optical nudge under the name, not a spacing step. */
-  .handle { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
+  .handle { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); }
   .site { color: var(--accent); font-weight: 600; }
   .bio { margin: var(--space-3) 0 0; color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); white-space: pre-line; }
   /* The avatar as a button: a camera badge in the corner says it's changeable. */
@@ -558,20 +559,20 @@
   .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* A pill riding after a name needs its own gap: the words beside it are text, not a flex row. */
   .name :global(.aftertext) { margin-left: var(--space-2); }
-  .desc { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); white-space: nowrap; }
+  .desc { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   .add { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); text-align: left; }
   li:first-child .add { border-top: 0; }
   .plus { font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; width: 14px; }
   .new form { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .new form :global(.grow) { flex: 1; min-width: 0; }
-  .status { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
+  .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
   .status a { color: var(--accent); font-weight: 600; }
   .saves { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-3) 0 0; padding: 0; list-style: none; }
   .all { display: block; width: fit-content; margin: var(--space-3) 0 0 auto; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
   .empty p { margin: 0; }
-  .join { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: var(--space-6); }
+  .join { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin-top: var(--space-6); }
   .join a { color: var(--accent); font-weight: 600; }
 </style>

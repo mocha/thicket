@@ -169,7 +169,7 @@
   .cardhead :global(.cg) { flex: none; width: min(320px, 100%); }
   .pad { padding: var(--space-4); }
   .foot { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
-  .status { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin: 0; }
+  .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin: 0; }
   .acts { list-style: none; margin: 0; padding: 0; }
   li { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   li:first-child { border-top: 0; }
@@ -181,11 +181,11 @@
   .glyph { flex: none; width: 20px; text-align: center; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
   .what { flex: 1; min-width: 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .what a { color: var(--text); font-weight: 600; }
-  .src { color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .src { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .src::before { content: ' · '; }
-  .when { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .when { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   /* Indented to line up under the row's text: the glyph column plus the row's gap. */
-  .names { display: flex; gap: var(--space-1); margin: var(--space-1) 0 0 var(--space-6); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .names { display: flex; gap: var(--space-1); margin: var(--space-1) 0 0 var(--space-6); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .trunc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rest { flex: none; }
   .rest::before { content: '· '; }
