@@ -111,21 +111,21 @@
   .unreachable p { margin: 0; }
   header.anon {
     display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
-    max-width: 640px; margin: 0 auto; padding: var(--space-4) var(--space-3) var(--space-1);
+    max-width: 640px; margin: 0 auto; padding: var(--space-4) var(--space-3);
+    /* A hairline under the logo, running the full width of the window. Drawn as a
+       border image pushed out past both sides: it paints edge to edge but, unlike a
+       wider box, can't make the page scroll sideways. */
+    border-bottom: 1px solid; border-image: linear-gradient(var(--line), var(--line)) 0 0 1 0 / 0 0 1px 0 / 0 100vw;
   }
   /* The logo and the wordmark, the word's tall letters nearly as tall as the logo. */
   .brand { display: flex; align-items: center; gap: calc(var(--space-2) + 2px); color: var(--text); }
   .auth { display: flex; gap: var(--space-2); align-items: center; }
-  /* On the redesigned landing page, a hairline under the logo, running the full width of
-     the window. Drawn as a border image pushed out past both sides: it paints edge to
-     edge but, unlike a wider box, can't make the page scroll sideways. */
-  header.anon.home { padding-bottom: var(--space-4); border-bottom: 1px solid; border-image: linear-gradient(var(--line), var(--line)) 0 0 1 0 / 0 0 1px 0 / 0 100vw; }
   @media (min-width: 900px) {
     /* The left margin is column math, not spacing: the sidebar plus half of what's left over. */
     main:not(.anon):not(.paged):not(.bare) { margin-left: calc(var(--nav-w) + max(24px, (100vw - var(--nav-w) - 640px) / 2)); padding: calc(var(--space-5) + var(--space-1)) var(--space-5) calc(var(--space-6) + var(--space-5)); }
     main.anon, header.anon { max-width: 680px; }
     main.home, header.anon.home { max-width: 1040px; }
     main.anon { padding: var(--space-5) var(--space-5) calc(var(--space-6) + var(--space-5)); }
-    header.anon { padding: var(--space-5) var(--space-5) 0; }
+    header.anon { padding: var(--space-5) var(--space-5) var(--space-4); }
   }
 </style>
