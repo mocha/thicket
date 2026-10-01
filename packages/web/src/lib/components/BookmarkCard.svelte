@@ -10,12 +10,17 @@
    * post editable in place, and other people's notes I may read follow it. On
    * someone's profile their note shows under the post, read-only, and the one
    * action in the corner is whatever the page passes: save a copy, usually.
+   *
+   * On a searched list the bookmark says where the search matched (`marks`),
+   * and those words are highlighted in the title, the site name, the summary
+   * and my note.
    */
   import type { Bookmark, Note, PublicBookmark, PublicUser, SavedNote } from '$lib/api';
   import { api, itemsApi } from '$lib/api';
   import { hostOf, relativeTime, savedHref, webHref } from '$lib/time';
   import { openReader, readsInline } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import { highlight, unmarked } from '$lib/words';
   import Card from './Card.svelte';
   import CardMeta from './CardMeta.svelte';
   import IconButton from './IconButton.svelte';
@@ -38,6 +43,13 @@
   const site = $derived(b.siteTitle ?? hostOf(b.url));
   const others = $derived('notes' in b ? (b.notes ?? []) : []);
   const theirNote = $derived(!mine && b.note && author ? { ...b.note, author } : null);
+  const marks = $derived('marks' in b ? (b.marks ?? null) : null);
+  /* The matched summary is the part around the match; say so when it starts mid-way. */
+  const cut = $derived(!!marks?.summary && !(b.summary ?? '').trimStart().startsWith(unmarked(marks.summary).slice(0, 24)));
+  /** The note changed under the search, so its old highlight no longer describes it. */
+  function forgetNoteMark() {
+    if ('marks' in b && b.marks) b.marks.note = null;
+  }
 
   /**
    * A plain click opens the post here when that is the reader's setting and we
@@ -72,6 +84,7 @@
     showToast(had ? 'Note updated' : 'Note saved');
     const note: Note = { id: n.id, body: n.body, createdAt: n.createdAt, updatedAt: n.updatedAt };
     b.note = note;
+    forgetNoteMark();
     editing = false;
     onnote?.(note, had);
   }
@@ -79,17 +92,27 @@
   function deleted() {
     const had = !!b.note;
     b.note = null;
+    forgetNoteMark();
     editing = false;
     onnote?.(null, had);
   }
 </script>
 
+{#snippet marked(text: string)}{#each highlight(text) as part}{#if part.hit}<mark>{part.text}</mark>{:else}{part.text}{/if}{/each}{/snippet}
+
 <Card as="li" class="bm" pad={false}>
   <a class="body" href={savedHref(b.url) ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
     <div class="text" class:two={mine && action}>
-      <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} />
-      <h3 class="card-title">{noOrphan(b.title ?? b.url)}</h3>
-      {#if b.summary}<p class="card-summary">{b.summary}</p>{/if}
+      {#if marks?.site}
+        <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt}>
+          {#snippet label()}{@render marked(marks.site ?? '')}{/snippet}
+        </CardMeta>
+      {:else}
+        <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} />
+      {/if}
+      <h3 class="card-title">{#if marks?.title}{@render marked(noOrphan(marks.title))}{:else}{noOrphan(b.title ?? b.url)}{/if}</h3>
+      {#if marks?.summary}<p class="card-summary found">{#if cut}… {/if}{@render marked(marks.summary)}</p>
+      {:else if b.summary}<p class="card-summary">{b.summary}</p>{/if}
       <div class="saved">Saved <time datetime={b.savedAt} title={new Date(b.savedAt).toLocaleString()}>{relativeTime(b.savedAt)}</time></div>
     </div>
     {#if b.imageUrl}<img class="thumb" src={b.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onerror={(e) => ((e.currentTarget as HTMLImageElement).hidden = true)} />{/if}
@@ -114,7 +137,7 @@
     {#if editing}
       <NoteEditor bookmarkId={b.id} note={b.note} onsaved={saved} ondeleted={deleted} oncancel={() => (editing = false)} />
     {:else if b.note}
-      <NoteBlock note={b.note} mine onedit={() => (editing = true)} />
+      <NoteBlock note={b.note} mine marked={marks?.note} onedit={() => (editing = true)} />
     {/if}
   {:else if theirNote}
     <NoteBlock note={theirNote} />
@@ -131,6 +154,10 @@
   .text.two { padding-right: calc(var(--space-6) * 2); }
   @media (hover: hover) { .body:hover h3 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   p { --summary-lines: 2; }
+  /* The part of the summary a search matched gets a third line, so the match is not the bit cut off. */
+  p.found { --summary-lines: 3; }
+  /* The words a search matched. The same highlight as a search result on Explore. */
+  mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
   .saved { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
   .card-extralink { display: inline-block; margin: calc(-1 * var(--space-2)) var(--card-pad) var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
   @media (hover: hover) { .card-extralink:hover { text-decoration: underline; text-underline-offset: 3px; } }
