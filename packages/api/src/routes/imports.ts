@@ -4,7 +4,7 @@
  */
 import { Hono } from "hono";
 import { currentUser } from "../lib/user.js";
-import { hit } from "../lib/ratelimit.js";
+import { LIMITS, hit, tooManyFor } from "../lib/ratelimit.js";
 import { CHECK_BATCH, ImportError, checkFeeds, commitImport, fetchOpml, readImport, type CommitGroup } from "../lib/importer.js";
 
 export const imports = new Hono();
@@ -24,7 +24,8 @@ imports.post("/read", async (c) => {
     let text: string;
     if ((c.req.header("content-type") ?? "").includes("application/json")) {
       const body = await c.req.json<{ url?: string }>().catch(() => ({} as { url?: string }));
-      if (!hit(`import-link:${user.id}`, { limit: 30, windowMs: 3600_000 }).ok) return c.json({ error: "That’s a lot of links in an hour. Try again later." }, 429);
+      const rl = hit(`import-link:${user.id}`, LIMITS.importLink);
+      if (!rl.ok) return tooManyFor(c, rl.retryAfterS, "That’s a lot of links in an hour. Try again later.");
       text = await fetchOpml(body.url ?? "");
     } else {
       text = await c.req.text();
@@ -39,16 +40,16 @@ imports.post("/read", async (c) => {
 
 /**
  * Body: `{ urls }`, at most CHECK_BATCH. Every one is a fetch of an address
- * someone else supplied, so it is counted: generous for a real import (a
- * thousand-feed file is 125 calls), a wall for anything else.
+ * someone else supplied, so each one is counted (LIMITS.importCheck): room
+ * for a real import of a few hundred feeds, a wall for anything else.
  */
 imports.post("/check", async (c) => {
   const user = currentUser(c);
   const body = await c.req.json<{ urls?: unknown }>().catch(() => ({} as { urls?: unknown }));
   const urls = Array.isArray(body.urls) ? body.urls.filter((u): u is string => typeof u === "string").slice(0, CHECK_BATCH) : [];
   if (!urls.length) return c.json({ error: "urls is required" }, 400);
-  const rl = hit(`import-check:${user.id}`, { limit: 400, windowMs: 3600_000 });
-  if (!rl.ok) return c.json({ error: "That’s a lot of checking in an hour. Try again later.", retryAfterS: rl.retryAfterS }, 429);
+  const rl = hit(`import-check:${user.id}`, LIMITS.importCheck, urls.length);
+  if (!rl.ok) return tooManyFor(c, rl.retryAfterS, "That’s a lot of checking in an hour. Try again later.");
   return c.json({ results: await checkFeeds(urls) });
 });
 

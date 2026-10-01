@@ -1,6 +1,6 @@
 {
-  "id": "1db728e6-8414-4dc7-b848-74eb20c7e5fa",
-  "prevId": "7190700b-4574-4b83-a129-eaa6a909176d",
+  "id": "1b895466-4e33-4a6f-bd22-acda12d9853f",
+  "prevId": "1db728e6-8414-4dc7-b848-74eb20c7e5fa",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -285,6 +285,16 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "search": {
+          "name": "search",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "setweight(to_tsvector('english', coalesce(\"title\", '')), 'A') || setweight(to_tsvector('english', coalesce(\"note\", '')), 'B') || setweight(to_tsvector('english', left(coalesce(\"summary\", ''), 20000)), 'C') || setweight(to_tsvector('english', coalesce(\"site_title\", '') || ' ' || \"url\" || ' ' || regexp_replace(\"url\", '[^[:alnum:]]+', ' ', 'g')), 'D')",
+            "type": "stored"
+          }
         }
       },
       "indexes": {
@@ -307,6 +317,21 @@
           "isUnique": true,
           "concurrently": false,
           "method": "btree",
+          "with": {}
+        },
+        "bookmarks_search_idx": {
+          "name": "bookmarks_search_idx",
+          "columns": [
+            {
+              "expression": "search",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
           "with": {}
         },
         "bookmarks_user_saved_idx": {

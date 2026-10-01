@@ -1,12 +1,10 @@
 <script lang="ts">
   /**
-   * The redesigned landing page, at an address nothing links to, so it can be
-   * shared for review on the live site. Kept out of search results. The real
-   * front door at / is unchanged until this replaces it.
+   * Where the landing page was reviewed before it went live. Links to it were
+   * shared, so it sends people on to the real one.
    */
-  import LandingPreview from '$lib/components/LandingPreview.svelte';
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+
+  onMount(() => void goto('/', { replaceState: true }));
 </script>
-
-<svelte:head><meta name="robots" content="noindex, nofollow" /></svelte:head>
-
-<LandingPreview />

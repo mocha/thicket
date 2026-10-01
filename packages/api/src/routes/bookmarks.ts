@@ -9,7 +9,7 @@
  * write or edit its note.
  *
  * `q=` searches them (issue #98): the title, the summary, the site name, the
- * address and my note, through the full-text index in drizzle/0020. It narrows
+ * address and my note, through the full-text index in drizzle/0021. It narrows
  * the list like any other filter and combines with all of them; the order
  * stays newest activity first, because a search here is for finding a thing I
  * know I saved, not for ranking.
@@ -22,8 +22,17 @@ import { currentUser } from "../lib/user.js";
 import { cleanNote, isSavedAddress, noteOf, snapshotOfItem } from "../lib/bookmarks.js";
 import { noteJson, othersNotesSql } from "../lib/notes.js";
 import { isHttpUrl } from "../feeds/normalize.js";
+import { fieldProblem } from "../lib/bookmark-fields.js";
+import { LIMITS, hit, tooManyFor } from "../lib/ratelimit.js";
 
 export const bookmarks = new Hono();
+
+/**
+ * What the daily limits say (LIMITS.savesPerDay, LIMITS.noteWritesPerDay). No
+ * reader meets them; they are there so an account can't be used as storage.
+ */
+export const SAVED_ENOUGH = "That is a lot of saving for one day. It will work again tomorrow.";
+export const NOTED_ENOUGH = "That is a lot of notes for one day. It will work again tomorrow.";
 
 /** When a bookmark last saw activity: saved, or its note written or edited. What the lists sort on. */
 export const activeAtSql = sql`greatest(b.saved_at, coalesce(b.note_updated_at, b.saved_at))`;
@@ -170,6 +179,8 @@ bookmarks.post("/", async (c) => {
     const r = body.restore;
     // The address comes back from the page, so it gets the same check as any
     // saved address: a web address, or a post's page here.
+    const problem = fieldProblem(r);
+    if (problem) return c.json({ error: problem }, 400);
     if (!r.url || !isSavedAddress(r.url)) return c.json({ error: "only http(s) URLs or a post's page here" }, 400);
     const note = r.note ? cleanNote(r.note) : null;
     if (note && "error" in note) return c.json({ error: note.error }, 400);
@@ -195,12 +206,17 @@ bookmarks.post("/", async (c) => {
     values = snap;
   } else if (body.url) {
     // A bookmark is a clickable card others may see, so only ever a web address.
+    const problem = fieldProblem({ url: body.url, title: body.title });
+    if (problem) return c.json({ error: problem }, 400);
     const url = body.url.trim();
     if (!isHttpUrl(url)) return c.json({ error: "only http(s) URLs" }, 400);
     values = { userId: user.id, url, title: body.title ?? null };
   } else {
     return c.json({ error: "itemId or url is required" }, 400);
   }
+  // Counted once it is known to be a real save, so a mistyped address costs nothing.
+  const pace = hit(`saves:${user.id}`, LIMITS.savesPerDay);
+  if (!pace.ok) return tooManyFor(c, pace.retryAfterS, SAVED_ENOUGH);
   const [saved] = await db
     .insert(schema.bookmarks)
     .values(values)
@@ -227,6 +243,8 @@ bookmarks.put("/:id/note", async (c) => {
   const payload = await c.req.json<{ body?: string }>().catch(() => ({} as { body?: string }));
   const clean = cleanNote(payload.body);
   if ("error" in clean) return c.json({ error: clean.error }, 400);
+  const pace = hit(`notes:${user.id}`, LIMITS.noteWritesPerDay);
+  if (!pace.ok) return tooManyFor(c, pace.retryAfterS, NOTED_ENOUGH);
   const [row] = await db.update(schema.bookmarks)
     .set({ note: clean.body, noteCreatedAt: sql`coalesce(${schema.bookmarks.noteCreatedAt}, now())`, noteUpdatedAt: sql`now()` })
     .where(and(eq(schema.bookmarks.id, id), eq(schema.bookmarks.userId, user.id)))
