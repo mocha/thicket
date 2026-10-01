@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { authApi, ApiError } from '$lib/api';
+  import { api, authApi, bookmarksApi, ApiError } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { site, loadSite } from '$lib/site.svelte';
   import Field from '$lib/components/Field.svelte';
@@ -20,6 +20,11 @@
    *
    * Unlike Settings, nothing here saves as you type: each change asks you to
    * confirm it with your password or a button.
+   *
+   * It is also where you take your things with you: Export my data, one row
+   * per thing you can download (issue #135). Bookmarks and notes are the
+   * first; collections get a row of their own when all of them can be
+   * exported at once, and until then a line says where to export each one.
    */
   const me = $derived(session.user!);
 
@@ -80,6 +85,14 @@
       resendBusy = false;
     }
   }
+
+  // ---- export ----
+  /* How many bookmarks there are and the most one file holds, to say so when
+     an export would stop short. Until it answers, or if it can't, nothing is
+     said and the button still works. */
+  let exportInfo = $state<{ count: number; limit: number } | null>(null);
+  $effect(() => { void bookmarksApi.exportInfo().then((i) => (exportInfo = i)).catch(() => {}); });
+  const capped = $derived(exportInfo !== null && exportInfo.count > exportInfo.limit);
 
   // ---- password (moved from Settings) ----
   let current = $state('');
@@ -173,6 +186,24 @@
   </form>
 </section>
 
+<section class="card">
+  <h2>Export my data</h2>
+  <p class="help">What you save in thicket is yours to keep and to take elsewhere.</p>
+
+  <!-- One row per thing to download: what it is and what you get on the left,
+       its button on the right. The next export gets a row of its own here. -->
+  <div class="export">
+    <div class="what">
+      <h3>Bookmarks and notes</h3>
+      <p>Every bookmark and its note, as a file that browsers and other bookmark services can open.</p>
+      {#if capped && exportInfo}<p>Exports are limited to your most recent {exportInfo.limit.toLocaleString('en-US')} bookmarks.</p>{/if}
+    </div>
+    <Button href={bookmarksApi.exportUrl()} download="thicket-bookmarks.html" onclick={() => api.event('bookmarks_exported', { count: exportInfo?.count })}>Export bookmarks</Button>
+  </div>
+
+  <p class="note also">Collections are exported one at a time for now. Open a collection, press Manage, then choose “Export collection to file” from the menu next to its name.</p>
+</section>
+
 <ApiTokens available={tokensAvailable} />
 
 <style>
@@ -196,4 +227,11 @@
   .row { display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; }
   .bad { color: var(--danger); margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   form .bad { margin: 0; }
+  /* An export row: words on the left, the button on the right, the button
+     dropping under the words on a phone. */
+  .export { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  .what { flex: 1 1 260px; min-width: 0; }
+  h3 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; }
+  .what p { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .also { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 </style>

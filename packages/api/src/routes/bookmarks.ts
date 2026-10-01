@@ -15,6 +15,7 @@ import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { cleanNote, isSavedAddress, noteOf, snapshotOfItem } from "../lib/bookmarks.js";
 import { noteJson, othersNotesSql } from "../lib/notes.js";
+import { EXPORT_MAX, renderBookmarkFile, type ExportRow } from "../lib/bookmark-export.js";
 import { isHttpUrl } from "../feeds/normalize.js";
 import { fieldProblem } from "../lib/bookmark-fields.js";
 import { LIMITS, hit, tooManyFor } from "../lib/ratelimit.js";
@@ -92,6 +93,40 @@ bookmarks.get("/sources", async (c) => {
   `);
   const [{ noted }] = (await db.execute<{ noted: number }>(sql`select count(*)::int as noted from bookmarks where user_id = ${user.id} and note is not null`)).rows;
   return c.json({ feeds: feeds.rows, collections: collections.rows, noted });
+});
+
+/**
+ * My bookmarks and notes as one file to keep or take elsewhere (issue #135):
+ * the bookmark file browsers and bookmark services read. Always the whole
+ * set, newest saved first, up to EXPORT_MAX of them, and for every account.
+ * `tz` is the reader's timezone as their browser names it, for the times
+ * written in each description; without a real one they are written in UTC.
+ * Sent as a download, and told never to run as a page here (its own
+ * stylesheet is all it may use): the text in it
+ * is escaped, and this is the second lock on the same door.
+ */
+bookmarks.get("/export", async (c) => {
+  const user = currentUser(c);
+  const rows = await db.execute<ExportRow>(sql`
+    select url, title, note, author, site_title as "siteTitle", published_at as "publishedAt", saved_at as "savedAt"
+    from bookmarks where user_id = ${user.id}
+    order by saved_at desc, id desc
+    limit ${EXPORT_MAX}
+  `);
+  const file = renderBookmarkFile(rows.rows, { handle: user.handle, timeZone: c.req.query("tz") });
+  c.header("content-type", "text/html; charset=utf-8");
+  c.header("content-disposition", `attachment; filename="thicket-bookmarks-${new Date().toISOString().slice(0, 10)}.html"`);
+  c.header("content-security-policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'");
+  c.header("x-content-type-options", "nosniff");
+  c.header("cache-control", "no-store");
+  return c.body(file);
+});
+
+/** What an export would hold: how many bookmarks I have, and the most one file carries. For the Account page. */
+bookmarks.get("/export/info", async (c) => {
+  const user = currentUser(c);
+  const [{ count }] = (await db.execute<{ count: number }>(sql`select count(*)::int as count from bookmarks where user_id = ${user.id}`)).rows;
+  return c.json({ count, limit: EXPORT_MAX });
 });
 
 type Restore = {

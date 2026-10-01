@@ -275,6 +275,18 @@ export const bookmarksApi = {
     return j<{ bookmarks: Bookmark[]; nextCursor: string | null }>(`/api/bookmarks?${q}`);
   },
   sources: () => j<BookmarkSources>('/api/bookmarks/sources'),
+  /**
+   * Where the download of every bookmark and note lives: one file, in the
+   * format browsers and bookmark services read. It carries this device's
+   * timezone so the times written in the file are the reader's own.
+   */
+  exportUrl: () => {
+    let tz = '';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? ''; } catch { /* the file says UTC instead */ }
+    return tz ? `/api/bookmarks/export?tz=${encodeURIComponent(tz)}` : '/api/bookmarks/export';
+  },
+  /** How many bookmarks I have, and the most one export holds. */
+  exportInfo: () => j<{ count: number; limit: number }>('/api/bookmarks/export/info'),
   saveItem: (itemId: number) => j<BookmarkRow>('/api/bookmarks', { method: 'POST', body: JSON.stringify({ itemId }) }),
   /** Copy someone's public bookmark, snapshot and all (not their note), into my own set. */
   saveFrom: (bookmarkId: number) => j<BookmarkRow>('/api/bookmarks', { method: 'POST', body: JSON.stringify({ bookmarkId }) }),
