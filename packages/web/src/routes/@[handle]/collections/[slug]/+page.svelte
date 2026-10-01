@@ -98,9 +98,9 @@
         {:else if session.user}
           {#if existingCopy}
             <Button variant="primary" href={collectionHref(session.user.handle, existingCopy.slug)}>Open your copy</Button>
-            <Button onclick={() => confirmAgain?.showModal()} disabled={copying}>{copying ? 'Copying…' : 'Copy again'}</Button>
+            <Button onclick={() => confirmAgain?.showModal()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy again'}</Button>
           {:else}
-            <Button variant="primary" onclick={copy} disabled={copying}>{copying ? 'Copying…' : 'Copy this collection'}</Button>
+            <Button variant="primary" onclick={copy} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy this collection'}</Button>
           {/if}
         {/if}
       </div>{/if}
@@ -130,7 +130,7 @@
         <section>
           <h3>On another thicket?</h3>
           <p>Copying a collection between thickets by link is on its way. Keep this page’s link; it’s what you’ll paste.</p>
-          <Button onclick={copyLink}>Copy link</Button>
+          <Button onclick={copyLink}><Icon name="copy" size={16} />Copy link</Button>
         </section>
       </div>
       <IconButton class="close" icon="close" label="Close" onclick={() => explain?.close()} />
@@ -145,7 +145,7 @@
       <p>You already have a copy of this collection. Copying again makes a second, separate one — handy if you want to prune each down to different feeds.</p>
       <div class="confirmbtns">
         <Button onclick={() => confirmAgain?.close()}>Cancel</Button>
-        <Button variant="primary" disabled={copying} onclick={() => { confirmAgain?.close(); void copy(); }}>Copy again</Button>
+        <Button variant="primary" disabled={copying} onclick={() => { confirmAgain?.close(); void copy(); }}><Icon name="copy" size={16} />Copy again</Button>
       </div>
     </div>
   </dialog>
