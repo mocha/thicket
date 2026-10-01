@@ -19,6 +19,7 @@ import { startRetention } from "./lib/retention.js";
 import { ensureAdmin, publicStatus } from "./lib/instance.js";
 import { runMigrations } from "./db/migrate.js";
 import { headForPath } from "./lib/meta.js";
+import { openApiDocument } from "./lib/openapi.js";
 import { EMAIL_REQUIRED, FETCH_CONCURRENCY, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, SMTP_URL, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
 
 // Every account has an email so it can reset its password; without mail, nobody could.
@@ -51,6 +52,8 @@ app.get("/api/health", async (c) => c.json({
   // What the proxies in front tell us about the client. Diagnostic for rate limiting keyed on the wrong hop.
   via: { forwardedFor: c.req.header("x-forwarded-for") ?? null, realIp: c.req.header("x-real-ip") ?? null, cfConnectingIp: c.req.header("cf-connecting-ip") ?? null, proto: c.req.header("x-forwarded-proto") ?? null, host: c.req.header("x-forwarded-host") ?? c.req.header("host") ?? null },
 }));
+// What an API token can do, described for applications and assistants (lib/openapi.ts). Readable by anyone.
+app.get("/api/openapi.json", (c) => c.json(openApiDocument(PUBLIC_URL), 200, { "cache-control": "public, max-age=300" }));
 app.notFound((c) => (c.req.path.startsWith("/api/") ? c.json({ error: "not found" }, 404) : c.text("not found", 404)));
 
 if (WEB_DIR) {
