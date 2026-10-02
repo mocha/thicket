@@ -171,13 +171,21 @@ export async function fileFeedback(id: number): Promise<void> {
 /** How long unfiled feedback keeps being tried. Past this, something is wrong that trying again won't fix; the log says what. */
 const RETRY_DAYS = 14;
 
-/** Every hour, file whatever is still waiting, oldest first, one at a time. */
+/** File whatever is still waiting, oldest first, one at a time. */
+async function fileWaiting(): Promise<void> {
+  const waiting = await db.execute<{ id: number }>(sql`
+    select id from feedback where issue_number is null and created_at > now() - make_interval(days => ${RETRY_DAYS}) order by created_at limit 50`).catch(() => null);
+  for (const r of waiting?.rows ?? []) await fileFeedback(Number(r.id));
+}
+
+/**
+ * File what is waiting as soon as thicket starts, then every hour. At the
+ * start, because a restart is what follows fixing whatever held feedback up
+ * (a missing or expired GITHUB_TOKEN), and it shouldn't then wait an hour.
+ */
 export function startFeedbackRetry(): void {
   if (!HOSTED) return;
   if (!GITHUB_TOKEN) console.error("[feedback] GITHUB_TOKEN is unset: feedback will be saved, and filed once it is set. See docs/DEPLOY.md.");
-  setInterval(async () => {
-    const waiting = await db.execute<{ id: number }>(sql`
-      select id from feedback where issue_number is null and created_at > now() - make_interval(days => ${RETRY_DAYS}) order by created_at limit 50`).catch(() => null);
-    for (const r of waiting?.rows ?? []) await fileFeedback(Number(r.id));
-  }, 3600_000).unref();
+  else void fileWaiting();
+  setInterval(() => void fileWaiting(), 3600_000).unref();
 }
