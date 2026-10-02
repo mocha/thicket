@@ -20,6 +20,7 @@ import { items } from "./items.js";
 import { marks } from "./marks.js";
 import { imports } from "./imports.js";
 import { tokens } from "./tokens.js";
+import { feedback } from "./feedback.js";
 
 export const ROUTERS: [base: string, router: Hono][] = [
   ["/api/auth", auth],
@@ -38,4 +39,5 @@ export const ROUTERS: [base: string, router: Hono][] = [
   ["/api/marks", marks],
   ["/api/import", imports],
   ["/api/tokens", tokens],
+  ["/api/feedback", feedback],
 ];

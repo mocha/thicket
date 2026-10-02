@@ -171,6 +171,29 @@ export const apiTokens = pgTable("api_tokens", {
   uniqueIndex("api_tokens_hash_uq").on(t.tokenHash),
 ]);
 
+/**
+ * What people tell us through "Send feedback" (issue #153, readthicket.com
+ * only). The feedback itself lives in a private GitHub issue tracker; this is
+ * the waiting room. It is saved here first and filed a moment later
+ * (lib/feedback.ts), so nothing is lost while GitHub is down: a row with no
+ * issue yet is tried again until it has one.
+ */
+export const feedback = pgTable("feedback", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  /** Who sent it, only if they ticked "Include my handle". The row outlives a deleted account. */
+  userId: bigint("user_id", { mode: "number" }).references(() => users.id, { onDelete: "set null" }),
+  body: text("body").notNull(),
+  /** The page they were on when they opened the form. */
+  page: text("page"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  /** The issue it became, or was added to as a comment. Null until it is filed. */
+  issueNumber: integer("issue_number"),
+  issueUrl: text("issue_url"),
+  /** Why the last try at filing it failed, in GitHub's own words. */
+  error: text("error"),
+});
+
 export const feeds = pgTable("feeds", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   /** Normalized feed URL. Uniqueness is on this. See feeds/normalize.ts. */

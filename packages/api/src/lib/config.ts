@@ -43,6 +43,24 @@ export const SMTP_URL = env("SMTP_URL");
 export const MAIL_FROM = env("MAIL_FROM") ?? "thicket <no-reply@readthicket.com>";
 
 /**
+ * "Send feedback" (issue #153, readthicket.com only; see lib/feedback.ts).
+ * What people send is filed as an issue in a private GitHub repository, and
+ * GitHub tells the people who watch it.
+ *
+ * FEEDBACK_REPO is that repository, as owner/name. It is private: issues
+ * carry people's own words.
+ * GITHUB_TOKEN can read and write issues on it. Until it is set, feedback is
+ * saved and waits (the log says so at boot); nothing is lost.
+ *
+ * ANTHROPIC_API_KEY is optional. With it, Claude reads each new piece of
+ * feedback beside the open issues, and one that repeats an issue is added to
+ * it as a comment. Without it, every piece of feedback is a new issue.
+ */
+export const FEEDBACK_REPO = env("FEEDBACK_REPO") ?? "christielenn/thicket-feedback";
+export const GITHUB_TOKEN = env("GITHUB_TOKEN");
+export const FEEDBACK_AI = !!env("ANTHROPIC_API_KEY");
+
+/**
  * Retention windows, in days. 0 disables a window entirely.
  *
  * Posts default to OFF: a feed serves a window, not an archive, so a post we

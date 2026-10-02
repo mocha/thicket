@@ -21,6 +21,9 @@
    * Unlike Settings, nothing here saves as you type: each change asks you to
    * confirm it with your password or a button.
    *
+   * It is where you bring your reading in from somewhere else: Import feeds,
+   * a door to the import page, which used to be in the account menu.
+   *
    * It is also where you take your things with you: Export my data, one row
    * per thing you can download (issue #135). Bookmarks and notes are the
    * first; collections get a row of their own when all of them can be
@@ -186,22 +189,32 @@
   </form>
 </section>
 
+<!-- The way in sits beside the way out: bring your reading here, take it with
+     you. The import itself is a page of its own (/import); this is its door. -->
+<section class="card">
+  <h2>Import feeds</h2>
+  <div class="export">
+    <div class="what">
+      <p>From another reader, or a link to someone’s collection.</p>
+    </div>
+    <Button href="/import">Import feeds</Button>
+  </div>
+</section>
+
 <section class="card">
   <h2>Export my data</h2>
-  <p class="help">What you save in thicket is yours to keep and to take elsewhere.</p>
 
   <!-- One row per thing to download: what it is and what you get on the left,
        its button on the right. The next export gets a row of its own here. -->
   <div class="export">
     <div class="what">
-      <h3>Bookmarks and notes</h3>
-      <p>Every bookmark and its note, as a file that browsers and other bookmark services can open.</p>
-      {#if capped && exportInfo}<p>Exports are limited to your most recent {exportInfo.limit.toLocaleString('en-US')} bookmarks.</p>{/if}
+      <p>Download your bookmarks and notes to keep, or to move to another bookmarking app.</p>
+      {#if capped && exportInfo}<p>Your most recent {exportInfo.limit.toLocaleString('en-US')} only.</p>{/if}
     </div>
     <Button href={bookmarksApi.exportUrl()} download="thicket-bookmarks.html" onclick={() => api.event('bookmarks_exported', { count: exportInfo?.count })}>Export bookmarks</Button>
   </div>
 
-  <p class="note also">Collections are exported one at a time for now. Open a collection, press Manage, then choose “Export collection to file” from the menu next to its name.</p>
+  <p class="note also">To export a single collection, click its gear button to access its manage features.</p>
 </section>
 
 <ApiTokens available={tokensAvailable} />
@@ -231,7 +244,6 @@
      dropping under the words on a phone. */
   .export { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
   .what { flex: 1 1 260px; min-width: 0; }
-  h3 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; }
-  .what p { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
+  .what p { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   .also { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 </style>

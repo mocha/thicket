@@ -16,6 +16,7 @@ import { startScheduler } from "./feeds/scheduler.js";
 import { attachUser, pruneSessions } from "./lib/auth.js";
 import { pruneEmailTokens } from "./lib/email-tokens.js";
 import { startRetention } from "./lib/retention.js";
+import { startFeedbackRetry } from "./lib/feedback.js";
 import { ensureAdmin, publicStatus } from "./lib/instance.js";
 import { runMigrations } from "./db/migrate.js";
 import { headForPath } from "./lib/meta.js";
@@ -46,6 +47,7 @@ const scheduler = SCHEDULER
 setInterval(() => void pruneSessions().catch(() => {}), 3600_000).unref();
 setInterval(() => void pruneEmailTokens().catch(() => {}), 3600_000).unref();
 startRetention();
+startFeedbackRetry();
 
 app.get("/api/health", async (c) => c.json({
   ok: true, instance: await publicStatus(), signedIn: !!c.get("user"), tracking: TRACK_ACTIVITY, scheduler: scheduler?.stats ?? "off",
