@@ -13,7 +13,7 @@
   import { feedback } from '$lib/feedback.svelte';
   import Button from '$lib/components/Button.svelte';
   import { session, loadMe, isPublicPath } from '$lib/session.svelte';
-  import { display, loadDisplay } from '$lib/display.svelte';
+  import { display, loadDisplay, watchDisplay } from '$lib/display.svelte';
   import { watchMarks } from '$lib/marks.svelte';
   import { watchBackForward } from '$lib/listmemory';
   import Wordmark from '$lib/components/Wordmark.svelte';
@@ -26,7 +26,7 @@
    * Public paths (/@handle…, /login, /signup) render for anyone; everything
    * else bounces to /login and comes back afterwards.
    */
-  onMount(() => { loadDisplay(); void loadMe(); });
+  onMount(() => { loadDisplay(); void loadMe(); return watchDisplay(); });
 
   const path = $derived(page.url.pathname);
   const isPublic = $derived(isPublicPath(path));
