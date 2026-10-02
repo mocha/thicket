@@ -24,8 +24,8 @@
   let { available = true, unavailable = 'API tokens aren’t available on this account.' }: Props = $props();
 
   const KINDS: { kind: ApiTokenKind; name: string; can: string }[] = [
-    { kind: 'read', name: 'Read-only access', can: 'Can read your feeds, collections, bookmarks and notes. Can’t change anything.' },
-    { kind: 'full', name: 'Full access', can: 'Can read everything, and also save bookmarks, write notes, and add or remove feeds and collections.' },
+    { kind: 'read', name: 'Read-only access', can: 'The app can see your feeds, collections, bookmarks, and notes.' },
+    { kind: 'full', name: 'Full access', can: 'The app can also save bookmarks, write notes, and add or remove feeds.' },
   ];
 
   let tokens = $state<Partial<Record<ApiTokenKind, ApiToken>>>({});
@@ -92,7 +92,7 @@
 
 <section class="card" class:off={!available} aria-labelledby="api-tokens-title">
   <h2 id="api-tokens-title">API tokens</h2>
-  <p class="help">Let your own scripts and assistants read your thicket, or add to it. A token is a password for an application, so only give one to something you trust.</p>
+  <p class="help">A token lets another app or AI assistant use your thicket account. Enable one, copy it, and paste it into the app. Only give it to apps you trust.</p>
   {#if !available}<p class="unavailable">{unavailable}</p>{/if}
 
   <ul class="kinds">
@@ -118,7 +118,7 @@
               {#if confirming !== k.kind}<Button size="sm" variant="danger" link onclick={() => (confirming = k.kind)}>Revoke</Button>{/if}
             </div>
           </div>
-          <p class="used">{t.lastUsedAt ? `Last used ${longAgo(t.lastUsedAt)}.` : 'Not used yet.'} Turned on {longAgo(t.createdAt)}.</p>
+          <p class="used">{t.lastUsedAt ? `Last used ${longAgo(t.lastUsedAt)}.` : 'Not used yet.'} Enabled {longAgo(t.createdAt)}.</p>
 
           {#if confirming === k.kind}
             <div class="confirm" role="alertdialog" aria-labelledby="revoke-{k.kind}-q">
@@ -137,7 +137,7 @@
   {#if error}<p class="bad" role="alert">{error}</p>{/if}
 
   <p class="how">
-    Send a token as <code>Authorization: Bearer</code> followed by the token. It works on the same API this site uses, which is described for applications at <a href="/api/openapi.json">/api/openapi.json</a>. A token can make 10 requests in any 10 seconds and 120 in any hour.
+    Building your own app? See the <a href="/api/openapi.json">technical reference</a>.
   </p>
 </section>
 
@@ -175,7 +175,6 @@
   .confirmbtns { display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; }
 
   .how { margin: 0; padding-top: var(--space-4); border-top: 1px solid var(--line); }
-  .how code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.95em; }
   .how a { color: var(--accent); font-weight: 600; }
   .how a:hover { text-decoration: underline; }
   .bad { color: var(--danger); margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); }

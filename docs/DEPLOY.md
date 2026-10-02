@@ -101,6 +101,9 @@ with comments. Only `DATABASE_URL` and `PUBLIC_URL` are required.
 | `HOSTED` | unset | readthicket.com only; leave unset on your own copy. Turns on what belongs to thicket's hosted service: its landing page, public sign up, account email, and password reset |
 | `SMTP_URL` | unset | readthicket.com only. Outgoing mail for email confirmation and reset links: `smtp://user:pass@host:587`. Required when `HOSTED` is set; thicket won't start without it |
 | `MAIL_FROM` | `thicket <no-reply@readthicket.com>` | readthicket.com only. The From line on every email |
+| `GITHUB_TOKEN` | unset | readthicket.com only. A GitHub token that can read and write issues on `FEEDBACK_REPO`. Until it is set, feedback is saved and waits |
+| `FEEDBACK_REPO` | `christielenn/thicket-feedback` | readthicket.com only. The private GitHub repository (`owner/name`) that "Send feedback" files issues in |
+| `ANTHROPIC_API_KEY` | unset | readthicket.com only, optional. Lets Claude add feedback that repeats an open issue to that issue as a comment, instead of filing it again |
 | `WEB_DIR` | set in the image | Built web app to serve; unset = API only |
 
 ## Building the image yourself
