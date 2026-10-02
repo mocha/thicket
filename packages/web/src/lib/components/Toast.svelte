@@ -1,5 +1,6 @@
 <script lang="ts">
   import { toast, dismissToast, showToast, holdToast, releaseToast } from '$lib/toast.svelte';
+  import IconButton from './IconButton.svelte';
 
   /** Whether the desktop sidebar is on screen, so the toast can center over the posts beside it rather than the whole window. */
   let { sidebar = false }: { sidebar?: boolean } = $props();
@@ -62,6 +63,8 @@
       <!-- Said after the message by a screen reader; there is nothing to see. -->
       {#if undoable}<span class="visually-hidden">Press {mac ? 'Command' : 'Control'} Z to undo.</span>{/if}
     {/if}
+    <!-- Every toast can be closed, with or without an action: nobody has to wait one out. -->
+    <IconButton class="x" icon="close" size="sm" label="Dismiss" onclick={dismissToast} />
   </div>
 {/if}
 
@@ -87,4 +90,10 @@
      theme picked for that ground, not the page accent (which lands on its own
      background here and disappears). */
   .action { color: var(--toast-accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
+  /* The close button takes the toast's own lettering color, for the same
+     reason: its usual gray is picked for the page, not this inverted ground.
+     Pulled towards the corner and tucked closer to what comes before it;
+     tuned by eye against the button's own box, so the pixels stay literal. */
+  .toast :global(.x) { color: var(--bg); margin: -3px -4px -3px calc(var(--space-2) * -1); }
+  .toast :global(.x:hover) { background: color-mix(in srgb, var(--bg) 18%, transparent); color: var(--bg); }
 </style>

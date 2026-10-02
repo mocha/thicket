@@ -435,9 +435,10 @@
     </div>
 
     <h3 class="sub">Toast</h3>
-    <p class="section-lede">A brief message, often carrying an undo — the app's main safety net. It appears at the top on a desktop, centered over the posts, and at the bottom on a phone, in reach of a thumb. A plain one stays 6 seconds and one with a button stays 10; the countdown waits while the pointer or keyboard focus is on it. While an Undo toast is showing, Cmd+Z (Ctrl+Z off a Mac) presses its Undo.</p>
+    <p class="section-lede">A brief message, often carrying an undo — the app's main safety net. It appears at the top on a desktop, centered over the posts, and at the bottom on a phone, in reach of a thumb. A plain one stays 6 seconds and one with a button stays 10; the countdown waits while the pointer or keyboard focus is on it. While an Undo toast is showing, Cmd+Z (Ctrl+Z off a Mac) presses its Undo. Every toast, with or without a button, has a ✕ to close it early.</p>
     <div class="row">
       <Button variant="ghost" onclick={() => showToast('Feed removed', { label: 'Undo', run: () => showToast('Feed restored') })}>Show a toast</Button>
+      <Button variant="ghost" onclick={() => showToast('Link copied')}>Show a plain toast</Button>
     </div>
   </section>
 

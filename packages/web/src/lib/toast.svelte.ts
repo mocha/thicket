@@ -5,6 +5,7 @@
  * there is time to read it and get to the button. Either way the countdown
  * waits while the pointer or keyboard focus is on the toast, and starts over
  * when it leaves: nobody loses an Undo while they are reaching for it.
+ * Every toast also has a close button, so none has to be waited out.
  */
 type Toast = { id: number; message: string; action?: { label: string; run: () => void | Promise<void> } };
 let counter = 0;
