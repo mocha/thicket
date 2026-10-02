@@ -419,6 +419,11 @@ export const adminApi = {
   setStarter: (handle: string | null) => j<{ handle: string | null }>('/api/admin/starter', { method: 'PUT', body: JSON.stringify({ handle: handle ?? '' }) })
 };
 
+export const contactApi = {
+  /** Send a message from the Contact page (issue #159, readthicket.com only). `website` is the hidden box only scripts fill in. */
+  send: (name: string, email: string, message: string, website: string) => j<{ ok: true }>('/api/contact', { method: 'POST', body: JSON.stringify({ name, email, message, website }) })
+};
+
 export const feedbackApi = {
   /** Send feedback (issue #153, readthicket.com only). `page` is the path the person was on; their handle goes with it only if `includeHandle`. */
   send: (body: string, page: string, includeHandle: boolean) => j<{ ok: true }>('/api/feedback', { method: 'POST', body: JSON.stringify({ body, page, includeHandle }) })

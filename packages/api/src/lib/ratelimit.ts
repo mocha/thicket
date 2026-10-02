@@ -176,6 +176,12 @@ export const LIMITS = {
    * to say fits.
    */
   feedbackPerDay: { limit: 10, windowMs: 24 * 3600_000 } satisfies Limit,
+  /**
+   * Per address. Messages from the Contact page (issue #159), which needs no
+   * account, so the address is all there is to count by. Each one lands in
+   * our inbox; a person writing twice fits, a script filling it doesn't.
+   */
+  contactAddress: { limit: 5, windowMs: 60 * 60_000 } satisfies Limit,
 };
 
 /**
@@ -205,6 +211,10 @@ export const MAX_LENGTH = {
   note: 2_000,
   /** Feedback, the same room as a note. */
   feedback: 2_000,
+  /** A Contact message: a letter, so more room than a note. */
+  contact: 5_000,
+  /** The name on a Contact message. */
+  contactName: 100,
 };
 
 /** The 429 body, shaped like every other auth error so the web client renders it unchanged. */

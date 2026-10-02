@@ -38,8 +38,11 @@
    * renders straight away rather than waiting on who's signed in.
    */
   const bare = $derived(path === '/design-system');
-  /** The landing page looks the same to everyone; being signed in doesn't wrap it in the app. */
-  const front = $derived(path === '/');
+  /**
+   * The marketing site: the landing page, About, and Contact. They look the
+   * same to everyone; being signed in doesn't wrap them in the app.
+   */
+  const front = $derived(path === '/' || path === '/about' || path === '/contact');
   const inApp = $derived(signedIn && !front);
 
   $effect(() => {
@@ -87,12 +90,12 @@
     <header class="anon" class:home={front}>
       <a class="brand tap" href="/"><img src="/icon.svg" alt="" width="32" height="32" /><Wordmark height={27} /></a>
       {#if front}
-        <!-- The landing page: one click into Everything for someone signed in;
-             otherwise Log in, and Sign up, which jumps to the form at the end of the page. -->
+        <!-- The marketing site: one click into Everything for someone signed in;
+             otherwise Log in, and Sign up, which jumps to the form at the end of the landing page. -->
         {#if signedIn}
           <span class="auth"><Button link size="lg" href="/everything">You’re already logged in <span aria-hidden="true">→</span></Button></span>
         {:else}
-          <span class="auth"><Button href="/login">Log in</Button><Button variant="primary" href="#sign-up">Sign up</Button></span>
+          <span class="auth"><Button href="/login">Log in</Button><Button variant="primary" href={path === '/' ? '#sign-up' : '/#sign-up'}>Sign up</Button></span>
         {/if}
       {:else if !signedIn && path !== '/login' && path !== '/signup' && !front}
         <span class="auth"><Button href="/login?next={encodeURIComponent(path)}">Log in</Button><Button variant="primary" href="/signup?next={encodeURIComponent(path)}">Sign up</Button></span>
@@ -128,7 +131,7 @@
   main.anon { padding-bottom: calc(var(--space-6) + var(--space-2)); }
   /* The design system runs on its own, without the app's chrome. A wider column
      than the reading app uses, so a gallery of swatches and controls has room. */
-  /* The landing page's green runs right to the bottom edge. */
+  /* The marketing site's green runs right to the bottom edge. */
   main.anon.home { padding-bottom: 0; }
   main.bare {
     max-width: 900px;

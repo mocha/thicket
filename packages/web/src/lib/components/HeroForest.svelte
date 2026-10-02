@@ -8,12 +8,16 @@
    *
    * The greens are the brand's own and stay the same in every theme, like a
    * printed cover.
+   *
+   * `picture={false}` is for the marketing site's other pages (About,
+   * Contact): the same green and fronds with no phone, and the words in one
+   * reading column down the middle. The fronds keep clear of that column.
    */
   import type { Snippet } from 'svelte';
   import PhoneFeed from './PhoneFeed.svelte';
   import FrondFrame from './FrondFrame.svelte';
 
-  let { pitch, below }: { pitch: Snippet; below?: Snippet } = $props();
+  let { pitch, below, picture = true }: { pitch: Snippet; below?: Snippet; picture?: boolean } = $props();
 
   /* Where the headline and intro sit, measured whenever the section changes
      size, so the fronds can keep clear of them at any width. */
@@ -38,9 +42,9 @@
 
 <section class="forest" bind:this={section}>
   <FrondFrame {clear} />
-  <div class="inner">
+  <div class="inner" class:plain={!picture}>
     <div class="pitch" bind:this={words}>{@render pitch()}</div>
-    <div class="picture"><PhoneFeed /></div>
+    {#if picture}<div class="picture"><PhoneFeed /></div>{/if}
   </div>
   {#if below}<div class="below">{@render below()}</div>{/if}
 </section>
@@ -83,10 +87,13 @@
     -webkit-box-decoration-break: clone; box-decoration-break: clone;
   }
   .picture { min-width: 0; }
+  /* No phone: one reading column down the middle, only as tall as its words. */
+  .inner.plain { display: block; max-width: var(--column, 42rem); margin-inline: auto; }
   .below { position: relative; padding-bottom: var(--space-6); }
   @media (min-width: 820px) {
     /* The height it had with the phone beside the words, kept whatever sits there,
        so the headline lands in the same spot with the same room around it. */
     .inner { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-6); padding: calc(var(--space-6) + var(--space-4)) 0; min-height: 794px; }
+    .inner.plain { min-height: 0; }
   }
 </style>

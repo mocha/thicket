@@ -21,13 +21,15 @@ import { ensureAdmin, publicStatus } from "./lib/instance.js";
 import { runMigrations } from "./db/migrate.js";
 import { headForPath } from "./lib/meta.js";
 import { openApiDocument } from "./lib/openapi.js";
-import { EMAIL_REQUIRED, FETCH_CONCURRENCY, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, SMTP_URL, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
+import { CONTACT_TO, EMAIL_REQUIRED, FETCH_CONCURRENCY, HOSTED, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, SMTP_URL, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
 
 // Every account has an email so it can reset its password; without mail, nobody could.
 if (EMAIL_REQUIRED && !SMTP_URL) {
   console.error("[mail] SMTP_URL is unset, but this instance requires email (HOSTED=true). Set SMTP_URL; see docs/DEPLOY.md.");
   process.exit(1);
 }
+
+if (HOSTED && !CONTACT_TO) console.error("[contact] CONTACT_TO is unset: the Contact page can't deliver messages until it is. See docs/DEPLOY.md.");
 
 await runMigrations();
 await ensureAdmin();
