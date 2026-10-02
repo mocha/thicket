@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { modality } from '$lib/focus.svelte';
 
   /**
@@ -7,7 +8,9 @@
    * only for someone tabbing through the page.
    *
    * `counter` shows how much room is left, warms up as you near the limit, and
-   * turns red once you are over it. Being over also tells screen readers the
+   * turns red once you are over it. It sits inside the box, at the bottom
+   * right under the text, so the box takes the same room on the page whether
+   * it counts or not. Being over also tells screen readers the
    * box is wrong, so a form can refuse to send on the same condition. The
    * count is read out with the box, so someone using a screen reader hears how
    * much room is left without hunting for it.
@@ -16,6 +19,10 @@
    * hard stop — a note that stops accepting text a little past its limit still
    * counts against the limit, so you can see how far over you are instead of
    * silently hitting a wall.
+   *
+   * `status` puts a short word of your own inside the box too, at the bottom
+   * left on the counter's line: the "Saved" that follows a box which saves
+   * itself.
    */
   interface Props {
     value: string;
@@ -25,8 +32,10 @@
     maxlength?: number;
     /** What the counter counts against, when that isn't the hard stop. */
     limit?: number;
-    /** Show "so far / allowed" under the box. Needs a limit or a maxlength. */
+    /** Show "so far / allowed" inside the box, bottom right. Needs a limit or a maxlength. */
     counter?: boolean;
+    /** A short word inside the box, bottom left, e.g. "Saved". */
+    status?: Snippet;
     invalid?: boolean;
     disabled?: boolean;
     /** Sit on the page background instead of the raised surface. */
@@ -49,6 +58,7 @@
     maxlength,
     limit,
     counter = false,
+    status,
     invalid = false,
     disabled = false,
     inset = false,
@@ -89,45 +99,49 @@
     byKeyboard = false;
     onblur?.(e);
   }
+  /* The line the counter sits on is part of the box to the eye, so pressing it
+     puts the cursor in the box rather than doing nothing. */
+  function pressed(e: MouseEvent) {
+    if (e.target === element || disabled) return;
+    e.preventDefault();
+    element?.focus();
+  }
   function typed(e: Event & { currentTarget: HTMLTextAreaElement }) {
     value = e.currentTarget.value;
     oninput?.(e);
   }
 </script>
 
-<div class="outer {klass}" {style}>
-  <div class="wrap" class:kb={byKeyboard} class:invalid={wrong} class:disabled class:inset>
-    <textarea
-      bind:this={element}
-      {value}
-      {rows}
-      {maxlength}
-      {disabled}
-      aria-invalid={wrong ? 'true' : undefined}
-      aria-describedby={described}
-      style:resize
-      {...rest}
-      oninput={typed}
-      onfocus={focused}
-      onblur={blurred}
-    ></textarea>
-  </div>
-  {#if showCounter}
-    <span class="counter" id={counterId} class:near class:over>{value.length}/{cap}</span>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="wrap {klass}" class:kb={byKeyboard} class:invalid={wrong} class:disabled class:inset class:grows={resize !== 'none'} {style} style:resize onmousedown={pressed}>
+  <textarea
+    bind:this={element}
+    {value}
+    {rows}
+    {maxlength}
+    {disabled}
+    aria-invalid={wrong ? 'true' : undefined}
+    aria-describedby={described}
+    {...rest}
+    oninput={typed}
+    onfocus={focused}
+    onblur={blurred}
+  ></textarea>
+  {#if showCounter || status}
+    <div class="foot">
+      <span class="status" aria-live="polite">{#if status}{@render status()}{/if}</span>
+      {#if showCounter}<span class="counter" id={counterId} class:near class:over>{value.length}/{cap}</span>{/if}
+    </div>
   {/if}
 </div>
 
 <style>
-  .outer {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-1);
-    min-width: 0;
-  }
-
+  /* The box is the wrapper, not the textarea, so the counter's line is inside
+     the outline and one focus ring is drawn around the lot. */
   .wrap {
     display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
     min-width: 0;
     padding: var(--space-3) var(--space-4);
     border: 1px solid var(--field-line);
@@ -136,9 +150,13 @@
     transition: border-color 0.12s ease;
   }
   .inset { background: var(--bg); }
+  /* Dragging taller is the box's job, not the textarea's, so the grip sits in
+     the box's own corner, below the counter rather than floating above it.
+     A box only shows the grip when its overflow is clipped. */
+  .grows { overflow: hidden; min-height: 4.5em; }
 
   textarea {
-    flex: 1;
+    flex: 1 1 auto;
     min-width: 0;
     padding: 0;
     border: 0;
@@ -147,6 +165,7 @@
     font-family: inherit;
     font-size: calc(var(--text-base) * var(--size-app));
     line-height: 1.45;
+    resize: none;
   }
   textarea:focus { outline: none; }
   textarea::placeholder { color: var(--text-2); opacity: 1; }
@@ -159,8 +178,10 @@
   .disabled { opacity: 0.55; }
   .disabled textarea { cursor: default; }
 
+  .foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); cursor: text; }
+  .status { font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); }
   .counter {
-    align-self: flex-end;
+    margin-left: auto;
     font-size: calc(var(--text-xs) * var(--size-app));
     color: var(--text-2);
     font-variant-numeric: tabular-nums;

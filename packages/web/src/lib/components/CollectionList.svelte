@@ -27,7 +27,7 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
 
-  let { ids, ontoggle, oncreated, hint, via, disabled = false, flash = new Set() }: {
+  let { ids, ontoggle, oncreated, hint, via, disabled = false, flash = new Set(), onPage = false }: {
     ids: number[];
     ontoggle: (id: number) => void;
     /** A new collection was just made from the row at the bottom. */
@@ -38,6 +38,8 @@
     disabled?: boolean;
     /** Collection ids whose count just went up, to pop the number. */
     flash?: Set<number>;
+    /** Sits straight on the page rather than inside a Sheet, so the filter and the list take the raised surface color themselves. */
+    onPage?: boolean;
   } = $props();
 
   let list = $state<HTMLElement | null>(null);
@@ -57,7 +59,9 @@
   $effect(() => {
     void loadCollections().then(async () => {
       await tick();
-      list?.querySelector('input:checked')?.closest('li')?.scrollIntoView({ block: 'center' });
+      // Scroll the list only. scrollIntoView also scrolled the page under it, which opened a feed's settings page partway down.
+      const row = list?.querySelector('input:checked')?.closest('li');
+      if (list && row) list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top - (list.clientHeight - row.offsetHeight) / 2;
     });
   });
 
@@ -99,7 +103,7 @@
         {id}
         variant="search"
         size="sm"
-        inset
+        inset={!onPage}
         bind:value={filter}
         placeholder="Filter collections…"
         {disabled}
@@ -108,7 +112,7 @@
     {/snippet}
   </Field>
 {/if}
-<div class="frame" style:--floor-rows={visible.length > 2 ? 2.5 : visible.length || (filter.trim() ? 1 : 0)}>
+<div class="frame" class:onpage={onPage} style:--floor-rows={visible.length > 2 ? 2.5 : visible.length || (filter.trim() ? 1 : 0)}>
   <div class="scroll" bind:this={list}>
     <ul class="checks">
       {#each visible as c (c.id)}
@@ -168,6 +172,7 @@
      its name, which says "there's more" the same way the desktop cap below
      does. Past that, whatever holds it scrolls. */
   .frame { display: flex; flex-direction: column; min-height: calc(var(--floor-rows) * 48px * var(--size-app) + 53px); flex: 0 1 auto; border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+  .frame.onpage { background: var(--surface); }
   .scroll { overflow-y: auto; min-height: 0; flex: 0 1 auto; max-height: 38vh; padding: 0 var(--space-3); }
   /* Desktop cap. Must come after the base .scroll rule above: same specificity,
      so source order decides, and the list should top out at ~7 rows and scroll,

@@ -195,6 +195,8 @@ profiles.get("/:handle/collections/:slug", async (c) => {
            (select fs.display_name from feed_settings fs where fs.user_id = ${viewerId} and fs.feed_id = f.id) as "displayName",
            coalesce(nullif(left(trim(both '-' from regexp_replace(lower(f.title), '[^a-z0-9]+', '-', 'g')), 60), ''), 'feed') as slug,
            f.last_item_at as "lastItemAt",
+           -- Only the owner is told a feed's checks are failing: it is theirs to fix or drop.
+           (${r.isMe} and f.consecutive_failures > 0) as "failing",
            exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon",
            (select count(*)::int from feeds g where g.title = f.title) as "sameTitle",
            (select count(distinct col.user_id)::int from collection_feeds x join collections col on col.id = x.collection_id where x.feed_id = f.id) as "followerCount",

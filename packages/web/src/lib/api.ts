@@ -449,6 +449,8 @@ export type PublicCollectionFeed = {
   lastItemAt: string | null; hasIcon: boolean; followerCount: number; myCollectionIds: number[]; sameTitle: number;
   /** The viewer's own name for this feed, if they gave it one. */
   displayName: string | null;
+  /** Its recent checks failed. Only ever true for the collection's owner. */
+  failing: boolean;
 };
 export type PublicCollection = {
   id: number; name: string; slug: string; description: string | null; visibility: ShareLevel; createdAt: string | null;
