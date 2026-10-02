@@ -9,6 +9,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { subscribe, addFeedToCollection, defaultCollectionFor } from "../lib/subscribe.js";
+import { explainAddFailure } from "../feeds/explain.js";
 import { refreshFeed } from "../feeds/refresh.js";
 import { isHttpUrl, normalizeFeedUrl } from "../feeds/normalize.js";
 import { refreshIcon } from "../feeds/icons.js";
@@ -122,14 +123,14 @@ feeds.get("/", async (c) => {
 feeds.post("/", async (c) => {
   type Body = { url?: string; collectionId?: number; collectionIds?: number[] };
   const body = await c.req.json<Body>().catch(() => ({} as Body));
-  if (!body.url) return c.json({ error: "url is required" }, 400);
+  if (!body.url) return c.json({ error: "Enter an address to follow." }, 400);
   let normalized: string;
   try {
     normalized = normalizeFeedUrl(body.url);
   } catch {
-    return c.json({ error: "not a valid URL" }, 400);
+    return c.json({ error: "That doesn’t look like a web address. Check it and try again." }, 400);
   }
-  if (!isHttpUrl(normalized)) return c.json({ error: "only http(s) URLs" }, 400);
+  if (!isHttpUrl(normalized)) return c.json({ error: "Use an address that starts with http or https." }, 400);
   const user = currentUser(c);
   // Several collections at once: only the caller's own count; anything else is silently dropped.
   const wanted = [...new Set([...(body.collectionIds ?? []), ...(body.collectionId ? [body.collectionId] : [])].map(Number).filter(Number.isFinite))];
@@ -141,8 +142,9 @@ feeds.post("/", async (c) => {
     if (outcome.status === "subscribed") for (const id of mine.slice(1)) await addFeedToCollection(id, outcome.feed.id);
     return c.json(outcome, outcome.status === "none" ? 404 : 200);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
     console.error(`[subscribe] ${new URL(normalized).hostname}:`, err);
+    // The real error is in the log line above; the person adding gets it in plain words.
+    const message = explainAddFailure(err, normalized);
     // Cloudflare replaces an origin 502 body with its own HTML error page,
     // hiding the useful explanation from the person adding the feed. This is
     // a dependency failure inside a healthy API, so preserve our JSON body.

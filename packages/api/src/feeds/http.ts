@@ -34,6 +34,13 @@ export class TooLargeError extends Error {
   }
 }
 
+/** A site answered with an error status where we needed a page or a feed. The message is for logs; feeds/explain.ts words it for readers. */
+export class BadStatus extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
 export type HttpBytes = Omit<HttpResult, "body" | "truncated"> & { bytes: Buffer };
 
 export type HttpOptions = {

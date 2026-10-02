@@ -59,7 +59,8 @@
  *  - Nothing else in the entry helps: no duration, no aspect ratio, no
  *    category. Drop the link and the two kinds are identical.
  */
-import { httpGet } from "./http.js";
+import { BadStatus, httpGet } from "./http.js";
+import { Explained } from "./explain.js";
 
 const CHANNEL_SUFFIX = "[\\w-]{22}";
 const CHANNEL_ID = `UC${CHANNEL_SUFFIX}`;
@@ -132,7 +133,7 @@ export async function resolveYouTube(input: string): Promise<YouTubeResolution |
   if (videoId && /^[\w-]{6,20}$/.test(videoId)) {
     const page = await fetchPage(`https://www.youtube.com/watch?v=${videoId}`);
     const id = extractChannelId(page, true);
-    if (!id) throw new Error("Found the YouTube video but not the channel it belongs to.");
+    if (!id) throw new Explained("thicket found that video but couldn’t tell which channel it belongs to. Try the channel’s own address.");
     return channel(id);
   }
 
@@ -143,7 +144,7 @@ export async function resolveYouTube(input: string): Promise<YouTubeResolution |
   if (channelPath) {
     const page = await fetchPage(`https://www.youtube.com${channelPath}`);
     const id = extractChannelId(page, false);
-    if (!id) throw new Error("Found the YouTube page but not its channel id.");
+    if (!id) throw new Explained("thicket found that YouTube page but couldn’t tell which channel it is. Try the address of one of its videos.");
     return channel(id);
   }
   return null; // youtube.com/something-else: let ordinary discovery have a go
@@ -152,6 +153,6 @@ export async function resolveYouTube(input: string): Promise<YouTubeResolution |
 /** A browser-ish request: YouTube serves the full page (with its JSON blobs) to a stated language, and the consent cookie skips the EU wall. */
 async function fetchPage(url: string): Promise<string> {
   const res = await httpGet(url, PAGE_HEADERS);
-  if (res.status >= 400) throw new Error(`YouTube answered HTTP ${res.status} for ${url}`);
+  if (res.status >= 400) throw new BadStatus(`YouTube answered HTTP ${res.status} for ${url}`, res.status);
   return res.body;
 }
