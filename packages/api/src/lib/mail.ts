@@ -1,8 +1,9 @@
 /**
- * Sending email: readthicket.com only (HOSTED). Four messages, all about
- * getting into your account — confirm an address, a note to the old address
- * when it changes, a reset link, and "your password was changed". thicket
- * sends nothing else.
+ * Sending email: readthicket.com only (HOSTED). Four messages about getting
+ * into your account — confirm an address, a note to the old address when it
+ * changes, a reset link, and "your password was changed" — and one to us:
+ * what someone wrote on the Contact page (routes/contact.ts). thicket sends
+ * nothing else.
  *
  * Plain SMTP, so any provider works. There is no fallback that prints
  * messages to the log: they carry live reset links. In dev, point SMTP_URL at
@@ -16,7 +17,8 @@ import { MAIL_FROM, PUBLIC_URL, SMTP_URL } from "./config.js";
 
 const transport = SMTP_URL ? nodemailer.createTransport(SMTP_URL) : null;
 
-export type Message = { to: string; subject: string; text: string };
+/** `replyTo`: who a reply goes to when that isn't us, as on a Contact message. */
+export type Message = { to: string; subject: string; text: string; replyTo?: string };
 
 export async function send(msg: Message): Promise<boolean> {
   if (!transport) {

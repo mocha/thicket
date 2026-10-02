@@ -61,6 +61,15 @@ export const GITHUB_TOKEN = env("GITHUB_TOKEN");
 export const FEEDBACK_AI = !!env("ANTHROPIC_API_KEY");
 
 /**
+ * The Contact page (issue #159, readthicket.com only; see routes/contact.ts).
+ * CONTACT_TO is the inbox its messages are emailed to. It is a setting and
+ * not written here so the address stays out of the public code and never
+ * appears on the site. Until it is set, the form tells people their message
+ * couldn't be sent, and the log says why at boot.
+ */
+export const CONTACT_TO = env("CONTACT_TO");
+
+/**
  * Retention windows, in days. 0 disables a window entirely.
  *
  * Posts default to OFF: a feed serves a window, not an archive, so a post we

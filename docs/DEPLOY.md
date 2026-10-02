@@ -103,6 +103,7 @@ with comments. Only `DATABASE_URL` and `PUBLIC_URL` are required.
 | `MAIL_FROM` | `thicket <no-reply@readthicket.com>` | readthicket.com only. The From line on every email |
 | `GITHUB_TOKEN` | unset | readthicket.com only. A GitHub token that can read and write issues on `FEEDBACK_REPO`. Until it is set, feedback is saved and waits |
 | `FEEDBACK_REPO` | `christielenn/thicket-feedback` | readthicket.com only. The private GitHub repository (`owner/name`) that "Send feedback" files issues in |
+| `CONTACT_TO` | unset | readthicket.com only. The inbox that messages from the Contact page are emailed to. It never appears on the site. Until it is set, the Contact form tells people their message couldn't be sent |
 | `ANTHROPIC_API_KEY` | unset | readthicket.com only, optional. Lets Claude add feedback that repeats an open issue to that issue as a comment, instead of filing it again |
 | `WEB_DIR` | set in the image | Built web app to serve; unset = API only |
 
