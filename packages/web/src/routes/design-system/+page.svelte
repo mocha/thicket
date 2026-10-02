@@ -15,6 +15,7 @@
   import Badge from '$lib/components/Badge.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
+  import Breadcrumb from '$lib/components/Breadcrumb.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
@@ -459,6 +460,10 @@
       onchange={(v) => (tab = v)}
       label="Example view"
     />
+
+    <h3 class="sub">Breadcrumb</h3>
+    <p class="section-lede">The header of a page that sits one step inside another, like managing a feed or a collection. It is the whole header: there’s no big title under it. Each place you came through is a link, in order, and the last step is the page you’re on, in plain gray. Every step is the same size, which is what makes it read as one trail. The page’s one main action, like Unfollow, sits at the right on the same line. Use it instead of a “Back to …” link above a title.</p>
+    <Breadcrumb trail={[{ label: 'Core77', href: '#navigation' }]} current="Manage feed" asTitle={false} />
 
     <h3 class="sub">Choice group</h3>
     <p class="section-lede">Pick one, and it takes effect at once — a setting, not a tab. Nothing else on the page moves. When the options can’t sit on one line in the space they have (a small phone, large text), the group becomes a dropdown with the same choices. It never wraps and never slides sideways.</p>

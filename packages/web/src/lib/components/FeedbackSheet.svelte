@@ -54,17 +54,15 @@
     <p class="lede">Something broken, confusing, or missing? Tell us. Only the people who make thicket will see what you write.</p>
     <Field label="Your feedback" hideLabel {error}>
       {#snippet children({ id, describedBy, invalid })}
-        <Textarea {id} aria-describedby={describedBy} {invalid} bind:element={box} bind:value={text} inset rows={6} limit={LIMIT} disabled={busy} placeholder="What happened, or what would you like?" />
+        <Textarea {id} aria-describedby={describedBy} {invalid} bind:element={box} bind:value={text} inset rows={6} limit={LIMIT} counter disabled={busy} placeholder="What happened, or what would you like?" />
       {/snippet}
     </Field>
-    <!-- Directly under the box. The count shares the row, and only once there is
-         little room left: until then it is one more thing to read. -->
+    <!-- Directly under the box. The count is inside the box itself. -->
     <div class="under">
       <label class="handle">
         <input type="checkbox" bind:checked={includeHandle} disabled={busy} />
         <span>Include your handle (@{session.user?.handle}), so we can follow up</span>
       </label>
-      {#if text.length > LIMIT * 0.9}<span class="count" class:over={text.length > LIMIT} role="status">{text.length}/{LIMIT}</span>{/if}
     </div>
   </form>
   {#snippet footer()}
@@ -79,8 +77,6 @@
   .lede { color: var(--text-2); margin: calc(-1 * var(--space-2)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   /* Tucked up under the box: a step closer than the Sheet spaces its parts. */
   .under { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: calc(-1 * var(--space-1)); }
-  .count { flex: none; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-2); font-variant-numeric: tabular-nums; }
-  .count.over { color: var(--danger); font-weight: 700; }
   /* The same tick box as "Create this collection" on the import page. */
   .handle { display: flex; align-items: center; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); cursor: pointer; }
   .handle input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }

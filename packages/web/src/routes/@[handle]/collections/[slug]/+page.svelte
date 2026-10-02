@@ -106,9 +106,11 @@
       </div>{/if}
     </div>
     {#if col.description}<p class="desc">{col.description}</p>{/if}
-    <p class="sub">
-      {#if !col.isMe}by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a> ·&nbsp;{/if}{#if col.isMe && audienceTag(col.visibility)}<Badge class="beforetext">{audienceTag(col.visibility)}</Badge>·&nbsp;{/if}<button class="reveal tap" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{col.feeds.length} {col.feeds.length === 1 ? 'feed' : 'feeds'}<Icon name="caret" size={14} stroke={2.4} dir={showFeeds ? 'down' : 'right'} /></button>
-    </p>
+    {#if !col.isMe}
+      <p class="sub">by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a></p>
+    {:else if audienceTag(col.visibility)}
+      <p class="sub"><Badge>{audienceTag(col.visibility)}</Badge></p>
+    {/if}
     {#if !session.user}
       <!-- The header's Sign up is the one green button on the page, and Copy
            leads there anyway, so Copy is just its words. -->
@@ -150,15 +152,24 @@
     </div>
   </dialog>
 
-  {#if showFeeds}
-    <section class="feeds" id="collection-feeds">
+  <!-- The collection's feeds, in one card: a row that opens it (like the Filters row on Explore), then the list inside. On my own collection, the open card also offers the list as a file. -->
+  {#if col.feeds.length > 0 || col.children.length > 0}
+  <section class="feedscard">
+    <div class="fc-head">
+      <button class="reveal tap" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{showFeeds ? (col.feeds.length === 1 ? 'Hide feed' : 'Hide feeds') : col.feeds.length === 1 ? 'See the 1 feed in this collection' : `See all ${col.feeds.length} feeds in this collection`}<Icon name="caret" size={14} stroke={2.4} dir={showFeeds ? 'down' : 'right'} /></button>
+      {#if col.isMe && showFeeds && col.feeds.length > 0}
+        <Button size="sm" href={opml} download="{col.slug}.opml" onclick={() => api.event('opml_exported', { collectionId: col?.id })} title="Save this collection as a file other readers can open">Export feeds</Button>
+      {/if}
+    </div>
+    {#if showFeeds}
+    <div id="collection-feeds">
       <ul class="list">
         {#each col.feeds as f (f.id)}
           <li>
             <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={36} />
             <div class="meta">
               <a class="title tap" href={feedHref(f)}>{feedListName(f)}</a>
-              <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · {relativeTime(f.lastItemAt)}{/if} · {f.followerCount} {f.followerCount === 1 ? 'follower' : 'followers'}</div>
+              <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · {relativeTime(f.lastItemAt)}{/if} · {f.followerCount} {f.followerCount === 1 ? 'follower' : 'followers'}{#if f.failing} · <span class="bad">failing</span>{/if}</div>
             </div>
             {#if session.user}
               <FollowControl feedId={f.id} ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} compact />
@@ -173,7 +184,9 @@
           {/each}
         </ul>
       {/if}
-    </section>
+    </div>
+    {/if}
+  </section>
   {/if}
 
   {#if col.isMe && col.feeds.length === 0}
@@ -191,8 +204,13 @@
   .sub { margin: var(--space-1) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
   /* The pill sits in a line of text, so it carries its own gap to the separator after it. */
-  .sub :global(.beforetext) { margin-right: var(--space-2); }
-  .reveal { display: inline-flex; align-items: center; gap: var(--space-1); font-size: inherit; font-weight: 600; color: var(--accent); vertical-align: baseline; }
+  .feedscard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: var(--space-4); }
+  /* The row that opens the card. As tall open as closed, so the Export button arriving doesn't move anything. */
+  .fc-head { display: flex; align-items: center; gap: var(--space-3); min-height: 52px; padding: var(--space-2) var(--space-4); }
+  /* The whole strip to the left of Export opens and closes the list, not just the words. */
+  .reveal { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-1); text-align: left; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
+  /* Inside the card the lists are part of it, not cards of their own. */
+  .feedscard .list { background: none; box-shadow: none; border-radius: 0; border-top: 1px solid var(--line); }
   /* 2px of top padding is an optical nudge: the buttons sit on the title's line. */
   .actions { flex: 0 1 auto; max-width: 100%; display: flex; gap: var(--space-2); align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
   /* The link keeps its own padding; pull it back so its words start at the title's left edge. */
@@ -211,7 +229,7 @@
   @media (min-width: 700px) { .sheet.confirm { width: 460px; } }
   .confirm p { margin: 0 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .confirmbtns { display: flex; gap: var(--space-2); justify-content: flex-end; }
-  .feeds { margin-bottom: var(--space-4); }
+  .bad { color: var(--danger); }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .list li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .list li:first-child { border-top: 0; }
