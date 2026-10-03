@@ -38,7 +38,7 @@
    * renders straight away rather than waiting on who's signed in.
    */
   const bare = $derived(path === '/design-system');
-  /** The landing page looks the same to everyone; being signed in doesn't wrap it in the app. */
+  /** The front page only sends people on (to Everything or the login screen), so it draws no frame of its own. */
   const front = $derived(path === '/');
   const inApp = $derived(signedIn && !front);
 
@@ -83,24 +83,17 @@
 {:else}
   {#if inApp}
     <Nav />
-  {:else if session.loaded}
-    <header class="anon" class:home={front}>
-      <a class="brand tap" href="/"><img src="/icon.svg" alt="" width="32" height="32" /><Wordmark height={27} /></a>
-      {#if front}
-        <!-- The landing page: one click into Everything for someone signed in;
-             otherwise Log in, and Sign up, which jumps to the form at the end of the page. -->
-        {#if signedIn}
-          <span class="auth"><Button link size="lg" href="/everything">You’re already logged in <span aria-hidden="true">→</span></Button></span>
-        {:else}
-          <span class="auth"><Button href="/login">Log in</Button><Button variant="primary" href="#sign-up">Sign up</Button></span>
-        {/if}
-      {:else if !signedIn && path !== '/login' && path !== '/signup' && !front}
+  {:else if session.loaded && !front}
+    <header class="anon">
+      <!-- A full page load, so on readthicket.com the server can hand / to its own landing page (see SITE_URL). -->
+      <a class="brand tap" href="/" data-sveltekit-reload><img src="/icon.svg" alt="" width="32" height="32" /><Wordmark height={27} /></a>
+      {#if !signedIn && path !== '/login' && path !== '/signup'}
         <span class="auth"><Button href="/login?next={encodeURIComponent(path)}">Log in</Button><Button variant="primary" href="/signup?next={encodeURIComponent(path)}">Sign up</Button></span>
       {/if}
     </header>
   {/if}
 
-  <main class:anon={!inApp} class:home={front} class:paged={inApp && display.layout === 'paged'} inert={covered} id="content" tabindex="-1" bind:this={content}>
+  <main class:anon={!inApp} class:paged={inApp && display.layout === 'paged'} inert={covered} id="content" tabindex="-1" bind:this={content}>
     {#if show}{@render children()}
     {:else if session.unreachable}
       <div class="unreachable" role="status">
@@ -128,8 +121,6 @@
   main.anon { padding-bottom: calc(var(--space-6) + var(--space-2)); }
   /* The design system runs on its own, without the app's chrome. A wider column
      than the reading app uses, so a gallery of swatches and controls has room. */
-  /* The landing page's green runs right to the bottom edge. */
-  main.anon.home { padding-bottom: 0; }
   main.bare {
     max-width: 900px;
     padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) var(--space-4) calc(var(--space-6) + var(--space-5));
@@ -158,7 +149,6 @@
   }
   @media (min-width: 900px) {
     main.anon, header.anon { max-width: 680px; }
-    main.home, header.anon.home { max-width: 1040px; }
     main.anon { padding: var(--space-5) var(--space-5) calc(var(--space-6) + var(--space-5)); }
     header.anon { padding: var(--space-5) var(--space-5) var(--space-4); }
   }

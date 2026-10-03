@@ -22,11 +22,19 @@ export const SIGNUPS_DEFAULT = (env("SIGNUPS") as "open" | "invite" | "closed" |
 export const INSTANCE_NAME = env("INSTANCE_NAME") ?? new URL(PUBLIC_URL).hostname;
 /**
  * True only on readthicket.com, thicket's own hosted service. Some things
- * belong to that service alone — its landing page, public sign up, account
- * email and password reset — because a self-hoster runs their own users.
+ * belong to that service alone — public sign up, account email and password
+ * reset — because a self-hoster runs their own users.
  * Off unless set, so a copy of thicket never turns them on by accident.
  */
 export const HOSTED = env("HOSTED") === "true";
+/**
+ * readthicket.com only: the private address of its own site (the landing page
+ * and, in time, pricing and legal pages; github.com/mocha/readthicket-com).
+ * Set, this server hands that site the paths it owns (SITE_PATHS in index.ts)
+ * and serves everything else itself, so both share one domain. Unset, as on
+ * every self-hosted copy, there is no such site: / goes straight into the app.
+ */
+export const SITE_URL = env("SITE_URL")?.replace(/\/+$/, "");
 /**
  * Every account must have an email, so password reset always works. Today
  * that's readthicket.com alone; self-hosted copies don't ask for email.

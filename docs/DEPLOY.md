@@ -98,7 +98,8 @@ with comments. Only `DATABASE_URL` and `PUBLIC_URL` are required.
 | `RETAIN_FETCH_LOG_DAYS` | `90` | Delete fetch-log rows older than this |
 | `RETAIN_EVENTS_DAYS` | `90` | Delete analytics events older than this |
 | `PORT` | `3000` | Listen port |
-| `HOSTED` | unset | readthicket.com only; leave unset on your own copy. Turns on what belongs to thicket's hosted service: its landing page, public sign up, account email, and password reset |
+| `HOSTED` | unset | readthicket.com only; leave unset on your own copy. Turns on what belongs to thicket's hosted service: public sign up, account email, and password reset |
+| `SITE_URL` | unset | readthicket.com only. The private address of its own site (the landing page; github.com/mocha/readthicket-com). This server hands it `/` and `/_site/` and serves everything else, so both share one domain. Unset, `/` sends people to Everything or the login screen |
 | `SMTP_URL` | unset | readthicket.com only. Outgoing mail for email confirmation and reset links: `smtp://user:pass@host:587`. Required when `HOSTED` is set; thicket won't start without it |
 | `MAIL_FROM` | `thicket <no-reply@readthicket.com>` | readthicket.com only. The From line on every email |
 | `GITHUB_TOKEN` | unset | readthicket.com only. A GitHub token that can read and write issues on `FEEDBACK_REPO`. Until it is set, feedback is saved and waits |
