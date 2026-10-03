@@ -426,7 +426,9 @@ export const feedbackApi = {
 export type StarterCandidate = { handle: string; displayName: string | null; collectionCount: number; feedCount: number };
 
 export type PublicUser = { handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: string; avatarUpdatedAt: string | null };
-export type ProfileCollection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null };
+export type ProfileCollection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null;
+  /** The viewer has a copy of this one (never true on your own profile). */
+  copiedByMe: boolean };
 export type Profile =
   | { handle: string; private: true }
   | (PublicUser & {
@@ -455,8 +457,15 @@ export type PublicCollectionFeed = {
 export type PublicCollection = {
   id: number; name: string; slug: string; description: string | null; visibility: ShareLevel; createdAt: string | null;
   owner: PublicUser; isMe: boolean; feeds: PublicCollectionFeed[]; children: { id: number; name: string; slug: string; description: string | null; feedCount: number }[];
-  /** For a signed-in visitor: the copy they already made of this collection, if any. Drives the "open your copy" state. */
-  myCopy: { slug: string; name: string } | null;
+  /**
+   * For a signed-in visitor: the copy they already made of this collection, if
+   * any, and how many of this collection's feeds it has. A copy with all of
+   * them gets "Open your copy"; one with fewer is pointed out but not treated
+   * as the same thing.
+   */
+  myCopy: { slug: string; name: string; sharedFeeds: number } | null;
+  /** For the owner: the collection this one was copied from, while they can still see it. */
+  copiedFrom: { name: string; slug: string; owner: PublicUser } | null;
 };
 /** Someone's saved post on their profile: their note, if they share notes with me, and whether I have saved it too. */
 export type PublicBookmark = Omit<Bookmark, 'notes'> & { myBookmarkId: number | null };

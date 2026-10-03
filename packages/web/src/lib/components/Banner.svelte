@@ -11,13 +11,15 @@
    *   success green   something worked
    * With `href`, the title is a link: for a banner whose whole point is to
    * send you somewhere, so the text under it needn't say "go here" again.
+   * The title can instead be a snippet, for a title where only a name in it
+   * is the link ("You made <a>Design inspiration</a> from this collection").
    * A dismissible banner shows ✕ and calls `ondismiss`. Remembering the
    * dismissal is the caller's job, because only the caller knows what should
    * bring the banner back.
    */
   type Tone = 'error' | 'warning' | 'info' | 'success';
   let { tone = 'info', title, href, dismissible = false, ondismiss, children }: {
-    tone?: Tone; title?: string; href?: string; dismissible?: boolean; ondismiss?: () => void; children?: Snippet;
+    tone?: Tone; title?: string | Snippet; href?: string; dismissible?: boolean; ondismiss?: () => void; children?: Snippet;
   } = $props();
 </script>
 
@@ -34,7 +36,8 @@
     {/if}
   </svg>
   <div class="body">
-    {#if title}<p class="title">{#if href}<a class="tap" {href}>{title}</a>{:else}{title}{/if}</p>{/if}
+    {#if typeof title === 'function'}<p class="title">{@render title()}</p>
+    {:else if title}<p class="title">{#if href}<a class="tap" {href}>{title}</a>{:else}{title}{/if}</p>{/if}
     {#if children}<div class="text">{@render children()}</div>{/if}
   </div>
   {#if dismissible}
@@ -61,9 +64,9 @@
   .info .icon { color: var(--text-2); }
   .body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .title { margin: 0 0 2px; font-weight: 650; }
-  .text :global(a), .title a { color: var(--accent); font-weight: 600; }
-  .title a { font-weight: inherit; }
-  .title a:hover { text-decoration: underline; }
+  .text :global(a), .title :global(a) { color: var(--accent); font-weight: 600; }
+  .title :global(a) { font-weight: inherit; }
+  .title :global(a:hover) { text-decoration: underline; }
   /* Pulled flush with the banner's padding so it sits in the corner. Tuned by eye
      against the close button's own box, so these stay literal. */
   .banner :global(.x) { margin: -3px -4px -3px 0; }

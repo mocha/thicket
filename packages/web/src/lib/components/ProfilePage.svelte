@@ -389,6 +389,7 @@
                 {#if c.description}<span class="desc">{c.description}</span>{/if}
               </div>
               {#if isMe && display.fresh && countText(marks.byId[c.id])}<Badge tone="accent">{countText(marks.byId[c.id])} new</Badge>{/if}
+              {#if c.copiedByMe}<Badge>Copied</Badge>{/if}
               <span class="count">{c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'}</span>
               <span class="chev" aria-hidden="true">›</span>
             </a>
@@ -519,7 +520,7 @@
   .who { display: flex; gap: var(--space-4); align-items: flex-start; margin: var(--space-2) 0 var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); }
   .names { flex: 1; min-width: 0; }
   /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 -0.2em; padding-bottom: 0.2em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* 2px is an optical nudge under the name, not a spacing step. */
   .handle { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); }
   .site { color: var(--accent); font-weight: 600; }
