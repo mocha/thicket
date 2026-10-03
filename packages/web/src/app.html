@@ -6,9 +6,14 @@
 		<meta name="color-scheme" content="light dark" />
 		<meta name="theme-color" content="#f6f1e8" media="(prefers-color-scheme: light)" />
 		<meta name="theme-color" content="#16140f" media="(prefers-color-scheme: dark)" />
-		<link rel="manifest" href="/manifest.webmanifest" />
-		<link rel="icon" href="/icon.svg" type="image/svg+xml" />
-		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<!-- Safari, iPadOS above all, keeps a site's icons long after they change, keyed
+		     by address: bump ?v= whenever an icon is redrawn so it fetches the new one.
+		     Not every browser draws an SVG tab icon, so a PNG and a /favicon.ico go first. -->
+		<link rel="manifest" href="/manifest.webmanifest?v=2" />
+		<link rel="icon" href="/favicon.ico?v=2" sizes="16x16 32x32 48x48" />
+		<link rel="icon" href="/favicon-96x96.png?v=2" sizes="96x96" type="image/png" />
+		<link rel="icon" href="/icon.svg?v=2" sizes="any" type="image/svg+xml" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" sizes="180x180" />
 		<!-- How this device shows thicket (light/dark, colour theme, fonts, layout)
 		     is chosen per device and kept in this browser (see lib/display.svelte.ts).
 		     Read it here, before anything paints, so a dark reader is never flashed
