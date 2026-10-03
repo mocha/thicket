@@ -420,10 +420,12 @@
 
     <section class="entry" id="banner" aria-labelledby="banner-h">
       <h3 class="entry-h" id="banner-h">Banner</h3>
-      <p class="section-lede">An inline notice inside a page. The tone sets the color and icon. When a banner's whole point is to send you somewhere, its title is the link, so the text under it doesn't repeat it.</p>
+      <p class="section-lede">An inline notice inside a page. The tone sets the color and icon. When a banner's whole point is to send you somewhere, its title is the link, so the text under it doesn't repeat it. When the title names something, only the name is the link.</p>
       <div class="stack">
         <Banner tone="info" title="Heads up">Context, nothing wrong. The quiet one.</Banner>
         <Banner tone="warning" title="Add an email to your account" href="#banner">A title can be the link when the banner exists to send you somewhere.</Banner>
+        {#snippet namedTitle()}You made <a class="tap" href="#banner">Design inspiration</a> from this collection{/snippet}
+        <Banner tone="info" title={namedTitle}>Only the name in a title is a link when the title names something.</Banner>
         <Banner tone="success" title="Saved">Your changes are in.</Banner>
         <Banner tone="warning" title="Check this">Something wants attention soon.</Banner>
         <Banner tone="error" title="That didn't work" dismissible ondismiss={() => {}}>Something failed, and here is why.</Banner>

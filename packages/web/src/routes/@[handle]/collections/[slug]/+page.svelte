@@ -16,6 +16,7 @@
   import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
   import Badge from '$lib/components/Badge.svelte';
+  import Banner from '$lib/components/Banner.svelte';
   import River from '$lib/components/River.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { COPY_PARAM, copyNext, welcome } from '$lib/copyintent.svelte';
@@ -44,6 +45,11 @@
   // also reports a copy from an earlier visit as col.myCopy; either counts.
   let justCopied = $state<{ slug: string; name: string } | null>(null);
   const existingCopy = $derived(justCopied ?? col?.myCopy ?? null);
+  // A copy holds less than this collection when the owner has added feeds since,
+  // or merged another collection into this one (issue #176). Then it isn't
+  // "your copy" of what's on screen: Copy stays the main button, and a banner
+  // says which collection you made from this one and how much of it it has.
+  const partialCopy = $derived(!justCopied && col?.myCopy && col.myCopy.sharedFeeds < col.feeds.length ? col.myCopy : null);
 
   $effect(() => {
     const key = `${handle}/${slug}`;
@@ -118,7 +124,9 @@
           <AddFeedButton collectionIds={[col!.id]} via="collection_page" />
           <IconButton icon="gear" variant="bordered" size="lg" href={manageCollectionHref(handle, slug)} label="Manage" title="Manage" />
         {:else if session.user}
-          {#if existingCopy}
+          {#if partialCopy}
+            <Button variant="primary" onclick={() => confirmAgain?.showModal()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy this collection'}</Button>
+          {:else if existingCopy}
             <Button variant="primary" href={collectionHref(session.user.handle, existingCopy.slug)}>Open your copy</Button>
             <Button onclick={() => confirmAgain?.showModal()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy again'}</Button>
           {:else}
@@ -133,6 +141,14 @@
     {:else if audienceTag(col.visibility)}
       <p class="sub"><Badge>{audienceTag(col.visibility)}</Badge></p>
     {/if}
+    {#if col.isMe && col.copiedFrom}
+      <p class="sub">Copied from <a href={collectionHref(col.copiedFrom.owner.handle, col.copiedFrom.slug)}>{col.copiedFrom.name}</a> by <a href={profileHref(col.copiedFrom.owner.handle)}>{col.copiedFrom.owner.displayName ?? `@${col.copiedFrom.owner.handle}`}</a></p>
+    {/if}
+    {#if partialCopy && session.user}
+      {@const href = collectionHref(session.user.handle, partialCopy.slug)}
+      {#snippet madeFrom()}You made <a class="tap" {href}>{partialCopy!.name}</a> from this collection{/snippet}
+      <div class="mycopy"><Banner title={madeFrom}>It has {partialCopy.sharedFeeds} of these {col.feeds.length} feeds</Banner></div>
+    {/if}
     {#if !session.user}
       <!-- The header's Sign up is the one green button on the page, and Copy
            leads there too, so Copy is just its words. -->
@@ -145,7 +161,11 @@
   <dialog bind:this={confirmAgain} onclick={(e) => { if (e.target === confirmAgain) confirmAgain?.close(); }} aria-labelledby="copy-again-title">
     <div class="sheet confirm">
       <h2 id="copy-again-title">Make another copy?</h2>
-      <p>You already have a copy of this collection. Copying again makes a second, separate one — handy if you want to prune each down to different feeds.</p>
+      {#if partialCopy}
+        <p>You made {partialCopy.name} from this collection. It has {partialCopy.sharedFeeds} of these {col.feeds.length} feeds. Copying again makes a new, separate collection with all {col.feeds.length}.</p>
+      {:else}
+        <p>You already have a copy of this collection. Copying again makes a second, separate one — handy if you want to prune each down to different feeds.</p>
+      {/if}
       <div class="confirmbtns">
         <Button onclick={() => confirmAgain?.close()}>Cancel</Button>
         <Button variant="primary" disabled={copying} onclick={() => { confirmAgain?.close(); void copy(); }}><Icon name="copy" size={16} />Copy again</Button>
@@ -200,10 +220,11 @@
 <style>
   .top { margin-bottom: var(--space-4); }
   .titlerow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-3); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1 1 8ch; }
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1 1 auto; }
   .desc { margin: var(--space-2) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); overflow-wrap: anywhere; }
   .sub { margin: var(--space-1) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
+  .mycopy { margin-top: var(--space-4); }
   /* The pill sits in a line of text, so it carries its own gap to the separator after it. */
   .feedscard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: var(--space-4); }
   /* The row that opens the card. As tall open as closed, so the Export button arriving doesn't move anything. */
@@ -219,6 +240,15 @@
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
   dialog::backdrop { background: var(--scrim); }
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-5) var(--space-4) calc(var(--space-4) + var(--safe-b)); box-shadow: var(--shadow-sheet); }
+  /* On a phone the buttons fold under the description and byline, so the title
+     keeps the full width and the actions sit just above what they act on. */
+  @media (max-width: 600px) {
+    .top { display: flex; flex-direction: column; }
+    .titlerow { display: contents; }
+    h1 { flex: none; }
+    .actions { order: 1; margin-top: var(--space-3); justify-content: flex-start; padding-top: 0; }
+    .mycopy { order: 2; }
+  }
   @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 560px; border-radius: var(--radius-lg); } }
   .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-4); }
   @media (min-width: 700px) { .sheet.confirm { width: 460px; } }

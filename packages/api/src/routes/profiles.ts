@@ -51,11 +51,16 @@ async function avatarTime(userId: number): Promise<string | null> {
   return a?.updatedAt.toISOString() ?? null;
 }
 
-/** Visible, named collections of an owner: non-root, and shared with this viewer (all of them, for the owner). */
-function collectionRows(u: Owner, who: Audience) {
-  return db.execute<{ id: number; parentId: number; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null }>(sql`
+/**
+ * Visible, named collections of an owner: non-root, and shared with this viewer
+ * (all of them, for the owner). `copiedByMe`: the viewer has a copy of it, so
+ * the profile can say so (issue #176).
+ */
+function collectionRows(u: Owner, who: Audience, viewerId: number | undefined) {
+  return db.execute<{ id: number; parentId: number; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null; copiedByMe: boolean }>(sql`
     select col.id, col.parent_id as "parentId", col.name, col.slug, col.description, col.visibility, col.copied_from_id as "copiedFromId",
-           ${subtreeFeedCount(sql`col.id`)} as "feedCount"
+           ${subtreeFeedCount(sql`col.id`)} as "feedCount",
+           (${!who.isMe && viewerId !== undefined} and exists(select 1 from collections mine where mine.user_id = ${viewerId ?? -1} and mine.copied_from_id = col.id)) as "copiedByMe"
     from collections col
     where col.user_id = ${u.id} and col.parent_id is not null and ${allowedLevelsSql("col.visibility", who)}
     order by lower(col.name)
@@ -92,7 +97,7 @@ profiles.get("/:handle", async (c) => {
            exists(select 1 from user_follows where follower_id = ${viewer?.id ?? -1} and followee_id = ${u.id}) as "isFollowing"
   `)).rows;
   const [{ noteCount }] = (await db.execute<{ noteCount: number }>(sql`select count(*)::int as "noteCount" from bookmarks where user_id = ${u.id} and note is not null`)).rows;
-  const collections = allows(u.collectionsVisibility, who) ? (await collectionRows(u, who)).rows : null;
+  const collections = allows(u.collectionsVisibility, who) ? (await collectionRows(u, who, viewer?.id)).rows : null;
 
   return c.json({
     ...publicUser(u, await avatarTime(u.id)), private: false, isMe, following,
@@ -185,6 +190,24 @@ async function visibleCollection(c: Context, handleRaw: string, slug: string) {
   return { u, col: { ...col, id: Number(col.id) }, isMe, who, viewer };
 }
 
+/**
+ * Where my collection was copied from, when I can still see that collection:
+ * its owner's profile isn't private, shares collections with me, and the
+ * collection itself is shared with me. Otherwise null, the same as never copied.
+ */
+async function copiedFromFor(id: number, meId: number) {
+  const [src] = (await db.execute<{ name: string; slug: string; visibility: ShareLevel; ownerId: number }>(sql`
+    select src.name, src.slug, src.visibility, src.user_id as "ownerId"
+    from collections mine join collections src on src.id = mine.copied_from_id
+    where mine.id = ${id} and src.parent_id is not null`)).rows;
+  if (!src) return null;
+  const [u] = await db.select().from(schema.users).where(eq(schema.users.id, Number(src.ownerId)));
+  if (!u || u.id === meId) return null;
+  const who = await audienceFor(u, meId);
+  if (u.profileVisibility === "private" || !allows(u.collectionsVisibility, who) || !allows(src.visibility, who)) return null;
+  return { name: src.name, slug: src.slug, owner: publicUser(u) };
+}
+
 /** A public collection: its feeds (with the viewer's relationship, if signed in) and children. */
 profiles.get("/:handle/collections/:slug", async (c) => {
   const r = await visibleCollection(c, c.req.param("handle"), c.req.param("slug"));
@@ -209,19 +232,31 @@ profiles.get("/:handle/collections/:slug", async (c) => {
     from collections col where col.parent_id = ${r.col.id} and ${allowedLevelsSql("col.visibility", r.who)} order by lower(col.name)
   `);
   // Does this signed-in reader already have a copy of this collection? Every
-  // copy records its source in copied_from_id, so the page can offer "open your
-  // copy" and warn before making a second one. Most recent wins if there are
-  // several.
+  // copy records its source in copied_from_id, so the page can point at it and
+  // warn before making a second one. Most recent wins if there are several.
+  // A copy can hold far less than this collection does now: the owner added
+  // feeds, or merged a bigger collection into this one and the copy's source
+  // moved here with it (issue #176). So it says how many of this collection's
+  // feeds it has, anywhere inside it; only a copy with all of them is "your copy"
+  // without qualification.
   const myCopy = r.viewer && !r.isMe
-    ? (await db.execute<{ slug: string; name: string }>(sql`
-        select slug, name from collections
-        where user_id = ${r.viewer.id} and copied_from_id = ${r.col.id}
-        order by created_at desc limit 1`)).rows[0] ?? null
+    ? (await db.execute<{ slug: string; name: string; sharedFeeds: number }>(sql`
+        with recursive newest as (
+          select id, slug, name from collections where user_id = ${r.viewer.id} and copied_from_id = ${r.col.id} order by created_at desc limit 1
+        ), mine as (
+          select id from newest
+          union all select k.id from collections k join mine on k.parent_id = mine.id
+        )
+        select newest.slug, newest.name,
+               (select count(*)::int from collection_feeds src where src.collection_id = ${r.col.id}
+                  and exists(select 1 from collection_feeds x where x.feed_id = src.feed_id and x.collection_id in (select id from mine))) as "sharedFeeds"
+        from newest`)).rows[0] ?? null
     : null;
+  const copiedFrom = r.isMe ? await copiedFromFor(r.col.id, r.viewer!.id) : null;
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
   return c.json({
     id: r.col.id, name: r.col.name, slug: r.col.slug, description: r.col.description, visibility: r.col.visibility, createdAt: iso(r.col.createdAt),
-    owner: publicUser(r.u), isMe: r.isMe, myCopy,
+    owner: publicUser(r.u), isMe: r.isMe, myCopy, copiedFrom,
     feeds: feeds.rows.map((f: any) => ({ ...f, lastItemAt: iso(f.lastItemAt) })),
     children: children.rows,
   });

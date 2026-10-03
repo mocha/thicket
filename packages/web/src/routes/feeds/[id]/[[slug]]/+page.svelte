@@ -109,13 +109,21 @@
   .who { flex: 1; min-width: 0; }
   /* The title takes what room it needs; the buttons sit to its right and drop underneath when the row runs out. */
   .titlerow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-2) var(--space-3); }
-  h1 { flex: 1 1 14ch; min-width: 0; font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
+  h1 { flex: 1 1 auto; min-width: 0; font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
   .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; flex: 0 1 auto; max-width: 100%; }
   /* 2px is an optical nudge under the title, not a spacing step. */
   .host { display: inline-block; max-width: 100%; overflow-wrap: anywhere; margin-top: 2px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
   /* The site link sits right under the follow and settings buttons, so its
      touch area grows downward only and leaves theirs whole. */
   @media (pointer: coarse) { .host::after { top: 0; } }
+  /* On a phone the buttons fold under the address and description, so the
+     title keeps the full width. */
+  @media (max-width: 600px) {
+    .who { display: flex; flex-direction: column; align-items: flex-start; }
+    .titlerow { display: contents; }
+    h1 { flex: none; }
+    .actions { order: 1; margin-top: var(--space-3); }
+  }
   .desc { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   /* 132px is the narrowest column that keeps the longest label, "Users following", on one line. */
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: var(--space-3) var(--space-2); margin: var(--space-4) 0 0; padding: var(--space-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
