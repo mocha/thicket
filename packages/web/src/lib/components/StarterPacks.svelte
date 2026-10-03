@@ -8,8 +8,10 @@
    * stream has something in it before you have learned what a feed is. The
    * copy is independent from that moment on — it is yours to add to and prune.
    *
-   * Shown signed out too (the sign-up page), where each card is a link: "here,
-   * copy mine" has to work as something you can send to a friend.
+   * Shown signed out too (the landing page), where each card is a link: "here,
+   * copy mine" has to work as something you can send to a friend. There the
+   * Copy button goes to Sign up, named for the collection, and the copy is
+   * made when you come back (see lib/copyintent.svelte.ts).
    */
   import { onMount } from 'svelte';
   import { api, exploreApi, profilesApi, collectionHref, profileHref, type ExploreCollection } from '$lib/api';
@@ -20,6 +22,7 @@
   import Card from './Card.svelte';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
+  import { copyNext } from '$lib/copyintent.svelte';
 
   let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false }:
     { heading?: string; lede?: string; compact?: boolean } = $props();
@@ -75,13 +78,17 @@
                still opens the collection while the button below stays its own control. -->
           <h3 class="card-title"><a class="name" href={collectionHref(c.handle, c.slug)}>{c.name}</a></h3>
           {#if c.description}<p class="card-summary">{c.description}</p>{/if}
-          {#if session.user}
-            <div class="take">
+          <div class="take">
+            {#if session.user}
               <Button variant="secondary" size="sm" loading={copying === c.id} disabled={copied.has(c.id)} onclick={() => void copy(c)}>
                 {#if copied.has(c.id)}Added{:else if copying === c.id}Copying…{:else}<Icon name="copy" size={16} />Copy to my collections{/if}
               </Button>
-            </div>
-          {/if}
+            {:else}
+              <Button variant="secondary" size="sm" href="/signup?next={encodeURIComponent(copyNext(c.handle, c.slug, 'starter_card'))}" onclick={() => api.event('copy_signup_started', { handle: c.handle, slug: c.slug, from: 'starter_card' })}>
+                <Icon name="copy" size={16} />Copy to my collections
+              </Button>
+            {/if}
+          </div>
         </Card>
       {/each}
     </ul>

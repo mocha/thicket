@@ -18,6 +18,7 @@
   import Badge from '$lib/components/Badge.svelte';
   import River from '$lib/components/River.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import { COPY_PARAM, copyNext, welcome } from '$lib/copyintent.svelte';
 
   /**
    * A collection, mine or anyone's, at its one address. The owner reads it
@@ -25,10 +26,11 @@
    * the shareable one. The owner's two actions are named rather than hidden
    * behind a kebab: add something to this collection, or change the collection
    * itself. For visitors there is one action:
-   * "Copy this collection". Signed in here, it copies at once. Signed out, a
-   * sheet explains: make an account here (and come straight back), or keep
-   * the link for the cross-thicket import that is still to come. The portable
-   * form underneath is OPML, advertised in <head>; nobody has to know that.
+   * "Copy this collection". Signed in here, it copies at once. Signed out, it
+   * goes straight to Sign up, which names the collection; signing up or
+   * logging in brings you back here with ?copy on the address, and the copy
+   * is made the moment the page loads, no second press. The portable form
+   * underneath is OPML, advertised in <head>; nobody has to know that.
    */
   const handle = $derived(page.params.handle ?? '');
   const slug = $derived(page.params.slug ?? '');
@@ -37,7 +39,6 @@
   let copying = $state(false);
   let loadedKey = $state<string | undefined>(undefined);
   let showFeeds = $state(false);
-  let explain = $state<HTMLDialogElement | null>(null);
   let confirmAgain = $state<HTMLDialogElement | null>(null);
   // A copy made in this visit, so the button reflects it right away. The server
   // also reports a copy from an earlier visit as col.myCopy; either counts.
@@ -53,15 +54,40 @@
   });
   onMount(() => api.event('public_collection_view', { handle, slug }));
 
-  async function copy() {
+  // Back from signing up or logging in to get this collection: copy it now,
+  // then take ?copy off the address so a reload doesn't copy it again. Its
+  // value says which button sent them (Copy, or the box at the end of the list).
+  // The copy then takes you to your own copy of it (see copy()).
+  $effect(() => {
+    const from = page.url.searchParams.get(COPY_PARAM);
+    if (from === null || !col || !session.user) return;
+    const url = new URL(page.url);
+    url.searchParams.delete(COPY_PARAM);
+    void goto(url.pathname + url.search + url.hash, { replaceState: true, noScroll: true, keepFocus: true });
+    // Logging in with a copy already made, or on your own collection: nothing to do.
+    if (!col.isMe && !existingCopy) void copy(from || 'copy_button');
+  });
+
+  async function copy(after?: string) {
     if (!col || copying) return;
     copying = true;
     try {
-      const mine = await profilesApi.copyCollection(handle, slug);
+      // Copied on arrival: a brand-new account's empty starter collection goes (the server checks it's untouched).
+      const mine = await profilesApi.copyCollection(handle, slug, { replaceStarter: !!after });
       justCopied = { slug: mine.slug, name: mine.name };
-      api.event('collection_copied', { from: `${handle}/${slug}`, collectionId: mine.id, feeds: mine.feedCount });
+      // `after` is set when this copy finished a sign-up or log-in, so we can count the accounts shared collections bring in.
+      api.event('collection_copied', { from: `${handle}/${slug}`, collectionId: mine.id, feeds: mine.feedCount, ...(after ? { after } : {}) });
       void loadCollections(true);
-      showToast(`Copied “${mine.name}” to your collections`, { label: 'Open', run: () => goto(collectionHref(session.user!.handle, mine.slug)) });
+      if (after) {
+        // Copied on arrival: go to the copy itself, so it's what's behind the
+        // welcome tour and what's left when the tour closes. The tour names it;
+        // without the tour (logging in on a screen that has seen it), a note does.
+        welcome.copied = mine.name;
+        await goto(collectionHref(session.user!.handle, mine.slug), { replaceState: true });
+        if (!welcome.open) showToast(`Copied “${mine.name}” to your collections`);
+      } else {
+        showToast(`Copied “${mine.name}” to your collections`, { label: 'Open', run: () => goto(collectionHref(session.user!.handle, mine.slug)) });
+      }
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e));
     } finally {
@@ -70,10 +96,6 @@
   }
 
   const opml = $derived(profilesApi.opmlUrl(handle, slug));
-  const pageUrl = $derived(page.url.href);
-  async function copyLink() {
-    try { await navigator.clipboard.writeText(pageUrl); showToast('Link copied'); } catch { showToast(pageUrl); }
-  }
 </script>
 
 <svelte:head>
@@ -100,7 +122,7 @@
             <Button variant="primary" href={collectionHref(session.user.handle, existingCopy.slug)}>Open your copy</Button>
             <Button onclick={() => confirmAgain?.showModal()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy again'}</Button>
           {:else}
-            <Button variant="primary" onclick={copy} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy this collection'}</Button>
+            <Button variant="primary" onclick={() => copy()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy this collection'}</Button>
           {/if}
         {/if}
       </div>{/if}
@@ -113,31 +135,10 @@
     {/if}
     {#if !session.user}
       <!-- The header's Sign up is the one green button on the page, and Copy
-           leads there anyway, so Copy is just its words. -->
-      <div class="visitoraction"><Button link onclick={() => { api.event('copy_explainer_opened', { handle, slug }); explain?.showModal(); }}><Icon name="copy" size={16} />Copy this collection</Button></div>
+           leads there too, so Copy is just its words. -->
+      <div class="visitoraction"><Button link href="/signup?next={encodeURIComponent(copyNext(handle, slug, 'copy_button'))}" onclick={() => api.event('copy_signup_started', { handle, slug, from: 'copy_button' })}><Icon name="copy" size={16} />Copy this collection</Button></div>
     {/if}
   </header>
-
-  <!-- Signed-out visitor pressed Copy: two ways home, neither of which mentions file formats. -->
-  <dialog bind:this={explain} onclick={(e) => { if (e.target === explain) explain?.close(); }} aria-labelledby="copy-explain-title">
-    <div class="sheet">
-      <h2 id="copy-explain-title">Take this collection with you</h2>
-      <div class="ways">
-        <section>
-          <h3>New here?</h3>
-          <p>Sign up for thicket. You’ll come right back here and can copy it straight away.</p>
-          <Button variant="primary" href="/signup?next={encodeURIComponent(page.url.pathname)}">Sign up</Button>
-          <Button href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</Button>
-        </section>
-        <section>
-          <h3>On another thicket?</h3>
-          <p>Copying a collection between thickets by link is on its way. Keep this page’s link; it’s what you’ll paste.</p>
-          <Button onclick={copyLink}><Icon name="copy" size={16} />Copy link</Button>
-        </section>
-      </div>
-      <IconButton class="close" icon="close" label="Close" onclick={() => explain?.close()} />
-    </div>
-  </dialog>
 
   <!-- You already have a copy: making another is fine (you might prune each
        differently), but say so first so it isn't an accident. -->
@@ -220,12 +221,6 @@
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-5) var(--space-4) calc(var(--space-4) + var(--safe-b)); box-shadow: var(--shadow-sheet); }
   @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 560px; border-radius: var(--radius-lg); } }
   .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-4); }
-  .ways { display: grid; gap: var(--space-3); }
-  @media (min-width: 700px) { .ways { grid-template-columns: 1fr 1fr; } }
-  .ways section { background: var(--bg); border-radius: var(--radius-md); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
-  .ways h3 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); }
-  .ways p { margin: 0 0 var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .sheet :global(.close) { position: absolute; top: var(--space-3); right: var(--space-3); }
   @media (min-width: 700px) { .sheet.confirm { width: 460px; } }
   .confirm p { margin: 0 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .confirmbtns { display: flex; gap: var(--space-2); justify-content: flex-end; }

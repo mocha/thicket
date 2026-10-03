@@ -15,7 +15,7 @@ import { Hono, type Context } from "hono";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { subtreeFeedCount } from "../lib/subtree.js";
 import { db, schema } from "../db/client.js";
-import { currentUser, normalizeHandle } from "../lib/auth.js";
+import { currentUser, normalizeHandle, FIRST_COLLECTION_SLUG } from "../lib/auth.js";
 import { exportCollectionOpml } from "../lib/opml.js";
 import { PUBLIC_URL } from "../lib/config.js";
 import { slugify, uniqueCollectionSlug } from "../lib/slug.js";
@@ -246,9 +246,15 @@ profiles.get("/:handle/collections/:slug/opml", async (c) => {
  * Copy a collection into my own, as-is: same name (deduped), same feeds,
  * sub-collections included. The copy is mine and independent; copied_from_id
  * records where it came from. Feeds I already follow simply gain a collection.
+ *
+ * Body { replaceStarter: true }: this copy finishes signing up to get it, so
+ * the empty "My first collection" every account starts with goes too. Only
+ * while it's still untouched: the account is under a day old, and the
+ * starter has no feeds, nothing inside it, and nothing else beside it.
  */
 profiles.post("/:handle/collections/:slug/copy", async (c) => {
   const me = currentUser(c);
+  const body = await c.req.json<{ replaceStarter?: boolean }>().catch(() => ({} as { replaceStarter?: boolean }));
   const r = await visibleCollection(c, c.req.param("handle"), c.req.param("slug"));
   if ("error" in r) return c.json({ error: r.error }, r.status);
   if (r.isMe) return c.json({ error: "That’s already yours." }, 400);
@@ -257,6 +263,15 @@ profiles.post("/:handle/collections/:slug/copy", async (c) => {
   const mineToTake = allowedLevels(r.who);
 
   const created = await db.transaction(async (tx) => {
+    if (body.replaceStarter) {
+      await tx.execute(sql`
+        delete from collections s
+        where s.user_id = ${me.id} and s.parent_id = ${me.rootCollectionId} and s.slug = ${FIRST_COLLECTION_SLUG}
+          and exists (select 1 from users u where u.id = ${me.id} and u.created_at > now() - interval '1 day')
+          and not exists (select 1 from collection_feeds cf where cf.collection_id = s.id)
+          and not exists (select 1 from collections k where k.parent_id = s.id)
+          and not exists (select 1 from collections o where o.user_id = ${me.id} and o.parent_id is not null and o.id <> s.id)`);
+    }
     // Name dedupe: "News", then "News (from @handle)", then "News (from @handle) 2"...
     // Against every slug of mine, since slugs are unique per user rather than per parent.
     const mine = await tx.select({ slug: schema.collections.slug }).from(schema.collections).where(eq(schema.collections.userId, me.id));
