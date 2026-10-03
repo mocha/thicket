@@ -8,6 +8,7 @@
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
   import Button from '$lib/components/Button.svelte';
+  import CopyHeading from '$lib/components/CopyHeading.svelte';
 
   let handle = $state('');
   let password = $state('');
@@ -15,13 +16,16 @@
   let error = $state<string | null>(null);
 
   onMount(() => void loadSite());
+  // Back to whatever brought you here (someone's collection, say), but only somewhere on this site.
+  const next = $derived(page.url.searchParams.get('next'));
+  const safeNext = $derived(next && next.startsWith('/') && !next.startsWith('//') ? next : null);
 
   async function submit() {
     if (busy) return;
     busy = true; error = null;
     try {
       setMe(await authApi.login(handle, password));
-      await goto(page.url.searchParams.get('next') || '/everything', { replaceState: true });
+      await goto(safeNext ?? '/everything', { replaceState: true });
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -33,7 +37,7 @@
 <svelte:head><title>Log in · thicket</title></svelte:head>
 
 <section class="auth">
-  <h1>Welcome back</h1>
+  <CopyHeading {next} action="Log in" heading="Welcome back" />
   <form onsubmit={(e) => { e.preventDefault(); void submit(); }}>
     <Field label="Handle">
       {#snippet children({ id, describedBy, invalid })}
@@ -72,7 +76,6 @@
 
 <style>
   .auth { max-width: 380px; margin: calc(var(--space-6) + var(--space-2)) auto 0; }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-5); }
   form { display: flex; flex-direction: column; gap: var(--space-5); }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .alt { margin: var(--space-5) 0 0; color: var(--text-2); }

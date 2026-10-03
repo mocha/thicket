@@ -468,7 +468,8 @@ export const profilesApi = {
   follow: (handle: string) => j<{ handle: string; isFollowing: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/follow`, { method: 'POST' }),
   unfollow: (handle: string) => j<{ handle: string; isFollowing: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/follow`, { method: 'DELETE' }),
   collection: (handle: string, slug: string) => j<PublicCollection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}`),
-  copyCollection: (handle: string, slug: string) => j<Collection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/copy`, { method: 'POST' }),
+  /** `replaceStarter`: this copy finishes signing up to get it, so an untouched, empty "My first collection" goes. */
+  copyCollection: (handle: string, slug: string, opts: { replaceStarter?: boolean } = {}) => j<Collection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/copy`, { method: 'POST', body: JSON.stringify(opts) }),
   opmlUrl: (handle: string, slug: string) => `/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/opml`,
   /**
    * Their bookmarks, newest activity first. `notes`: only the ones with a note

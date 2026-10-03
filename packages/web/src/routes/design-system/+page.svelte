@@ -83,6 +83,7 @@
     { name: 'text', use: 'Primary ink' },
     { name: 'text-2', use: 'Secondary ink, hints and counts' },
     { name: 'text-3', use: 'Decoration only, too faint for words' },
+    { name: 'placeholder', use: 'Hint text in an empty field, and fixed text beside what you type' },
     { name: 'accent', use: 'The one action color' },
     { name: 'accent-ink', use: 'Lettering on a filled accent' },
     { name: 'accent-soft', use: 'The secondary button’s pale wash' },
@@ -517,7 +518,7 @@
 
     <section class="entry" id="input" aria-labelledby="input-h">
       <h3 class="entry-h" id="input-h">Input</h3>
-      <p class="section-lede">Every text box is the same rounded rectangle, with a focus ring that only thickens for someone arriving by keyboard. On a touchscreen the text inside a field is never smaller than 16px, even in the small size, so an iPhone doesn’t zoom in when you tap one.</p>
+      <p class="section-lede">Every text box is the same rounded rectangle, with a focus ring that only thickens for someone arriving by keyboard. The whole box is the field: pressing anywhere in it, including an icon or fixed text beside the words, puts the cursor at the end of what’s typed. Hint text is the placeholder color, which in dark themes sits well below typed text so an empty field never looks filled in. On a touchscreen the text inside a field is never smaller than 16px, even in the small size, so an iPhone doesn’t zoom in when you tap one.</p>
       <div class="stack">
         <Field label="Feed name" hideLabel>
           {#snippet children({ id, describedBy })}

@@ -96,6 +96,14 @@
      the 3:1 a control's edge needs, on the page and on a card, in every theme. */
   --field-line: var(--text-3);
 
+  /* Hint text inside an empty box you type in, and fixed text sitting beside
+     what you type (the "readthicket.com/@" before a handle). It has to read
+     as "not typed yet": in light themes --text-2 is far enough from --text;
+     in dark ones it was too close, so it's taken 60% of the way to --text-3.
+     That still clears 4.5:1 on the card in every dark theme but Soft sepia,
+     which is low-contrast on purpose. */
+  --placeholder: var(--text-2);
+
   /* Corner ladder. Every rounded corner in the app is one of these.
      xs     inline code and highlight marks, too small for a bigger curve
      sm     controls, rows, inputs, small tiles
@@ -188,6 +196,7 @@
     --text: var(--d-text);
     --text-2: var(--d-text-2);
     --text-3: var(--d-text-3);
+    --placeholder: color-mix(in srgb, var(--d-text-2) 40%, var(--d-text-3));
     --accent: var(--d-accent);
     --accent-ink: var(--d-accent-ink);
     --accent-soft: var(--d-accent-soft);
@@ -208,6 +217,7 @@
   --text: var(--d-text);
   --text-2: var(--d-text-2);
   --text-3: var(--d-text-3);
+  --placeholder: color-mix(in srgb, var(--d-text-2) 40%, var(--d-text-3));
   --accent: var(--d-accent);
   --accent-ink: var(--d-accent-ink);
   --accent-soft: var(--d-accent-soft);
