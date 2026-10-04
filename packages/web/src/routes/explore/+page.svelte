@@ -95,12 +95,12 @@
    */
   const feedSort = $derived(feedSortFrom(page.url.searchParams.get('sort')));
   /** A long search would stretch the dropdown, which is as wide as its longest choice. */
-  const aboutLabel = $derived(q.length > 18 ? 'Most about this' : `Most about “${q}”`);
+  const term = $derived(q.length > 18 ? 'this search' : `“${q}”`);
   const feedSorts = $derived<{ id: FeedSearchSort; label: string; help: string }[]>([
-    { id: 'about', label: aboutLabel, help: `Feeds with the most posts mentioning “${q}” in the last 90 days come first. Feeds that only match by name come last.` },
-    { id: 'mentioned', label: 'Mentioned recently', help: `Feeds that mentioned “${q}” most recently come first. Feeds that only match by name come last.` },
-    { id: 'active', label: 'Most active', help: 'Feeds that posted the most in the last 90 days, about anything, come first.' },
-    { id: 'posted', label: 'Posted recently', help: 'Feeds with the newest posts, about anything, come first.' }
+    { id: 'about', label: `most mentions of ${term}`, help: `Feeds with the most posts mentioning “${q}” in the last 90 days come first. Feeds that only match by name come last.` },
+    { id: 'mentioned', label: `most recent mention of ${term}`, help: `Feeds that mentioned “${q}” most recently come first. Feeds that only match by name come last.` },
+    { id: 'active', label: 'number of posts (last 90d)', help: 'Feeds that posted the most in the last 90 days, about anything, come first.' },
+    { id: 'posted', label: 'most recent post', help: 'Feeds with the newest posts, about anything, come first.' }
   ]);
   const feedSortHelp = $derived(feedSorts.find((s) => s.id === feedSort)?.help ?? '');
   const sortsFeeds = $derived(searching && scope === 'feeds');
@@ -510,7 +510,7 @@
     {#if sortsFeeds}
       <Select
         class="filter"
-        label="Sort"
+        label="Sort by"
         size="sm"
         value={feedSort}
         options={feedSorts.map((s) => ({ value: s.id, label: s.label }))}
