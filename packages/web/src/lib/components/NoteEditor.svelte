@@ -57,6 +57,32 @@
   const options = $derived(typing ? rankPeople(people, typing.query) : []);
   const open = $derived(options.length > 0);
 
+  // The list sits in the top layer (a popover), placed under the box by hand,
+  // so a card that clips its contents (Card.svelte, overflow: hidden) can't cut
+  // it off. It goes above the box when there is no room below.
+  let combo = $state<HTMLDivElement | null>(null);
+  let list = $state<HTMLUListElement | null>(null);
+  function place() {
+    if (!combo || !list) return;
+    const r = combo.getBoundingClientRect();
+    const h = list.offsetHeight;
+    const gap = 4;
+    const above = r.bottom + gap + h > window.innerHeight && r.top - gap - h > 0;
+    list.style.left = `${r.left}px`;
+    list.style.width = `${r.width}px`;
+    list.style.top = `${above ? r.top - gap - h : r.bottom + gap}px`;
+  }
+  $effect(() => {
+    if (!list) return;
+    if (!open) { if (list.matches(':popover-open')) list.hidePopover(); return; }
+    void options.length;
+    if (!list.matches(':popover-open')) list.showPopover();
+    place();
+    addEventListener('scroll', place, true);
+    addEventListener('resize', place);
+    return () => { removeEventListener('scroll', place, true); removeEventListener('resize', place); };
+  });
+
   /** Look at what is just before the caret: is a mention being typed there? */
   function track() {
     if (!box || box.selectionStart !== box.selectionEnd) { typing = null; return; }
@@ -146,7 +172,7 @@
 <form class="editor" onsubmit={(e) => { e.preventDefault(); void save(); }}>
   <Field label={note ? 'Edit my note' : 'My note'} {error}>
     {#snippet children({ id, describedBy, invalid })}
-      <div class="combo">
+      <div class="combo" bind:this={combo}>
         <Textarea
           {id}
           aria-describedby={describedBy}
@@ -173,7 +199,7 @@
           onblur={() => (typing = null)}
         />
         <!-- Pressing a suggestion must not take focus from the box, or the caret (and the mention being typed) would be lost. -->
-        <ul class="people" id={listId} role="listbox" aria-label="People to mention" hidden={!open}>
+        <ul class="people" id={listId} role="listbox" aria-label="People to mention" popover="manual" bind:this={list}>
           {#each options as p, i (p.handle)}
             <!-- The keyboard works the list from the box (aria-activedescendant), so an option itself only needs the pointer. -->
             <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -197,14 +223,12 @@
 <style>
   .editor { border-top: 1px solid var(--line); padding: var(--space-3) var(--space-4); background: var(--surface-2); }
   .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
-  /* The suggestions hang just under the box, over whatever follows, as wide as the box. */
-  .combo { position: relative; }
+  /* The suggestions hang just under the box, over whatever follows, as wide as the box: placed by place(), in the top layer. */
   .people {
-    position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + var(--space-1));
+    position: fixed; inset: auto; border: 0;
     list-style: none; margin: 0; padding: var(--space-1); max-height: 280px; overflow-y: auto;
     background: var(--surface); color: var(--text); border-radius: var(--radius-md); box-shadow: var(--shadow-menu);
   }
-  .people[hidden] { display: none; }
   .people li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); cursor: pointer; min-height: 44px; }
   /* The highlighted one: a fill and a bar, so it reads without color. */
   .people li.active { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); }
