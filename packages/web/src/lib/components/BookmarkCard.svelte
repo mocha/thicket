@@ -92,7 +92,7 @@
       <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} />
       <svelte:element this={heading} class="card-title">{noOrphan(b.title ?? b.url)}</svelte:element>
       {#if b.summary}<p class="card-summary">{b.summary}</p>{/if}
-      <div class="saved">Saved <time datetime={b.savedAt} title={new Date(b.savedAt).toLocaleString()}>{relativeTime(b.savedAt)}</time></div>
+      <div class="saved">Bookmarked <time datetime={b.savedAt} title={new Date(b.savedAt).toLocaleString()}>{relativeTime(b.savedAt)}</time></div>
     </div>
     {#if b.imageUrl}<img class="thumb" src={b.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onerror={(e) => ((e.currentTarget as HTMLImageElement).hidden = true)} />{/if}
   </a>

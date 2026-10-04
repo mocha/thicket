@@ -138,7 +138,7 @@
 
 <header class="top">
   <h1>My Bookmarks</h1>
-  <p class="sub">Posts you've saved, and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
+  <p class="sub">Posts you've bookmarked, and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
 </header>
 
 {#if hasFilters}
@@ -203,8 +203,8 @@
           <circle cx="222" cy="36" r="20" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 4" />
           <path d="M215 27h14v18l-7-4.5-7 4.5z" fill="var(--accent)" />
         </svg>
-        <h2>Nothing saved yet</h2>
-        <p>Every post has a bookmark in its top right corner. Press it and the post is kept here for as long as you like, even after it has scrolled out of All my feeds. Save what you want to read later, come back to, or share from your profile.</p>
+        <h2>No bookmarks yet</h2>
+        <p>Every post has a bookmark in its top right corner. Press it and the post is kept here for as long as you like, even after it has scrolled out of All my feeds. Bookmark what you want to read later, come back to, or share from your profile.</p>
         <div class="ctas"><Button variant="primary" size="lg" href="/everything">Go to All my feeds</Button><Button size="lg" href="/explore">Explore feeds</Button></div>
       {/if}
     </div>
