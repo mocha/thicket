@@ -172,6 +172,12 @@ const feedEvidence = (q: string) => sql`
  * name both multiplies whatever post evidence exists and carries a floor of its
  * own, which is what lets a feed with a matching name and no matching posts
  * place among the results instead of below all of them.
+ *
+ * The list itself is ordered by the newest post that mentions the words, with
+ * feeds found only by name or description (no post mentions it) after all of
+ * those. A density order read as no order at all to the people using it
+ * (issue 182), while "most recently mentioned" is a fact each row already
+ * shows. The score breaks ties and orders the name-only feeds among themselves.
  */
 async function searchFeeds(q: string, userId: number, limit: number, offset: number, net: number[] | null = null) {
   const like = likeFor(q);
@@ -186,6 +192,14 @@ async function searchFeeds(q: string, userId: number, limit: number, offset: num
     with ${feedEvidence(q)}
     , cand as (
       select f.id, coalesce(a.matches, 0) as matches, coalesce(a.weight, 0) as weight, a.last_match,
+             -- The newest post that mentions the words: what the list is ordered by.
+             -- From the sample it is exact (the sample is the newest hits, so a feed
+             -- in it has its newest hit in it). Only a feed found by name whose
+             -- mentions are all older than the sample needs its own walk, and
+             -- coalesce runs that for those rows alone.
+             coalesce(a.last_match, (select i.published_at from items i where i.feed_id = f.id
+               and i.search @@ websearch_to_tsquery('english', ${q})
+               order by i.published_at desc limit 1)) as last_mention,
              coalesce(a.posts, (select count(*)::numeric from items i2 where i2.feed_id = f.id)) as posts,
              ${named} as name_match,
              ${strength} as name_score
@@ -225,7 +239,7 @@ async function searchFeeds(q: string, userId: number, limit: number, offset: num
            exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon",
            coalesce((select array_agg(cf.collection_id order by cf.collection_id) from collection_feeds cf join collections col on col.id = cf.collection_id and col.user_id = ${userId} where cf.feed_id = f.id), '{}') as "myCollectionIds"
     from scored s join feeds f on f.id = s.id
-    order by s.score desc, s.name_score desc nulls last, s.posts desc, f.id
+    order by s.last_mention desc nulls last, s.score desc, s.name_score desc nulls last, s.posts desc, f.id
     limit ${limit + 1} offset ${offset}
   `);
   const page = rows.rows.slice(0, limit).map((r: any) => ({ ...r, id: Number(r.id), lastMatchAt: iso(r.lastMatchAt), lastItemAt: iso(r.lastItemAt) }));
