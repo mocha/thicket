@@ -26,7 +26,7 @@
         const b = await bookmarksApi.saveItem(item.id);
         item.bookmarkId = b.id;
         api.event('bookmark_saved', { itemId: item.id, feedId: item.feedId, via });
-        showToast('Saved to Bookmarks');
+        showToast('Bookmarked');
       }
     } catch (err) {
       showToast(err instanceof Error ? err.message : String(err));
