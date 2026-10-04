@@ -119,6 +119,19 @@
   });
 
   /**
+   * The people who follow you (issue #191). Only on your own profile, and the
+   * API refuses it to anyone else. No count: follower numbers stay off thicket.
+   */
+  let followers = $state<PublicUser[] | null>(null);
+  let followersFor = $state<string | undefined>(undefined);
+  $effect(() => {
+    if (!profile || profile.private || !profile.isMe || followersFor === profile.handle) return;
+    const h = profile.handle;
+    followersFor = h; followers = null;
+    profilesApi.followers(h).then((r) => { if (followersFor === h) followers = r.users; }).catch(() => (followers = []));
+  });
+
+  /**
    * Collections arrive flat with parent pointers, and are shown as the tree
    * they are — the same shape the sidebar shows. Top level is anything whose
    * parent isn't in the list: the root, which is nobody's page, and also a
@@ -493,19 +506,39 @@
         {:else if following.length === 0}
           <div class="pad"><p class="status">{profile.isMe ? 'You aren’t following anyone yet. Open someone’s profile and press Follow.' : 'Not following anyone yet.'}</p></div>
         {:else}
-          <ul class="list">
-            {#each following as p (p.handle)}
-              <li><a href="/@{p.handle}">
-                <Avatar handle={p.handle} name={p.displayName ?? p.handle} size={34} v={p.avatarUpdatedAt} />
-                <div class="meta2"><span class="name">{p.displayName ?? p.handle}</span><span class="desc">@{p.handle}</span></div>
-                <span class="chev" aria-hidden="true">›</span>
-              </a></li>
-            {/each}
-          </ul>
+          {@render people(following)}
         {/if}
       </div>
     </section>
   {/if}
+
+  {#if profile.isMe}
+    <section>
+      <h2>Followers <Badge>Only you</Badge></h2>
+      <div class="card">
+        <div class="pad"><p class="status">Only you can see who follows you. Following you doesn’t show them anything you haven’t shared with everyone.</p></div>
+        {#if followers === null}
+          <div class="pad"><p class="status">Loading…</p></div>
+        {:else if followers.length === 0}
+          <div class="pad"><p class="status">No one is following you yet.</p></div>
+        {:else}
+          {@render people(followers)}
+        {/if}
+      </div>
+    </section>
+  {/if}
+
+  {#snippet people(list: PublicUser[])}
+    <ul class="list">
+      {#each list as p (p.handle)}
+        <li><a href="/@{p.handle}">
+          <Avatar handle={p.handle} name={p.displayName ?? p.handle} size={34} v={p.avatarUpdatedAt} />
+          <div class="meta2"><span class="name">{p.displayName ?? p.handle}</span><span class="desc">@{p.handle}</span></div>
+          <span class="chev" aria-hidden="true">›</span>
+        </a></li>
+      {/each}
+    </ul>
+  {/snippet}
 
   {/if}
 

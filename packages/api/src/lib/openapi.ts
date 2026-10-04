@@ -95,6 +95,7 @@ export const ENDPOINTS: Endpoint[] = [
   // ---- people and what they share
   { method: "GET", path: "/api/profiles/:handle", tag: "People", summary: "Someone's profile, as far as they share it with me." },
   { method: "GET", path: "/api/profiles/:handle/following", tag: "People", summary: "The people someone follows, if they share that." },
+  { method: "GET", path: "/api/profiles/:handle/followers", tag: "People", summary: "The people who follow me. Only for my own handle; anyone else's is a 404." },
   { method: "POST", path: "/api/profiles/:handle/follow", tag: "People", summary: "Follow a person." },
   { method: "DELETE", path: "/api/profiles/:handle/follow", tag: "People", summary: "Stop following a person." },
   { method: "GET", path: "/api/profiles/:handle/collections/:slug", tag: "People", summary: "One of someone's shared collections, with its feeds." },

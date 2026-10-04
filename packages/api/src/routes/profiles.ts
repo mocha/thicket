@@ -129,15 +129,41 @@ profiles.get("/:handle/following", async (c) => {
   if (!u) return c.json({ error: "not found" }, 404);
   const who = await audienceFor(u, c.get("user")?.id);
   if (u.profileVisibility === "private" && !who.isMe) return c.json({ error: "not found" }, 404);
-  const rows = (await db.execute<{ handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: Date; avatarUpdatedAt: Date | null }>(sql`
+  const rows = (await db.execute<PersonRow>(sql`
     select tu.handle, tu.display_name as "displayName", tu.bio, tu.homepage_url as "homepageUrl", tu.created_at as "createdAt", ua.updated_at as "avatarUpdatedAt"
     from user_follows uf join users tu on tu.id = uf.followee_id
     left join user_avatars ua on ua.user_id = tu.id
     where uf.follower_id = ${u.id} and tu.profile_visibility = 'public'
     order by lower(coalesce(tu.display_name, tu.handle))
   `)).rows;
-  const users = rows.map((r) => ({ handle: r.handle, displayName: r.displayName, bio: r.bio, homepageUrl: r.homepageUrl, createdAt: new Date(r.createdAt).toISOString(), avatarUpdatedAt: r.avatarUpdatedAt ? new Date(r.avatarUpdatedAt).toISOString() : null }));
-  return c.json({ owner: publicUser(u), isMe: who.isMe, users });
+  return c.json({ owner: publicUser(u), isMe: who.isMe, users: rows.map(personJson) });
+});
+
+type PersonRow = { handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: Date; avatarUpdatedAt: Date | null };
+const personJson = (r: PersonRow) => ({ handle: r.handle, displayName: r.displayName, bio: r.bio, homepageUrl: r.homepageUrl, createdAt: new Date(r.createdAt).toISOString(), avatarUpdatedAt: r.avatarUpdatedAt ? new Date(r.avatarUpdatedAt).toISOString() : null });
+
+/**
+ * The people who follow me (issue #191). Only ever mine: you must be signed in
+ * (401 otherwise), and asking for anyone else's is a 404, the same answer as a
+ * handle that doesn't exist, so the route doesn't even confirm whose list it
+ * would have been. Both refusals are decided from the session alone, before
+ * the database is asked anything.
+ *
+ * Like the following list, only followers with public profiles are named: a
+ * private profile stays opaque, here too. Being followed still grants the
+ * follower nothing (docs/DECISIONS.md: friends means the people *I* follow).
+ */
+profiles.get("/:handle/followers", async (c) => {
+  const me = currentUser(c);
+  if (normalizeHandle(c.req.param("handle")) !== me.handle) return c.json({ error: "not found" }, 404);
+  const rows = (await db.execute<PersonRow>(sql`
+    select fu.handle, fu.display_name as "displayName", fu.bio, fu.homepage_url as "homepageUrl", fu.created_at as "createdAt", ua.updated_at as "avatarUpdatedAt"
+    from user_follows uf join users fu on fu.id = uf.follower_id
+    left join user_avatars ua on ua.user_id = fu.id
+    where uf.followee_id = ${me.id} and fu.profile_visibility = 'public'
+    order by lower(coalesce(fu.display_name, fu.handle))
+  `)).rows;
+  return c.json({ users: rows.map(personJson) });
 });
 
 /**
