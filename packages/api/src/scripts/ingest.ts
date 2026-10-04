@@ -27,6 +27,7 @@ import { readFileSync } from "node:fs";
 import { eq, sql } from "drizzle-orm";
 import { db, pool, schema } from "../db/client.js";
 import { normalizeFeedUrl } from "../feeds/normalize.js";
+import { carefulNetwork } from "../feeds/hosts.js";
 import { refreshFeed } from "../feeds/refresh.js";
 import { otherScheme } from "../feeds/twins.js";
 
@@ -41,7 +42,7 @@ const limit = opt("limit", Infinity);
 /** Silent for longer than this and it is not a feed any more, it is an archive. */
 const maxAgeDays = opt("max-age-days", 730);
 const concurrency = opt("concurrency", 8);
-/** One request at a time per host, however wide the run is. */
+/** One request at a time per host, and per careful network, however wide the run is. */
 const PER_HOST = 1;
 const PARK_MS = 6 * 60 * 60 * 1000;
 
@@ -80,7 +81,7 @@ if (dry || fresh.length === 0) {
   process.exit(0);
 }
 
-const stats = { added: 0, duplicate: 0, empty: 0, notEnglish: 0, failed: 0 };
+const stats = { added: 0, duplicate: 0, empty: 0, notEnglish: 0, paused: 0, failed: 0 };
 const failures = new Map<string, number>();
 const busyHost = new Map<string, number>();
 let cursor = 0;
@@ -98,7 +99,9 @@ async function ingest(url: string) {
   // Folded into a feed the index already had under another address (feeds/twins.ts).
   if (!after && "mergedFrom" in r && r.mergedFrom) { stats.duplicate++; return; }
   const ageDays = after?.lastItemAt ? (Date.now() - after.lastItemAt.getTime()) / 86_400_000 : null;
-  const reason = r.error ? shorten(r.error)
+  // Never fetched: its host, or its shared host, asked us to wait (feeds/hosts.ts). Not a judgement on the feed; a later run picks it up.
+  const reason = "deferredUntil" in r && r.deferredUntil ? "host asked us to wait"
+    : r.error ? shorten(r.error)
     : !after?.title ? "no title"
     : r.itemsNew === 0 ? "no items"
     : ageDays === null ? "no dates"
@@ -110,6 +113,7 @@ async function ingest(url: string) {
     // Never one somebody follows: this row may have absorbed an older twin that had followers.
     await db.delete(schema.feeds).where(sql`id = ${row.id} and not exists(select 1 from collection_feeds cf where cf.feed_id = ${row.id})`);
     if (reason === "no language" || reason.startsWith("in ")) stats.notEnglish++;
+    else if (reason === "host asked us to wait") stats.paused++;
     else if (reason.startsWith("no ") || reason.startsWith("silent")) stats.empty++;
     else stats.failed++;
     failures.set(reason, (failures.get(reason) ?? 0) + 1);
@@ -135,15 +139,20 @@ await new Promise<void>((resolve) => {
       const url = fresh[cursor];
       const h = hostOf(url);
       if ((busyHost.get(h) ?? 0) >= PER_HOST) break; // the list is host-sorted rarely; just wait
+      // And one at a time per careful network: a shared host that limits across its customers (feeds/hosts.ts).
+      const net = carefulNetwork(url);
+      if (net && (busyHost.get(net) ?? 0) >= PER_HOST) break;
       if (inFlight >= concurrency) break;
       cursor++;
       inFlight++;
       busyHost.set(h, (busyHost.get(h) ?? 0) + 1);
+      if (net) busyHost.set(net, (busyHost.get(net) ?? 0) + 1);
       void ingest(url)
         .catch((e) => { stats.failed++; failures.set(shorten(String(e)), (failures.get(shorten(String(e))) ?? 0) + 1); })
         .finally(() => {
           inFlight--;
           busyHost.set(h, (busyHost.get(h) ?? 1) - 1);
+          if (net) busyHost.set(net, (busyHost.get(net) ?? 1) - 1);
           done++;
           if (done % 50 === 0) console.log(`  ${done}/${fresh.length} — ${stats.added} added, ${stats.empty} empty, ${stats.failed} failed`);
           if (done === fresh.length) resolve();
@@ -155,7 +164,7 @@ await new Promise<void>((resolve) => {
   pump();
 });
 
-console.log(`\n${stats.added} added, ${stats.duplicate} already here under another address, ${stats.empty} empty or abandoned, ${stats.notEnglish} not stated as English, ${stats.failed} failed`);
+console.log(`\n${stats.added} added, ${stats.duplicate} already here under another address, ${stats.empty} empty or abandoned, ${stats.notEnglish} not stated as English, ${stats.paused} skipped while their host asked us to wait (run again to pick them up), ${stats.failed} failed`);
 const why = [...failures.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
 if (why.length) console.log("why not:", why.map(([k, n]) => `${k} ${n}`).join(", "));
 const [{ n }] = (await db.execute<{ n: number }>(sql`select count(*)::int as n from feeds`)).rows;

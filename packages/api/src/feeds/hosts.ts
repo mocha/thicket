@@ -27,10 +27,29 @@
  * host, and so are all the *.substack.com blogs, because a rate limit belongs to
  * whoever runs the servers. Pauses are written to host_cooldowns, so a redeploy
  * in the middle of one does not forget it.
+ *
+ * And a fourth, because some servers are run for thousands of domains at once:
+ *
+ * 4. **When a shared host says slow down, all of its sites wait.** Shared
+ *    hosting limits by our address across every customer it has: in the Kagi
+ *    survey every 429 came from DreamHost, each on a different customer's
+ *    domain, and pausing one domain never slowed the next. So each site also
+ *    has a network (feeds/networks.ts: the provider's ASN, or the /24 for big
+ *    CDNs and clouds whose customers are unrelated). A network that limits
+ *    across sites becomes *careful* for a day: one 429 from any site on it
+ *    pauses all of them, its requests start at least NETWORK_GAP_MS apart
+ *    whichever site they are for, and the scheduler and importer run one feed
+ *    on it at a time (carefulNetwork). A network becomes careful when two
+ *    different sites on it are limited within half an hour, or from the start
+ *    for shared hosts we already know (SHARED_HOSTS). One site's own 429 never
+ *    pauses its neighbours on a CDN, and a network that has never limited us
+ *    is not slowed at all. Network pauses are kept in host_cooldowns too,
+ *    keyed "AS26347" or "203.0.113.0/24".
  */
 import { setTimeout as sleep } from "node:timers/promises";
 import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
+import { NetworkMap, SHARED_HOSTS, isNetworkKey, networkShouldPause, realDeps, type NetworkDeps } from "./networks.js";
 
 const DEFAULT_GAP_MS = 750;
 const GAP_MS: Record<string, number> = { "reddit.com": 7_000 };
@@ -63,8 +82,70 @@ type HostState = {
   failFeeds: Set<number>;
 };
 
+/**
+ * Minimum gap between the starts of requests to a careful network, whichever of
+ * its sites they are for. The survey's DreamHost retry went through cleanly at
+ * three in flight; one start a second is well inside that.
+ */
+const NETWORK_GAP_MS = 1_000;
+/** How long a network stays careful after it last paused us. */
+const CAREFUL_MS = 24 * 3600_000;
+
+type NetState = {
+  nextSlot: number;
+  until: number;
+  reason: string | null;
+  /** Network pauses while careful; drives the doubling default. Starts over once it stops being careful. */
+  strikes: number;
+  /** Careful until (ms epoch): paced and paused as one. */
+  carefulUntil: number;
+  /** Sites on it told to slow down recently, and when. */
+  limited: Map<string, number>;
+};
+
 const hosts = new Map<string, HostState>();
+const nets = new Map<string, NetState>();
+let networks = new NetworkMap();
+/** Off in tests: keep everything in memory. */
+let remember = true;
 const log = (m: string) => console.log(`[polite] ${m}`);
+
+function netState(key: string): NetState {
+  let n = nets.get(key);
+  if (!n) {
+    n = { nextSlot: 0, until: 0, reason: null, strikes: 0, carefulUntil: 0, limited: new Map() };
+    nets.set(key, n);
+  }
+  return n;
+}
+
+const isCareful = (key: string, n: NetState, now: number) => SHARED_HOSTS.has(key) || n.carefulUntil > now;
+
+/**
+ * The careful network this URL's site is on, if it is on one and we already know
+ * which (no lookup: this is for the scheduler's loop). The scheduler and the
+ * importer keep one feed in flight per careful network, as they do per host.
+ */
+export function carefulNetwork(url: string): string | null {
+  const key = networks.cached(hostnameOf(url));
+  return key && isCareful(key, netState(key), Date.now()) ? key : null;
+}
+
+function hostnameOf(url: string): string {
+  try { return new URL(url).hostname.toLowerCase().replace(/^\[|\]$/g, ""); } catch { return ""; }
+}
+
+/**
+ * Tests only: forget every host and network, never touch the database, and
+ * resolve networks with the given functions instead of real DNS.
+ */
+export function useInMemoryHostsForTests(deps: Partial<NetworkDeps> = {}) {
+  hosts.clear();
+  nets.clear();
+  loaded = Promise.resolve();
+  remember = false;
+  networks = new NetworkMap({ ...realDeps, ...deps });
+}
 
 export class HostCoolingDown extends Error {
   constructor(readonly host: string, readonly until: Date, reason: string) {
@@ -99,7 +180,19 @@ export function loadHosts(): Promise<void> {
     try {
       const rows = await db.execute<{ host: string; until: string; reason: string | null; strikes: number; outage_strikes: number }>(sql`
         select host, until, reason, strikes, outage_strikes from host_cooldowns`);
+      const stale: string[] = [];
       for (const r of rows.rows) {
+        if (isNetworkKey(r.host)) {
+          // A network row outlives its pause: it is also the record that the network is careful, for a day after.
+          const until = new Date(r.until).getTime();
+          if (until + CAREFUL_MS < Date.now()) { stale.push(r.host); continue; }
+          const n = netState(r.host);
+          n.until = until;
+          n.reason = r.reason;
+          n.strikes = r.strikes;
+          n.carefulUntil = until + CAREFUL_MS;
+          continue;
+        }
         const s = state(r.host);
         s.until = new Date(r.until).getTime();
         s.reason = r.reason;
@@ -107,6 +200,7 @@ export function loadHosts(): Promise<void> {
         s.outageStrikes = r.outage_strikes;
         s.wasPaused = true;
       }
+      for (const key of stale) await db.execute(sql`delete from host_cooldowns where host = ${key}`);
     } catch (e) {
       log(`could not load saved pauses: ${e}`);
     }
@@ -119,33 +213,82 @@ export function coolingUntil(key: string): Date | null {
   return s && s.until > Date.now() ? new Date(s.until) : null;
 }
 
-/** Wait for this host's turn. Throws HostCoolingDown when it is paused or the queue is too long. Returns the host key. */
-export async function awaitTurn(url: string): Promise<string> {
+/** Whose turn a request took: its host, and its network when the site's address is known. */
+export type Turn = { host: string; network: string | null };
+
+const NETWORK_REASON = "is on a shared host that asked thicket to slow down";
+
+/**
+ * Wait for this host's turn, and its network's when the network is careful.
+ * Throws HostCoolingDown when either is paused or the queue is too long.
+ */
+export async function awaitTurn(url: string): Promise<Turn> {
   await loadHosts();
   const key = hostKey(url);
   const s = state(key);
+  // Before anything is reserved, so the checks and reservations below happen without a pause in between.
+  const network = await networks.of(hostnameOf(url));
+  const n = network ? netState(network) : null;
   const now = Date.now();
   if (s.until > now) throw new HostCoolingDown(key, new Date(s.until), s.reason ?? "asked thicket to wait");
-  const slot = Math.max(now, s.nextSlot);
+  if (n && n.until > now) throw new HostCoolingDown(key, new Date(n.until), NETWORK_REASON);
+  const paced = n && isCareful(network!, n, now) ? n : null;
+  const slot = Math.max(now, s.nextSlot, paced?.nextSlot ?? 0);
   if (slot - now > MAX_QUEUE_MS) throw new HostCoolingDown(key, new Date(slot), "already has requests from thicket queued");
   s.nextSlot = slot + (GAP_MS[key] ?? DEFAULT_GAP_MS);
+  if (paced) paced.nextSlot = slot + NETWORK_GAP_MS;
   if (slot > now) await sleep(slot - now);
   // A pause can begin while we queue.
   if (s.until > Date.now()) throw new HostCoolingDown(key, new Date(s.until), s.reason ?? "asked thicket to wait");
-  return key;
+  if (n && n.until > Date.now()) throw new HostCoolingDown(key, new Date(n.until), NETWORK_REASON);
+  return { host: key, network };
 }
 
-/** Read what a response says about the host itself. Pauses it on 429, or on 503 with Retry-After. */
-export async function afterResponse(key: string, status: number, headers: Headers): Promise<void> {
+/**
+ * Read what a response says about the host itself. Pauses it on 429, or on 503
+ * with Retry-After, and the whole network too when that is the second site on
+ * it to say so lately, or the network is careful.
+ */
+export async function afterResponse(turn: Turn, status: number, headers: Headers): Promise<void> {
   const retryAfter = headers.get("retry-after");
   if (!(status === 429 || (status === 503 && retryAfter))) return;
+  const key = turn.host;
   const s = state(key);
   s.strikes++;
   const hinted = parseRetryAfter(retryAfter);
   const fallback = DEFAULT_PAUSE_MS * 2 ** Math.min(s.strikes - 1, 8);
   const wait = Math.min(MAX_PAUSE_MS, Math.max(MIN_PAUSE_MS, hinted ?? fallback));
   const reason = status === 429 ? "asked thicket to slow down" : "said it is temporarily unavailable";
-  await pause(key, s, Date.now() + wait, reason, `HTTP ${status}${retryAfter ? `, Retry-After ${retryAfter}` : ", no Retry-After"}`);
+  const detail = `HTTP ${status}${retryAfter ? `, Retry-After ${retryAfter}` : ", no Retry-After"}`;
+  await pause(key, s, Date.now() + wait, reason, detail);
+  if (turn.network) await networkLimited(turn.network, key, hinted, detail);
+}
+
+async function networkLimited(network: string, site: string, hinted: number | null, detail: string) {
+  const n = netState(network);
+  const now = Date.now();
+  const careful = isCareful(network, n, now);
+  if (!networkShouldPause(n.limited, site, now, careful)) return;
+  if (!careful) n.strikes = 0;
+  n.strikes++;
+  const fallback = DEFAULT_PAUSE_MS * 2 ** Math.min(n.strikes - 1, 8);
+  const until = Math.max(n.until, now + Math.min(MAX_PAUSE_MS, Math.max(MIN_PAUSE_MS, hinted ?? fallback)));
+  n.until = until;
+  n.reason = NETWORK_REASON;
+  n.carefulUntil = until + CAREFUL_MS;
+  const sites = [...n.limited.keys()];
+  log(`${network} paused until ${new Date(until).toISOString()}: shared host, ${sites.length} of its sites limited lately (${sites.slice(0, 3).join(", ")}${sites.length > 3 ? ", …" : ""}; last ${site}: ${detail})`);
+  // Its feeds are not moved here: which feeds are on a network is only known by
+  // resolving them. Each one that comes due meets the pause in awaitTurn instead,
+  // without a request, and is put back past it (feeds/refresh.ts).
+  if (!remember) return;
+  try {
+    await db.execute(sql`
+      insert into host_cooldowns (host, until, reason, strikes, outage_strikes) values (${network}, ${new Date(until)}, ${n.reason}, ${n.strikes}, 0)
+      on conflict (host) do update set until = excluded.until, reason = excluded.reason, strikes = excluded.strikes, updated_at = now()`);
+  } catch (e) {
+    log(`could not save pause for ${network}: ${e}`);
+  }
 }
 
 /**
@@ -182,6 +325,7 @@ async function pause(key: string, s: HostState, untilMs: number, reason: string,
   s.wasPaused = true;
   const until = new Date(untilMs);
   log(`${key} paused until ${until.toISOString()}: ${reason} (${detail})`);
+  if (!remember) return;
   try {
     await db.execute(sql`
       insert into host_cooldowns (host, until, reason, strikes, outage_strikes) values (${key}, ${until}, ${reason}, ${s.strikes}, ${s.outageStrikes})
@@ -202,6 +346,7 @@ async function recover(key: string, s: HostState) {
   s.wasPaused = false;
   s.until = 0;
   s.reason = null;
+  if (!remember) return;
   try {
     await db.execute(sql`delete from host_cooldowns where host = ${key}`);
     if (!hadPause) return;

@@ -1,8 +1,8 @@
 /**
  * One HTTP client for everything we pull from the open web. Polite by default:
  * every request waits its host's turn, and a host that says slow down is
- * paused for everyone (feeds/hosts.ts). Nothing should call fetch() on the
- * open web directly.
+ * paused for everyone, as is a shared host's every site when it says so
+ * (feeds/hosts.ts). Nothing should call fetch() on the open web directly.
  */
 import { afterResponse, awaitTurn } from "./hosts.js";
 
@@ -65,13 +65,13 @@ export async function httpGetBytes(url: string, extra: Record<string, string> = 
 }
 
 async function request(url: string, headers: Record<string, string>, opts: HttpOptions) {
-  const host = await awaitTurn(url);
+  const turn = await awaitTurn(url);
   const res = await fetch(url, {
     headers: { "user-agent": USER_AGENT, ...headers },
     redirect: opts.redirect ?? "follow",
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
-  await afterResponse(host, res.status, res.headers);
+  await afterResponse(turn, res.status, res.headers);
   const limit = opts.maxBytes ?? MAX_BYTES;
   if (res.status === 304 || !res.body) return { res, bytes: Buffer.alloc(0), truncated: false };
   const len = Number(res.headers.get("content-length") ?? 0);
