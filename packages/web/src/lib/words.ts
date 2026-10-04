@@ -54,3 +54,19 @@ export function highlight(snippet: string): { text: string; hit: boolean }[] {
   }
   return out;
 }
+
+/** The same text with the fences taken out. */
+export const unmarked = (snippet: string) => snippet.replaceAll(OPEN, '').replaceAll(CLOSE, '');
+
+/**
+ * The same highlight for HTML we rendered ourselves from fenced text (a note's
+ * Markdown, whose every character was escaped before any markup was added).
+ * A fence in the text becomes a <mark>; one that landed inside a tag, such as
+ * a link's address, is dropped so the tag still works.
+ */
+export function highlightHtml(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, (tag) => unmarked(tag))
+    .replaceAll(OPEN, '<mark>')
+    .replaceAll(CLOSE, '</mark>');
+}

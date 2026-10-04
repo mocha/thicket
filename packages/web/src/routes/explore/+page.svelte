@@ -248,8 +248,8 @@
     if (markBusy) return;
     markBusy = p.id;
     try {
-      if (p.bookmarkId) { await bookmarksApi.remove(p.bookmarkId); p.bookmarkId = null; showToast('Removed from saved'); }
-      else { const b = await bookmarksApi.saveItem(p.id); p.bookmarkId = b.id; api.event('bookmark_saved', { itemId: p.id, via: 'search' }); showToast('Saved'); }
+      if (p.bookmarkId) { await bookmarksApi.remove(p.bookmarkId); p.bookmarkId = null; showToast('Removed bookmark'); }
+      else { const b = await bookmarksApi.saveItem(p.id); p.bookmarkId = b.id; api.event('bookmark_saved', { itemId: p.id, via: 'search' }); showToast('Bookmarked'); }
     } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } finally { markBusy = null; }
   }
 
@@ -564,7 +564,7 @@
     </a>
     {#if session.user}
       <button class="save tap" class:on={!!p.bookmarkId} onclick={() => toggleBookmark(p)} disabled={markBusy === p.id} aria-pressed={!!p.bookmarkId}>
-        {p.bookmarkId ? 'Saved' : 'Save'}
+        {p.bookmarkId ? 'Bookmarked' : 'Bookmark'}
       </button>
     {/if}
   </li>
@@ -580,7 +580,7 @@
           <span class="why">
             {#if ev.notesMatch}<strong>{plural(ev.notesMatch, 'note')}</strong> about “{q}”{/if}
             {#if ev.notesMatch && ev.marksMatch} · {/if}
-            {#if ev.marksMatch}<strong>{plural(ev.marksMatch, 'saved post')}</strong> about “{q}”{/if}
+            {#if ev.marksMatch}<strong>{plural(ev.marksMatch, 'bookmark')}</strong> about “{q}”{/if}
           </span>
         {/if}
         <span class="sub2">

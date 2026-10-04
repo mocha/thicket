@@ -213,7 +213,7 @@
 
   <section class="card">
     <h2>Starter packs</h2>
-    <p class="help">Someone who has just signed up follows nothing, so the first screen offers them collections to copy. Point it at an account and its public collections become those packs — curate them by signing in as that account and making collections the normal way. An account made for the purpose works well, and its profile doubles as a worked example: what it reads, saves and notes.</p>
+    <p class="help">Someone who has just signed up follows nothing, so the first screen offers them collections to copy. Point it at an account and its public collections become those packs — curate them by signing in as that account and making collections the normal way. An account made for the purpose works well, and its profile doubles as a worked example: what it reads, bookmarks and notes.</p>
     {#if starterCandidates.length}
       <ul class="packs">
         {#each starterCandidates as u (u.handle)}
