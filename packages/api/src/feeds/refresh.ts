@@ -184,6 +184,7 @@ export async function refreshFeed(feedId: number): Promise<RefreshResult> {
         title: feed.title ?? parsed.title,
         description: parsed.description ?? feed.description,
         siteUrl: parsed.siteUrl ?? feed.siteUrl,
+        language: parsed.language,
         etag: res.headers.get("etag"),
         lastModified: res.headers.get("last-modified"),
         lastStatus: res.status,

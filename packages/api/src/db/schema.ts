@@ -203,6 +203,13 @@ export const feeds = pgTable("feeds", {
   title: text("title"),
   description: text("description"),
   kind: feedKind("kind").notNull().default("unknown"),
+  /**
+   * The language the feed says it is in, as a bare lowercase code ("en", not
+   * "en-US"), or null when it doesn't say. Taken at face value from the last
+   * fetch, and not shown to anyone yet: `pnpm ingest` keeps only feeds that say
+   * "en". See ParsedFeed.language.
+   */
+  language: text("language"),
   /** Conditional-GET state. */
   etag: text("etag"),
   lastModified: text("last_modified"),
