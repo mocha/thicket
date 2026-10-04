@@ -5,7 +5,8 @@
   import {
     api, bookmarksApi, exploreApi, searchApi, feedHref, collectionHref, profileHref, profilesApi,
     type Feed, type ExploreCollection, type ExploreUser,
-    type SearchResults, type SearchScope, type SearchFeed, type SearchCollection, type SearchPost, type SearchPerson
+    type SearchResults, type SearchScope, type SearchFeed, type SearchCollection, type SearchPost, type SearchPerson,
+    type FeedSearchSort, DEFAULT_FEED_SORT, feedSortFrom
   } from '$lib/api';
   import { feedOrigin, hostOf, longAgo, postRate, relativeTime, webHref } from '$lib/time';
   import { highlight, latestShort, mentionRate, plural } from '$lib/words';
@@ -76,8 +77,38 @@
    */
   const narrowToNetwork = $derived(page.url.searchParams.get('by') === 'following');
   const since = $derived(page.url.searchParams.get('since'));
-  // 'followers' is the old name for 'popular'; saved links still land on it.
-  const sort = $derived(((s) => (s === 'followers' ? 'popular' : s))(page.url.searchParams.get('sort') ?? 'popular'));
+  const sorts = [
+    { id: 'popular', label: 'Popular' },
+    { id: 'recent', label: 'Recent posts' },
+    { id: 'posts', label: 'Most active' },
+    { id: 'title', label: 'A–Z' },
+    { id: 'added', label: 'Newest here' }
+  ];
+  // 'followers' is the old name for 'popular'; saved links still land on it. ?sort= is also a
+  // search's feed order (below), so a value that isn't a browse order is read as the default.
+  const sort = $derived(((s) => (s === 'followers' ? 'popular' : sorts.some((x) => x.id === s) ? s : 'popular'))(page.url.searchParams.get('sort') ?? 'popular'));
+
+  /**
+   * The order of a search's Feeds list (issue 182). Searching, ?sort= means
+   * this; anything it doesn't know is the default. Only the Feeds tab offers
+   * it: Everything's short preview of feeds keeps the default.
+   */
+  const feedSort = $derived(feedSortFrom(page.url.searchParams.get('sort')));
+  /** A long search would stretch the dropdown, which is as wide as its longest choice. */
+  const term = $derived(q.length > 18 ? 'this search' : `“${q}”`);
+  const feedSorts = $derived<{ id: FeedSearchSort; label: string; help: string }[]>([
+    { id: 'about', label: `most mentions of ${term}`, help: `Feeds with the most posts mentioning “${q}” in the last 90 days come first. Feeds that only match by name come last.` },
+    { id: 'mentioned', label: `most recent mention of ${term}`, help: `Feeds that mentioned “${q}” most recently come first. Feeds that only match by name come last.` },
+    { id: 'active', label: 'number of posts (last 90d)', help: 'Feeds that posted the most in the last 90 days, about anything, come first.' },
+    { id: 'posted', label: 'most recent post', help: 'Feeds with the newest posts, about anything, come first.' }
+  ]);
+  const feedSortHelp = $derived(feedSorts.find((s) => s.id === feedSort)?.help ?? '');
+  const sortsFeeds = $derived(searching && scope === 'feeds');
+  function setFeedSort(v: string) {
+    const s = feedSortFrom(v);
+    setParams({ sort: s === DEFAULT_FEED_SORT ? null : s });
+    api.event('explore_feed_sort', { sort: s });
+  }
   let followsAnyone = $state<boolean | null>(null);
   const feedsNetwork = $derived(narrowToNetwork ? '1' : null);
 
@@ -97,12 +128,13 @@
   function onSearch(v: string) {
     draft = v;
     clearTimeout(timer);
-    timer = setTimeout(() => setParams({ q: v.trim() || null }), 250);
+    // Starting or ending a search drops ?sort=: a browse order and a search order are different lists.
+    timer = setTimeout(() => setParams(!!v.trim() === searching ? { q: v.trim() || null } : { q: v.trim() || null, sort: null }), 250);
   }
   function clearSearch() {
     draft = '';
     clearTimeout(timer);
-    setParams({ q: null });
+    setParams({ q: null, sort: null });
     searchInput?.focus();
   }
 
@@ -173,7 +205,7 @@
   function loadSearch(reset = false) {
     const s = scope;
     return load(reset, s === 'all' || moreNext !== null,
-      () => searchApi.run({ q, scope: s, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork }),
+      () => searchApi.run({ q, scope: s, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork, sort: s === 'feeds' ? feedSort : undefined }),
       (r) => {
         res = r;
         if (s === 'all') { more = []; moreNext = null; }
@@ -187,13 +219,6 @@
   let feedsTotal = $state(0);
   let feedsAll = $state(0);
   let feedsNext = $state<number | null>(null);
-  const sorts = [
-    { id: 'popular', label: 'Popular' },
-    { id: 'recent', label: 'Recent posts' },
-    { id: 'posts', label: 'Most active' },
-    { id: 'title', label: 'A–Z' },
-    { id: 'added', label: 'Newest here' }
-  ];
   function loadFeeds(reset = false) {
     return load(reset, feedsNext !== null,
       () => api.feeds({ network: feedsNetwork, since, sort, limit: 50, offset: reset ? 0 : feedsNext ?? 0 }),
@@ -315,7 +340,7 @@
 
   $effect(() => {
     if (followsAnyone === null) return; // wait until we know the default
-    const key = `${q}|${scope}|${feedsNetwork}|${since}|${sort}`;
+    const key = `${q}|${scope}|${feedsNetwork}|${since}|${sort}|${sortsFeeds ? feedSort : ''}`;
     if (loadedKey === key) return;
     loadedKey = key;
     if (searching) { res = null; more = []; moreNext = null; void loadSearch(true); }
@@ -482,6 +507,17 @@
         onchange={(e) => setParams({ sort: e.currentTarget.value === 'popular' ? null : e.currentTarget.value })}
       />
     {/if}
+    {#if sortsFeeds}
+      <Select
+        class="filter"
+        label="Sort by"
+        size="sm"
+        value={feedSort}
+        options={feedSorts.map((s) => ({ value: s.id, label: s.label }))}
+        aria-describedby="feed-sort-help"
+        onchange={(e) => setFeedSort(e.currentTarget.value)}
+      />
+    {/if}
 {/snippet}
 
 {#snippet filterBar()}
@@ -496,6 +532,9 @@
   <div class="filters" class:fold={threeFilters} class:snug={threeFilters && fit === 'snug'} class:unfit={threeFilters && fit === 'fold'} bind:this={filtersEl} inert={threeFilters && fit === 'fold'}>
     {@render filterFields()}
   </div>
+  <!-- What the chosen order means, said under the row rather than inside it so
+       the filters stay one line. The dropdown points at it, so it is read out too. -->
+  {#if sortsFeeds}<p class="sort-help" id="feed-sort-help">{feedSortHelp}</p>{/if}
 {/snippet}
 
 <!-- Rows. Each kind knows how to show its own evidence; see lib/words.ts. -->
@@ -508,7 +547,8 @@
         <span class="sub2 byline">
           {feedOrigin(f)}
           {#if f.postsLast30d} · publishes about {postRate(f.postsLast30d)}{/if}
-          {#if !ev && f.lastItemAt} · latest {longAgo(f.lastItemAt)}{/if}
+          <!-- Sorted by newest post, a search row shows the date it is sorted by. -->
+          {#if (!ev || (sortsFeeds && feedSort === 'posted')) && f.lastItemAt} · latest {longAgo(f.lastItemAt)}{/if}
           {#if !ev && feedsNetwork && (f as Feed).networkFollowers} · <span class="net-n">{(f as Feed).networkFollowers} {(f as Feed).networkFollowers === 1 ? 'person' : 'people'} you follow</span>{/if}
           {#if f.consecutiveFailures >= 3} · <span class="bad">failing</span>{/if}
         </span>
@@ -701,6 +741,8 @@
   /* Beats .link’s inherited size below: “See all” is a small action, not part of the heading. */
   h2 .all { margin-left: auto; font-family: var(--font); font-size: calc(var(--text-sm) * var(--size-app)); }
   .filters { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; margin-bottom: var(--space-1); }
+  /* The note under the filters saying what the chosen order means. */
+  .sort-help { margin: 0 0 var(--space-3); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; text-wrap: pretty; }
   /* Each filter reads as one line — its name, then the dropdown beside it —
      instead of the stack a labelled field normally makes. */
   .filters :global(.filter) { flex-direction: row; align-items: center; gap: var(--space-1); }

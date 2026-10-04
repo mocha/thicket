@@ -557,6 +557,18 @@ export const exploreApi = {
  * rank. `nameMatch` marks a row found by its name rather than by its posts.
  */
 export type SearchScope = 'all' | 'feeds' | 'collections' | 'posts' | 'people';
+/**
+ * How the Feeds list of a search is ordered (issue 182); the API's FeedSort.
+ * `about` is the default, the nearest to the relevance order the list had
+ * before there was a choice. To change the default, change this and
+ * DEFAULT_FEED_SORT in the API's routes/search.ts together.
+ */
+export type FeedSearchSort = 'mentioned' | 'posted' | 'about' | 'active';
+export const FEED_SEARCH_SORTS: FeedSearchSort[] = ['mentioned', 'posted', 'about', 'active'];
+export const DEFAULT_FEED_SORT: FeedSearchSort = 'about';
+/** Anything that isn't one of the four, including nothing, is the default. */
+export const feedSortFrom = (v: string | null | undefined): FeedSearchSort =>
+  FEED_SEARCH_SORTS.includes(v as FeedSearchSort) ? (v as FeedSearchSort) : DEFAULT_FEED_SORT;
 export type SearchFeed = {
   id: number; url: string; siteUrl: string | null; title: string | null; description: string | null; slug: string;
   lastItemAt: string | null; consecutiveFailures: number; postsLast30d: number; hasIcon: boolean; myCollectionIds: number[];
@@ -583,17 +595,21 @@ export type SearchPerson = {
 export type SearchGroup<T> = { rows: T[]; total: number; nextOffset: number | null };
 export type SearchResults = {
   q: string; scope: SearchScope;
+  /** The order the feeds came back in; always the default unless scope is feeds. */
+  sort?: FeedSearchSort;
   feeds: SearchGroup<SearchFeed>; collections: SearchGroup<SearchCollection>;
   posts: SearchGroup<SearchPost>; people: SearchGroup<SearchPerson>;
 };
 
 export const searchApi = {
-  run: (opts: { q: string; scope?: SearchScope; limit?: number; offset?: number; network?: string | null }) => {
+  run: (opts: { q: string; scope?: SearchScope; limit?: number; offset?: number; network?: string | null; sort?: FeedSearchSort }) => {
     const p = new URLSearchParams({ q: opts.q });
     if (opts.scope && opts.scope !== 'all') p.set('scope', opts.scope);
     if (opts.limit) p.set('limit', String(opts.limit));
     if (opts.offset) p.set('offset', String(opts.offset));
     if (opts.network) p.set('network', opts.network);
+    // Only the Feeds list takes an order; the API ignores it anywhere else.
+    if (opts.sort && opts.scope === 'feeds') p.set('sort', opts.sort);
     return j<SearchResults>(`/api/search?${p}`);
   }
 };
