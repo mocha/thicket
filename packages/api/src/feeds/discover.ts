@@ -3,7 +3,8 @@
  * path: the add-feed form, the PWA share target, and any future extension or
  * external tool all land here.
  */
-import { httpGet, MAX_BYTES, TooLargeError, type HttpResult } from "./http.js";
+import { BadStatus, httpGet, MAX_BYTES, TooLargeError, type HttpResult } from "./http.js";
+import { Explained } from "./explain.js";
 import { normalizeFeedUrl } from "./normalize.js";
 import { parseFeedDocument, type ParsedFeed } from "./parse.js";
 import { resolveYouTube } from "./youtube.js";
@@ -89,10 +90,9 @@ export async function discover(input: string): Promise<Discovery> {
   if (known) {
     const site = /reddit\.com/i.test(known.feedUrl) ? "Reddit" : "YouTube";
     const res = await httpGet(known.feedUrl);
-    if (res.status === 429) throw new Error(`${site} is rate-limiting us right now; try again in a minute.`);
-    if (res.status >= 400) throw new Error(`${site}'s feed answered HTTP ${res.status}`);
+    if (res.status >= 400) throw new BadStatus(`${site}'s feed answered HTTP ${res.status}`, res.status);
     const parsed = tryParse(res.body, res.finalUrl);
-    if (!parsed) throw new Error(`${site} returned something that isn't a feed.`);
+    if (!parsed) throw new Explained(`${site} sent back something thicket couldn’t read as a feed. Try again later.`);
     return { status: "feed", url: normalizeFeedUrl(res.finalUrl), parsed, etag: res.headers.get("etag"), lastModified: res.headers.get("last-modified") };
   }
 
@@ -102,7 +102,7 @@ export async function discover(input: string): Promise<Discovery> {
   // shared download limit; direct feeds larger than that were already too big
   // to parse, while HTML discovery only inspects the first 200 KB below.
   const res = await httpGet(url, {}, { truncate: true });
-  if (res.status >= 400) throw new Error(`HTTP ${res.status} fetching ${url}`);
+  if (res.status >= 400) throw new BadStatus(`HTTP ${res.status} fetching ${url}`, res.status);
 
   // 1. Is it a feed already?
   const direct = tryParse(res.body, res.finalUrl);

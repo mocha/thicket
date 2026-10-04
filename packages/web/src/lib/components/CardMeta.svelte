@@ -41,7 +41,7 @@
 
 <div class="meta {klass}" {...rest}>
   {#if onsource}
-    <button class="source" onclick={onsource} title="About {name}">
+    <button class="source tap" onclick={onsource} title="About {name}">
       <SourceIcon {feedId} {hasIcon} {name} size={ICON} />
       <span class="name">{#if label}{@render label()}{:else}{name}{/if}</span>
     </button>
@@ -83,5 +83,5 @@
     text-overflow: ellipsis;
   }
   .dot { color: var(--text-3); }
-  time { color: var(--text-3); white-space: nowrap; }
+  time { color: var(--text-2); white-space: nowrap; }
 </style>

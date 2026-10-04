@@ -24,14 +24,14 @@
   });
 </script>
 
-<dialog bind:this={dialog} onclose={onclose} onclick={(e) => { if (e.target === dialog) dialog?.close(); }}>
+<dialog bind:this={dialog} onclose={onclose} onclick={(e) => { if (e.target === dialog) dialog?.close(); }} aria-label={feed ? `About ${feed.title ?? hostOf(feed.url)}` : 'About this feed'}>
   <div class="sheet">
     {#if feed}
       <header>
         <SourceIcon feedId={feed.id} hasIcon={feed.hasIcon} name={feed.title ?? hostOf(feed.url)} size={48} />
         <div class="who">
           <h2>{feed.title ?? hostOf(feed.url)}</h2>
-          <a class="host" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
+          <a class="host tap" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
         </div>
         <IconButton class="close" icon="close" label="Close" onclick={() => dialog?.close()} />
       </header>
@@ -70,8 +70,8 @@
   .desc { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: var(--space-4) 0 0; padding: var(--space-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .stats div { display: flex; flex-direction: column; /* 2px is an optical gap between a number and its label. */ gap: 2px; }
-  dt { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+  dt { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); }
   dd { margin: 0; font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   footer { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); align-items: center; }
-  .loading { text-align: center; color: var(--text-3); padding: var(--space-6) 0; }
+  .loading { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
 </style>

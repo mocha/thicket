@@ -15,6 +15,8 @@
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
   import Select from '$lib/components/Select.svelte';
+  import Sheet from '$lib/components/Sheet.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FollowControl from '$lib/components/FollowControl.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
@@ -148,6 +150,9 @@
    * a reset) waits its turn and stops at the end.
    */
   let latestLoad = 0;
+  /** Said to a screen reader when scrolling brings in more rows: "25 more loaded, 50 in all." The rows themselves aren't read out. */
+  let loadedSaid = $state('');
+  const shown = () => (searching ? more.length : browseAs === 'feeds' ? feeds.length : browseAs === 'collections' ? cols.length : users.length);
   async function load<T>(reset: boolean, hasMore: boolean, request: () => Promise<T>, apply: (r: T) => void) {
     if (!reset && (loading || !hasMore)) return;
     const key = loadedKey;
@@ -156,7 +161,12 @@
     loading = true; error = null;
     try {
       const r = await request();
-      if (isCurrent()) apply(r);
+      if (isCurrent()) {
+        const before = shown();
+        apply(r);
+        const now = shown();
+        loadedSaid = !reset && now > before ? `${(now - before).toLocaleString()} more loaded, ${now.toLocaleString()} in all.` : '';
+      }
     } catch (e) { if (isCurrent()) error = e instanceof Error ? e.message : String(e); } finally { if (isCurrent()) loading = false; }
   }
 
@@ -327,6 +337,60 @@
       : (browseAs === 'feeds' ? feeds.length : browseAs === 'collections' ? cols.length : users.length) === 0)
   );
   const scopeLabel = $derived(SCOPES.find((s) => s.id === scope)?.label ?? '');
+
+  /* On a phone, browsing feeds has three filters, and stacked they push the
+     list most of the way down the first screen. There they fold into one row
+     that names what's chosen and opens the same three dropdowns in a Sheet. */
+  const ADDED: Record<string, string> = { '': 'Any time', '24h': 'Past 24 hours', week: 'Past week', month: 'Past month', year: 'Past year' };
+  const threeFilters = $derived(!searching && browseAs === 'feeds');
+  const filterSummary = $derived([
+    narrowToNetwork ? 'People I follow' : 'Everyone',
+    ADDED[since ?? ''] ?? 'Any time',
+    sorts.find((x) => x.id === sort)?.label ?? 'Popular'
+  ].join(' · '));
+  let filtersDialog = $state<HTMLDialogElement | null>(null);
+
+  /* Off the phone the three sit in one row, which has to actually fit: longer
+     wording or larger text can make them wider than the card. Measured, the
+     row is 'roomy' (the normal gaps), 'snug' (tighter gaps, when that is all
+     it takes), or 'fold' (they don't fit on one line at all, so they fold
+     into the Filters box the same way they do on a phone). It never wraps a
+     filter onto a second line. */
+  let filtersEl = $state<HTMLDivElement | null>(null);
+  let fit = $state<'roomy' | 'snug' | 'fold'>('roomy');
+  $effect(() => {
+    const el = filtersEl;
+    if (!el || !threeFilters) { fit = 'roomy'; return; }
+    const measure = () => {
+      const kids = [...el.children] as HTMLElement[];
+      if (!kids.length || !el.clientWidth || getComputedStyle(el).flexDirection === 'column') return;
+      const cs = getComputedStyle(el);
+      const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const need = kids.reduce((w, k) => w + k.offsetWidth, 0);
+      const gaps = kids.length - 1;
+      fit = need + 16 * gaps <= room ? 'roomy' : need + 8 * gaps <= room ? 'snug' : 'fold';
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    for (const k of el.children) ro.observe(k);
+    measure();
+    void document.fonts?.ready.then(measure);
+    return () => ro.disconnect();
+  });
+
+  /**
+   * What a screen reader is told when a search comes back: how many results,
+   * and of what. The results redraw as you type, and without this nothing says
+   * so. Empty while a search is still on its way, so only the answer is read.
+   */
+  const KINDS: Record<Exclude<SearchScope, 'all'>, [string, string]> = { feeds: ['feed', 'feeds'], collections: ['collection', 'collections'], posts: ['post', 'posts'], people: ['person', 'people'] };
+  const said = $derived.by(() => {
+    if (!searching || loading || !res) return '';
+    if (scope !== 'all') return res[scope].total === 0 ? `No ${KINDS[scope][1]} match “${q}”.` : `${plural(res[scope].total, ...KINDS[scope])} for “${q}”.`;
+    if (found === 0) return `Nothing matches “${q}”.`;
+    const parts = (Object.keys(KINDS) as Exclude<SearchScope, 'all'>[]).filter((k) => res![k].total > 0).map((k) => plural(res![k].total, ...KINDS[k]));
+    return `${plural(found, 'result')} for “${q}”: ${parts.join(', ')}.`;
+  });
 </script>
 
 <svelte:head><title>{searching ? `${q} · Explore` : 'Explore'} · thicket</title></svelte:head>
@@ -363,8 +427,11 @@
     value={scope}
     onchange={(v) => setScope(v as SearchScope)}
     label="What to search"
+    panel="explore-results"
     fill
   />
+  <p class="visually-hidden" role="status">{said}</p>
+  <p class="visually-hidden" role="status">{loadedSaid}</p>
 </section>
 
 <!-- The filters that act on a browse list. Rendered as the list card's header
@@ -381,9 +448,7 @@
   </svg>
 {/snippet}
 
-{#snippet filterBar()}
-  <p class="blurb">{@render scopeIcon(scope)}<span>{noOrphan(SCOPE_BLURB[scope])}</span></p>
-  <div class="filters">
+{#snippet filterFields()}
     <Select
       class="filter"
       label="Show"
@@ -404,11 +469,7 @@
         size="sm"
         value={since ?? ''}
         options={[
-          { value: '', label: 'any time' },
-          { value: '24h', label: '24 hours' },
-          { value: 'week', label: 'week' },
-          { value: 'month', label: 'month' },
-          { value: 'year', label: 'year' }
+          ...Object.entries(ADDED).map(([value, label]) => ({ value, label }))
         ]}
         onchange={(e) => setParams({ since: e.currentTarget.value || null })}
       />
@@ -421,13 +482,26 @@
         onchange={(e) => setParams({ sort: e.currentTarget.value === 'popular' ? null : e.currentTarget.value })}
       />
     {/if}
+{/snippet}
+
+{#snippet filterBar()}
+  <p class="blurb">{@render scopeIcon(scope)}<span>{noOrphan(SCOPE_BLURB[scope])}</span></p>
+  {#if threeFilters}
+    <button type="button" class="filters-row" class:wide={fit === 'fold'} onclick={() => filtersDialog?.showModal()} aria-haspopup="dialog">
+      <svg class="fr-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>
+      <span class="fr-text"><span class="fr-name">Filters</span><span class="fr-now">{filterSummary}</span></span>
+      <span class="fr-caret"><Icon name="caret" dir="down" size={20} /></span>
+    </button>
+  {/if}
+  <div class="filters" class:fold={threeFilters} class:snug={threeFilters && fit === 'snug'} class:unfit={threeFilters && fit === 'fold'} bind:this={filtersEl} inert={threeFilters && fit === 'fold'}>
+    {@render filterFields()}
   </div>
 {/snippet}
 
 <!-- Rows. Each kind knows how to show its own evidence; see lib/words.ts. -->
 {#snippet feedRow(f: SearchFeed | Feed, ev: SearchFeed | null)}
   <li>
-    <a class="row" href={feedHref(f)} onclick={() => (opened = { feed: f.id })}>
+    <a class="row tap" href={feedHref(f)} onclick={() => (opened = { feed: f.id })}>
       <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={40} />
       <div class="meta">
         <span class="title">{feedListName(f)}</span>
@@ -454,7 +528,7 @@
 
 {#snippet colRow(c: ExploreCollection | SearchCollection, ev: SearchCollection | null)}
   <li>
-    <a class="row" href={collectionHref(c.handle, c.slug)}>
+    <a class="row tap" href={collectionHref(c.handle, c.slug)}>
       <span class="stack" aria-hidden="true">
         {#each c.sample.slice(0, 3) as s (s.id)}<SourceIcon feedId={s.id} hasIcon={s.hasIcon} name={s.title ?? '?'} size={22} />{/each}
       </span>
@@ -477,7 +551,7 @@
 
 {#snippet postRow(p: SearchPost)}
   <li>
-    <a class="row" href={webHref(p.url) ?? feedHref({ id: p.feedId })} target={webHref(p.url) ? '_blank' : undefined} rel={webHref(p.url) ? 'noreferrer' : undefined}>
+    <a class="row tap" href={webHref(p.url) ?? feedHref({ id: p.feedId })} target={webHref(p.url) ? '_blank' : undefined} rel={webHref(p.url) ? 'noreferrer' : undefined}>
       <SourceIcon feedId={p.feedId} hasIcon={p.hasIcon} name={p.feedTitle ?? ''} size={40} />
       <div class="meta">
         <span class="title">{p.title ?? p.url}</span>
@@ -489,7 +563,7 @@
       </div>
     </a>
     {#if session.user}
-      <button class="save" class:on={!!p.bookmarkId} onclick={() => toggleBookmark(p)} disabled={markBusy === p.id} aria-pressed={!!p.bookmarkId}>
+      <button class="save tap" class:on={!!p.bookmarkId} onclick={() => toggleBookmark(p)} disabled={markBusy === p.id} aria-pressed={!!p.bookmarkId}>
         {p.bookmarkId ? 'Saved' : 'Save'}
       </button>
     {/if}
@@ -498,7 +572,7 @@
 
 {#snippet personRow(u: ExploreUser | SearchPerson, ev: SearchPerson | null)}
   <li>
-    <a class="row" href={profileHref(u.handle)} onclick={() => (opened = { person: u.handle })}>
+    <a class="row tap" href={profileHref(u.handle)} onclick={() => (opened = { person: u.handle })}>
       <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={40} v={u.avatarUpdatedAt} />
       <div class="meta">
         <span class="title">{u.displayName ?? u.handle} <span class="handle">@{u.handle}</span></span>
@@ -518,8 +592,10 @@
   </li>
 {/snippet}
 
+<!-- What the tabs above switch between. -->
+<div id="explore-results" role="tabpanel" aria-label={scopeLabel}>
 {#if error}
-  <p class="status error">Couldn’t load: {error}</p>
+  <p class="status error" role="alert">Couldn’t load: {error}</p>
 {:else if nothing}
   {@render filterBar()}
   <div class="empty">
@@ -543,25 +619,25 @@
   {#if scope === 'all'}
     {#if res.feeds.rows.length}
       <section class="group">
-        <h2>Feeds <Badge>{res.feeds.total.toLocaleString()}</Badge>{#if res.feeds.total > res.feeds.rows.length}<button class="link all" onclick={() => setScope('feeds')}>See all</button>{/if}</h2>
+        <h2>Feeds <Badge>{res.feeds.total.toLocaleString()}</Badge>{#if res.feeds.total > res.feeds.rows.length}<button class="link all tap" onclick={() => setScope('feeds')}>See all</button>{/if}</h2>
         <ul class="list">{#each res.feeds.rows as f (f.id)}{@render feedRow(f, f)}{/each}</ul>
       </section>
     {/if}
     {#if res.collections.rows.length}
       <section class="group">
-        <h2>Collections <Badge>{res.collections.total.toLocaleString()}</Badge>{#if res.collections.total > res.collections.rows.length}<button class="link all" onclick={() => setScope('collections')}>See all</button>{/if}</h2>
+        <h2>Collections <Badge>{res.collections.total.toLocaleString()}</Badge>{#if res.collections.total > res.collections.rows.length}<button class="link all tap" onclick={() => setScope('collections')}>See all</button>{/if}</h2>
         <ul class="list">{#each res.collections.rows as c (c.id)}{@render colRow(c, c)}{/each}</ul>
       </section>
     {/if}
     {#if res.posts.rows.length}
       <section class="group">
-        <h2>Posts <Badge>{res.posts.total.toLocaleString()}</Badge>{#if res.posts.total > res.posts.rows.length}<button class="link all" onclick={() => setScope('posts')}>See all</button>{/if}</h2>
+        <h2>Posts <Badge>{res.posts.total.toLocaleString()}</Badge>{#if res.posts.total > res.posts.rows.length}<button class="link all tap" onclick={() => setScope('posts')}>See all</button>{/if}</h2>
         <ul class="list">{#each res.posts.rows as p (p.id)}{@render postRow(p)}{/each}</ul>
       </section>
     {/if}
     {#if res.people.rows.length}
       <section class="group">
-        <h2>People <Badge>{res.people.total.toLocaleString()}</Badge>{#if res.people.total > res.people.rows.length}<button class="link all" onclick={() => setScope('people')}>See all</button>{/if}</h2>
+        <h2>People <Badge>{res.people.total.toLocaleString()}</Badge>{#if res.people.total > res.people.rows.length}<button class="link all tap" onclick={() => setScope('people')}>See all</button>{/if}</h2>
         <ul class="list">{#each res.people.rows as u (u.handle)}{@render personRow(u, u)}{/each}</ul>
       </section>
     {/if}
@@ -584,16 +660,25 @@
   <div class="browse">{@render filterBar()}<ul class="list">{#each users as u (u.handle)}{@render personRow(u, null)}{/each}</ul></div>
 {/if}
 
+</div>
+
 {#if loading}<p class="status">Loading…</p>{/if}
 <div bind:this={sentinel} aria-hidden="true"></div>
 
+{#if threeFilters}
+  <Sheet title="Filters" bind:dialog={filtersDialog}>
+    <div class="sheet-filters">{@render filterFields()}</div>
+  </Sheet>
+{/if}
+
 <style>
   .top { margin-bottom: var(--space-3); }
-  .titlerow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  /* Wraps: at a big text size on a phone the button drops under the title instead of sliding beneath it. */
+  .titlerow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; min-width: 0; }
   /* text-wrap: pretty keeps a lone last word from stranding on its own line. */
   /* 2px is an optical nudge under the title, not a spacing step. */
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 62ch; text-wrap: pretty; }
+  .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 62ch; text-wrap: pretty; }
   /* On a phone the subtitle drops its "all in one search" tail to stay one tidy line. */
   @media (max-width: 560px) { .sub .tail { display: none; } }
   .pane { margin-bottom: var(--space-2); }
@@ -625,7 +710,40 @@
   @media (max-width: 600px) {
     .filters { flex-direction: column; align-items: stretch; }
     .filters :global(.filter) { flex-direction: column; align-items: stretch; }
+    /* Three filters fold into the one row above them; see the script. */
+    .filters.fold { display: none; }
   }
+  /* Off the phone: the row never wraps a filter onto a second line. It closes
+     its gaps when that is all it takes to fit (16px to 8px, the two the script
+     measures against), and when even that isn't enough it is swapped for the
+     Filters box: still laid out, so it can be measured again, but taking no
+     height and out of sight and reach. */
+  @media (min-width: 601px) {
+    .filters.fold { flex-wrap: nowrap; }
+    .filters.snug { column-gap: var(--space-2); }
+    .filters.unfit, .browse .filters.unfit { visibility: hidden; height: 0; padding-block: 0; margin-block: 0; overflow: hidden; }
+    .filters.fold :global(.filter) { flex: none; }
+  }
+  /* The folded row. Drawn as a box with the dropdown's own outline, corner and
+     caret, so it reads as something to press rather than a line of text: an
+     icon, what it is, and what's chosen now. */
+  .filters-row { display: none; }
+  @media (max-width: 600px) { .filters-row { display: flex; } }
+  .filters-row.wide { display: flex; }
+  .filters-row {
+    align-items: center; gap: var(--space-3); width: 100%; min-height: 52px; text-align: left;
+    padding: var(--space-2) var(--space-3); margin-bottom: var(--space-2);
+    border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface);
+  }
+  /* Inside the list card it keeps the card's side padding around it. */
+  .browse .filters-row { width: calc(100% - var(--space-3) * 2); margin: var(--space-3) var(--space-3) var(--space-2); }
+  .fr-icon { flex: none; color: var(--accent); }
+  .fr-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .fr-name { font-weight: 600; color: var(--text); line-height: 1.25; }
+  .fr-now { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
+  .fr-caret { flex: none; display: grid; color: var(--text-2); }
+  /* In the Sheet the three dropdowns stack, each under its name, full width. */
+  .sheet-filters { display: flex; flex-direction: column; gap: var(--space-3); padding-bottom: var(--space-2); }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   /* Browse: the filters are the list card's header, so the two read as one unit. */
   .browse { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
@@ -643,7 +761,7 @@
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .handle { font-weight: 400; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); margin-left: var(--space-1); }
+  .handle { font-weight: 400; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin-left: var(--space-1); }
   /* Wraps rather than truncates: every part of it is a fact someone is deciding on.
      --text-2, not --text-3, because these facts are read, and --text-3 falls short
      of readable contrast in most themes. The gap sets it apart from the
@@ -678,9 +796,9 @@
   .stack :global(> :nth-child(3)) { left: 18px; z-index: 1; }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   .follow, .save { flex: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
-  .follow.on, .save.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: transparent; }
+  .follow.on, .save.on { background: var(--accent-tint); border-color: transparent; }
   .follow:disabled, .save:disabled { opacity: 0.6; }
-  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
+  .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
   .status.error { color: var(--danger); }
   .empty { text-align: center; color: var(--text-2); padding: calc(var(--space-6) + var(--space-1)) var(--space-4); font-size: calc(var(--text-base) * var(--size-app)); }
   .empty p { margin: 0 auto; max-width: 480px; }

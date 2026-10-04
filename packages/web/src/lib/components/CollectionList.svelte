@@ -27,7 +27,7 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
 
-  let { ids, ontoggle, oncreated, hint, via, disabled = false, flash = new Set() }: {
+  let { ids, ontoggle, oncreated, hint, via, disabled = false, flash = new Set(), onPage = false }: {
     ids: number[];
     ontoggle: (id: number) => void;
     /** A new collection was just made from the row at the bottom. */
@@ -38,6 +38,8 @@
     disabled?: boolean;
     /** Collection ids whose count just went up, to pop the number. */
     flash?: Set<number>;
+    /** Sits straight on the page rather than inside a Sheet, so the filter and the list take the raised surface color themselves. */
+    onPage?: boolean;
   } = $props();
 
   let list = $state<HTMLElement | null>(null);
@@ -57,7 +59,9 @@
   $effect(() => {
     void loadCollections().then(async () => {
       await tick();
-      list?.querySelector('input:checked')?.closest('li')?.scrollIntoView({ block: 'center' });
+      // Scroll the list only. scrollIntoView also scrolled the page under it, which opened a feed's settings page partway down.
+      const row = list?.querySelector('input:checked')?.closest('li');
+      if (list && row) list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top - (list.clientHeight - row.offsetHeight) / 2;
     });
   });
 
@@ -99,7 +103,7 @@
         {id}
         variant="search"
         size="sm"
-        inset
+        inset={!onPage}
         bind:value={filter}
         placeholder="Filter collections…"
         {disabled}
@@ -108,7 +112,7 @@
     {/snippet}
   </Field>
 {/if}
-<div class="frame">
+<div class="frame" class:onpage={onPage} style:--floor-rows={visible.length > 2 ? 2.5 : visible.length || (filter.trim() ? 1 : 0)}>
   <div class="scroll" bind:this={list}>
     <ul class="checks">
       {#each visible as c (c.id)}
@@ -150,7 +154,7 @@
           {/snippet}
         </Field>
       {:else}
-        <button type="button" class="start" onclick={startNaming} {disabled}>
+        <button type="button" class="start tap" onclick={startNaming} {disabled}>
           <span class="plus" aria-hidden="true">+</span>
           <span class="name">Add a new collection</span>
         </button>
@@ -161,8 +165,14 @@
 {#if hint && collectionStore.loaded}<p class="hint">{hint}</p>{/if}
 
 <style>
-  /* The border holds both the scrolling rows and the pinned new-collection row. */
-  .frame { display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+  /* The border holds both the scrolling rows and the pinned new-collection row.
+     On a short screen (keyboard up, phone on its side) the list gives up height
+     so its Sheet fits, but only down to two and a half rows (--floor-rows; 48px
+     is a row, 53px the pinned row and its line): the third row is cut through
+     its name, which says "there's more" the same way the desktop cap below
+     does. Past that, whatever holds it scrolls. */
+  .frame { display: flex; flex-direction: column; min-height: calc(var(--floor-rows) * 48px * var(--size-app) + 53px); flex: 0 1 auto; border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+  .frame.onpage { background: var(--surface); }
   .scroll { overflow-y: auto; min-height: 0; flex: 0 1 auto; max-height: 38vh; padding: 0 var(--space-3); }
   /* Desktop cap. Must come after the base .scroll rule above: same specificity,
      so source order decides, and the list should top out at ~7 rows and scroll,
@@ -179,11 +189,11 @@
   /* No browser margin, so the box and the + in the last row share one column. */
   .checks input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
   .name { flex: 1; font-weight: 500; }
-  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); transition: color 300ms; }
+  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); transition: color 300ms; }
   .count.flash { color: var(--accent); font-weight: 700; animation: pop 1.2s ease-out; }
   @keyframes pop { 0% { transform: scale(1.4); } 30% { transform: scale(1); } 100% { transform: scale(1); } }
-  .nomatch { margin: 0; padding: var(--space-3) var(--space-2); color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .hint { margin: calc(-1 * var(--space-1)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .nomatch { margin: 0; padding: var(--space-3) var(--space-2); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .hint { margin: calc(-1 * var(--space-1)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   /* Lined up with the rows above: the + sits where a checkbox would. */
   .new { display: flex; align-items: center; gap: var(--space-3); margin: 0 var(--space-3); padding: var(--space-2) var(--space-1); min-height: 52px; border-top: 1px solid var(--line); }
   .new.alone { border-top: 0; }

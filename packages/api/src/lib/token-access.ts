@@ -65,6 +65,8 @@ export const NEVER: Rule[] = [
   { path: /^\/api\/import(\/|$)/, why: "the import page" },
   // The web app's own usage log.
   { path: /^\/api\/events(\/|$)/, why: "the web app’s usage log" },
+  // Feedback is a person telling us something, and each one emails the admins.
+  { path: /^\/api\/feedback(\/|$)/, why: "the feedback form" },
 ];
 
 /** Reads that are sent as a POST because they carry a body. A read-only token may make them. */

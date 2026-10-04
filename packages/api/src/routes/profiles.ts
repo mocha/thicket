@@ -15,7 +15,7 @@ import { Hono, type Context } from "hono";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { subtreeFeedCount } from "../lib/subtree.js";
 import { db, schema } from "../db/client.js";
-import { currentUser, normalizeHandle } from "../lib/auth.js";
+import { currentUser, normalizeHandle, FIRST_COLLECTION_SLUG } from "../lib/auth.js";
 import { exportCollectionOpml } from "../lib/opml.js";
 import { PUBLIC_URL } from "../lib/config.js";
 import { slugify, uniqueCollectionSlug } from "../lib/slug.js";
@@ -51,11 +51,16 @@ async function avatarTime(userId: number): Promise<string | null> {
   return a?.updatedAt.toISOString() ?? null;
 }
 
-/** Visible, named collections of an owner: non-root, and shared with this viewer (all of them, for the owner). */
-function collectionRows(u: Owner, who: Audience) {
-  return db.execute<{ id: number; parentId: number; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null }>(sql`
+/**
+ * Visible, named collections of an owner: non-root, and shared with this viewer
+ * (all of them, for the owner). `copiedByMe`: the viewer has a copy of it, so
+ * the profile can say so (issue #176).
+ */
+function collectionRows(u: Owner, who: Audience, viewerId: number | undefined) {
+  return db.execute<{ id: number; parentId: number; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null; copiedByMe: boolean }>(sql`
     select col.id, col.parent_id as "parentId", col.name, col.slug, col.description, col.visibility, col.copied_from_id as "copiedFromId",
-           ${subtreeFeedCount(sql`col.id`)} as "feedCount"
+           ${subtreeFeedCount(sql`col.id`)} as "feedCount",
+           (${!who.isMe && viewerId !== undefined} and exists(select 1 from collections mine where mine.user_id = ${viewerId ?? -1} and mine.copied_from_id = col.id)) as "copiedByMe"
     from collections col
     where col.user_id = ${u.id} and col.parent_id is not null and ${allowedLevelsSql("col.visibility", who)}
     order by lower(col.name)
@@ -92,7 +97,7 @@ profiles.get("/:handle", async (c) => {
            exists(select 1 from user_follows where follower_id = ${viewer?.id ?? -1} and followee_id = ${u.id}) as "isFollowing"
   `)).rows;
   const [{ noteCount }] = (await db.execute<{ noteCount: number }>(sql`select count(*)::int as "noteCount" from bookmarks where user_id = ${u.id} and note is not null`)).rows;
-  const collections = allows(u.collectionsVisibility, who) ? (await collectionRows(u, who)).rows : null;
+  const collections = allows(u.collectionsVisibility, who) ? (await collectionRows(u, who, viewer?.id)).rows : null;
 
   return c.json({
     ...publicUser(u, await avatarTime(u.id)), private: false, isMe, following,
@@ -185,6 +190,24 @@ async function visibleCollection(c: Context, handleRaw: string, slug: string) {
   return { u, col: { ...col, id: Number(col.id) }, isMe, who, viewer };
 }
 
+/**
+ * Where my collection was copied from, when I can still see that collection:
+ * its owner's profile isn't private, shares collections with me, and the
+ * collection itself is shared with me. Otherwise null, the same as never copied.
+ */
+async function copiedFromFor(id: number, meId: number) {
+  const [src] = (await db.execute<{ name: string; slug: string; visibility: ShareLevel; ownerId: number }>(sql`
+    select src.name, src.slug, src.visibility, src.user_id as "ownerId"
+    from collections mine join collections src on src.id = mine.copied_from_id
+    where mine.id = ${id} and src.parent_id is not null`)).rows;
+  if (!src) return null;
+  const [u] = await db.select().from(schema.users).where(eq(schema.users.id, Number(src.ownerId)));
+  if (!u || u.id === meId) return null;
+  const who = await audienceFor(u, meId);
+  if (u.profileVisibility === "private" || !allows(u.collectionsVisibility, who) || !allows(src.visibility, who)) return null;
+  return { name: src.name, slug: src.slug, owner: publicUser(u) };
+}
+
 /** A public collection: its feeds (with the viewer's relationship, if signed in) and children. */
 profiles.get("/:handle/collections/:slug", async (c) => {
   const r = await visibleCollection(c, c.req.param("handle"), c.req.param("slug"));
@@ -195,6 +218,8 @@ profiles.get("/:handle/collections/:slug", async (c) => {
            (select fs.display_name from feed_settings fs where fs.user_id = ${viewerId} and fs.feed_id = f.id) as "displayName",
            coalesce(nullif(left(trim(both '-' from regexp_replace(lower(f.title), '[^a-z0-9]+', '-', 'g')), 60), ''), 'feed') as slug,
            f.last_item_at as "lastItemAt",
+           -- Only the owner is told a feed's checks are failing: it is theirs to fix or drop.
+           (${r.isMe} and f.consecutive_failures > 0) as "failing",
            exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon",
            (select count(*)::int from feeds g where g.title = f.title) as "sameTitle",
            (select count(distinct col.user_id)::int from collection_feeds x join collections col on col.id = x.collection_id where x.feed_id = f.id) as "followerCount",
@@ -207,19 +232,31 @@ profiles.get("/:handle/collections/:slug", async (c) => {
     from collections col where col.parent_id = ${r.col.id} and ${allowedLevelsSql("col.visibility", r.who)} order by lower(col.name)
   `);
   // Does this signed-in reader already have a copy of this collection? Every
-  // copy records its source in copied_from_id, so the page can offer "open your
-  // copy" and warn before making a second one. Most recent wins if there are
-  // several.
+  // copy records its source in copied_from_id, so the page can point at it and
+  // warn before making a second one. Most recent wins if there are several.
+  // A copy can hold far less than this collection does now: the owner added
+  // feeds, or merged a bigger collection into this one and the copy's source
+  // moved here with it (issue #176). So it says how many of this collection's
+  // feeds it has, anywhere inside it; only a copy with all of them is "your copy"
+  // without qualification.
   const myCopy = r.viewer && !r.isMe
-    ? (await db.execute<{ slug: string; name: string }>(sql`
-        select slug, name from collections
-        where user_id = ${r.viewer.id} and copied_from_id = ${r.col.id}
-        order by created_at desc limit 1`)).rows[0] ?? null
+    ? (await db.execute<{ slug: string; name: string; sharedFeeds: number }>(sql`
+        with recursive newest as (
+          select id, slug, name from collections where user_id = ${r.viewer.id} and copied_from_id = ${r.col.id} order by created_at desc limit 1
+        ), mine as (
+          select id from newest
+          union all select k.id from collections k join mine on k.parent_id = mine.id
+        )
+        select newest.slug, newest.name,
+               (select count(*)::int from collection_feeds src where src.collection_id = ${r.col.id}
+                  and exists(select 1 from collection_feeds x where x.feed_id = src.feed_id and x.collection_id in (select id from mine))) as "sharedFeeds"
+        from newest`)).rows[0] ?? null
     : null;
+  const copiedFrom = r.isMe ? await copiedFromFor(r.col.id, r.viewer!.id) : null;
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
   return c.json({
     id: r.col.id, name: r.col.name, slug: r.col.slug, description: r.col.description, visibility: r.col.visibility, createdAt: iso(r.col.createdAt),
-    owner: publicUser(r.u), isMe: r.isMe, myCopy,
+    owner: publicUser(r.u), isMe: r.isMe, myCopy, copiedFrom,
     feeds: feeds.rows.map((f: any) => ({ ...f, lastItemAt: iso(f.lastItemAt) })),
     children: children.rows,
   });
@@ -244,9 +281,15 @@ profiles.get("/:handle/collections/:slug/opml", async (c) => {
  * Copy a collection into my own, as-is: same name (deduped), same feeds,
  * sub-collections included. The copy is mine and independent; copied_from_id
  * records where it came from. Feeds I already follow simply gain a collection.
+ *
+ * Body { replaceStarter: true }: this copy finishes signing up to get it, so
+ * the empty "My first collection" every account starts with goes too. Only
+ * while it's still untouched: the account is under a day old, and the
+ * starter has no feeds, nothing inside it, and nothing else beside it.
  */
 profiles.post("/:handle/collections/:slug/copy", async (c) => {
   const me = currentUser(c);
+  const body = await c.req.json<{ replaceStarter?: boolean }>().catch(() => ({} as { replaceStarter?: boolean }));
   const r = await visibleCollection(c, c.req.param("handle"), c.req.param("slug"));
   if ("error" in r) return c.json({ error: r.error }, r.status);
   if (r.isMe) return c.json({ error: "That’s already yours." }, 400);
@@ -255,6 +298,15 @@ profiles.post("/:handle/collections/:slug/copy", async (c) => {
   const mineToTake = allowedLevels(r.who);
 
   const created = await db.transaction(async (tx) => {
+    if (body.replaceStarter) {
+      await tx.execute(sql`
+        delete from collections s
+        where s.user_id = ${me.id} and s.parent_id = ${me.rootCollectionId} and s.slug = ${FIRST_COLLECTION_SLUG}
+          and exists (select 1 from users u where u.id = ${me.id} and u.created_at > now() - interval '1 day')
+          and not exists (select 1 from collection_feeds cf where cf.collection_id = s.id)
+          and not exists (select 1 from collections k where k.parent_id = s.id)
+          and not exists (select 1 from collections o where o.user_id = ${me.id} and o.parent_id is not null and o.id <> s.id)`);
+    }
     // Name dedupe: "News", then "News (from @handle)", then "News (from @handle) 2"...
     // Against every slug of mine, since slugs are unique per user rather than per parent.
     const mine = await tx.select({ slug: schema.collections.slug }).from(schema.collections).where(eq(schema.collections.userId, me.id));

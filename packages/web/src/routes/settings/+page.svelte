@@ -138,8 +138,8 @@
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   /* When a description follows the header, pull it up tight; the header's gap then sits under the description. */
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
-  .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
-  .fine { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.45; max-width: 66ch; }
+  .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
+  .fine { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.45; max-width: 66ch; }
   fieldset { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
   .radio input, .switch input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
@@ -149,6 +149,6 @@
   .radio input:focus-visible, .switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
-  .radio small, .switch small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  .radio small, .switch small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .admin .help a { color: var(--accent); font-weight: 600; }
 </style>

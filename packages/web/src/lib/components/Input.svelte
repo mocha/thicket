@@ -131,6 +131,19 @@
     }
     onclear?.();
   }
+
+  /* The whole box is the field. A press on its padding or on something
+     sitting beside the text (a magnifier, the "readthicket.com/@" before a
+     handle) puts the cursor in the field, at the end of what's typed, rather
+     than doing nothing. Buttons and links inside the box keep their own press. */
+  function pressed(e: MouseEvent) {
+    const t = e.target as HTMLElement;
+    if (!element || disabled || t === element || t.closest('button, a')) return;
+    e.preventDefault();
+    element.focus();
+    const end = element.value.length;
+    try { element.setSelectionRange(end, end); } catch { /* email and number fields have no cursor position to set */ }
+  }
 </script>
 
 <div
@@ -142,6 +155,8 @@
   class:hasclear={showClear}
   class:hastrail={!!trailing}
   {style}
+  onmousedown={pressed}
+  role="presentation"
 >
   {#if variant === 'search'}
     <span class="lead" aria-hidden="true"><Icon name="search" size={glyph} /></span>
@@ -177,7 +192,7 @@
     min-width: 0;
     width: 100%;
     padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--line);
+    border: 1px solid var(--field-line);
     /* Single-line fields are pills, like buttons; Textarea keeps --radius-sm because a pill cannot wrap several lines. */
     border-radius: var(--radius-pill);
     background: var(--surface);
@@ -214,17 +229,22 @@
   /* The wrapper draws the ring, so the field inside draws nothing. */
   input:focus { outline: none; }
   /* The placeholder is a shade darker than the browser's own, which is too
-     faint to read against the light palettes. */
-  input::placeholder { color: var(--text-2); opacity: 1; }
+     faint to read against the light palettes, and dimmer than typed text in
+     the dark ones (see --placeholder in app.css). */
+  input::placeholder { color: var(--placeholder); opacity: 1; }
   /* We draw our own clear button; hide the browser's so there aren't two. */
   input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
 
+  /* What sits beside the text reads as part of the hint, not as typed text,
+     and pressing it types, so it shows the typing cursor. */
   .lead {
     flex: none;
     display: flex;
     align-items: center;
-    color: var(--text-2);
+    color: var(--placeholder);
+    cursor: text;
   }
+  .wrap:not(.disabled) { cursor: text; }
 
   /* Focus, quietly: the outline turns the accent color however you got here. */
   .wrap:focus-within { border-color: var(--accent); }
@@ -234,10 +254,19 @@
   /* Starting something new: the accent outline and an accent-colored
      placeholder say "this makes a thing" before you have typed anything. */
   .create { border-color: var(--accent); }
-  .create input::placeholder { color: var(--accent); opacity: 0.85; }
+  /* Full strength: thinned to 85% it fell under 4.5:1 in two of the warm themes. Soft sepia keeps the thinner one; it is low-contrast on purpose. */
+  .create input::placeholder { color: var(--accent); opacity: 1; }
+  :global(:root[data-palette='parchment']) .create input::placeholder { opacity: 0.85; }
 
   .invalid { border-color: var(--danger); }
 
   .disabled { opacity: 0.55; }
   .disabled input { cursor: default; }
+  /* On a touchscreen a field's text is never under 16px: iOS Safari zooms the
+     whole page in when a smaller field takes focus, and doesn't zoom back out. */
+  @media (pointer: coarse) {
+    /* And the small size is still a full 44px to tap. */
+    .wrap.sm { min-height: 44px; }
+    input, .sm input { font-size: max(16px, calc(var(--text-base) * var(--size-app))); }
+  }
 </style>

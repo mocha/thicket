@@ -210,8 +210,47 @@ export function loadDisplay() {
   apply();
 }
 
+/**
+ * Take up the record as it stands in storage now. Another tab of thicket may
+ * have changed it since this one loaded: without this, that tab's choice never
+ * shows here, and the next change made here writes this tab's old values back
+ * over it (a theme picked in one tab quietly undone from another).
+ */
+function sync() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw === null) return;
+    const found = coerce(JSON.parse(raw));
+    if (display.configured && JSON.stringify(found) === JSON.stringify(snapshot())) return;
+    Object.assign(display, found);
+    display.configured = true;
+    apply();
+  } catch { /* what is on screen stands */ }
+}
+
+/**
+ * Keep this tab in step with the others. The browser reports a change made in
+ * another tab as it happens; a tab that was asleep in the background (or
+ * brought back by the Back button) may have missed that, so it also looks
+ * again whenever it comes back into view.
+ */
+export function watchDisplay() {
+  const onStorage = (e: StorageEvent) => { if (e.key === KEY || e.key === null) sync(); };
+  const onVisible = () => { if (document.visibilityState === 'visible') sync(); };
+  window.addEventListener('storage', onStorage);
+  window.addEventListener('pageshow', sync);
+  document.addEventListener('visibilitychange', onVisible);
+  return () => {
+    window.removeEventListener('storage', onStorage);
+    window.removeEventListener('pageshow', sync);
+    document.removeEventListener('visibilitychange', onVisible);
+  };
+}
+
 /** Change one or more fields. Applies immediately and remembers on this device. */
 export function setDisplay(patch: Partial<Omit<Display, 'fonts'>> & { fonts?: Partial<Record<Role, Partial<{ family: Family; size: Size }>>> }) {
+  // Start from the latest record, so only the fields being changed here are changed.
+  sync();
   const { fonts, ...rest } = patch;
   Object.assign(display, rest);
   if (fonts) for (const role of ROLES) if (fonts[role.id]) Object.assign(display.fonts[role.id], fonts[role.id]);
@@ -235,6 +274,7 @@ export function stepSize(role: Role, delta: 1 | -1) {
  * counts as set up, and dismissing the walkthrough is a choice like any other.
  */
 export function markConfigured() {
+  sync();
   if (display.configured) return;
   display.configured = true;
   remember(snapshot());

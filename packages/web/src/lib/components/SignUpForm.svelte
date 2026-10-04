@@ -1,11 +1,18 @@
 <script lang="ts">
   /**
-   * The landing page's sign-up form, sitting straight on the green. Just for signing up: most people here are
+   * readthicket.com's sign-up form. Just for signing up: most people here are
    * new, so logging in is a quiet link under the button, to the log-in page.
    *
-   * Lives only on readthicket.com's landing page. The handle field shows the
-   * address being built ("readthicket.com/@" in front of what you type), which says what a handle is without help text.
-   * Hints sit inside the empty fields. The button is full strength from the
+   * Two homes, one form: straight on the landing page's green (now a copy in
+   * readthicket.com's own site, mocha/readthicket-com; keep the two alike), and on the
+   * plain background of the sign-up page that every other page's Sign up
+   * leads to. That one passes `next`, the page to go back to afterward (a
+   * shared collection, say); the landing page lands you on Everything.
+   * The line above the handle field builds your page's address as you type
+   * ("readthicket.com/@you" until then), which says what a handle is. It sat
+   * inside the box once, and an empty box read as filled in. Hints sit inside
+   * the empty fields, the handle's included, as words that can't pass for a
+   * handle someone typed. The button is full strength from the
    * start; anything missing or wrong is explained under its field after you
    * press it, rather than leaving a pale button that looks broken.
    *
@@ -21,6 +28,10 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
   import Button from './Button.svelte';
+
+  let { next = null, onGreen = true }: { next?: string | null; onGreen?: boolean } = $props();
+  // Only a path on this site, so a crafted link can't send a new account elsewhere.
+  const safeNext = $derived(next && next.startsWith('/') && !next.startsWith('//') ? next : null);
 
   let handle = $state('');
   let password = $state('');
@@ -50,8 +61,8 @@
     busy = true;
     try {
       setMe(await authApi.signup(handleClean, password, undefined, undefined, hosted ? email.trim() : undefined));
-      api.event('signed_up', { via: 'home' });
-      await goto('/everything', { replaceState: true });
+      api.event('signed_up', { via: onGreen ? 'home' : 'signup_page', next: safeNext });
+      await goto(safeNext ?? '/everything', { replaceState: true });
     } catch (e) {
       error = e instanceof ApiError ? { message: e.message, field: e.field } : { message: e instanceof Error ? e.message : String(e) };
     } finally {
@@ -60,23 +71,21 @@
   }
 </script>
 
-<div class="box">
+<div class="box" class:green={onGreen}>
   <form novalidate onsubmit={(e) => { e.preventDefault(); void submit(); }}>
-    <Field label="Your handle" error={error?.field === 'handle' ? error.message : null}>
+    <Field label="Your handle" hint="Your page will be readthicket.com/@{handleClean || 'you'}" error={error?.field === 'handle' ? error.message : null}>
       {#snippet children({ id, describedBy, invalid })}
-        <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={handle} autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="you" style="--field-gap: 0">
-          {#snippet leading()}<span class="prefix" aria-hidden="true">readthicket.com/@</span>{/snippet}
-        </Input>
+        <Input {id} aria-describedby={describedBy} {invalid} inset={onGreen} bind:value={handle} autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="Pick a short name" />
       {/snippet}
     </Field>
     <Field label="Password" error={error?.field === 'password' ? error.message : null}>
       {#snippet children({ id, describedBy, invalid })}
-        <Input {id} aria-describedby={describedBy} {invalid} inset type="password" bind:value={password} autocomplete="new-password" placeholder="At least 8 characters" />
+        <Input {id} aria-describedby={describedBy} {invalid} inset={onGreen} type="password" bind:value={password} autocomplete="new-password" placeholder="At least 8 characters" />
       {/snippet}
     </Field>
     <Field label="Email" error={error?.field === 'email' ? error.message : null}>
       {#snippet children({ id, describedBy, invalid })}
-        <Input {id} aria-describedby={describedBy} {invalid} inset type="email" bind:value={email} autocomplete="email" placeholder="Only used to reset your password" />
+        <Input {id} aria-describedby={describedBy} {invalid} inset={onGreen} type="email" bind:value={email} autocomplete="email" placeholder="Only used to reset your password" />
       {/snippet}
     </Field>
     {#if error && !errorOnField}<p class="bad" role="alert">{error.message}</p>{/if}
@@ -86,24 +95,28 @@
   </form>
   <div class="after">
     <p>Free, with no ads and no tracking</p>
-    <p>Already have an account? <a href="/login">Log in</a></p>
+    <p>Already have an account? <a href="/login{safeNext ? `?next=${encodeURIComponent(safeNext)}` : ''}">Log in</a></p>
   </div>
 </div>
 
 <style>
-  /* No card of its own: the form sits straight on the landing page's green,
-     so the labels and small lines read in cream. The fields stay light, so
-     they're still plainly fields. */
-  .box { --on-green: #f6f1e8; --on-green-2: color-mix(in srgb, #f6f1e8 78%, transparent); color: var(--on-green); }
-  .box :global(label) { color: var(--on-green); }
-  /* The dark theme's danger red: the light one is too dim on the green. */
-  .box :global(.note.bad) { color: var(--d-danger); }
+  /* No card of its own. On the landing page's green, the labels and small
+     lines read in cream, and the fields stay light, so they're still plainly
+     fields. On the sign-up page it's ordinary ink on the page background. */
+  .box.green { --on-green: #f6f1e8; --on-green-2: color-mix(in srgb, #f6f1e8 78%, transparent); --on-green-danger: #e38c7d; color: var(--on-green); }
+  .green :global(label) { color: var(--on-green); }
+  /* The dark theme's danger red, a shade paler: the light theme's is too dim on
+     the green, and the dark one's fell just short of 4.5:1 on the green's lighter patches. */
+  .green :global(.note) { color: var(--on-green-2); }
+  .green :global(.note.bad) { color: var(--on-green-danger); }
   form { display: flex; flex-direction: column; gap: var(--space-4); }
-  .go { display: flex; flex-direction: column; --accent: var(--d-accent); --accent-ink: var(--d-accent-ink); }
-  /* The address being built sits in front of what's typed, in quiet ink. */
-  .prefix { color: var(--text-3); white-space: nowrap; }
-  .bad { color: var(--d-danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .after { margin-top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--on-green-2); }
+  .go { display: flex; flex-direction: column; }
+  .green .go { --accent: var(--d-accent); --accent-ink: var(--d-accent-ink); }
+  .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .green .bad { color: var(--on-green-danger); }
+  .after { margin-top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .green .after { color: var(--on-green-2); }
   .after p { margin: 0; }
-  .after a { color: var(--on-green); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+  .after a { color: var(--accent); font-weight: 600; }
+  .green .after a { color: var(--on-green); text-decoration: underline; text-underline-offset: 3px; }
 </style>

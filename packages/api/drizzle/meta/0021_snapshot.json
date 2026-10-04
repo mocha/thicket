@@ -1,5 +1,5 @@
 {
-  "id": "1b895466-4e33-4a6f-bd22-acda12d9853f",
+  "id": "d9233bbc-f42a-41bb-8655-acc89edba6f7",
   "prevId": "1db728e6-8414-4dc7-b848-74eb20c7e5fa",
   "version": "7",
   "dialect": "postgresql",
@@ -285,16 +285,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "search": {
-          "name": "search",
-          "type": "tsvector",
-          "primaryKey": false,
-          "notNull": false,
-          "generated": {
-            "as": "setweight(to_tsvector('english', coalesce(\"title\", '')), 'A') || setweight(to_tsvector('english', coalesce(\"note\", '')), 'B') || setweight(to_tsvector('english', left(coalesce(\"summary\", ''), 20000)), 'C') || setweight(to_tsvector('english', coalesce(\"site_title\", '') || ' ' || \"url\" || ' ' || regexp_replace(\"url\", '[^[:alnum:]]+', ' ', 'g')), 'D')",
-            "type": "stored"
-          }
         }
       },
       "indexes": {
@@ -317,21 +307,6 @@
           "isUnique": true,
           "concurrently": false,
           "method": "btree",
-          "with": {}
-        },
-        "bookmarks_search_idx": {
-          "name": "bookmarks_search_idx",
-          "columns": [
-            {
-              "expression": "search",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
           "with": {}
         },
         "bookmarks_user_saved_idx": {
@@ -1025,6 +1000,88 @@
           ]
         }
       },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.feedback": {
+      "name": "feedback",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "page": {
+          "name": "page",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "issue_number": {
+          "name": "issue_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issue_url": {
+          "name": "issue_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "feedback_user_id_users_id_fk": {
+          "name": "feedback_user_id_users_id_fk",
+          "tableFrom": "feedback",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

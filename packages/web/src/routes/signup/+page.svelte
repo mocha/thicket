@@ -8,13 +8,19 @@
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
   import Button from '$lib/components/Button.svelte';
+  import SignUpForm from '$lib/components/SignUpForm.svelte';
+  import CopyHeading from '$lib/components/CopyHeading.svelte';
 
   /**
-   * Sign-up is a handle and a password, plus an email on readthicket.com (for
-   * password resets only). Everything on the profile is optional
-   * and can be filled in later (or never), so a new person lands on an empty
-   * Everything with the one thing that matters: Add a feed.
+   * On readthicket.com, the same form as the landing page, on the plain
+   * background: every page but the landing page sends Sign up here. Coming
+   * from Copy on someone's collection, the top names what you're about to
+   * get instead of a plain "Sign up".
+   *
+   * A self-hosted copy still gets the older form below, invite codes and all,
+   * until issue #114 takes public sign-up off those sites altogether.
    */
+  const next = $derived(page.url.searchParams.get('next'));
   let handle = $state('');
   let password = $state('');
   let displayName = $state('');
@@ -60,6 +66,14 @@
 
 <svelte:head><title>Sign up · thicket</title></svelte:head>
 
+{#if !status}
+  <p class="lede center">Loading…</p>
+{:else if hosted}
+<section class="auth">
+  <CopyHeading {next} action="Sign up" heading="Sign up" />
+  <SignUpForm {next} onGreen={false} />
+</section>
+{:else}
 <section class="auth">
   <h1>Sign up for thicket</h1>
   <p class="lede">{hosted ? 'All you need is a handle, a password, and an email.' : 'All you need is a handle and a password.'} You can start following feeds right away.</p>
@@ -129,11 +143,13 @@
     <p>thicket is open source, so other people run their own thicket sites, and you can, too. You can copy your collections to any of them, so you’re never locked in.</p>
   </aside>
 </section>
+{/if}
 
 <style>
   .auth { max-width: 380px; margin: calc(var(--space-6) + var(--space-2)) auto 0; }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
   .lede { color: var(--text-2); margin: 0 0 var(--space-5); }
+  .center { text-align: center; }
   form { display: flex; flex-direction: column; gap: var(--space-5); }
   .bad { color: var(--danger); margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .alt { margin: var(--space-5) 0 0; color: var(--text-2); }

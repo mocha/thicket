@@ -282,6 +282,18 @@ export const bookmarksApi = {
     return j<{ bookmarks: Bookmark[]; nextCursor: string | null }>(`/api/bookmarks?${q}`);
   },
   sources: () => j<BookmarkSources>('/api/bookmarks/sources'),
+  /**
+   * Where the download of every bookmark and note lives: one file, in the
+   * format browsers and bookmark services read. It carries this device's
+   * timezone so the times written in the file are the reader's own.
+   */
+  exportUrl: () => {
+    let tz = '';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? ''; } catch { /* the file says UTC instead */ }
+    return tz ? `/api/bookmarks/export?tz=${encodeURIComponent(tz)}` : '/api/bookmarks/export';
+  },
+  /** How many bookmarks I have, and the most one export holds. */
+  exportInfo: () => j<{ count: number; limit: number }>('/api/bookmarks/export/info'),
   saveItem: (itemId: number) => j<BookmarkRow>('/api/bookmarks', { method: 'POST', body: JSON.stringify({ itemId }) }),
   /** Copy someone's public bookmark, snapshot and all (not their note), into my own set. */
   saveFrom: (bookmarkId: number) => j<BookmarkRow>('/api/bookmarks', { method: 'POST', body: JSON.stringify({ bookmarkId }) }),
@@ -413,10 +425,17 @@ export const adminApi = {
   starter: () => j<{ handle: string | null; candidates: StarterCandidate[] }>('/api/admin/starter'),
   setStarter: (handle: string | null) => j<{ handle: string | null }>('/api/admin/starter', { method: 'PUT', body: JSON.stringify({ handle: handle ?? '' }) })
 };
+
+export const feedbackApi = {
+  /** Send feedback (issue #153, readthicket.com only). `page` is the path the person was on; their handle goes with it only if `includeHandle`. */
+  send: (body: string, page: string, includeHandle: boolean) => j<{ ok: true }>('/api/feedback', { method: 'POST', body: JSON.stringify({ body, page, includeHandle }) })
+};
 export type StarterCandidate = { handle: string; displayName: string | null; collectionCount: number; feedCount: number };
 
 export type PublicUser = { handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: string; avatarUpdatedAt: string | null };
-export type ProfileCollection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null };
+export type ProfileCollection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null;
+  /** The viewer has a copy of this one (never true on your own profile). */
+  copiedByMe: boolean };
 export type Profile =
   | { handle: string; private: true }
   | (PublicUser & {
@@ -439,12 +458,21 @@ export type PublicCollectionFeed = {
   lastItemAt: string | null; hasIcon: boolean; followerCount: number; myCollectionIds: number[]; sameTitle: number;
   /** The viewer's own name for this feed, if they gave it one. */
   displayName: string | null;
+  /** Its recent checks failed. Only ever true for the collection's owner. */
+  failing: boolean;
 };
 export type PublicCollection = {
   id: number; name: string; slug: string; description: string | null; visibility: ShareLevel; createdAt: string | null;
   owner: PublicUser; isMe: boolean; feeds: PublicCollectionFeed[]; children: { id: number; name: string; slug: string; description: string | null; feedCount: number }[];
-  /** For a signed-in visitor: the copy they already made of this collection, if any. Drives the "open your copy" state. */
-  myCopy: { slug: string; name: string } | null;
+  /**
+   * For a signed-in visitor: the copy they already made of this collection, if
+   * any, and how many of this collection's feeds it has. A copy with all of
+   * them gets "Open your copy"; one with fewer is pointed out but not treated
+   * as the same thing.
+   */
+  myCopy: { slug: string; name: string; sharedFeeds: number } | null;
+  /** For the owner: the collection this one was copied from, while they can still see it. */
+  copiedFrom: { name: string; slug: string; owner: PublicUser } | null;
 };
 /** Someone's saved post on their profile: their note, if they share notes with me, and whether I have saved it too. */
 export type PublicBookmark = Omit<Bookmark, 'notes'> & { myBookmarkId: number | null };
@@ -456,7 +484,8 @@ export const profilesApi = {
   follow: (handle: string) => j<{ handle: string; isFollowing: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/follow`, { method: 'POST' }),
   unfollow: (handle: string) => j<{ handle: string; isFollowing: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/follow`, { method: 'DELETE' }),
   collection: (handle: string, slug: string) => j<PublicCollection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}`),
-  copyCollection: (handle: string, slug: string) => j<Collection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/copy`, { method: 'POST' }),
+  /** `replaceStarter`: this copy finishes signing up to get it, so an untouched, empty "My first collection" goes. */
+  copyCollection: (handle: string, slug: string, opts: { replaceStarter?: boolean } = {}) => j<Collection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/copy`, { method: 'POST', body: JSON.stringify(opts) }),
   opmlUrl: (handle: string, slug: string) => `/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/opml`,
   /**
    * Their bookmarks, newest activity first. `notes`: only the ones with a note

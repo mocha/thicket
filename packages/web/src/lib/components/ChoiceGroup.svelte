@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Select from './Select.svelte';
+
   /**
    * The one "pick one of these" row. A short row of joined options that sets a
    * value the moment you press one — a setting, not a set of tabs. Nothing
@@ -13,6 +15,11 @@
    * The chosen option is drawn three ways at once — a wash of the accent
    * color, accent-colored words, and its own outline repainted in the accent
    * color — so it still reads as chosen without relying on color.
+   *
+   * When the options can't sit on one line in the space they have, the control
+   * turns into the dropdown (Select) with the same choices. It never wraps an
+   * option onto two lines and never slides sideways. A color chip doesn't
+   * carry over into the dropdown, whose menu the operating system draws.
    *
    * Keyboard: one stop on the way through, the chosen option. The arrow keys
    * move between options and pick as they go, wrapping around the ends, and
@@ -113,32 +120,60 @@
     else return;
     e.preventDefault();
   }
+
+  /**
+   * Whether the options are too wide for one line in the space they have: a
+   * small phone, a long set of words, large text. A cramped row doesn't wrap
+   * and doesn't slide; the whole control becomes a dropdown instead, showing
+   * the current choice (see the markup). The row stays in the page, unseen,
+   * so it can be measured again when the space or the text size changes.
+   */
+  let opts = $state<HTMLDivElement>();
+  let tight = $state(false);
+  $effect(() => {
+    const el = opts;
+    if (!el) return;
+    options;
+    const measure = () => { tight = el.scrollWidth > el.clientWidth + 1; };
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    for (const b of btns) if (b) ro.observe(b);
+    measure();
+    void document.fonts?.ready.then(measure);
+    return () => ro.disconnect();
+  });
 </script>
 
-<div
-  bind:this={root}
-  class="cg {size} {klass}"
-  class:fill
-  role="radiogroup"
-  aria-label={label}
-  {onkeydown}
-  {...rest}
->
-  {#each options as o, i (o.value)}
-    <button
-      bind:this={btns[i]}
-      type="button"
-      role="radio"
-      aria-checked={o.value === value}
-      class:on={o.value === value}
-      tabindex={i === stop ? 0 : -1}
-      disabled={disabled || o.disabled}
-      onclick={() => o.value !== value && onchange(o.value)}
-      {...o.data}
-    >
-      {#if o.swatch}<i class="sw" style="background:{o.swatch}" aria-hidden="true"></i>{/if}{o.label}
-    </button>
-  {/each}
+<div bind:this={root} class="cg {size} {klass}" class:fill class:tight {...rest}>
+  <div bind:this={opts} class="opts" role="radiogroup" aria-label={label} {onkeydown} inert={tight} aria-hidden={tight ? 'true' : undefined}>
+    {#each options as o, i (o.value)}
+      <button
+        class="tap"
+        bind:this={btns[i]}
+        type="button"
+        role="radio"
+        aria-checked={o.value === value}
+        class:on={o.value === value}
+        tabindex={i === stop ? 0 : -1}
+        disabled={disabled || o.disabled}
+        onclick={() => o.value !== value && onchange(o.value)}
+        {...o.data}
+      >
+        {#if o.swatch}<i class="sw" style="background:{o.swatch}" aria-hidden="true"></i>{/if}{o.label}
+      </button>
+    {/each}
+  </div>
+  {#if tight}
+    <Select
+      {size}
+      {label}
+      hideLabel
+      {disabled}
+      {value}
+      options={options.map((o) => ({ value: o.value, label: o.label, disabled: o.disabled }))}
+      onchange={(e) => e.currentTarget.value !== value && onchange(e.currentTarget.value)}
+    />
+  {/if}
 </div>
 
 <style>
@@ -148,15 +183,34 @@
      in the accent color on all four of its sides. */
   .cg {
     display: inline-flex;
+    flex-direction: column;
     max-width: 100%;
-    /* A row too long for its space slides sideways rather than hiding an
-       option off the end. It rarely comes to this. */
-    overflow-x: auto;
-    overflow-y: hidden;
+    min-width: 0;
   }
   .cg.fill {
     display: flex;
     width: 100%;
+  }
+  /* The row of options. It clips rather than scrolls: if it is clipping
+     anything, the script has already swapped it for the dropdown. */
+  .opts {
+    display: flex;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  /* The clipping would cut the options' taller touch area (see `.tap` in
+     app.css) back to their drawn height. This gives the row that much room
+     inside itself without moving anything around it. */
+  @media (pointer: coarse) {
+    .opts { padding-block: 3px; margin-block: -3px; }
+  }
+  /* Swapped for the dropdown: still laid out, so it can be measured, but it
+     takes no height and can't be seen, tapped or tabbed to. */
+  .cg.tight .opts {
+    visibility: hidden;
+    height: 0;
+    padding-block: 0;
+    margin-block: 0;
   }
   .cg.fill button {
     flex: 1;
@@ -201,7 +255,7 @@
      the accent color over its neighbors' — so it is not color alone that
      says which one is on. */
   .cg button.on {
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    background: var(--accent-tint);
     color: var(--accent);
     border-color: var(--accent);
     position: relative;

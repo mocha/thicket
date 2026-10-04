@@ -185,6 +185,8 @@
   });
 </script>
 
+<svelte:head><title>My Bookmarks · thicket</title></svelte:head>
+
 <header class="top">
   <h1>My Bookmarks</h1>
   <p class="sub">Posts you've saved, and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
@@ -288,7 +290,7 @@
   {:else}
     <ul class="list">
       {#each list as b (b.id)}
-        <BookmarkCard {b} mine onopen={() => api.event('bookmark_opened', { bookmarkId: b.id })}
+        <BookmarkCard {b} mine heading="h2" onopen={() => api.event('bookmark_opened', { bookmarkId: b.id })}
           onnote={(n, had) => noteChanged(b, n, had)}
           action={{ kind: 'remove', on: true, label: b.note ? 'Remove bookmark and note' : 'Remove bookmark', run: () => remove(b) }} />
       {/each}
@@ -302,7 +304,7 @@
   .top { margin-bottom: var(--space-3); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
   /* 2px is an optical nudge under the title, not a spacing step. */
-  .sub { margin: 2px 0 0; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
   /* The collections get the whole width to slide along; the source menu sits
      on its own line under them, so neither one squeezes the other. */
@@ -324,5 +326,5 @@
   .elsewhere { text-align: center; margin: 0; font-size: calc(var(--text-base) * var(--size-app)); overflow-wrap: anywhere; }
   .elsewhere a { color: var(--accent); font-weight: 600; }
   @media (hover: hover) { .elsewhere a:hover { text-decoration: underline; text-underline-offset: 3px; } }
-  .status { text-align: center; color: var(--text-3); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; }
+  .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; }
 </style>

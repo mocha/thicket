@@ -8,19 +8,21 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
+import { proxy } from "hono/proxy";
 import { logger } from "hono/logger";
 import { ROUTERS } from "./routes/index.js";
 import { startScheduler } from "./feeds/scheduler.js";
 import { attachUser, pruneSessions } from "./lib/auth.js";
 import { pruneEmailTokens } from "./lib/email-tokens.js";
 import { startRetention } from "./lib/retention.js";
+import { startFeedbackRetry } from "./lib/feedback.js";
 import { ensureAdmin, publicStatus } from "./lib/instance.js";
 import { runMigrations } from "./db/migrate.js";
 import { headForPath } from "./lib/meta.js";
 import { openApiDocument } from "./lib/openapi.js";
-import { EMAIL_REQUIRED, FETCH_CONCURRENCY, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, SMTP_URL, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
+import { EMAIL_REQUIRED, FETCH_CONCURRENCY, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, SITE_URL, SMTP_URL, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
 
 // Every account has an email so it can reset its password; without mail, nobody could.
 if (EMAIL_REQUIRED && !SMTP_URL) {
@@ -46,6 +48,7 @@ const scheduler = SCHEDULER
 setInterval(() => void pruneSessions().catch(() => {}), 3600_000).unref();
 setInterval(() => void pruneEmailTokens().catch(() => {}), 3600_000).unref();
 startRetention();
+startFeedbackRetry();
 
 app.get("/api/health", async (c) => c.json({
   ok: true, instance: await publicStatus(), signedIn: !!c.get("user"), tracking: TRACK_ACTIVITY, scheduler: scheduler?.stats ?? "off",
@@ -54,7 +57,37 @@ app.get("/api/health", async (c) => c.json({
 }));
 // What an API token can do, described for applications and assistants (lib/openapi.ts). Readable by anyone.
 app.get("/api/openapi.json", (c) => c.json(openApiDocument(PUBLIC_URL), 200, { "cache-control": "public, max-age=300" }));
+// Where the landing page was reviewed before it went live. Links to it were shared.
+app.get("/preview/landing", (c) => c.redirect("/", 301));
 app.notFound((c) => (c.req.path.startsWith("/api/") ? c.json({ error: "not found" }, 404) : c.text("not found", 404)));
+
+/**
+ * readthicket.com's own site (SITE_URL): what it serves, by path. "/" is its
+ * landing page, then About and Contact; /_site/ holds its built files (the
+ * app's own are under /_app/). New pages there are added here too, and
+ * Contact's form sends to /contact/send. If the site can't be reached, "/"
+ * falls through to the app's own front page, which sends people into the app.
+ */
+const SITE_PATHS = ["/", "/about", "/contact", "/_site/*"];
+const SITE_POSTS = ["/contact/send"];
+if (SITE_URL) {
+  const toSite: MiddlewareHandler = async (c, next) => {
+    const url = new URL(c.req.url);
+    try {
+      return await proxy(`${SITE_URL}${url.pathname}${url.search}`, {
+        raw: c.req.raw,
+        headers: { ...c.req.header(), host: undefined, "x-forwarded-host": url.host, "x-forwarded-proto": c.req.header("x-forwarded-proto") ?? url.protocol.replace(":", "") },
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch (err) {
+      console.error(`[site] ${c.req.method} ${url.pathname}: ${err instanceof Error ? err.message : err}`);
+      if (url.pathname !== "/" || c.req.method === "POST") return c.text("unavailable", 502);
+      await next();
+    }
+  };
+  app.on(["GET", "HEAD"], SITE_PATHS, toSite);
+  app.on("POST", SITE_POSTS, toSite);
+}
 
 if (WEB_DIR) {
   // Hashed build assets are immutable; everything else (index.html, manifest, icons) is revalidated.

@@ -9,14 +9,18 @@
    * closing it any way at all is the same as finishing it. The full set of
    * options stays on the Settings page.
    *
-   * Someone who follows nothing yet gets an import step first, because
-   * bringing their feeds is the thing that matters most on day one and it
-   * shouldn't wait behind four appearance questions. Picking a file says what
+   * A new account (under a day old), or anyone who follows nothing yet, gets
+   * an import step first, because bringing their feeds is the thing that
+   * matters most on day one and it shouldn't wait behind four appearance
+   * questions. A new account counts even if it already follows feeds: one
+   * shared collection copied on sign-up says nothing about the reader they
+   * came from. When that copy is what brought them, the first step says so
+   * at the top, and the page behind is their copy. Picking a file says what
    * was found, then the appearance steps go by while the feeds are checked in
    * the background, and the last step opens the review instead of starting to
    * read. The
-   * dialog opens once per screen, not per account, so a second device only
-   * asks when there is still nothing followed.
+   * dialog opens once per screen, not per account, so a second device a day
+   * or more later only asks when there is still nothing followed.
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
@@ -29,7 +33,10 @@
   import Button from '$lib/components/Button.svelte';
   import ImportHelp from '$lib/components/ImportHelp.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import Banner from '$lib/components/Banner.svelte';
   import { imp } from '$lib/importer.svelte';
+  import { session } from '$lib/session.svelte';
+  import { welcome } from '$lib/copyintent.svelte';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let open = $state(false);
@@ -52,10 +59,13 @@
     const again = import.meta.env.DEV && new URLSearchParams(location.search).has('setup');
     if (display.configured && !again) return;
     markConfigured();
-    // Only ask about importing when nothing is followed yet. If that can't be
-    // found out, the dialog opens without it rather than not at all.
+    welcome.open = true;
+    // Ask about importing on a new account, or when nothing is followed yet.
+    // If that can't be found out, the dialog opens without it rather than not at all.
+    const created = session.user ? new Date(session.user.createdAt).getTime() : 0;
+    const newAccount = Date.now() - created < 24 * 60 * 60 * 1000;
     api.riverStats()
-      .then((s) => { withImport = s.feeds === 0; })
+      .then((s) => { withImport = newAccount || s.feeds === 0; })
       .catch(() => {})
       .finally(() => {
         open = true;
@@ -67,6 +77,8 @@
   function finish(how: 'done' | 'dismissed' | 'advanced' | 'review') {
     api.event('display_setup_closed', { how, step: current.key, withImport });
     open = false;
+    welcome.open = false;
+    welcome.copied = null;
     dialog?.close();
     if (how === 'advanced') void goto('/settings#display');
     if (how === 'review') void goto('/import');
@@ -77,6 +89,7 @@
   <dialog bind:this={dialog} onclose={() => { if (open) finish('dismissed'); }} onclick={(e) => { if (e.target === dialog) finish('dismissed'); }} aria-labelledby="setup-title">
     <div class="box">
       <header>
+        {#if welcome.copied && step === 0}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
         <p class="eyebrow">{withImport ? 'Get started' : 'Set up this screen'} · {step + 1} of {STEPS.length}</p>
         <h2 id="setup-title">{current.title}</h2>
         <p class="lead">{current.lead}</p>
@@ -138,7 +151,8 @@
     .box { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(720px, calc(100vw - 48px)); border-radius: var(--radius-lg); max-height: calc(100vh - 48px); }
   }
   header { padding: var(--space-5) var(--space-5) 0; }
-  .eyebrow { margin: 0 0 var(--space-1); font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); font-weight: 600; }
+  .copied { margin-bottom: var(--space-4); }
+  .eyebrow { margin: 0 0 var(--space-1); font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); font-weight: 600; }
   h2 { margin: 0; font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; }
   .lead { margin: var(--space-1) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 56ch; }
   .body { padding: var(--space-4) var(--space-5) var(--space-1); overflow-y: auto; min-height: 0; }

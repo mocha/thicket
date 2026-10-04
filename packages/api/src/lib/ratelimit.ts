@@ -168,6 +168,14 @@ export const LIMITS = {
   tokenBurst: { limit: 10, windowMs: 10_000 } satisfies Limit,
   /** Against steady automation: no more than 120 requests in any hour. */
   tokenHourly: { limit: 120, windowMs: 60 * 60_000 } satisfies Limit,
+
+  /**
+   * Per account. Feedback sent in a day (issue #153). Each one becomes a
+   * GitHub issue or comment and is read by Claude first, so this is what stops
+   * one account flooding the tracker or running up a bill. Someone with a lot
+   * to say fits.
+   */
+  feedbackPerDay: { limit: 10, windowMs: 24 * 3600_000 } satisfies Limit,
 };
 
 /**
@@ -195,6 +203,8 @@ export const MAX_LENGTH = {
   imageUrl: 500_000,
   /** A note is a margin note, not a post. Two pages of a Word document, roughly. */
   note: 2_000,
+  /** Feedback, the same room as a note. */
+  feedback: 2_000,
 };
 
 /** The 429 body, shaped like every other auth error so the web client renders it unchanged. */

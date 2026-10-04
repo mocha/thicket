@@ -50,7 +50,7 @@
     <li>Sign into your reader</li>
     <li>Find Export or OPML in its settings</li>
   {/if}
-  <li>{#if imp.busy}Reading…{:else}Upload the file <button type="button" class="upload" onclick={() => fileInput?.click()}>here</button>{/if}</li>
+  <li>{#if imp.busy}Reading…{:else}Upload the file <button type="button" class="upload tap" onclick={() => fileInput?.click()}>here</button>{/if}</li>
 </ol>
 </div>
 <input bind:this={fileInput} type="file" accept=".opml,.xml,text/x-opml,text/xml,application/xml" onchange={onFile} hidden />
@@ -60,6 +60,7 @@
 <style>
   .steps { margin: var(--space-4) 0 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text); line-height: 1.4; }
   .steps a, .upload { color: var(--accent); font-weight: 600; }
+  .steps a { overflow-wrap: anywhere; }
   .upload { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 0.15em; }
   .upload:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
   .bad { color: var(--danger); margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }

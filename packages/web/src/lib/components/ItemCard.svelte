@@ -48,6 +48,33 @@
     api.event('source_opened', { feedId: item.feedId, via: 'card' });
     popover = true;
   }
+
+  /**
+   * A compact card is a fixed height, so its summary gets whatever room the
+   * title and byline leave, which is rarely a whole number of lines. This
+   * shows only as many lines as fit whole (none, if there isn't room for
+   * one), so the last line is never sliced through the middle.
+   */
+  function wholeLines(node: HTMLElement, on: boolean) {
+    if (!on) return;
+    const fit = () => {
+      const lh = Number.parseFloat(getComputedStyle(node).lineHeight);
+      if (!lh) return;
+      // Measure the room with the paragraph's own caps off (it then takes all
+      // the height the card can give it), then cap it to whole lines: cutting the text at a line count alone would still let
+      // the next line show in whatever space was left over.
+      node.style.maxHeight = '';
+      node.style.setProperty('--summary-lines', '9');
+      const lines = Math.floor((node.clientHeight + 1) / lh);
+      node.style.setProperty('--summary-lines', String(Math.max(1, lines)));
+      node.style.maxHeight = `${Math.max(1, lines) * lh}px`;
+      node.style.visibility = lines < 1 ? 'hidden' : '';
+    };
+    const ro = new ResizeObserver(fit);
+    ro.observe(node);
+    fit();
+    return { destroy: () => ro.disconnect() };
+  }
 </script>
 
 <!--
@@ -75,9 +102,9 @@
     {#if item.imageUrl && !imgFailed}
       <img class="hero" src={item.imageUrl} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror={() => (imgFailed = true)} />
     {/if}
-    <h2 class="card-title" class:tight={compact}>{noOrphan(item.title ?? item.summary ?? item.url)}</h2>
+    <h3 class="card-title" class:tight={compact}>{noOrphan(item.title ?? item.summary ?? item.url)}</h3>
     {#if item.title && item.summary && item.summary !== item.title}
-      <p class="card-summary" class:tight={compact}>{item.summary}</p>
+      <p class="card-summary" class:tight={compact} use:wholeLines={compact}>{item.summary}</p>
     {/if}
     {#if item.author}
       <footer>{item.author}</footer>
@@ -88,7 +115,7 @@
     <!-- The feed's whole description was a link elsewhere (e.g. Hacker News's
          discussion thread). It lives outside the body's link, since a link can't
          nest inside another. -->
-    <a class="card-extralink" class:compact href={webHref(item.linkUrl)} target="_blank" rel="noopener">{item.linkLabel} →</a>
+    <a class="card-extralink tap" class:compact href={webHref(item.linkUrl)} target="_blank" rel="noopener">{item.linkLabel} →</a>
   {/if}
 
   {#if compact && (myNote || others.length)}
@@ -128,18 +155,18 @@
     padding: var(--space-3) var(--space-2) 0 var(--card-pad); min-width: 0;
   }
   header.compact { padding-top: var(--space-2); }
-  time { color: var(--text-3); white-space: nowrap; }
+  time { color: var(--text-2); white-space: nowrap; }
   .fresh { font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
   .spacer { flex: 1; }
   .link { display: block; padding: var(--space-2) var(--card-pad) var(--card-pad); -webkit-tap-highlight-color: transparent; }
-  @media (hover: hover) { .link:hover h2 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
+  @media (hover: hover) { .link:hover h3 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   /* Edge to edge: wider than the text by the card's inset on each side. The app-wide
      "never wider than your container" rule for pictures would cut it short on the right. */
   .hero {
     width: calc(100% + var(--card-pad) * 2); max-width: none; margin: 0 calc(var(--card-pad) * -1) var(--space-3); aspect-ratio: 16 / 9; object-fit: cover;
     background: var(--surface-2);
   }
-  footer { margin-top: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
+  footer { margin-top: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .card-extralink { display: inline-block; margin: calc(-1 * var(--space-2)) var(--card-pad) var(--card-pad); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
   /* Compact cards fill a fixed frame; the link sits at the bottom edge with no negative pull. */
   .card-extralink.compact { margin: 0 var(--card-pad) var(--space-2); }
@@ -156,8 +183,9 @@
   /* Compact: a fixed height so a page of cards lines up. The picture sits beside the words. */
   .link.compact { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto; column-gap: var(--space-3); padding: var(--space-2) var(--card-pad); }
   .link.compact .hero { grid-column: 2; grid-row: 1 / span 3; width: 108px; height: 100%; max-height: 92px; aspect-ratio: auto; margin: 0; border-radius: var(--radius-sm); align-self: start; }
-  h2.tight { grid-column: 1; font-size: calc(var(--text-base) * var(--size-headings)); --title-lines: 2; }
-  p.tight { grid-column: 1; --summary-gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-reading)); --summary-lines: 2; }
+  h3.tight { grid-column: 1; font-size: calc(var(--text-base) * var(--size-headings)); --title-lines: 2; }
+  /* The summary gets whatever room the title leaves, rounded down to whole lines, so a line is never sliced through the middle. */
+  p.tight { grid-column: 1; --summary-gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-reading)); --summary-lines: 2; align-self: start; max-height: round(down, 100%, 1lh); }
   .link.compact footer { grid-column: 1; margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .notecount { position: absolute; right: var(--card-pad); bottom: var(--space-2); font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); }
 </style>

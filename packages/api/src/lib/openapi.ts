@@ -13,6 +13,7 @@
  * out the shape of every answer; those are plain JSON, and the web app's
  * types (packages/web/src/lib/api.ts) are the fuller reference.
  */
+import { EXPORT_MAX } from "./bookmark-export.js";
 import { LIMITS } from "./ratelimit.js";
 import { tokenMay } from "./token-access.js";
 
@@ -82,6 +83,8 @@ export const ENDPOINTS: Endpoint[] = [
   // ---- bookmarks and notes
   { method: "GET", path: "/api/bookmarks", tag: "Bookmarks and notes", summary: "My bookmarks, most recently saved or noted first. Each carries my note if it has one.", query: { feed: "Only bookmarks from this feed (its id).", collection: "Only bookmarks from feeds in this collection (its id).", notes: "1 for only the ones with a note.", ...PAGE } },
   { method: "GET", path: "/api/bookmarks/sources", tag: "Bookmarks and notes", summary: "Which feeds and collections my bookmarks come from, with counts, and how many carry a note." },
+  { method: "GET", path: "/api/bookmarks/export", tag: "Bookmarks and notes", summary: `Every bookmark and its note as one bookmark file (HTML, the format browsers and bookmark services import), newest saved first. The most recent ${EXPORT_MAX.toLocaleString("en-US")} at most.`, query: { tz: "An IANA time zone (America/Chicago) for the times written in the file. UTC when absent or unknown." } },
+  { method: "GET", path: "/api/bookmarks/export/info", tag: "Bookmarks and notes", summary: "How many bookmarks I have, and the most one export file carries." },
   { method: "POST", path: "/api/bookmarks", tag: "Bookmarks and notes", summary: `Save a bookmark. Send one of: \`itemId\` to save a post, \`bookmarkId\` to copy someone's public bookmark, or \`url\` to save any web address. Saving the same address twice keeps one bookmark. At most ${LIMITS.savesPerDay.limit} a day.`, body: { "itemId?": "A post's id.", "bookmarkId?": "Someone's public bookmark's id.", "url?": "A web address (http or https).", "title?": "A title, when saving by `url`." } },
   { method: "DELETE", path: "/api/bookmarks/:id", tag: "Bookmarks and notes", summary: "Remove a bookmark, and the note on it. Answers with what was removed." },
   { method: "PUT", path: "/api/bookmarks/:id/note", tag: "Bookmarks and notes", summary: `Write or rewrite my note on a bookmark. At most ${LIMITS.noteWritesPerDay.limit} note writes a day.`, body: { body: "The note, as Markdown. At most 2,000 characters." } },

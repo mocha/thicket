@@ -8,7 +8,9 @@
    *
    * The content column never grows past the screen: any part of it that can
    * scroll (a long list) should say so with its own overflow, and everything
-   * else keeps its height. Tapping the dimmed backdrop closes it, as does
+   * else keeps its height. When even that doesn't fit (the keyboard is up, or
+   * the phone is on its side) the whole Sheet scrolls, so the footer's action
+   * can always be reached. Tapping the dimmed backdrop closes it, as does
    * Escape. The parent opens it with `dialog.showModal()`.
    */
   import type { Snippet } from 'svelte';
@@ -17,12 +19,13 @@
   let { title, dialog = $bindable(null), onclose, children, footer }: {
     title: string; dialog?: HTMLDialogElement | null; onclose?: () => void; children: Snippet; footer?: Snippet;
   } = $props();
+  const titleId = $props.id();
 </script>
 
-<dialog bind:this={dialog} {onclose} onclick={(e) => { if (e.target === dialog) dialog?.close(); }}>
+<dialog bind:this={dialog} {onclose} onclick={(e) => { if (e.target === dialog) dialog?.close(); }} aria-labelledby={titleId}>
   <div class="sheet">
     <header>
-      <h2>{title}</h2>
+      <h2 id={titleId}>{title}</h2>
       <IconButton icon="close" label="Close" onclick={() => dialog?.close()} />
     </header>
     {@render children()}
@@ -35,11 +38,11 @@
   dialog::backdrop { background: var(--scrim); }
   .sheet {
     position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-b)); max-height: 90vh; overflow: hidden;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-b)); max-height: 90vh; max-height: 90dvh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
     box-shadow: var(--shadow-sheet); display: flex; flex-direction: column; gap: var(--space-3);
   }
   @media (min-width: 700px) {
-    .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 460px; border-radius: var(--radius-lg); max-height: 86vh; }
+    .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 460px; border-radius: var(--radius-lg); max-height: 86vh; max-height: 86dvh; }
   }
   header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   h2 { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); overflow-wrap: anywhere; }

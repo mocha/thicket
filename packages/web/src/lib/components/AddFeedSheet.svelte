@@ -7,9 +7,10 @@
    * in your default collection. Success lands on the feed's own page. Nothing
    * is saved until Follow, so closing is a true cancel.
    */
+  import { untrack } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { api, feedHref, type SubscribeOutcome } from '$lib/api';
+  import { api, ApiError, feedHref, type Feed, type SubscribeOutcome } from '$lib/api';
   import { addFeed, closeAddFeed } from '$lib/addfeed.svelte';
   import { loadCollections, whereItGoes } from '$lib/collections.svelte';
   import { hostOf } from '$lib/time';
@@ -27,13 +28,24 @@
   let outcome = $state<SubscribeOutcome | null>(null);
   /** Set while we leave for the feed page, so closing the sheet doesn't also send /add home. */
   let landing = false;
+  /** The address that turned up several feeds, and which of them are ticked. */
+  let lookedUp = $state('');
+  let picked = $state<string[]>([]);
+  /** How the last Follow went for each feed, by address: followed, or why not. Shown under that feed. */
+  let results = $state<Record<string, { ok: true } | { ok: false; why: string }>>({});
+
+  /* The feeds to choose from, for as long as the address box still holds the
+     address they came from. Edit the address and Follow looks it up afresh. */
+  const candidates = $derived(
+    outcome && !('error' in outcome) && outcome.status === 'choose' && url.trim() === lookedUp ? outcome.candidates : null
+  );
 
   /* Both ways this can go wrong are about the address, so they belong under
      the address box. "More than one feed here" isn't a failure and stays a
      list further down. */
   const urlError = $derived(
     outcome && 'error' in outcome
-      ? `Couldn’t reach that: ${outcome.error}`
+      ? outcome.error
       : outcome?.status === 'none'
         // Some big sites (CNN, for one) have quietly stopped publishing feeds,
         // so say that can happen instead of implying the address was wrong.
@@ -48,13 +60,16 @@
     url = o.url ?? '';
     ids = [...(o.collectionIds ?? [])];
     outcome = null; busy = false; landing = false;
+    lookedUp = ''; picked = []; results = {};
     // Opened from a collection, that one starts ticked. Opened from Everything,
     // nothing is ticked — leave it and Follow drops the feed in your default
     // collection, which the hint below spells out.
     // (The list centers that ticked row itself, since it is often below the fold.)
     void loadCollections().then((s) => { ids = ids.filter((id) => id !== s.rootId); });
     dialog?.showModal();
-    if (o.autoSubmit && url) void submit(url);
+    // Untracked: the lookup reads and writes the form's own state, and this
+    // reset should run once per open, not again each time that state changes.
+    if (o.autoSubmit && o.url) untrack(() => void submit(o.url));
     else queueMicrotask(() => input?.focus());
   });
 
@@ -66,12 +81,14 @@
 
   /** Any URL in. A page, a feed, a shared link from another app: the server figures it out. */
   async function submit(target = url) {
+    if (candidates) return followPicked(candidates);
     const value = target.trim();
     if (!value || busy) return;
     busy = true; outcome = null;
     try {
       const res = await api.addFeed(value, ids);
       outcome = res;
+      if ('status' in res && res.status === 'choose') { lookedUp = value; picked = []; results = {}; }
       if ('status' in res && res.status === 'subscribed') {
         api.event('feed_added', { feedId: res.feed.id, alreadyFollowed: res.alreadyFollowed, collectionIds: ids, via: addFeed.opts.via ?? 'sheet' });
         showToast(res.alreadyFollowed ? `Already following ${res.feed.title ?? hostOf(res.feed.url)}` : `Following ${res.feed.title ?? hostOf(res.feed.url)}`);
@@ -81,10 +98,68 @@
         await goto(feedHref(res.feed));
       }
     } catch (e) {
-      outcome = { error: e instanceof Error ? e.message : String(e) };
+      outcome = { error: sayWhy(e) };
     } finally {
       busy = false;
     }
+  }
+
+  /**
+   * Why a request failed, for the reader. The server words its own refusals;
+   * anything else means the request never got a proper answer from thicket
+   * (offline, or the server is restarting), which we say here.
+   */
+  function sayWhy(e: unknown): string {
+    if (e instanceof ApiError && !/^HTTP \d+$/.test(e.message)) return e.message;
+    return navigator.onLine ? 'thicket isn’t answering right now. Try again in a minute.' : 'You’re offline. Reconnect and try again.';
+  }
+
+  function togglePick(u: string) {
+    picked = picked.includes(u) ? picked.filter((x) => x !== u) : [...picked, u];
+  }
+
+  /**
+   * Follow every ticked feed, one after another. One feed lands on its own
+   * page, as adding a single feed does. Several leave you where you were, with
+   * a toast. If some fail the sheet stays open: each failed feed stays ticked
+   * with its reason underneath, so Follow tries just those again, and each
+   * followed one says so.
+   */
+  async function followPicked(list: NonNullable<typeof candidates>) {
+    const chosen = list.filter((c) => picked.includes(c.url));
+    if (!chosen.length || busy) return;
+    busy = true;
+    const done: Feed[] = [];
+    const missed: string[] = [];
+    const next = { ...results };
+    for (const c of chosen) {
+      try {
+        const res = await api.addFeed(c.url, ids);
+        if ('status' in res && res.status === 'subscribed') {
+          // Two addresses can lead to one feed; count it once.
+          if (!done.some((f) => f.id === res.feed.id)) done.push(res.feed);
+          api.event('feed_added', { feedId: res.feed.id, alreadyFollowed: res.alreadyFollowed, collectionIds: ids, via: addFeed.opts.via ?? 'sheet' });
+          next[c.url] = { ok: true };
+        } else {
+          missed.push(c.url);
+          next[c.url] = { ok: false, why: 'error' in res ? res.error : 'There’s no feed at this address.' };
+        }
+      } catch (e) {
+        missed.push(c.url);
+        next[c.url] = { ok: false, why: sayWhy(e) };
+      }
+    }
+    if (done.length) void loadCollections(true);
+    busy = false;
+    if (missed.length) {
+      picked = missed;
+      results = next;
+      return;
+    }
+    showToast(done.length === 1 ? `Following ${done[0].title ?? hostOf(done[0].url)}` : `Following ${done.length} feeds`);
+    landing = done.length === 1;
+    dialog?.close();
+    if (done.length === 1) await goto(feedHref(done[0]));
   }
 
   /** Closing from /add (the share target) has nothing underneath; go home. */
@@ -122,12 +197,23 @@
       {/snippet}
     </Field>
 
-    {#if outcome && !('error' in outcome) && outcome.status === 'choose'}
-      <div class="result">
-        <p>There’s more than one way to follow this. Which one?</p>
+    {#if candidates}
+      <div class="result" role="group" aria-labelledby="add-feed-pick">
+        <p id="add-feed-pick">There’s more than one feed here. Select the ones you want.</p>
         <ul class="candidates">
-          {#each outcome.candidates as c}
-            <li><button type="button" onclick={() => submit(c.url)} disabled={busy}><strong>{c.title ?? hostOf(c.url)}</strong><span>{c.note ?? c.url}</span></button></li>
+          {#each candidates as c (c.url)}
+            {@const r = results[c.url]}
+            <li>
+              <label>
+                <input type="checkbox" checked={r?.ok || picked.includes(c.url)} onchange={() => togglePick(c.url)} disabled={busy || r?.ok} aria-describedby={r ? `pick-${c.url}` : undefined} />
+                <span class="which">
+                  <strong>{c.title ?? hostOf(c.url)}</strong>
+                  <span>{c.note ?? c.url}</span>
+                  {#if r?.ok}<span id="pick-{c.url}">Following</span>
+                  {:else if r}<span id="pick-{c.url}" class="pick-error" role="alert">Not followed. {r.why}</span>{/if}
+                </span>
+              </label>
+            </li>
           {/each}
         </ul>
       </div>
@@ -139,7 +225,7 @@
     {/key}
   </form>
   {#snippet footer()}
-    <button type="submit" form="add-feed" class="sheet-action" disabled={busy || !url.trim()}>{busy ? 'Looking…' : 'Follow'}</button>
+    <button type="submit" form="add-feed" class="sheet-action" disabled={busy || !url.trim() || (!!candidates && !picked.length)}>{busy ? (candidates ? 'Following…' : 'Looking…') : candidates && picked.length > 1 ? `Follow ${picked.length} feeds` : 'Follow'}</button>
   {/snippet}
 </Sheet>
 
@@ -151,7 +237,12 @@
   .result { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .result p { margin: 0 0 var(--space-2); }
   .candidates { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
-  .candidates button { width: 100%; text-align: left; display: flex; flex-direction: column; /* 2px is an optical gap between a name and its address. */ gap: 2px; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); }
-  .candidates span { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
-  .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: var(--space-1); }
+  /* The same tick box and spacing as the collection rows below. */
+  .candidates label { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); cursor: pointer; }
+  .candidates input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
+  .which { display: flex; flex-direction: column; /* 2px is an optical gap between a name and its address. */ gap: 2px; min-width: 0; }
+  .which strong { color: var(--text); }
+  .which span { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
+  .which .pick-error { color: var(--danger); }
+  .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); margin-top: var(--space-1); }
 </style>

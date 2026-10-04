@@ -22,11 +22,19 @@ export const SIGNUPS_DEFAULT = (env("SIGNUPS") as "open" | "invite" | "closed" |
 export const INSTANCE_NAME = env("INSTANCE_NAME") ?? new URL(PUBLIC_URL).hostname;
 /**
  * True only on readthicket.com, thicket's own hosted service. Some things
- * belong to that service alone — its landing page, public sign up, account
- * email and password reset — because a self-hoster runs their own users.
+ * belong to that service alone — public sign up, account email and password
+ * reset — because a self-hoster runs their own users.
  * Off unless set, so a copy of thicket never turns them on by accident.
  */
 export const HOSTED = env("HOSTED") === "true";
+/**
+ * readthicket.com only: the private address of its own site (the landing page
+ * and, in time, pricing and legal pages; github.com/mocha/readthicket-com).
+ * Set, this server hands that site the paths it owns (SITE_PATHS in index.ts)
+ * and serves everything else itself, so both share one domain. Unset, as on
+ * every self-hosted copy, there is no such site: / goes straight into the app.
+ */
+export const SITE_URL = env("SITE_URL")?.replace(/\/+$/, "");
 /**
  * Every account must have an email, so password reset always works. Today
  * that's readthicket.com alone; self-hosted copies don't ask for email.
@@ -41,6 +49,24 @@ export const EMAIL_REQUIRED = HOSTED;
 export const SMTP_URL = env("SMTP_URL");
 /** The From line on every message. */
 export const MAIL_FROM = env("MAIL_FROM") ?? "thicket <no-reply@readthicket.com>";
+
+/**
+ * "Send feedback" (issue #153, readthicket.com only; see lib/feedback.ts).
+ * What people send is filed as an issue in a private GitHub repository, and
+ * GitHub tells the people who watch it.
+ *
+ * FEEDBACK_REPO is that repository, as owner/name. It is private: issues
+ * carry people's own words.
+ * GITHUB_TOKEN can read and write issues on it. Until it is set, feedback is
+ * saved and waits (the log says so at boot); nothing is lost.
+ *
+ * ANTHROPIC_API_KEY is optional. With it, Claude reads each new piece of
+ * feedback beside the open issues, and one that repeats an issue is added to
+ * it as a comment. Without it, every piece of feedback is a new issue.
+ */
+export const FEEDBACK_REPO = env("FEEDBACK_REPO") ?? "christielenn/thicket-feedback";
+export const GITHUB_TOKEN = env("GITHUB_TOKEN");
+export const FEEDBACK_AI = !!env("ANTHROPIC_API_KEY");
 
 /**
  * Retention windows, in days. 0 disables a window entirely.

@@ -17,8 +17,8 @@
    *
    * Two sizes. Small is the one that sits in a filter bar beside other small
    * controls; medium is the everyday one on a form. Small is set below body
-   * size, so on an iPhone tapping it may zoom the page in slightly — the same
-   * trade the small text field makes.
+   * size with a mouse; on a touchscreen its text is 16px and it is 44px tall,
+   * so tapping it never zooms an iPhone in (see the styles).
    *
    * Choices come either as `options`, a plain list of value-and-label pairs
    * (preferred), or as raw <option> tags written inside the tag, for the rare
@@ -154,7 +154,7 @@
     /* No native arrow: we draw our own so it matches every other caret here. */
     appearance: none;
     -webkit-appearance: none;
-    border: 1px solid var(--line);
+    border: 1px solid var(--field-line);
     /* A picker, not a text field — see the note at the top of this file. */
     border-radius: var(--radius-sm);
     background: var(--surface);
@@ -197,4 +197,11 @@
     pointer-events: none;
   }
   .sm .caret { right: var(--space-3); }
+  /* On a touchscreen a field's text is never under 16px: iOS Safari zooms the
+     whole page in when a smaller field takes focus, and doesn't zoom back out. */
+  @media (pointer: coarse) {
+    /* And the small size is still a full 44px to tap. */
+    .sm select { min-height: 44px; }
+    select, .sm select { font-size: max(16px, calc(var(--text-base) * var(--size-app))); }
+  }
 </style>

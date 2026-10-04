@@ -5,10 +5,11 @@
   import { hostOf, relativeTime } from '$lib/time';
   import { feedName } from '$lib/feedname';
   import { resetNotice } from '$lib/feedsettings';
-  import { loadCollections } from '$lib/collections.svelte';
+  import { loadCollections, namedCollections } from '$lib/collections.svelte';
   import CollectionCheckList from '$lib/components/CollectionCheckList.svelte';
   import SavedNote from '$lib/components/SavedNote.svelte';
   import Banner from '$lib/components/Banner.svelte';
+  import Breadcrumb from '$lib/components/Breadcrumb.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Button from '$lib/components/Button.svelte';
   import Field from '$lib/components/Field.svelte';
@@ -18,10 +19,11 @@
 
   /**
    * My settings on one feed, at /feeds/:id/settings. Laid out like managing a
-   * collection: back, what you are managing, your settings for it, where it is
-   * filed, and at the very end the diagnostics: the raw facts about the feed
-   * and a way to fetch it now. Everything above the diagnostics is yours
-   * alone. The feed is shared, and nothing here changes it for anyone else.
+   * collection: a breadcrumb back to the feed as the header,
+   * your settings for it, where it is filed, and at the very end the
+   * diagnostics, folded behind a question: the raw facts about the feed and a
+   * way to fetch it now. Everything above the diagnostics is yours alone. The
+   * feed is shared, and nothing here changes it for anyone else.
    */
   const id = $derived(Number(page.params.id));
   let feed = $state<Feed | null>(null);
@@ -30,11 +32,13 @@
   let loadedId = $state<number | undefined>(undefined);
 
   const original = $derived(feed ? (feed.title ?? hostOf(feed.url)) : '');
+  const hasCollections = $derived(namedCollections().length > 0);
 
   /** Admin only: removing the feed from the instance, for everyone. The numbers come first, then the button. */
   let removeDialog = $state<HTMLDialogElement | null>(null);
   let impact = $state<Awaited<ReturnType<typeof adminApi.feedImpact>> | null>(null);
   let removing = $state(false);
+  let adminOpen = $state(false);
   async function askRemove() {
     if (!feed) return;
     impact = null;
@@ -66,10 +70,11 @@
       return void goto('/explore', { replaceState: true });
     }
     ids = feed.myCollectionIds;
+    diagOpen = feed.consecutiveFailures > 0;
     displayName = feed.displayName ?? '';
   }
 
-  /* Display name: a field whose Save wakes up once something changed. Empty goes back to the feed's own title. */
+  /* Display name: a field with Save inside it, which wakes up once something changed. Saving it empty goes back to the feed's own title. */
   let displayName = $state('');
   let savingName = $state(false);
   const nameDirty = $derived(!!feed && displayName.trim() !== (feed.displayName ?? ''));
@@ -101,8 +106,8 @@
     showToast(hide === null ? 'This channel follows your default again' : hide ? 'Shorts hidden from this channel' : 'Shorts shown on this channel');
   }
 
-  /* One click out of every collection, which is unfollowing; undo puts it back where it was. */
-  async function removeFromAll() {
+  /* Unfollow, beside the feed's name: one click out of every collection; undo puts it back where it was. */
+  async function unfollow() {
     if (!feed || ids.length === 0) return;
     const f = feed;
     const prev = ids;
@@ -110,7 +115,7 @@
     ids = [];
     void loadCollections(true);
     api.event('feed_unfollowed', { feedId: f.id, via: 'feed_settings' });
-    showToast(`Removed ${feedName(f)} from all your collections`, {
+    showToast(`Unfollowed ${feedName(f)}`, {
       label: 'Undo',
       run: async () => {
         const r = await api.restore(f.id, removed.collectionIds.length ? removed.collectionIds : prev);
@@ -121,6 +126,7 @@
   }
 
   /* Diagnostics: fetch the feed now. The site may be paused for everyone (it asked thicket to slow down), and then this says so rather than asking again. */
+  let diagOpen = $state(false);
   let refreshing = $state(false);
   let refreshNote = $state<{ tone: 'error' | 'info' | 'success'; text: string } | null>(null);
   async function refresh() {
@@ -189,42 +195,28 @@
 <svelte:head><title>{feed ? `Managing ${feedName(feed)}` : 'Feed settings'} · thicket</title></svelte:head>
 
 {#if feed}
-  <a class="back" href={feedHref(feed)}>
-    <Icon name="back" size={16} stroke={2.4} />
-    Back to feed
-  </a>
-
   <header class="top">
-    <p class="pre">Managing feed:</p>
-    <h1>{feedName(feed)}</h1>
+    <Breadcrumb trail={[{ label: feedName(feed), href: feedHref(feed) }]} current="Manage feed" />
+    {#if ids.length > 0}<Button variant="danger" onclick={unfollow}>Unfollow</Button>{/if}
   </header>
 
   <hr />
   <section>
-    <h2>Settings</h2>
-
-    <div class="opt">
-      <form onsubmit={(e) => { e.preventDefault(); void saveName(displayName); }}>
-        <Field
-          label="Display name"
-          hint="Only you see this name. Where feeds are listed to choose from, it shows as “Your name ({original})”."
-        >
-          {#snippet children({ id, describedBy, invalid })}
-            <Input {id} aria-describedby={describedBy} {invalid} bind:value={displayName} maxlength={120} placeholder={original} disabled={savingName} />
-          {/snippet}
-        </Field>
-        <div class="row">
-          <Button type="submit" variant="primary" disabled={!nameDirty || savingName}>{savingName ? 'Saving…' : 'Save'}</Button>
-          {#if feed.displayName}
-            <Button onclick={() => saveName('')} disabled={savingName}>Use “{original}”</Button>
-          {/if}
-        </div>
-      </form>
-    </div>
+    <form class="opt" onsubmit={(e) => { e.preventDefault(); void saveName(displayName); }}>
+      <Field label="Display name" hint="Only you see this name.">
+        {#snippet children({ id, describedBy, invalid })}
+          <Input {id} aria-describedby={describedBy} {invalid} bind:value={displayName} maxlength={120} placeholder={original} disabled={savingName}>
+            {#snippet trailing()}
+              <Button type="submit" variant="primary" disabled={!nameDirty || savingName}>{savingName ? 'Saving…' : 'Save'}</Button>
+            {/snippet}
+          </Input>
+        {/snippet}
+      </Field>
+    </form>
 
     {#if feed.isYouTube}
       <div class="opt">
-        <h3>YouTube Shorts</h3>
+        <h2>YouTube Shorts</h2>
         <div class="radios" role="radiogroup" aria-label="YouTube Shorts">
           <label>
             <input type="radio" name="shorts" checked={feed.hideShortsSetting === null} onchange={() => setShorts(null)} />
@@ -245,46 +237,50 @@
 
   <section class="opt">
     <h2 class="withnote">Collections ({ids.length}) <SavedNote show={collectionsSaved} /></h2>
-    <div class="card">
-      <CollectionCheckList feedId={feed.id} bind:ids bind:saved={collectionsSaved} name={feedName(feed)} />
-    </div>
-    <Button variant="danger" onclick={removeFromAll} disabled={ids.length === 0}>Remove from all collections</Button>
+    <!-- What the list is for, above it, as the Follow sheet does. With no collections yet, the list's own line says how to start one. -->
+    {#if hasCollections}<p class="hint lede">Choose the collections this feed appears in. Every feed you follow lives in at least one.</p>{/if}
+    <CollectionCheckList feedId={feed.id} bind:ids bind:saved={collectionsSaved} name={feedName(feed)} showHint={!hasCollections} onPage />
   </section>
 
   <hr />
-  <section class="diag">
-    <h2>Diagnostics</h2>
-    {#if feed.consecutiveFailures > 0}
-      <Banner tone="error">Last fetch failed: {feed.lastError ?? `HTTP ${feed.lastStatus}`}</Banner>
-    {/if}
-    <div class="row">
-      <Button onclick={refresh} disabled={refreshing}>{refreshing ? 'Fetching…' : 'Refresh now'}</Button>
-      <span class="hint inline">{feed.lastFetchedAt ? `Last checked ${relativeTime(feed.lastFetchedAt)}` : 'Not fetched yet'}</span>
-    </div>
-    {#if refreshNote}
-      <Banner tone={refreshNote.tone} dismissible ondismiss={() => (refreshNote = null)}>{refreshNote.text}</Banner>
-    {/if}
-
-    <details class="facts">
-      <summary>
-        Feed metadata
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-      </summary>
-      <ul>
+  <!-- Troubleshooting, shut until asked for: a question to click, then the way to check the feed now and the raw facts about it. A feed whose last check failed arrives open, so the reason is never hidden. -->
+  <details class="fold" bind:open={diagOpen}>
+    <summary class="tap">
+      <Icon name="caret" dir={diagOpen ? 'down' : 'right'} size={16} stroke={2.4} />
+      <h2>Not seeing new posts from this feed?</h2>
+    </summary>
+    <div class="body">
+      {#if feed.consecutiveFailures > 0}
+        <Banner tone="error">Last fetch failed: {feed.lastError ?? `HTTP ${feed.lastStatus}`}</Banner>
+      {/if}
+      <div class="row">
+        <Button onclick={refresh} disabled={refreshing}>{refreshing ? 'Fetching…' : 'Refresh now'}</Button>
+        <span class="hint inline">{feed.lastFetchedAt ? `Last checked ${relativeTime(feed.lastFetchedAt)}` : 'Not fetched yet'}</span>
+      </div>
+      {#if refreshNote}
+        <Banner tone={refreshNote.tone} dismissible ondismiss={() => (refreshNote = null)}>{refreshNote.text}</Banner>
+      {/if}
+      <ul class="facts">
         {#each facts as [k, v] (k)}
-          <li><strong>{k}:</strong> <span class:none={v === null}>{v ?? '—'}</span></li>
+          <li><strong>{k}:</strong> <span>{v ?? '—'}</span></li>
         {/each}
       </ul>
-    </details>
-  </section>
+    </div>
+  </details>
 
   {#if session.user?.isAdmin}
     <hr />
-    <section class="admin">
-      <h2>Admin</h2>
-      <p class="hint">Feeds are shared. Removing this one takes it away from everyone on this instance: its posts and its place in every collection. Bookmarks, and the notes on them, keep their saved copy. Use it for spam, abuse, or a feed that should never have been indexed.</p>
-      <Button variant="danger" onclick={askRemove}>Remove this feed from thicket</Button>
-    </section>
+    <!-- Admins only, and folded like the troubleshooting above it: the question, then what removing does and the button. -->
+    <details class="fold" bind:open={adminOpen}>
+      <summary class="tap">
+        <Icon name="caret" dir={adminOpen ? 'down' : 'right'} size={16} stroke={2.4} />
+        <h2>Need to remove this feed for everyone?</h2>
+      </summary>
+      <div class="body admin">
+        <p class="hint">Feeds are shared. Removing this one takes it away from everyone on thicket: its posts and its place in every collection. Bookmarks, and the notes on them, keep their saved copy. Use it for spam, abuse, or a feed that should never have been indexed.</p>
+        <Button variant="danger" onclick={askRemove}>Remove from thicket</Button>
+      </div>
+    </details>
 
     <dialog bind:this={removeDialog} class="remove" onclick={(e) => { if (e.target === removeDialog) removeDialog?.close(); }} aria-labelledby="remove-title">
       <h2 id="remove-title">Remove {feedName(feed)} from thicket?</h2>
@@ -304,43 +300,41 @@
 {/if}
 
 <style>
-  .back { display: inline-flex; align-items: center; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); padding: var(--space-2) 0; margin-bottom: var(--space-2); }
-  .top { margin-bottom: var(--space-2); }
-  .pre { margin: 0; font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 2px 0 0; /* 2px is an optical nudge: the title sits on the label's line. */ overflow-wrap: anywhere; }
+  /* The breadcrumb is the header and takes the room; Unfollow keeps its size at the right. The min-height holds the row steady when Unfollow isn't shown. */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 44px; }
   hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-4) 0; }
-  section > h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 var(--space-3); }
-  section > h2.withnote { display: flex; align-items: center; gap: var(--space-3); }
-  .opt { margin-bottom: var(--space-4); }
-  h3 { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; margin: 0 0 var(--space-2); }
-  .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
-  .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); overflow-wrap: anywhere; }
+  /* Section headings match a field's label, so "Display name" and "Collections" read as the same kind of thing. */
+  section h2 { font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; margin: 0 0 var(--space-3); }
+  section h2.withnote { display: flex; align-items: center; gap: var(--space-3); }
+  /* Between one setting and the next: more than the gap inside a setting, so each reads as its own group. The last one leaves the usual gap before the line under it. */
+  .opt { margin-bottom: var(--space-6); }
+  section.opt { margin-bottom: var(--space-4); }
+  .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); flex-wrap: wrap; }
+  .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
   .hint.inline { margin: 0; }
+  /* The line under a section heading: tucked up against it, then the usual gap before what it describes. */
+  .hint.lede { margin: calc(var(--space-2) * -1) 0 var(--space-3); }
   .radios { display: flex; flex-direction: column; gap: var(--space-2); }
   .radios label { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
   .radios label:has(input:checked) { border-color: var(--accent); }
   .radios input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); }
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-3); }
-  .admin { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; }
-  .admin > h2 { margin: 0; }
+  .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .admin { align-items: flex-start; }
+  .admin .hint { margin: 0; }
   dialog.remove { max-width: 440px; padding: var(--space-5) var(--space-5) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: var(--shadow-dialog); }
   dialog.remove::backdrop { background: var(--scrim); }
   dialog.remove h2 { margin: 0 0 var(--space-3); font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }
   dialog.remove p { margin: 0 0 var(--space-4); line-height: 1.5; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   dialog.remove .actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
-  .diag { display: flex; flex-direction: column; gap: var(--space-3); }
-  .diag > h2 { margin: 0; }
-  .diag .row { margin-top: 0; }
-  .facts summary { display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; list-style: none; }
-  .facts summary::-webkit-details-marker { display: none; }
-  .facts summary svg { transition: transform 150ms ease; color: var(--text-3); }
-  .facts[open] summary svg { transform: rotate(180deg); }
-  .facts ul { margin: var(--space-3) 0 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .fold summary { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; list-style: none; color: var(--text-2); }
+  .fold summary::-webkit-details-marker { display: none; }
+  .fold summary h2 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); }
+  .fold .body { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); }
+  .fold .row { margin-top: 0; }
+  .facts { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .facts li { overflow-wrap: anywhere; }
   .facts strong { color: var(--text); font-weight: 600; }
-  .facts .none { color: var(--text-3); }
-  .status { text-align: center; color: var(--text-3); padding: var(--space-5) 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
+  .status { text-align: center; color: var(--text-2); padding: var(--space-5) 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>

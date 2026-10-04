@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { authApi, ApiError } from '$lib/api';
+  import { api, authApi, bookmarksApi, ApiError } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { site, loadSite } from '$lib/site.svelte';
   import Field from '$lib/components/Field.svelte';
@@ -20,6 +20,14 @@
    *
    * Unlike Settings, nothing here saves as you type: each change asks you to
    * confirm it with your password or a button.
+   *
+   * It is where you bring your reading in from somewhere else: Import feeds,
+   * a door to the import page, which used to be in the account menu.
+   *
+   * It is also where you take your things with you: Export my data, one row
+   * per thing you can download (issue #135). Bookmarks and notes are the
+   * first; collections get a row of their own when all of them can be
+   * exported at once, and until then a line says where to export each one.
    */
   const me = $derived(session.user!);
 
@@ -80,6 +88,14 @@
       resendBusy = false;
     }
   }
+
+  // ---- export ----
+  /* How many bookmarks there are and the most one file holds, to say so when
+     an export would stop short. Until it answers, or if it can't, nothing is
+     said and the button still works. */
+  let exportInfo = $state<{ count: number; limit: number } | null>(null);
+  $effect(() => { void bookmarksApi.exportInfo().then((i) => (exportInfo = i)).catch(() => {}); });
+  const capped = $derived(exportInfo !== null && exportInfo.count > exportInfo.limit);
 
   // ---- password (moved from Settings) ----
   let current = $state('');
@@ -173,6 +189,34 @@
   </form>
 </section>
 
+<!-- The way in sits beside the way out: bring your reading here, take it with
+     you. The import itself is a page of its own (/import); this is its door. -->
+<section class="card">
+  <h2>Import feeds</h2>
+  <div class="export">
+    <div class="what">
+      <p>From another reader, or a link to someone’s collection.</p>
+    </div>
+    <Button href="/import">Import feeds</Button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Export my data</h2>
+
+  <!-- One row per thing to download: what it is and what you get on the left,
+       its button on the right. The next export gets a row of its own here. -->
+  <div class="export">
+    <div class="what">
+      <p>Download your bookmarks and notes to keep, or to move to another bookmarking app.</p>
+      {#if capped && exportInfo}<p>Your most recent {exportInfo.limit.toLocaleString('en-US')} only.</p>{/if}
+    </div>
+    <Button href={bookmarksApi.exportUrl()} download="thicket-bookmarks.html" onclick={() => api.event('bookmarks_exported', { count: exportInfo?.count })}>Export bookmarks</Button>
+  </div>
+
+  <p class="note also">To export a single collection, click its gear button to access its manage features.</p>
+</section>
+
 <ApiTokens available={tokensAvailable} />
 
 <style>
@@ -181,11 +225,11 @@
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
-  .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   .address { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   .who { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
   .addr { font-weight: 600; overflow-wrap: anywhere; }
-  .note { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-3); line-height: 1.4; }
+  .note { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   /* Resend reads as a link inside the sentence, like links in help text elsewhere. */
   .link { font: inherit; color: var(--accent); font-weight: 600; }
   .link:hover { text-decoration: underline; }
@@ -196,4 +240,10 @@
   .row { display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; }
   .bad { color: var(--danger); margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   form .bad { margin: 0; }
+  /* An export row: words on the left, the button on the right, the button
+     dropping under the words on a phone. */
+  .export { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  .what { flex: 1 1 260px; min-width: 0; }
+  .what p { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
+  .also { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 </style>
