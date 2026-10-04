@@ -37,9 +37,10 @@
  *    has a network (feeds/networks.ts: the provider's ASN, or the /24 for big
  *    CDNs and clouds whose customers are unrelated). A network that limits
  *    across sites becomes *careful* for a day: one 429 from any site on it
- *    pauses all of them, its requests start at least NETWORK_GAP_MS apart
- *    whichever site they are for, and the scheduler and importer run one feed
- *    on it at a time (carefulNetwork). A network becomes careful when two
+ *    pauses all of them, and whichever site they are for, its requests go one
+ *    at a time (a request holds the network until its response has been read:
+ *    Turn.release) and start at least NETWORK_GAP_MS apart. A network becomes
+ *    careful when two
  *    different sites on it are limited within half an hour, or from the start
  *    for shared hosts we already know (SHARED_HOSTS). One site's own 429 never
  *    pauses its neighbours on a CDN, and a network that has never limited us
@@ -55,6 +56,7 @@ const DEFAULT_GAP_MS = 750;
 const GAP_MS: Record<string, number> = { "reddit.com": 7_000 };
 /** A request that would queue longer than this is refused as "busy" and rescheduled instead. */
 const MAX_QUEUE_MS = 90_000;
+let maxQueueMs = MAX_QUEUE_MS;
 
 const MIN_PAUSE_MS = 60_000;
 const DEFAULT_PAUSE_MS = 10 * 60_000;
@@ -101,6 +103,9 @@ type NetState = {
   carefulUntil: number;
   /** Sites on it told to slow down recently, and when. */
   limited: Map<string, number>;
+  /** A request to it is in flight (careful networks only); others wait in `waiters`, first come first served. */
+  busy: boolean;
+  waiters: (() => void)[];
 };
 
 const hosts = new Map<string, HostState>();
@@ -113,7 +118,7 @@ const log = (m: string) => console.log(`[polite] ${m}`);
 function netState(key: string): NetState {
   let n = nets.get(key);
   if (!n) {
-    n = { nextSlot: 0, until: 0, reason: null, strikes: 0, carefulUntil: 0, limited: new Map() };
+    n = { nextSlot: 0, until: 0, reason: null, strikes: 0, carefulUntil: 0, limited: new Map(), busy: false, waiters: [] };
     nets.set(key, n);
   }
   return n;
@@ -122,9 +127,39 @@ function netState(key: string): NetState {
 const isCareful = (key: string, n: NetState, now: number) => SHARED_HOSTS.has(key) || n.carefulUntil > now;
 
 /**
+ * Take the network's one in-flight place, waiting up to `ms` for it. False when
+ * the wait ran out. On release the place goes straight to the next waiter.
+ */
+function acquire(n: NetState, ms: number): Promise<boolean> {
+  if (!n.busy) { n.busy = true; return Promise.resolve(true); }
+  return new Promise((resolve) => {
+    const take = () => { clearTimeout(timer); resolve(true); };
+    const timer = setTimeout(() => {
+      n.waiters.splice(n.waiters.indexOf(take), 1);
+      resolve(false);
+    }, ms);
+    n.waiters.push(take);
+  });
+}
+
+/** Give the place back, once only however often it is called. */
+function releaser(n: NetState): () => void {
+  let done = false;
+  return () => {
+    if (done) return;
+    done = true;
+    const next = n.waiters.shift();
+    if (next) next(); else n.busy = false;
+  };
+}
+
+/**
  * The careful network this URL's site is on, if it is on one and we already know
- * which (no lookup: this is for the scheduler's loop). The scheduler and the
- * importer keep one feed in flight per careful network, as they do per host.
+ * which (no lookup: this is for the scheduler's loop). awaitTurn keeps careful
+ * networks to one request at a time for every caller; the scheduler and the
+ * importer also check this so that a feed doesn't hold one of their slots while
+ * it waits there. On first contact the network isn't known yet, and awaitTurn
+ * alone keeps it to one at a time.
  */
 export function carefulNetwork(url: string): string | null {
   const key = networks.cached(hostnameOf(url));
@@ -139,7 +174,8 @@ function hostnameOf(url: string): string {
  * Tests only: forget every host and network, never touch the database, and
  * resolve networks with the given functions instead of real DNS.
  */
-export function useInMemoryHostsForTests(deps: Partial<NetworkDeps> = {}) {
+export function useInMemoryHostsForTests(deps: Partial<NetworkDeps> = {}, queueMs = MAX_QUEUE_MS) {
+  maxQueueMs = queueMs;
   hosts.clear();
   nets.clear();
   loaded = Promise.resolve();
@@ -213,14 +249,21 @@ export function coolingUntil(key: string): Date | null {
   return s && s.until > Date.now() ? new Date(s.until) : null;
 }
 
-/** Whose turn a request took: its host, and its network when the site's address is known. */
-export type Turn = { host: string; network: string | null };
+/**
+ * Whose turn a request took: its host, and its network when the site's address
+ * is known. The caller must call `release` once the response has been read, or
+ * the request has failed in any way: on a careful network the next request
+ * waits for it. Calling it twice is harmless.
+ */
+export type Turn = { host: string; network: string | null; release: () => void };
 
 const NETWORK_REASON = "is on a shared host that asked thicket to slow down";
 
 /**
- * Wait for this host's turn, and its network's when the network is careful.
- * Throws HostCoolingDown when either is paused or the queue is too long.
+ * Wait for this host's turn, and its network's when the network is careful:
+ * then the request also holds the network, so no other request to any of its
+ * sites starts until this one is released. Throws HostCoolingDown when either is
+ * paused or the wait would be too long.
  */
 export async function awaitTurn(url: string): Promise<Turn> {
   await loadHosts();
@@ -229,19 +272,34 @@ export async function awaitTurn(url: string): Promise<Turn> {
   // Before anything is reserved, so the checks and reservations below happen without a pause in between.
   const network = await networks.of(hostnameOf(url));
   const n = network ? netState(network) : null;
-  const now = Date.now();
-  if (s.until > now) throw new HostCoolingDown(key, new Date(s.until), s.reason ?? "asked thicket to wait");
-  if (n && n.until > now) throw new HostCoolingDown(key, new Date(n.until), NETWORK_REASON);
-  const paced = n && isCareful(network!, n, now) ? n : null;
-  const slot = Math.max(now, s.nextSlot, paced?.nextSlot ?? 0);
-  if (slot - now > MAX_QUEUE_MS) throw new HostCoolingDown(key, new Date(slot), "already has requests from thicket queued");
-  s.nextSlot = slot + (GAP_MS[key] ?? DEFAULT_GAP_MS);
-  if (paced) paced.nextSlot = slot + NETWORK_GAP_MS;
-  if (slot > now) await sleep(slot - now);
-  // A pause can begin while we queue.
-  if (s.until > Date.now()) throw new HostCoolingDown(key, new Date(s.until), s.reason ?? "asked thicket to wait");
-  if (n && n.until > Date.now()) throw new HostCoolingDown(key, new Date(n.until), NETWORK_REASON);
-  return { host: key, network };
+  const notPaused = () => {
+    const now = Date.now();
+    if (s.until > now) throw new HostCoolingDown(key, new Date(s.until), s.reason ?? "asked thicket to wait");
+    if (n && n.until > now) throw new HostCoolingDown(key, new Date(n.until), NETWORK_REASON);
+  };
+  notPaused();
+  let held: NetState | null = null;
+  let release = () => {};
+  if (n && isCareful(network!, n, Date.now())) {
+    if (!(await acquire(n, maxQueueMs))) throw new HostCoolingDown(key, new Date(Date.now() + 60_000), "is on a shared host thicket already has requests queued for");
+    held = n;
+    release = releaser(n);
+  }
+  try {
+    // A pause can begin while we queue.
+    notPaused();
+    const now = Date.now();
+    const slot = Math.max(now, s.nextSlot, held?.nextSlot ?? 0);
+    if (slot - now > maxQueueMs) throw new HostCoolingDown(key, new Date(slot), "already has requests from thicket queued");
+    s.nextSlot = slot + (GAP_MS[key] ?? DEFAULT_GAP_MS);
+    if (held) held.nextSlot = slot + NETWORK_GAP_MS;
+    if (slot > now) await sleep(slot - now);
+    notPaused();
+    return { host: key, network, release };
+  } catch (e) {
+    release();
+    throw e;
+  }
 }
 
 /**

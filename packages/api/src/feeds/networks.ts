@@ -22,6 +22,10 @@
  *   large share of the web into one slow queue, and Cloudflare does not limit
  *   one customer for another's sake. The /24 is also the fallback whenever the
  *   ASN lookup fails, so a Cymru outage costs precision, not politeness.
+ * - **No network at all** for platforms that put many unrelated customers on a
+ *   handful of addresses (SINGLE_SITE_PLATFORMS). All 2,220 WordPress.com feeds
+ *   in the 2026-10 import list, custom domains included, sit in one /24, so even
+ *   the /24 would make them one queue. Each of their sites is just its own host.
  *
  * Being in a group costs nothing by itself. hosts.ts only acts on a network
  * once it has shown that it limits across sites (two different sites on it
@@ -56,14 +60,30 @@ const PLATFORMS = new Set<number>([
   16509, 14618, // Amazon
   15169, 396982, // Google, Google Cloud
   8075, // Microsoft
-  36459, // GitHub (Pages)
-  2635, // Automattic (WordPress.com)
+  209242, // Cloudflare London (Spectrum)
+  60068, // CDN77
+  30148, // Sucuri (a WAF proxy in front of unrelated sites)
+  36459, // GitHub (Pages): spread over four /24s, a few hundred feeds each
   14061, // DigitalOcean
   24940, // Hetzner
   16276, // OVH
   63949, // Linode
   20473, // Vultr
   31898, // Oracle Cloud
+]);
+
+/**
+ * Platforms whose many unrelated customers share a few addresses, so that even
+ * their /24 is one platform: no network for them, each site is its own host.
+ * Shared hosts that do limit across customers (Hostinger, IONOS, Namecheap,
+ * Unified Layer, GoDaddy) are deliberately not here: they stay grouped by ASN.
+ */
+const SINGLE_SITE_PLATFORMS = new Set<number>([
+  2635, // Automattic: WordPress.com and Tumblr, custom domains included, on 192.0.78.0/24
+  53831, // Squarespace
+  58182, // Wix
+  397273, // Render: custom domains share a few addresses
+  395409, // Neocities: one address for every site
 ]);
 
 const HOST_TTL_MS = 3600_000;
@@ -117,8 +137,13 @@ export function parseCymru(records: string[][]): number | null {
   return asn ? Number(asn) : null;
 }
 
-/** The network key for an address: "AS26347" for most, the /24 for the big platforms or when the ASN is unknown. */
+/**
+ * The network key for an address: "AS26347" for most, the /24 for the big
+ * platforms or when the ASN is unknown, null (no network) for platforms whose
+ * customers crowd onto a few addresses.
+ */
 export function groupKey(ip: string, asn: number | null): string | null {
+  if (asn !== null && SINGLE_SITE_PLATFORMS.has(asn)) return null;
   return asn !== null && !PLATFORMS.has(asn) ? `AS${asn}` : prefixKey(ip);
 }
 
@@ -169,25 +194,27 @@ type Cached<T> = { expires: number; value: Promise<T>; settled?: T };
 
 /** Hostname → network key, with the lookups behind it cached. */
 export class NetworkMap {
-  private byHost = new Map<string, Cached<string | null>>();
+  /** Null is a failed lookup, retried sooner; `{ network: null }` is a site that has no network (a single-site platform). */
+  private byHost = new Map<string, Cached<{ network: string | null } | null>>();
   private byPrefix = new Map<string, Cached<number | null>>();
   constructor(private deps: NetworkDeps = realDeps) {}
 
   /** The network already known for this hostname, without looking anything up. */
   cached(hostname: string): string | null {
     const c = this.byHost.get(hostname);
-    return c && c.expires > this.deps.now() ? c.settled ?? null : null;
+    return c && c.expires > this.deps.now() ? c.settled?.network ?? null : null;
   }
 
-  /** This hostname's network key, or null when it doesn't resolve. Never throws. */
-  of(hostname: string): Promise<string | null> {
-    return this.remember(this.byHost, hostname, HOST_TTL_MS, async () => {
+  /** This hostname's network key, or null when it has none or doesn't resolve. Never throws. */
+  async of(hostname: string): Promise<string | null> {
+    const found = await this.remember(this.byHost, hostname, HOST_TTL_MS, async () => {
       const ip = isIP(hostname) ? hostname : await this.deps.lookup(hostname).catch(() => null);
       const prefix = ip && prefixKey(ip);
       if (!ip || !prefix) return null;
       const asn = await this.remember(this.byPrefix, prefix, ASN_TTL_MS, () => this.deps.asn(ip).catch(() => null));
-      return groupKey(ip, asn);
+      return { network: groupKey(ip, asn) };
     });
+    return found?.network ?? null;
   }
 
   private remember<T>(map: Map<string, Cached<T | null>>, key: string, ttl: number, load: () => Promise<T | null>): Promise<T | null> {

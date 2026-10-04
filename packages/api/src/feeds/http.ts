@@ -66,20 +66,25 @@ export async function httpGetBytes(url: string, extra: Record<string, string> = 
 
 async function request(url: string, headers: Record<string, string>, opts: HttpOptions) {
   const turn = await awaitTurn(url);
-  const res = await fetch(url, {
-    headers: { "user-agent": USER_AGENT, ...headers },
-    redirect: opts.redirect ?? "follow",
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  });
-  await afterResponse(turn, res.status, res.headers);
-  const limit = opts.maxBytes ?? MAX_BYTES;
-  if (res.status === 304 || !res.body) return { res, bytes: Buffer.alloc(0), truncated: false };
-  const len = Number(res.headers.get("content-length") ?? 0);
-  if (len > limit && !opts.truncate) {
-    await res.body.cancel().catch(() => {});
-    throw new TooLargeError(len, res);
+  // Held until the body is read or the request fails: a careful network's next request waits for this one to finish (feeds/hosts.ts).
+  try {
+    const res = await fetch(url, {
+      headers: { "user-agent": USER_AGENT, ...headers },
+      redirect: opts.redirect ?? "follow",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    await afterResponse(turn, res.status, res.headers);
+    const limit = opts.maxBytes ?? MAX_BYTES;
+    if (res.status === 304 || !res.body) return { res, bytes: Buffer.alloc(0), truncated: false };
+    const len = Number(res.headers.get("content-length") ?? 0);
+    if (len > limit && !opts.truncate) {
+      await res.body.cancel().catch(() => {});
+      throw new TooLargeError(len, res);
+    }
+    return { res, ...(await readUpTo(res, res.body, limit, !!opts.truncate)) };
+  } finally {
+    turn.release();
   }
-  return { res, ...(await readUpTo(res, res.body, limit, !!opts.truncate)) };
 }
 
 /** Read a body up to `limit` bytes. Past it: stop downloading, then either fail or keep what arrived. */
