@@ -13,11 +13,17 @@
    * Pass `onsource` and the name becomes a button that opens the feed's card;
    * without it the name is plain text. Anything else that belongs on the line
    * (a "New" mark, say) is passed as children and lands after the time.
+   *
+   * `label` draws the name some other way than as plain text: with the words
+   * a search matched highlighted, say. The plain `name` is still what the
+   * icon and the tooltip use.
    */
   interface Props {
     feedId: number | null;
     hasIcon?: boolean;
     name: string | null;
+    /** Drawn in place of the name's plain text, when given. */
+    label?: Snippet;
     /** When the post went up. Left off when there is no date to show. */
     when?: string | null;
     /** Given, the source name becomes a button. */
@@ -27,7 +33,7 @@
     [key: string]: unknown;
   }
 
-  let { feedId, hasIcon = false, name, when = null, onsource, children, class: klass = '', ...rest }: Props = $props();
+  let { feedId, hasIcon = false, name, label, when = null, onsource, children, class: klass = '', ...rest }: Props = $props();
 
   /** One icon size on every card. */
   const ICON = 20;
@@ -37,11 +43,11 @@
   {#if onsource}
     <button class="source tap" onclick={onsource} title="About {name}">
       <SourceIcon {feedId} {hasIcon} {name} size={ICON} />
-      <span class="name">{name}</span>
+      <span class="name">{#if label}{@render label()}{:else}{name}{/if}</span>
     </button>
   {:else}
     <SourceIcon {feedId} {hasIcon} {name} size={ICON} />
-    <span class="name">{name}</span>
+    <span class="name">{#if label}{@render label()}{:else}{name}{/if}</span>
   {/if}
   {#if when}
     <span class="dot">·</span>
