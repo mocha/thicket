@@ -10,10 +10,11 @@
  * Politeness lives in feeds/hosts.ts, underneath every request: the gap between
  * requests to a host, pausing a host that says slow down, and noticing a host
  * that is down. This file only makes sure it never asks one host for two feeds
- * at once.
+ * at once, nor one careful network (a shared host that limits across all its
+ * sites; see hosts.ts rule 4) for two feeds on any of its sites.
  */
 import { dueFeeds, refreshFeed } from "./refresh.js";
-import { hostKey, loadHosts } from "./hosts.js";
+import { carefulNetwork, hostKey, loadHosts } from "./hosts.js";
 
 const PER_HOST = 1;
 
@@ -40,8 +41,12 @@ export function startScheduler(opts: { tickMs: number; concurrency: number; log?
       if (inFlightIds.has(f.id)) continue;
       const host = hostKey(f.url);
       if ((perHost.get(host) ?? 0) >= PER_HOST) continue;
+      // Counted alongside hosts: network keys ("AS26347") never look like host keys.
+      const network = carefulNetwork(f.url);
+      if (network && (perHost.get(network) ?? 0) >= PER_HOST) continue;
       inFlightIds.add(f.id);
       perHost.set(host, (perHost.get(host) ?? 0) + 1);
+      if (network) perHost.set(network, (perHost.get(network) ?? 0) + 1);
       stats.inFlight = inFlightIds.size;
       launched++;
       refreshFeed(f.id)
@@ -57,6 +62,7 @@ export function startScheduler(opts: { tickMs: number; concurrency: number; log?
         .finally(() => {
           inFlightIds.delete(f.id);
           perHost.set(host, (perHost.get(host) ?? 1) - 1);
+          if (network) perHost.set(network, (perHost.get(network) ?? 1) - 1);
           stats.inFlight = inFlightIds.size;
           drain();
         });
