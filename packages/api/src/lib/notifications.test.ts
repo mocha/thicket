@@ -11,7 +11,7 @@ import { Hono } from "hono";
 
 // The modules import the database client, which wants an address at import time. It is never connected to here.
 process.env.DATABASE_URL ??= "postgres://not-used-by-tests";
-const { assemble, CAP } = await import("./notifications.js");
+const { assemble, CAP, parseRange } = await import("./notifications.js");
 const { mentionedHandles } = await import("./mentions.js");
 const { notifications } = await import("../routes/notifications.js");
 type Candidates = import("./notifications.js").Candidates;
@@ -155,4 +155,54 @@ test("notifications need someone signed in", async () => {
     const r = await a.request(`/api/notifications${path}`, { method });
     assert.equal(r.status, 401, `${method} ${path}`);
   }
+});
+
+test("a range: only what happened after since and up to until", () => {
+  const c = { ...none, saves: [save({ savedAt: ago(1) }), save({ savedAt: ago(30) }), save({ savedAt: ago(100) })] };
+  const r = assemble(ME, c, { ...opts, since: ago(48), until: ago(24) });
+  assert.deepEqual(r.items.map((n) => n.at), [ago(30)]);
+});
+
+test("a range of kinds; a mention stays a mention when asking for notes", () => {
+  const ana = author();
+  const n = save({ author: ana, noteCreatedAt: ago(1) });
+  const c = { ...none, saves: [n, save()], mentions: [mention({ id: n.id, author: ana })] };
+  assert.deepEqual(kinds(assemble(ME, c, { ...opts, kinds: ["bookmark"] })), ["bookmark"]);
+  assert.deepEqual(kinds(assemble(ME, c, { ...opts, kinds: ["note"] })), []);
+  assert.deepEqual(kinds(assemble(ME, c, { ...opts, kinds: ["mention", "note"] })), ["mention"]);
+});
+
+test("truncated says the list stopped at the cap with more in range", () => {
+  const many = Array.from({ length: CAP + 1 }, (_, i) => save({ savedAt: ago(i + 1) }));
+  assert.equal(assemble(ME, { ...none, saves: many }, opts).truncated, true);
+  assert.equal(assemble(ME, { ...none, saves: many.slice(0, CAP) }, opts).truncated, false);
+});
+
+test("since and until read as a script would write them", () => {
+  const ok = (q: Parameters<typeof parseRange>[0]) => {
+    const r = parseRange(q, NOW);
+    assert.ok(!("error" in r), JSON.stringify(r));
+    return r as Exclude<typeof r, { error: string }>;
+  };
+  assert.deepEqual(ok({}), { since: ago(30 * 24), until: ago(0), kinds: null });
+  assert.equal(ok({ since: "24h" }).since, ago(24));
+  assert.equal(ok({ since: "7d" }).since, ago(7 * 24));
+  // A day starts a range at its start and ends one at its end.
+  assert.deepEqual(ok({ since: "2026-09-01", until: "2026-09-02" }), { since: "2026-09-01T00:00:00.000Z", until: "2026-09-03T00:00:00.000Z", kinds: null });
+  assert.equal(ok({ since: "2026-10-03T09:30:00Z" }).since, "2026-10-03T09:30:00.000Z");
+  // A future until is now.
+  assert.equal(ok({ until: "2027-01-01" }).until, ago(0));
+  assert.deepEqual(ok({ kind: "follow, mention" }).kinds, ["follow", "mention"]);
+  for (const q of [{ since: "yesterday" }, { since: "3w" }, { until: "10/01/2026" }, { since: "400d" }, { since: "1h", until: "2h" }, { kind: "likes" }]) {
+    assert.ok("error" in parseRange(q, NOW), JSON.stringify(q));
+  }
+});
+
+test("a range that can't be read is refused before anything is looked up", async () => {
+  const a = new Hono();
+  a.use("*", async (c, next) => { c.set("user", { id: ME, handle: "me" } as never); await next(); });
+  a.route("/api/notifications", notifications);
+  const r = await a.request("/api/notifications?since=yesterday");
+  assert.equal(r.status, 400);
+  assert.match((await r.json() as { error: string }).error, /since/);
 });

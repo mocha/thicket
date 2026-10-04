@@ -49,6 +49,59 @@ export const WINDOW_DAYS = 30;
 /** The most the list holds and the bubble counts; past it the bubble says "100+". */
 export const CAP = 100;
 
+/** How far back `since` may reach when a script asks for a range. The list still holds at most CAP. */
+export const MAX_DAYS = 365;
+export const KINDS = ["follow", "bookmark", "note", "mention"] as const;
+export type Kind = (typeof KINDS)[number];
+
+/**
+ * The part of the list a caller asked for: after `since`, up to and including
+ * `until`, of these kinds (null for all of them).
+ */
+export type Range = { since: string; until: string; kinds: Kind[] | null };
+
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
+
+/**
+ * A point in time as a script would write it: `24h` or `7d` back from now, a
+ * day (`2026-10-01`, its start, or its end when it closes a range), or a full
+ * ISO time. Null when it is none of those.
+ */
+function when(raw: string, now: number, endOfDay: boolean): number | null {
+  const rel = /^(\d{1,4})([hd])$/.exec(raw);
+  if (rel) return now - Number(rel[1]) * (rel[2] === "h" ? HOUR : DAY);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const t = Date.parse(`${raw}T00:00:00Z`);
+    return Number.isNaN(t) ? null : endOfDay ? t + DAY : t;
+  }
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(raw)) return null;
+  const t = Date.parse(raw);
+  return Number.isNaN(t) ? null : t;
+}
+
+/**
+ * `?since=&until=&kind=` on GET /api/notifications, read into a Range, or the
+ * reason it can't be. Without any of them it is the page's own list: the last
+ * WINDOW_DAYS, every kind. A future `until` is now. Pure.
+ */
+export function parseRange(q: { since?: string; until?: string; kind?: string }, now: number): Range | { error: string } {
+  const since = q.since ? when(q.since, now, false) : now - WINDOW_DAYS * DAY;
+  if (since === null) return { error: "since: use a time like 24h, 7d, 2026-10-01 or 2026-10-01T09:00:00Z" };
+  const until = q.until ? when(q.until, now, true) : now;
+  if (until === null) return { error: "until: use a time like 24h, 7d, 2026-10-01 or 2026-10-01T09:00:00Z" };
+  if (since < now - MAX_DAYS * DAY) return { error: `since: notifications go back at most ${MAX_DAYS} days` };
+  if (since >= until) return { error: "since must be before until" };
+  let kinds: Kind[] | null = null;
+  if (q.kind) {
+    const asked = q.kind.split(",").map((k) => k.trim()).filter(Boolean);
+    const bad = asked.filter((k) => !(KINDS as readonly string[]).includes(k));
+    if (bad.length) return { error: `kind: ${bad.join(", ")} is not one of ${KINDS.join(", ")}` };
+    kinds = asked as Kind[];
+  }
+  return { since: new Date(since).toISOString(), until: new Date(Math.min(until, now)).toISOString(), kinds };
+}
+
 export type Person = { id: number; handle: string; displayName: string | null; avatarUpdatedAt: string | null };
 
 /** The author of a bookmark or note, with what decides whether I may see it. */
@@ -95,12 +148,15 @@ const audience = (a: Author): Audience => ({ isMe: false, isFriend: a.followsMe 
 /**
  * Turn candidates into the list I see, newest first: visibility applied,
  * supersession applied, my own acts left out, and each marked new or not
- * against `seenAt`. `since` is the start of the window. Pure.
+ * against `seenAt`. Only what happened after `since` and up to `until`, of
+ * `kinds` when given. `truncated` says the list stopped at CAP with more in
+ * range: ask again with an earlier `until`. Pure.
  */
-export function assemble(meId: number, c: Candidates, opts: { seenAt: string; since: string }): { items: Notification[]; count: number; more: boolean } {
+export function assemble(meId: number, c: Candidates, opts: { seenAt: string; since: string; until?: string; kinds?: Kind[] | null }): { items: Notification[]; count: number; more: boolean; truncated: boolean } {
   const since = Date.parse(opts.since);
   const seen = Date.parse(opts.seenAt);
-  const inWindow = (at: string | null) => !!at && Date.parse(at) > since;
+  const until = opts.until ? Date.parse(opts.until) : Infinity;
+  const inWindow = (at: string | null) => !!at && Date.parse(at) > since && Date.parse(at) <= until;
   const out: Draft[] = [];
 
   for (const f of c.follows) {
@@ -129,10 +185,11 @@ export function assemble(meId: number, c: Candidates, opts: { seenAt: string; si
     }
   }
 
-  out.sort((x, y) => Date.parse(y.at) - Date.parse(x.at) || (x.key < y.key ? -1 : 1));
-  const items = out.slice(0, CAP).map((n) => ({ ...n, isNew: Date.parse(n.at) > seen }) as Notification);
-  const fresh = out.filter((n) => Date.parse(n.at) > seen).length;
-  return { items, count: Math.min(fresh, CAP), more: fresh > CAP };
+  const kept = opts.kinds ? out.filter((n) => opts.kinds!.includes(n.kind)) : out;
+  kept.sort((x, y) => Date.parse(y.at) - Date.parse(x.at) || (x.key < y.key ? -1 : 1));
+  const items = kept.slice(0, CAP).map((n) => ({ ...n, isNew: Date.parse(n.at) > seen }) as Notification);
+  const fresh = kept.filter((n) => Date.parse(n.at) > seen).length;
+  return { items, count: Math.min(fresh, CAP), more: fresh > CAP, truncated: kept.length > CAP };
 }
 
 const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
@@ -160,12 +217,12 @@ const authorOf = (r: AuthorDbRow): Author => ({
  * bookmarks of the people I follow by (user, saved_at), and notes written or
  * edited lately by the partial index on note_updated_at.
  */
-export async function candidatesFor(me: { id: number; handle: string }, since: string): Promise<Candidates> {
+export async function candidatesFor(me: { id: number; handle: string }, since: string, until: string): Promise<Candidates> {
   const follows = await db.execute<{ at: Date; id: number; handle: string; displayName: string | null; avatarUpdatedAt: Date | null; profileVisibility: "public" | "private" }>(sql`
     select uf.created_at as at, fu.id, fu.handle, fu.display_name as "displayName", ua.updated_at as "avatarUpdatedAt", fu.profile_visibility as "profileVisibility"
     from user_follows uf join users fu on fu.id = uf.follower_id
     left join user_avatars ua on ua.user_id = fu.id
-    where uf.followee_id = ${me.id} and uf.created_at > ${since}::timestamptz
+    where uf.followee_id = ${me.id} and uf.created_at > ${since}::timestamptz and uf.created_at <= ${until}::timestamptz
     order by uf.created_at desc limit ${CAP}
   `);
 
@@ -179,7 +236,8 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
     join users u on u.id = b.user_id
     left join user_avatars ua on ua.user_id = u.id
     where mine.follower_id = ${me.id} and b.user_id <> ${me.id}
-      and (b.saved_at > ${since}::timestamptz or b.note_created_at > ${since}::timestamptz)
+      and ((b.saved_at > ${since}::timestamptz and b.saved_at <= ${until}::timestamptz)
+        or (b.note_created_at > ${since}::timestamptz and b.note_created_at <= ${until}::timestamptz))
     order by greatest(b.saved_at, coalesce(b.note_created_at, b.saved_at)) desc limit ${CAP * 3}
   `);
 
@@ -198,7 +256,7 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
     join users u on u.id = b.user_id
     left join user_avatars ua on ua.user_id = u.id
     left join items i on i.id = b.item_id
-    where b.note is not null and b.note_updated_at > ${since}::timestamptz and b.user_id <> ${me.id}
+    where b.note is not null and b.note_updated_at > ${since}::timestamptz and b.note_updated_at <= ${until}::timestamptz and b.user_id <> ${me.id}
       and ${mentionsHandleSql(sql`b.note`, me.handle)}
     order by b.note_updated_at desc limit ${CAP}
   `);
@@ -213,14 +271,19 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
   };
 }
 
-/** My notifications, as of now: the list, how many are new, and the moment it was read (what "seen" may move up to). */
-export async function notificationsFor(me: { id: number; handle: string }) {
+/**
+ * My notifications, as of now: the list, how many are new, and the moment it
+ * was read (what "seen" may move up to). The last WINDOW_DAYS of every kind,
+ * or the `range` a caller asked for (parseRange).
+ */
+export async function notificationsFor(me: { id: number; handle: string }, range?: Range) {
   const [row] = (await db.execute<{ seenAt: Date; now: Date }>(sql`
     select notifications_seen_at as "seenAt", now() as now from users where id = ${me.id}
   `)).rows;
   const asOf = iso(row.now)!;
-  const since = new Date(Date.parse(asOf) - WINDOW_DAYS * 86_400_000).toISOString();
+  const since = range?.since ?? new Date(Date.parse(asOf) - WINDOW_DAYS * DAY).toISOString();
+  const until = range?.until ?? asOf;
   const seenAt = iso(row.seenAt)!;
-  const c = await candidatesFor(me, since);
-  return { ...assemble(me.id, c, { seenAt, since }), seenAt, asOf };
+  const c = await candidatesFor(me, since, until);
+  return { ...assemble(me.id, c, { seenAt, since, until, kinds: range?.kinds }), seenAt, asOf, since, until };
 }

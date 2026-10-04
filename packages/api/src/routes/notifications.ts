@@ -13,14 +13,21 @@ import { Hono } from "hono";
 import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
-import { notificationsFor } from "../lib/notifications.js";
+import { notificationsFor, parseRange } from "../lib/notifications.js";
 
 export const notifications = new Hono();
 
+/**
+ * The list. With no query it is what the page shows: the last 30 days. A
+ * script can narrow it with `since`, `until` and `kind` (lib/notifications.ts
+ * parseRange); `truncated` says it stopped at 100 with more in range.
+ */
 notifications.get("/", async (c) => {
   const me = currentUser(c);
-  const r = await notificationsFor(me);
-  return c.json({ items: r.items, count: r.count, more: r.more, seenAt: r.seenAt, asOf: r.asOf });
+  const range = parseRange({ since: c.req.query("since"), until: c.req.query("until"), kind: c.req.query("kind") }, Date.now());
+  if ("error" in range) return c.json({ error: range.error }, 400);
+  const r = await notificationsFor(me, range);
+  return c.json({ items: r.items, count: r.count, more: r.more, truncated: r.truncated, since: r.since, until: r.until, seenAt: r.seenAt, asOf: r.asOf });
 });
 
 /** How many are new, for the bubble. Counted the same way as the list, up to 100 (`more` past that). */
