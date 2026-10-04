@@ -107,6 +107,11 @@ export const ENDPOINTS: Endpoint[] = [
   { method: "GET", path: "/api/explore/collections", tag: "People", summary: "Shared collections on this instance.", query: { q: "Filter by name.", network: "1 for only collections by people I follow.", ...OFFSET } },
   { method: "GET", path: "/api/explore/users", tag: "People", summary: "People with public profiles on this instance.", query: { q: "Filter by name or handle.", ...OFFSET } },
   { method: "GET", path: "/api/explore/featured", tag: "People", summary: "The collections this instance suggests to newcomers." },
+
+  // ---- notifications
+  { method: "GET", path: "/api/notifications", tag: "Notifications", summary: "What happened in the last 30 days that concerns me, newest first, at most 100: new followers, posts bookmarked and notes written by people I follow, and notes that @mention me. Each says whether it is new since I last looked. Reading does not mark anything seen." },
+  { method: "GET", path: "/api/notifications/count", tag: "Notifications", summary: "How many notifications are new since I last looked, up to 100 (`more` is true past that)." },
+  { method: "POST", path: "/api/notifications/seen", tag: "Notifications", summary: "Mark notifications seen up to a time: the `asOf` the list came with, or now.", body: { "upTo?": "An ISO time, normally the list's `asOf`. Default now." } },
 ];
 
 const NUMERIC = new Set(["id", "feedId", "itemId"]);
@@ -171,7 +176,7 @@ export function openApiDocument(serverUrl: string) {
       ].join("\n"),
     },
     servers: [{ url: serverUrl }],
-    tags: ["Account", "Reading", "Feeds", "Collections", "Bookmarks and notes", "People"].map((name) => ({ name })),
+    tags: ["Account", "Reading", "Feeds", "Collections", "Bookmarks and notes", "People", "Notifications"].map((name) => ({ name })),
     paths,
     components: {
       securitySchemes: {

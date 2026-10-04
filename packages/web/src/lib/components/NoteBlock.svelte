@@ -2,7 +2,8 @@
   /**
    * One note under a post: mine ("My note:") or someone's ("@bob's note:").
    * Shows three lines, then "Show more" slides the rest out. Mine has Edit.
-   * Rendering is our own safe Markdown subset (lib/markdown.ts).
+   * Rendering is our own safe Markdown subset (lib/markdown.ts), where an
+   * @mention of someone with an account links to their profile.
    *
    * On a searched list the caller passes `marked`: the note's text with the
    * matched words fenced (lib/words.ts). They are drawn highlighted, and if the
@@ -18,7 +19,7 @@
   let expanded = $state(false);
   let body = $state<HTMLElement | null>(null);
   let overflows = $state(false);
-  const html = $derived(marked ? highlightHtml(renderMarkdown(marked)) : renderMarkdown(note.body));
+  const html = $derived(marked ? highlightHtml(renderMarkdown(marked, note.mentions)) : renderMarkdown(note.body, note.mentions));
   const edited = $derived(new Date(note.updatedAt).getTime() - new Date(note.createdAt).getTime() > 60_000);
   const author = $derived('author' in note ? note.author : null);
 

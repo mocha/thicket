@@ -3,7 +3,9 @@
  * My note on a post. One per post; edits keep createdAt and move updatedAt. A
  * note is part of a bookmark (issue #84), so its id is the bookmark's.
  */
-export type Note = { id: number; body: string; createdAt: string; updatedAt: string };
+export type Note = { id: number; body: string; createdAt: string; updatedAt: string;
+  /** The people the note @mentions who have an account, lowercase, so their names can link to them (issue #184). */
+  mentions?: string[] };
 /** A note just written: writing one saves the post, so this says which bookmark holds it. */
 export type SavedNote = Note & { bookmarkId: number };
 export type PublicNote = Note & { author: { handle: string; displayName: string | null } };
@@ -255,6 +257,35 @@ export const NOTE_MAX = 2000;
 export const notesApi = {
   write: (itemId: number, body: string) => j<SavedNote>(`/api/notes/items/${itemId}`, { method: 'PUT', body: JSON.stringify({ body }) }),
   remove: (itemId: number) => j<void>(`/api/notes/items/${itemId}`, { method: 'DELETE' }),
+};
+
+// ---- notifications (issue #184) ----------------------------------------------
+
+/** Who a notification is about. */
+export type NotificationPerson = { handle: string; displayName: string | null; avatarUpdatedAt: string | null };
+/** A post, as a one-line notification names it. */
+export type NotificationPost = { url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean };
+/**
+ * One thing that happened, newest first. Derived on the server from follows,
+ * bookmarks and notes, so anything undone simply drops out. `isNew`: it
+ * happened after I last looked. `key` is stable across loads.
+ *   follow    `person` started following me
+ *   bookmark  `person` (someone I follow) bookmarked `post`
+ *   note      `person` (someone I follow) wrote a note on `post`
+ *   mention   `person` @mentioned me in the note on `bookmark`
+ */
+export type Notification =
+  | { kind: 'follow'; key: string; at: string; isNew: boolean; person: NotificationPerson }
+  | { kind: 'bookmark' | 'note'; key: string; at: string; isNew: boolean; person: NotificationPerson; post: NotificationPost }
+  | { kind: 'mention'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark };
+
+export const notificationsApi = {
+  /** The last 30 days, at most 100. Reading does not mark them seen; `asOf` is what to pass to `seen`. */
+  list: () => j<{ items: Notification[]; count: number; more: boolean; seenAt: string; asOf: string }>('/api/notifications'),
+  /** How many are new, for the bubble: up to 100, `more` past that. */
+  count: () => j<{ count: number; more: boolean }>('/api/notifications/count'),
+  /** I've looked, up to `upTo` (the list's `asOf`). */
+  seen: (upTo: string) => j<{ seenAt: string }>('/api/notifications/seen', { method: 'POST', body: JSON.stringify({ upTo }) }),
 };
 
 export type BookmarkSources = {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import '../app.css';
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import Nav from '$lib/components/Nav.svelte';
@@ -15,6 +15,7 @@
   import { session, loadMe, isPublicPath } from '$lib/session.svelte';
   import { display, loadDisplay, watchDisplay } from '$lib/display.svelte';
   import { watchMarks } from '$lib/marks.svelte';
+  import { watchNotifs, loadNotifs } from '$lib/notifications.svelte';
   import { watchBackForward } from '$lib/listmemory';
   import Wordmark from '$lib/components/Wordmark.svelte';
   let { children } = $props();
@@ -71,6 +72,9 @@
 
   // "What's new" counts, only while this device has the option on and someone is signed in.
   $effect(() => { if (signedIn && display.fresh) return watchMarks(); });
+  // The Notifications bubble: whenever someone is signed in, recounted on each move between pages (at most once a minute).
+  $effect(() => { if (signedIn) return watchNotifs(); });
+  $effect(() => { void path; if (signedIn) untrack(() => void loadNotifs()); });
 </script>
 
 <svelte:head><title>thicket</title></svelte:head>

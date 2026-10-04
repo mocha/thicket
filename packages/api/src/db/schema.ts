@@ -84,6 +84,15 @@ export const users = pgTable("users", {
   email: text("email"),
   /** When the owner clicked the confirmation link. Resets only go to a confirmed address. */
   emailConfirmedAt: timestamp("email_confirmed_at", { withTimezone: true }),
+  /**
+   * How far down Notifications I have looked (issue #184): anything newer is
+   * "new" and counts toward the sidebar bubble. Notifications themselves are
+   * not stored; they are derived from follows, bookmarks and notes
+   * (lib/notifications.ts), so this one time is all the feature keeps. Starts
+   * at the moment the account (or, for older accounts, the column) was made,
+   * so nobody opens the app to a backlog they never asked for.
+   */
+  notificationsSeenAt: timestamp("notifications_seen_at", { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   /** Trigram GIN for fuzzy handle search (drizzle/0007). */
@@ -505,6 +514,8 @@ export const bookmarks = pgTable("bookmarks", {
   /** Finding the notes under a post: by its address, or by the post itself when it has none. */
   index("bookmarks_noted_url_idx").on(t.url).where(sql`${t.note} is not null`),
   index("bookmarks_noted_item_idx").on(t.itemId).where(sql`${t.note} is not null`),
+  /** Notes written or edited lately: the only ones Notifications reads for @mentions (lib/notifications.ts). */
+  index("bookmarks_noted_updated_idx").on(t.noteUpdatedAt).where(sql`${t.note} is not null`),
 ]);
 
 /**
