@@ -55,14 +55,16 @@ export type ParsedFeed = {
 const SUMMARY_LEN = 280;
 
 /**
- * A declared language reduced to its bare code: "en-US", "en_gb" and "EN" are
+ * A declared language reduced to its bare code: "en-US", "en_gb", "EN" and "eng" are
  * all "en". Anything that isn't shaped like a language tag ("English",
  * "x-default", "un") is null rather than a guess.
  */
 export function feedLanguage(declared: unknown): string | null {
   if (typeof declared !== "string") return null;
   const m = /^\s*([a-z]{2,3})(?:[-_][a-z0-9]{1,8})*\s*$/i.exec(declared);
-  const code = m?.[1].toLowerCase() ?? null;
+  let code = m?.[1].toLowerCase() ?? null;
+  // Three-letter codes ("eng", "ger") come down to the two-letter ones where there is one: the same language either way.
+  if (code?.length === 3) { try { code = Intl.getCanonicalLocales(code)[0]; } catch { /* not a language: judged below as written */ } }
   return code && code !== "un" && code !== "und" ? code : null;
 }
 

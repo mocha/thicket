@@ -9,8 +9,9 @@ import { feedLanguage, parseFeedDocument } from "./parse.js";
 const url = "https://blog.example.com/feed";
 
 test("a declared language comes down to its bare code", () => {
-  for (const tag of ["en", "en-US", "en-us", "en_GB", "EN", " en-gb ", "en-en"]) assert.equal(feedLanguage(tag), "en", tag);
+  for (const tag of ["en", "en-US", "en-us", "en_GB", "EN", " en-gb ", "en-en", "eng", "ENG", "eng-US"]) assert.equal(feedLanguage(tag), "en", tag);
   assert.equal(feedLanguage("de-DE"), "de");
+  assert.equal(feedLanguage("ger"), "de");
   assert.equal(feedLanguage("zh-Hant-TW"), "zh");
 });
 
