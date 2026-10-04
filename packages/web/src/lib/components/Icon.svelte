@@ -1,6 +1,6 @@
 <script lang="ts">
   interface Props {
-    name: 'gear' | 'pencil' | 'close' | 'caret' | 'back' | 'dots' | 'bookmark' | 'note' | 'search' | 'check' | 'key' | 'import' | 'copy';
+    name: 'gear' | 'pencil' | 'close' | 'caret' | 'back' | 'dots' | 'bookmark' | 'note' | 'search' | 'check' | 'key' | 'import' | 'copy' | 'eye' | 'eye-off';
     size?: number;
     stroke?: number;
     /** Paint the shape solid instead of outlining it: the on state of a toggle. */
@@ -59,6 +59,14 @@
   {:else if name === 'copy'}
     <rect x="8" y="8" width="13" height="13" rx="2" />
     <path d="M5 16H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1" />
+  {:else if name === 'eye'}
+    <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+    <circle cx="12" cy="12" r="3" />
+  {:else if name === 'eye-off'}
+    <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
+    <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
+    <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
+    <path d="m2 2 20 20" />
   {:else if name === 'note'}
     <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H10l-5 4v-4H5.5A1.5 1.5 0 0 1 4 14.5z" />
   {/if}

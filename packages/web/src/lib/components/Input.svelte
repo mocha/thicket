@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { tick, type Snippet } from 'svelte';
   import Icon from './Icon.svelte';
   import IconButton from './IconButton.svelte';
   import { modality } from '$lib/focus.svelte';
@@ -28,6 +28,13 @@
    * when focus arrived by keyboard, so clicking into a field no longer looks
    * like tabbing into one. See lib/focus.svelte.ts.
    *
+   * Every password field can be shown. An eye at the end of the box switches
+   * it between dots and plain text, so you can check what you typed on a phone.
+   * It is a real toggle button ("Show password" / "Hide password", announced
+   * as pressed while the password is showing), it keeps your cursor and what
+   * you typed where they were, and it is on for every `type="password"` field
+   * unless the caller passes `revealable={false}`.
+   *
    * `leading` and `trailing` put your own thing inside the box, before or after
    * the text — the "@" in front of a handle, a Create button after a name. Set
    * `--field-gap` to tighten the space beside a text prefix.
@@ -44,6 +51,8 @@
     /** The clear X, on by default. Off only for a field that must not be emptied. */
     clearable?: boolean;
     onclear?: () => void;
+    /** The show/hide eye on a password field, on by default. Ignored for other types. */
+    revealable?: boolean;
     /** Sit on the page background instead of the raised surface. */
     inset?: boolean;
     leading?: Snippet;
@@ -69,6 +78,7 @@
     readonly = false,
     clearable = true,
     onclear,
+    revealable = true,
     inset = false,
     leading,
     trailing,
@@ -87,6 +97,33 @@
   /* A search box asks for the search keyboard unless told otherwise. We draw
      our own clear button, so the browser's is hidden in the styles below. */
   const kind = $derived(type ?? (variant === 'search' ? 'search' : 'text'));
+
+  /* A password field carries the eye; pressing it shows the password as plain
+     text until it is pressed again. */
+  const canReveal = $derived(revealable && type === 'password' && !disabled);
+  let revealed = $state(false);
+  const shownType = $derived(canReveal && revealed ? 'text' : kind);
+
+  /* Where the cursor was when the eye was pressed, if it was in the field.
+     Swapping the field's type can drop the cursor, and on a phone the tap can
+     move focus to the button, so both are put back afterwards. A keyboard
+     press leaves focus on the eye, where the person pressing it put it. */
+  let caret: { start: number | null; end: number | null } | null = null;
+  function noteCaret() {
+    caret = element && document.activeElement === element
+      ? { start: element.selectionStart, end: element.selectionEnd }
+      : null;
+  }
+  async function toggleReveal(e: MouseEvent) {
+    /* A click from Enter or Space has no click count. */
+    const keep = e.detail === 0 ? null : caret;
+    caret = null;
+    revealed = !revealed;
+    if (!keep || !element) return;
+    await tick();
+    element.focus();
+    try { element.setSelectionRange(keep.start, keep.end); } catch { /* nothing to restore */ }
+  }
 
   const glyph = $derived(size === 'sm' ? 15 : 20);
 
@@ -154,6 +191,7 @@
   class:inset
   class:hasclear={showClear}
   class:hastrail={!!trailing}
+  class:hasreveal={canReveal}
   {style}
   onmousedown={pressed}
   role="presentation"
@@ -164,7 +202,7 @@
   {#if leading}<span class="lead">{@render leading()}</span>{/if}
   <input
     bind:this={element}
-    type={kind}
+    type={shownType}
     {value}
     {disabled}
     {readonly}
@@ -177,6 +215,19 @@
   />
   {#if showClear}
     <IconButton class="clear" icon="close" size="sm" label="Clear" onclick={clear} />
+  {/if}
+  {#if canReveal}
+    <IconButton
+      class="reveal"
+      icon={revealed ? 'eye-off' : 'eye'}
+      size="sm"
+      iconSize={size === 'sm' ? 14 : 16}
+      label={revealed ? 'Hide password' : 'Show password'}
+      aria-pressed={revealed}
+      onpointerdown={noteCaret}
+      onmousedown={(e: MouseEvent) => e.preventDefault()}
+      onclick={toggleReveal}
+    />
   {/if}
   {#if trailing}{@render trailing()}{/if}
 </div>
@@ -211,6 +262,9 @@
   /* A button living inside the box brings its own height and its own edge, so
      the box tightens around it rather than framing it in white space. */
   .hastrail { padding: var(--space-1); padding-left: var(--space-4); }
+  /* The eye is the last thing in the box, so the box tightens around it the
+     same way it does for the clear X. */
+  .hasreveal { padding-right: var(--space-2); }
   .sm.hastrail { padding: var(--space-1); padding-left: var(--space-3); }
 
   input {
@@ -234,6 +288,8 @@
   input::placeholder { color: var(--placeholder); opacity: 1; }
   /* We draw our own clear button; hide the browser's so there aren't two. */
   input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+  /* Same for Edge's own show-password eye: ours is the one that works everywhere. */
+  input::-ms-reveal { display: none; }
 
   /* What sits beside the text reads as part of the hint, not as typed text,
      and pressing it types, so it shows the typing cursor. */
@@ -267,6 +323,10 @@
   @media (pointer: coarse) {
     /* And the small size is still a full 44px to tap. */
     .wrap.sm { min-height: 44px; }
+    /* The clear X and the eye each get a 44px touch area around a 24px circle
+       (see `.tap` in app.css), so with both showing they sit far enough apart
+       that the two areas don't overlap. */
+    .hasclear.hasreveal :global(.reveal) { margin-left: var(--space-3); }
     input, .sm input { font-size: max(16px, calc(var(--text-base) * var(--size-app))); }
   }
 </style>
