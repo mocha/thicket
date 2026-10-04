@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { proxy } from "hono/proxy";
 import { logger } from "hono/logger";
@@ -63,25 +63,30 @@ app.notFound((c) => (c.req.path.startsWith("/api/") ? c.json({ error: "not found
 
 /**
  * readthicket.com's own site (SITE_URL): what it serves, by path. "/" is its
- * landing page; /_site/ holds its built files (the app's own are under /_app/).
- * New pages there are added here too. If the site can't be reached, "/" falls
- * through to the app's own front page, which sends people into the app.
+ * landing page, then About and Contact; /_site/ holds its built files (the
+ * app's own are under /_app/). New pages there are added here too, and
+ * Contact's form sends to /contact/send. If the site can't be reached, "/"
+ * falls through to the app's own front page, which sends people into the app.
  */
-const SITE_PATHS = ["/", "/_site/*"];
+const SITE_PATHS = ["/", "/about", "/contact", "/_site/*"];
+const SITE_POSTS = ["/contact/send"];
 if (SITE_URL) {
-  app.on(["GET", "HEAD"], SITE_PATHS, async (c, next) => {
+  const toSite: MiddlewareHandler = async (c, next) => {
     const url = new URL(c.req.url);
     try {
       return await proxy(`${SITE_URL}${url.pathname}${url.search}`, {
+        raw: c.req.raw,
         headers: { ...c.req.header(), host: undefined, "x-forwarded-host": url.host, "x-forwarded-proto": c.req.header("x-forwarded-proto") ?? url.protocol.replace(":", "") },
         signal: AbortSignal.timeout(10_000),
       });
     } catch (err) {
-      console.error(`[site] ${url.pathname}: ${err instanceof Error ? err.message : err}`);
-      if (url.pathname !== "/") return c.text("unavailable", 502);
+      console.error(`[site] ${c.req.method} ${url.pathname}: ${err instanceof Error ? err.message : err}`);
+      if (url.pathname !== "/" || c.req.method === "POST") return c.text("unavailable", 502);
       await next();
     }
-  });
+  };
+  app.on(["GET", "HEAD"], SITE_PATHS, toSite);
+  app.on("POST", SITE_POSTS, toSite);
 }
 
 if (WEB_DIR) {

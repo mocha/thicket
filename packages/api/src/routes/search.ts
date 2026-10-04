@@ -18,7 +18,7 @@
  * feed mentions the words over the last 30 days, counted exactly per feed.
  */
 import { Hono } from "hono";
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { allowsSql } from "../lib/visibility.js";
 import { myBookmarkIdSql } from "../lib/notes.js";
@@ -160,6 +160,72 @@ const feedEvidence = (q: string) => sql`
   )`;
 
 /**
+ * The orders a reader can put the feed results in (issue 182). Each is a fact
+ * about the feed that can be checked, not a score: the newest post that
+ * mentions the words, the newest post of any kind, how many posts mentioned the
+ * words in the last 90 days, and how many posts there were in the last 90 days.
+ *
+ * "about" is the default because it is the nearest of the four to the
+ * relevance order this list used to have. Changing the default is this one
+ * line and its twin, DEFAULT_FEED_SORT in the web app's lib/api.ts.
+ */
+export const FEED_SORTS = ["mentioned", "posted", "about", "active"] as const;
+export type FeedSort = (typeof FEED_SORTS)[number];
+export const DEFAULT_FEED_SORT: FeedSort = "about";
+/** Anything that isn't one of the four, including nothing, is the default. */
+export const feedSortFrom = (v: string | null | undefined): FeedSort =>
+  (FEED_SORTS as readonly string[]).includes(v ?? "") ? (v as FeedSort) : DEFAULT_FEED_SORT;
+
+/**
+ * Posts in the last 90 days that mention the words, per feed. One pass over the
+ * matching posts, bounded by date: the text index finds the matches and the
+ * date bound cuts them to the window, so no feed's older history is read.
+ */
+const recentMentions = (q: string) => sql`
+  recent as (
+    select i.feed_id, count(*)::int as n from items i
+    where i.search @@ websearch_to_tsquery('english', ${q}) and i.published_at > now() - interval '90 days'
+    group by i.feed_id
+  )`;
+
+/**
+ * The value each order sorts on, worked out for every candidate feed (a sort
+ * has to see them all). Each one is a bounded read:
+ *  - mentioned: read off the sample, where it is exact (the sample is the
+ *    newest hits, so a feed in it has its newest hit in it). A feed outside the
+ *    sample has no mention newer than everything in it, so it belongs at the
+ *    tail either way, where the score orders it instead of a lookup: for a
+ *    feed found by name that never mentions the words, that lookup would
+ *    read the feed's whole history.
+ *  - posted: a column on the feed, kept current as posts arrive.
+ *  - about: the date-bounded tally above, joined in.
+ *  - active: this feed's last 90 days, read off the (feed, date) index alone.
+ */
+const SORT_KEY: Record<FeedSort, SQL> = {
+  mentioned: sql`a.last_match`,
+  posted: sql`f.last_item_at`,
+  about: sql`coalesce(r.n, 0)`,
+  active: sql`(select count(*)::int from items i where i.feed_id = f.id and i.published_at > now() - interval '90 days')`,
+};
+
+/**
+ * How each order sorts, ahead of the relevance score that breaks ties.
+ *
+ * For the two orders about the words (mentioned, about), feeds that are here
+ * only because their name or description matches come after every feed with a
+ * post that mentions the words: they have no mention to be recent or many.
+ * The two orders about the feed itself (posted, active) sort every feed
+ * together, name matches included, since how much and how lately a feed posts
+ * is true of it whatever its posts are about.
+ */
+const SORT_ORDER: Record<FeedSort, SQL> = {
+  mentioned: sql`s.sort_key desc nulls last,`,
+  posted: sql`s.sort_key desc nulls last,`,
+  about: sql`s.sort_key desc, (s.matches > 0) desc,`,
+  active: sql`s.sort_key desc,`,
+};
+
+/**
  * Feeds, ranked by density. ln(1 + matches) says "there is enough here to be
  * real" without letting 400 matches beat 40 by ten times; the smoothed share
  * says "and it is a lot of what they do", with the +25 stopping a three-post
@@ -172,8 +238,12 @@ const feedEvidence = (q: string) => sql`
  * name both multiplies whatever post evidence exists and carries a floor of its
  * own, which is what lets a feed with a matching name and no matching posts
  * place among the results instead of below all of them.
+ *
+ * That score no longer orders the list on its own. A density order read as no
+ * order at all to the people using it (issue 182), so the list is sorted by a
+ * plain fact the reader picks (see FeedSort) and the score only breaks ties.
  */
-async function searchFeeds(q: string, userId: number, limit: number, offset: number, net: number[] | null = null) {
+async function searchFeeds(q: string, userId: number, limit: number, offset: number, net: number[] | null = null, sort: FeedSort = DEFAULT_FEED_SORT) {
   const like = likeFor(q);
   const named = sql`coalesce((f.title ilike ${like} or f.description ilike ${like} or f.url ilike ${like} or f.site_url ilike ${like} or ${q} <% coalesce(f.title, '')), false)`;
   /** 0 to 1. The title is worth most; a description or URL hit is weaker evidence. */
@@ -183,13 +253,14 @@ async function searchFeeds(q: string, userId: number, limit: number, offset: num
     (case when f.description ilike ${like} then 0.35 else 0 end)::real,
     (case when f.url ilike ${like} or f.site_url ilike ${like} then 0.3 else 0 end)::real)`;
   const base = sql`
-    with ${feedEvidence(q)}
+    with ${feedEvidence(q)}${sort === "about" ? sql`, ${recentMentions(q)}` : sql``}
     , cand as (
       select f.id, coalesce(a.matches, 0) as matches, coalesce(a.weight, 0) as weight, a.last_match,
              coalesce(a.posts, (select count(*)::numeric from items i2 where i2.feed_id = f.id)) as posts,
              ${named} as name_match,
-             ${strength} as name_score
-      from feeds f left join feedw a on a.feed_id = f.id
+             ${strength} as name_score,
+             ${SORT_KEY[sort]} as sort_key
+      from feeds f left join feedw a on a.feed_id = f.id${sort === "about" ? sql` left join recent r on r.feed_id = f.id` : sql``}
       where (a.feed_id is not null or ${named})${net ? sql` and ${feedInNetwork("f.id", net)}` : sql``}
     )
     , scored as (
@@ -225,7 +296,7 @@ async function searchFeeds(q: string, userId: number, limit: number, offset: num
            exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon",
            coalesce((select array_agg(cf.collection_id order by cf.collection_id) from collection_feeds cf join collections col on col.id = cf.collection_id and col.user_id = ${userId} where cf.feed_id = f.id), '{}') as "myCollectionIds"
     from scored s join feeds f on f.id = s.id
-    order by s.score desc, s.name_score desc nulls last, s.posts desc, f.id
+    order by ${SORT_ORDER[sort]} s.score desc, s.name_score desc nulls last, s.posts desc, f.id
     limit ${limit + 1} offset ${offset}
   `);
   const page = rows.rows.slice(0, limit).map((r: any) => ({ ...r, id: Number(r.id), lastMatchAt: iso(r.lastMatchAt), lastItemAt: iso(r.lastItemAt) }));
@@ -392,6 +463,8 @@ search.get("/", async (c) => {
 
   // "People I follow": null = filter off; a (possibly empty) id list = filter on.
   const net = c.req.query("network") === "1" ? await followSet(viewerId) : null;
+  // The order is a choice on the Feeds list alone; Everything's short feed preview keeps the default.
+  const feedSort = scope === "feeds" ? feedSortFrom(c.req.query("sort")) : DEFAULT_FEED_SORT;
 
   /**
    * Every scope reports every total, so the scope chips can say how much sits
@@ -403,7 +476,7 @@ search.get("/", async (c) => {
   const take = (kind: keyof typeof PREVIEW) => (!want(kind) ? 1 : scope === "all" ? PREVIEW[kind] : limit);
   const from = (kind: Scope) => (want(kind) && scope !== "all" ? offset : 0);
   const [feeds, collections, posts, people] = await Promise.all([
-    searchFeeds(q, viewerId ?? -1, take("feeds"), from("feeds"), net),
+    searchFeeds(q, viewerId ?? -1, take("feeds"), from("feeds"), net, feedSort),
     searchCollections(q, viewerId, take("collections"), from("collections"), net),
     searchPosts(q, viewerId, take("posts"), from("posts"), net),
     searchPeople(q, viewerId, take("people"), from("people")),
@@ -413,7 +486,7 @@ search.get("/", async (c) => {
   // The answer depends on who is asking; a shared cache must key on the cookie.
   c.header("vary", "cookie");
   return c.json({
-    q, scope,
+    q, scope, sort: feedSort,
     feeds: trim(feeds, "feeds"),
     collections: trim(collections, "collections"),
     posts: trim(posts, "posts"),

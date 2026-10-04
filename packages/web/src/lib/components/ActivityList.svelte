@@ -93,7 +93,7 @@
     {:else if entries === null}
       <div class="pad"><p class="status">Loading…</p></div>
     {:else if entries.length === 0}
-      <div class="pad"><p class="status">{isMe ? 'Follow a feed, save a post or write a note and it shows up here.' : 'Nothing to show yet.'}</p></div>
+      <div class="pad"><p class="status">{isMe ? 'Follow a feed, bookmark a post or write a note and it shows up here.' : 'Nothing to show yet.'}</p></div>
     {:else}
       <ul class="acts">
       {#each visible as e (key(e))}
@@ -132,7 +132,7 @@
             <div class="row">
               <SourceIcon feedId={e.payload.feedId} hasIcon={e.payload.hasIcon} name={e.payload.siteTitle ?? e.payload.title} size={20} />
               <p class="what">
-                Saved <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel="noopener">{e.payload.title ?? e.payload.url}</a>
+                Bookmarked <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel="noopener">{e.payload.title ?? e.payload.url}</a>
                 <span class="src">{e.payload.siteTitle ?? hostOf(e.payload.url)}</span>
               </p>
               <span class="when">{relativeTime(e.at)}</span>
