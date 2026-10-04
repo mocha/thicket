@@ -286,6 +286,6 @@ function snapshot(): Display {
 }
 
 export const FRESH_OPTIONS: { id: 'on' | 'off'; label: string; note: string }[] = [
-  { id: 'off', label: 'Off', note: 'No counts and no New tags. Each collection just lists its posts, newest first.' },
-  { id: 'on', label: 'On', note: 'Beside each collection, a count of the posts that arrived since you last read it. Inside, those posts are tagged New. Read down to where they end and the count clears.' }
+  { id: 'off', label: 'Off', note: 'Do not show a count of new posts next to each collection.' },
+  { id: 'on', label: 'On', note: 'Show a count of unread posts next to each collection.' }
 ];

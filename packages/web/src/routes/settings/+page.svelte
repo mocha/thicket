@@ -65,9 +65,9 @@
 </section>
 
 <section class="card">
-  <h2>New post counts</h2>
-  <Tiles name="New post counts" options={FRESH_OPTIONS} value={display.fresh ? 'on' : 'off'} art={FRESH_ART} notes onchange={(v) => choose({ fresh: v === 'on' }, 'fresh')} />
-  <p class="fine">These counts are kept in your browser, not your account, so each device keeps its own. As you scroll a collection, your browser marks the newest post you’ve passed, and “new” means everything that’s arrived since. A collection you haven’t opened on this device starts from a day ago, so it shows today’s posts instead of a long backlog. None of this reaches our servers — not your spot in a collection, not which posts you open or read.</p>
+  <h2>Unread posts</h2>
+  <Tiles name="Unread posts" options={FRESH_OPTIONS} value={display.fresh ? 'on' : 'off'} art={FRESH_ART} notes onchange={(v) => choose({ fresh: v === 'on' }, 'fresh')} />
+  <p class="fine">Keep track of how many new posts are in each collection and show me a count in the sidebar.</p>
 </section>
 
 <section class="card">
