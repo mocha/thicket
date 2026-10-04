@@ -39,3 +39,10 @@ test("JSON Feed: language", () => {
   assert.equal(json(`,"language":"en-GB"`).language, "en");
   assert.equal(json("").language, null);
 });
+
+test("a NUL character in a post is dropped, not stored", () => {
+  const doc = `<?xml version="1.0"?><rss version="2.0"><channel><title>t</title><link>https://blog.example.com/</link><description>d</description><item><title>x\u0000y</title><link>https://blog.example.com/1</link><description>before\u0000after</description></item></channel></rss>`;
+  const [item] = parseFeedDocument(doc, url).items;
+  assert.equal(item.title, "xy");
+  assert.equal(item.summary, "beforeafter");
+});

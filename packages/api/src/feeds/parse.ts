@@ -223,6 +223,10 @@ function mediaDescription(media: any): string | null {
 }
 
 export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
+  // A NUL character means nothing in a feed, and Postgres refuses it in text: one
+  // stray 0x00 in one post failed the insert of every post in the feed with it
+  // (fritzenlab.net, 2026-10-04). Gone before anything reads the document.
+  text = text.replace(/\u0000/g, "");
   const { format, feed } = parseFeed(text);
   const items: ParsedItem[] = [];
 
