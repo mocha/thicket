@@ -474,6 +474,8 @@ export const profilesApi = {
   get: (handle: string) => j<Profile>(`/api/profiles/${encodeURIComponent(handle)}`),
   /** The people this person follows (public profiles only). */
   following: (handle: string) => j<{ owner: PublicUser; isMe: boolean; users: PublicUser[] }>(`/api/profiles/${encodeURIComponent(handle)}/following`),
+  /** The people who follow me (public profiles only). Mine alone: any other handle is a 404. */
+  followers: (handle: string) => j<{ users: PublicUser[] }>(`/api/profiles/${encodeURIComponent(handle)}/followers`),
   follow: (handle: string) => j<{ handle: string; isFollowing: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/follow`, { method: 'POST' }),
   unfollow: (handle: string) => j<{ handle: string; isFollowing: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/follow`, { method: 'DELETE' }),
   collection: (handle: string, slug: string) => j<PublicCollection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}`),
