@@ -20,6 +20,7 @@
   import { marks, loadMarks, anchorFor, advance, begin, recount, countText } from '$lib/marks.svelte';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import VisitorMore from './VisitorMore.svelte';
+  import ExploreMore from './ExploreMore.svelte';
   import Button from '$lib/components/Button.svelte';
   import { recall, keepOnLeave } from '$lib/listmemory';
 
@@ -258,25 +259,35 @@
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
   });
   // Keep the current page in range when the frame changes size.
-  $effect(() => { if (paged && items.length && pageIndex * perPage >= items.length) pageIndex = Math.max(0, Math.ceil(items.length / perPage) - 1); });
+  $effect(() => { if (paged && slots && pageIndex * perPage >= slots) pageIndex = Math.max(0, Math.ceil(slots / perPage) - 1); });
 
+  /**
+   * Someone signed in who has reached the oldest post gets a pointer to
+   * Explore at the very end. A visitor held to the newest posts gets
+   * VisitorMore there instead.
+   */
+  const endsInExplore = $derived(done && !cappedAt && items.length > 0 && !!session.user);
+  const endFrom = $derived(feed !== null ? 'feed' : collection !== null ? 'collection' : 'everything');
+  /** In pages the pointer takes one card's place after the last post, so the frame never cuts it off. */
+  const slots = $derived(items.length + (endsInExplore ? 1 : 0));
   const pageItems = $derived(paged ? items.slice(pageIndex * perPage, (pageIndex + 1) * perPage) : []);
+  const endOnPage = $derived(paged && endsInExplore && items.length >= pageIndex * perPage && items.length < (pageIndex + 1) * perPage);
   const canPrev = $derived(pageIndex > 0);
-  const canNext = $derived((pageIndex + 1) * perPage < items.length || (!done && !cappedAt));
+  const canNext = $derived((pageIndex + 1) * perPage < slots || (!done && !cappedAt));
   const pageLabel = $derived.by(() => {
-    if (!pageItems.length) return '';
+    if (!pageItems.length) return endOnPage ? 'The end' : '';
     const today = dayKey(new Date());
     const clamp = (k: string) => (k > today ? today : k); // future-dated posts ride along with today's
     const first = dayLabel(clamp(dayKey(new Date(pageItems[0].publishedAt))));
     const last = dayLabel(clamp(dayKey(new Date(pageItems[pageItems.length - 1].publishedAt))));
     return first === last ? first : `${first} – ${last}`;
   });
-  const pageCount = $derived(Math.ceil(items.length / perPage));
+  const pageCount = $derived(Math.ceil(slots / perPage));
 
   async function nextPage() {
     if ((pageIndex + 1) * perPage >= items.length) {
       await loadMore();
-      if ((pageIndex + 1) * perPage >= items.length) return;
+      if ((pageIndex + 1) * perPage >= slots) return;
     }
     pageIndex++;
     api.event('page_turned', { direction: 'next', page: pageIndex });
@@ -290,12 +301,13 @@
 
 {#if paged}
   <section class="river paged" bind:this={frame} style:height="{frameH}px">
-    {#if pageItems.length}
+    {#if pageItems.length || endOnPage}
       <div class="pagehead" style:height="{PAGEHEAD_H}px"><h2 class="when">{pageLabel}</h2>{#if newAtOpen}<span class="newn">{newAtOpen} new{#if !caught} · <button type="button" onclick={caughtUp}>I’m caught up</button>{/if}</span>{/if}<span class="n" role="status">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
       <div class="grid" style:grid-template-columns="repeat({cols}, minmax(0, 1fr))" style:grid-auto-rows="{cardH}px" style:gap="{GAP}px">
         {#each pageItems as item (item.id)}
           <ItemCard {item} {showSource} compact fresh={isFresh(item)} />
         {/each}
+        {#if endOnPage}<div class="endcell"><ExploreMore {hidden} from={endFrom} /></div>{/if}
       </div>
     {:else if !loading && items.length === 0 && !error}
       <div class="empty">
@@ -346,7 +358,7 @@
     {/if}
     {#if error}<p class="status error" role="alert">Couldn’t load posts: {error}</p>{/if}
     {#if loading}<p class="status">Loading…</p>{/if}
-    {#if cappedAt}<VisitorMore cap={cappedAt} />{:else if done && items.length > 0}<p class="status">That’s everything.{#if hidden} {hidden} hidden by your blocks.{/if}</p>{/if}
+    {#if cappedAt}<VisitorMore cap={cappedAt} />{:else if endsInExplore}<ExploreMore {hidden} from={endFrom} />{:else if done && items.length > 0}<p class="status">That’s everything.{#if hidden} {hidden} hidden by your blocks.{/if}</p>{/if}
     <div bind:this={sentinel} class="sentinel" aria-hidden="true"></div>
   </section>
 {/if}
@@ -380,4 +392,5 @@
   .pagehead .when { margin: 0; font: inherit; font-weight: 600; }
   .pagehead .n { font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-2); font-variant-numeric: tabular-nums; }
   .grid { display: grid; align-content: start; }
+  .endcell { display: flex; flex-direction: column; justify-content: center; }
 </style>

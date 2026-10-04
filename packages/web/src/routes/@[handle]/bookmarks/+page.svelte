@@ -68,7 +68,7 @@
         const mine = await bookmarksApi.saveFrom(b.id);
         b.myBookmarkId = mine.id;
         api.event('bookmark_saved', { via: 'public_bookmarks', from: handle });
-        showToast('Saved to your bookmarks');
+        showToast('Added to your bookmarks');
       }
     } catch (e) {
       // The remove was optimistic; put the bookmark back if the request failed.
@@ -117,12 +117,12 @@
 {#if error}
   <div class="empty"><h2>Not here</h2><p>{error === 'not found' ? 'These bookmarks aren’t shared.' : error}</p></div>
 {:else if !loading && list.length === 0}
-  <div class="empty"><h2>{notes || notedOnly ? 'No notes yet' : 'Nothing saved yet'}</h2></div>
+  <div class="empty"><h2>{notes || notedOnly ? 'No notes yet' : 'No bookmarks yet'}</h2></div>
 {:else}
   <ul class="list">
     {#each list as b (b.id)}
       <BookmarkCard {b} author={owner} heading="h2" onopen={() => api.event('bookmark_opened', { via: 'public_bookmarks' })}
-        action={session.user && !isMe ? { kind: 'save', on: !!b.myBookmarkId, label: b.myBookmarkId ? 'Remove from my bookmarks' : 'Save to my bookmarks', run: () => toggle(b) } : undefined} />
+        action={session.user && !isMe ? { kind: 'save', on: !!b.myBookmarkId, label: b.myBookmarkId ? 'Remove from my bookmarks' : 'Add to my bookmarks', run: () => toggle(b) } : undefined} />
     {/each}
   </ul>
   {#if loading}<p class="status">Loading…</p>{/if}

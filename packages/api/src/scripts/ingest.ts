@@ -13,6 +13,12 @@
  * than --max-age-days is dropped, which is the difference between a slow blog
  * and an abandoned one. Feeds that already exist are left as they are.
  *
+ * Only feeds that say they are in English are kept. This is the curated
+ * starting index, and it has to be one we can read and look after; until there
+ * are people to look after other languages, they come in only because someone
+ * followed or imported them. That door stays open: nothing a person does to add
+ * a feed checks its language.
+ *
  * New rows are parked six hours out before they are refreshed here, so a
  * scheduler running elsewhere against the same database does not race this
  * script for them. Their real cadence is set by the refresh that follows.
@@ -74,7 +80,7 @@ if (dry || fresh.length === 0) {
   process.exit(0);
 }
 
-const stats = { added: 0, duplicate: 0, empty: 0, failed: 0 };
+const stats = { added: 0, duplicate: 0, empty: 0, notEnglish: 0, failed: 0 };
 const failures = new Map<string, number>();
 const busyHost = new Map<string, number>();
 let cursor = 0;
@@ -97,11 +103,14 @@ async function ingest(url: string) {
     : r.itemsNew === 0 ? "no items"
     : ageDays === null ? "no dates"
     : ageDays > maxAgeDays ? `silent ${Math.max(1, Math.round(ageDays / 365))}y`
+    : after.language === null ? "no language"
+    : after.language !== "en" ? `in ${after.language}`
     : null;
   if (reason) {
     // Never one somebody follows: this row may have absorbed an older twin that had followers.
     await db.delete(schema.feeds).where(sql`id = ${row.id} and not exists(select 1 from collection_feeds cf where cf.feed_id = ${row.id})`);
-    if (reason.startsWith("no ") || reason.startsWith("silent")) stats.empty++;
+    if (reason === "no language" || reason.startsWith("in ")) stats.notEnglish++;
+    else if (reason.startsWith("no ") || reason.startsWith("silent")) stats.empty++;
     else stats.failed++;
     failures.set(reason, (failures.get(reason) ?? 0) + 1);
     return;
@@ -146,7 +155,7 @@ await new Promise<void>((resolve) => {
   pump();
 });
 
-console.log(`\n${stats.added} added, ${stats.duplicate} already here under another address, ${stats.empty} empty or abandoned, ${stats.failed} failed`);
+console.log(`\n${stats.added} added, ${stats.duplicate} already here under another address, ${stats.empty} empty or abandoned, ${stats.notEnglish} not stated as English, ${stats.failed} failed`);
 const why = [...failures.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
 if (why.length) console.log("why not:", why.map(([k, n]) => `${k} ${n}`).join(", "));
 const [{ n }] = (await db.execute<{ n: number }>(sql`select count(*)::int as n from feeds`)).rows;
