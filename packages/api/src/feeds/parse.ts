@@ -47,10 +47,34 @@ export type ParsedFeed = {
   siteUrl: string | null;
   /** The image the feed declares for itself: RSS <image>, Atom <icon>/<logo>, JSON Feed icon or author avatar. An account's picture, for feeds that are accounts (feeds/icons.ts). */
   image: string | null;
+  /** The language the feed declares (feedLanguage), or null. */
+  language: string | null;
   items: ParsedItem[];
 };
 
 const SUMMARY_LEN = 280;
+
+/**
+ * A declared language reduced to its bare code: "en-US", "en_gb" and "EN" are
+ * all "en". Anything that isn't shaped like a language tag ("English",
+ * "x-default", "un") is null rather than a guess.
+ */
+export function feedLanguage(declared: unknown): string | null {
+  if (typeof declared !== "string") return null;
+  const m = /^\s*([a-z]{2,3})(?:[-_][a-z0-9]{1,8})*\s*$/i.exec(declared);
+  const code = m?.[1].toLowerCase() ?? null;
+  return code && code !== "un" && code !== "und" ? code : null;
+}
+
+/**
+ * Atom's xml:lang, which feedsmith doesn't keep: on the root <feed> when it is
+ * there, or else wherever it first appears. Some feeds only mark each entry.
+ */
+function atomLanguage(text: string): string | null {
+  const lang = /\sxml:lang\s*=\s*["']([^"']*)["']/i;
+  const root = /<(?:[\w-]+:)?feed\b[^>]*>/i.exec(text)?.[0] ?? "";
+  return feedLanguage(lang.exec(root)?.[1] ?? lang.exec(text)?.[1]);
+}
 
 /**
  * HTML to the plain text that titles, summaries and author names are made of.
@@ -233,7 +257,8 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       });
     }
     const image = absolutize(f.image?.url ?? null, feedUrl);
-    return { kind: format, title: f.title ? stripHtml(f.title) : null, description: f.description ? stripHtml(f.description) : null, siteUrl, image, items };
+    const language = feedLanguage(f.language) ?? feedLanguage(f.dc?.language);
+    return { kind: format, title: f.title ? stripHtml(f.title) : null, description: f.description ? stripHtml(f.description) : null, siteUrl, image, language, items };
   }
 
   if (format === "atom") {
@@ -261,7 +286,7 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       });
     }
     const image = absolutize(f.icon ?? f.logo ?? null, feedUrl);
-    return { kind: "atom", title: f.title ? stripHtml(f.title) : null, description: f.subtitle ? stripHtml(f.subtitle) : null, siteUrl, image, items };
+    return { kind: "atom", title: f.title ? stripHtml(f.title) : null, description: f.subtitle ? stripHtml(f.subtitle) : null, siteUrl, image, language: atomLanguage(text), items };
   }
 
   // json
@@ -287,5 +312,5 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
     });
   }
   const image = absolutize(f.icon ?? f.authors?.[0]?.avatar ?? f.author?.avatar ?? f.favicon ?? null, feedUrl);
-  return { kind: "json", title: f.title ? stripHtml(f.title) : null, description: f.description ? stripHtml(f.description) : null, siteUrl, image, items };
+  return { kind: "json", title: f.title ? stripHtml(f.title) : null, description: f.description ? stripHtml(f.description) : null, siteUrl, image, language: feedLanguage(f.language), items };
 }
