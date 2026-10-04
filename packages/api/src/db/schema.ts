@@ -479,8 +479,21 @@ export const bookmarks = pgTable("bookmarks", {
    */
   isPublic: boolean("is_public").notNull().default(false),
   savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
+  /**
+   * Weighted full-text vector over what I saved and what I wrote: title (A),
+   * note (B), summary (C), site name and address (D). Generated in the
+   * database. Drives search on the Bookmarks page (routes/bookmarks.ts).
+   * The address goes in twice: as it is, so "example.com" finds it, and with
+   * its punctuation turned to spaces, so "example" does too. Created in
+   * drizzle/0021_bookmark_search.sql.
+   */
+  search: tsvector("search").generatedAlwaysAs(
+    sql`setweight(to_tsvector('english', coalesce("title", '')), 'A') || setweight(to_tsvector('english', coalesce("note", '')), 'B') || setweight(to_tsvector('english', left(coalesce("summary", ''), 20000)), 'C') || setweight(to_tsvector('english', coalesce("site_title", '') || ' ' || "url" || ' ' || regexp_replace("url", '[^[:alnum:]]+', ' ', 'g')), 'D')`,
+  ),
 }, (t) => [
   uniqueIndex("bookmarks_user_url_uq").on(t.userId, t.url),
+  /** Full-text GIN over the generated `search` column (drizzle/0021). */
+  index("bookmarks_search_idx").using("gin", t.search),
   index("bookmarks_user_saved_idx").on(t.userId, t.savedAt),
   /** Finding the notes under a post: by its address, or by the post itself when it has none. */
   index("bookmarks_noted_url_idx").on(t.url).where(sql`${t.note} is not null`),
