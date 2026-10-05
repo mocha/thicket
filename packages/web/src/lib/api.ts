@@ -80,7 +80,7 @@ export type FeedIndexPage = { feeds: Feed[]; total: number; indexTotal: number; 
 export type Collection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; feedCount: number; visibility: ShareLevel };
 
 export type SubscribeOutcome =
-  | { status: 'subscribed'; feed: Feed; alreadyFollowed: boolean }
+  | { status: 'subscribed'; feed: Feed; alreadyFollowed: boolean; waiting?: boolean }
   | { status: 'choose'; candidates: { url: string; title: string | null; kind: string | null; note?: string | null }[] }
   | { status: 'none'; pageUrl: string }
   | { error: string };

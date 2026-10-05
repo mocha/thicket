@@ -184,7 +184,7 @@ export function useInMemoryHostsForTests(deps: Partial<NetworkDeps> = {}, queueM
 }
 
 export class HostCoolingDown extends Error {
-  constructor(readonly host: string, readonly until: Date, reason: string) {
+  constructor(readonly host: string, readonly until: Date, readonly reason: string) {
     const mins = Math.max(1, Math.round((until.getTime() - Date.now()) / 60_000));
     super(`${host} ${reason}; thicket will try again in about ${mins} minute${mins === 1 ? "" : "s"}.`);
   }
@@ -257,7 +257,19 @@ export function coolingUntil(key: string): Date | null {
  */
 export type Turn = { host: string; network: string | null; release: () => void };
 
-const NETWORK_REASON = "is on a shared host that asked thicket to slow down";
+/**
+ * Why a host is paused or refused, as stored in host_cooldowns.reason and
+ * carried on HostCoolingDown. feeds/explain.ts words each one for a person.
+ */
+export const PAUSE_REASONS = {
+  slowDown: "asked thicket to slow down",
+  unavailable: "said it is temporarily unavailable",
+  outage: "seems to be down",
+  network: "is on a shared host that asked thicket to slow down",
+  queued: "already has requests from thicket queued",
+  networkQueued: "is on a shared host thicket already has requests queued for",
+} as const;
+const NETWORK_REASON = PAUSE_REASONS.network;
 
 /**
  * Wait for this host's turn, and its network's when the network is careful:
@@ -274,14 +286,14 @@ export async function awaitTurn(url: string): Promise<Turn> {
   const n = network ? netState(network) : null;
   const notPaused = () => {
     const now = Date.now();
-    if (s.until > now) throw new HostCoolingDown(key, new Date(s.until), s.reason ?? "asked thicket to wait");
+    if (s.until > now) throw new HostCoolingDown(key, new Date(s.until), s.reason ?? PAUSE_REASONS.slowDown);
     if (n && n.until > now) throw new HostCoolingDown(key, new Date(n.until), NETWORK_REASON);
   };
   notPaused();
   let held: NetState | null = null;
   let release = () => {};
   if (n && isCareful(network!, n, Date.now())) {
-    if (!(await acquire(n, maxQueueMs))) throw new HostCoolingDown(key, new Date(Date.now() + 60_000), "is on a shared host thicket already has requests queued for");
+    if (!(await acquire(n, maxQueueMs))) throw new HostCoolingDown(key, new Date(Date.now() + 60_000), PAUSE_REASONS.networkQueued);
     held = n;
     release = releaser(n);
   }
@@ -290,7 +302,7 @@ export async function awaitTurn(url: string): Promise<Turn> {
     notPaused();
     const now = Date.now();
     const slot = Math.max(now, s.nextSlot, held?.nextSlot ?? 0);
-    if (slot - now > maxQueueMs) throw new HostCoolingDown(key, new Date(slot), "already has requests from thicket queued");
+    if (slot - now > maxQueueMs) throw new HostCoolingDown(key, new Date(slot), PAUSE_REASONS.queued);
     s.nextSlot = slot + (GAP_MS[key] ?? DEFAULT_GAP_MS);
     if (held) held.nextSlot = slot + NETWORK_GAP_MS;
     if (slot > now) await sleep(slot - now);
@@ -316,7 +328,7 @@ export async function afterResponse(turn: Turn, status: number, headers: Headers
   const hinted = parseRetryAfter(retryAfter);
   const fallback = DEFAULT_PAUSE_MS * 2 ** Math.min(s.strikes - 1, 8);
   const wait = Math.min(MAX_PAUSE_MS, Math.max(MIN_PAUSE_MS, hinted ?? fallback));
-  const reason = status === 429 ? "asked thicket to slow down" : "said it is temporarily unavailable";
+  const reason = status === 429 ? PAUSE_REASONS.slowDown : PAUSE_REASONS.unavailable;
   const detail = `HTTP ${status}${retryAfter ? `, Retry-After ${retryAfter}` : ", no Retry-After"}`;
   await pause(key, s, Date.now() + wait, reason, detail);
   if (turn.network) await networkLimited(turn.network, key, hinted, detail);
@@ -374,7 +386,7 @@ export async function feedOutcome(url: string, feedId: number, failure: string |
   const wait = Math.min(MAX_OUTAGE_PAUSE_MS, OUTAGE_PAUSE_MS * 2 ** Math.min(s.outageStrikes - 1, 8));
   const n = s.failFeeds.size;
   s.failFeeds.clear();
-  await pause(key, s, Date.now() + wait, "seems to be down", `${n} of its feeds in a row failed with ${failure}`);
+  await pause(key, s, Date.now() + wait, PAUSE_REASONS.outage, `${n} of its feeds in a row failed with ${failure}`);
 }
 
 async function pause(key: string, s: HostState, untilMs: number, reason: string, detail: string) {

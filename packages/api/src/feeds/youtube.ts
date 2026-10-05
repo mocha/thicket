@@ -20,6 +20,19 @@
  * usual. Throws when it is YouTube but the channel can't be found (a consent
  * wall, a removed video), with a message the add sheet can show.
  *
+ * ## When the feed isn't answering
+ *
+ * YouTube's feed endpoint fails for hours at a time while the rest of YouTube
+ * works: all 404s and 500s from 00:00 to 07:00 UTC on 2026-10-03 and -04, and
+ * again on -05, when the same channel's feed alternated 404 and 500 from a
+ * home connection too, so it was not about thicket. We know the shape of every
+ * channel feed, so a channel whose page is real is enough. Adding one while
+ * its feed fails (a 404, a 5xx, a timeout) follows it anyway, named from its
+ * page, and the scheduler fetches its videos once the feed answers
+ * (feeds/discover.ts, `waiting`). A channel that doesn't exist still says so,
+ * because its page 404s. Being asked to slow down (a 429, a host pause) is
+ * never worked around: that refusal stands for people as for the scheduler.
+ *
  * ## Shorts
  *
  * A channel's uploads and its Shorts arrive in one YouTube feed. Leaving the
@@ -83,7 +96,32 @@ export function isYouTubeUrl(input: string): boolean {
   try { const u = new URL(input); return YT_HOST.test(u.hostname) || SHORT_HOST.test(u.hostname); } catch { return false; }
 }
 
-export type YouTubeResolution = { feedUrl: string; via: "feed" | "playlist" | "channel" };
+/**
+ * `channelId` is set when the feed is a channel's. `title` is the channel's
+ * name when its page was read along the way (an @handle), else null.
+ */
+export type YouTubeResolution = { feedUrl: string; via: "feed" | "playlist" | "channel"; channelId?: string; title?: string | null };
+
+/** The channel's name, from its page: the metadata block, else og:title. */
+export function extractChannelTitle(html: string): string | null {
+  const json = /"channelMetadataRenderer":\{"title":"((?:[^"\\]|\\.)*)"/.exec(html)?.[1];
+  if (json) {
+    try { return JSON.parse(`"${json}"`).trim() || null; } catch { /* fall through */ }
+  }
+  const og = /<meta property="og:title" content="([^"]*)"/.exec(html)?.[1];
+  return og ? og.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").trim() || null : null;
+}
+
+/**
+ * Check that a channel exists by reading its page, and return its name. Throws
+ * BadStatus when YouTube says there is no such channel. See "When the feed
+ * isn't answering" above.
+ */
+export async function channelName(channelId: string): Promise<string | null> {
+  const page = await fetchPage(`https://www.youtube.com/channel/${channelId}`);
+  if (!extractChannelId(page, false)) throw new Explained("thicket found that YouTube page but couldn’t tell which channel it is. Try the address of one of its videos.");
+  return extractChannelTitle(page);
+}
 
 /** Pull the channel id out of a fetched YouTube page. `video` = only trust the owner block. */
 export function extractChannelId(html: string, video: boolean): string | null {
@@ -110,10 +148,11 @@ export async function resolveYouTube(input: string): Promise<YouTubeResolution |
   if (!short && !YT_HOST.test(u.hostname)) return null;
   const path = u.pathname.replace(/\/+$/, "");
   const seg = path.split("/").filter(Boolean);
-  const channel = (channelId: string): YouTubeResolution => ({ feedUrl: channelFeedUrl(channelId), via: "channel" });
+  const channel = (channelId: string, title: string | null = null): YouTubeResolution => ({ feedUrl: channelFeedUrl(channelId), via: "channel", channelId, title });
 
   if (path === "/feeds/videos.xml" && (u.searchParams.get("channel_id") || u.searchParams.get("playlist_id") || u.searchParams.get("user"))) {
-    return { feedUrl: u.toString(), via: "feed" };
+    const id = new RegExp(`^${CHANNEL_ID}$`).exec(u.searchParams.get("channel_id") ?? "")?.[0];
+    return { feedUrl: u.toString(), via: "feed", ...(id ? { channelId: id, title: null } : {}) };
   }
   if (path === "/playlist" && u.searchParams.get("list")) {
     const list = u.searchParams.get("list")!;
@@ -145,7 +184,7 @@ export async function resolveYouTube(input: string): Promise<YouTubeResolution |
     const page = await fetchPage(`https://www.youtube.com${channelPath}`);
     const id = extractChannelId(page, false);
     if (!id) throw new Explained("thicket found that YouTube page but couldn’t tell which channel it is. Try the address of one of its videos.");
-    return channel(id);
+    return channel(id, extractChannelTitle(page));
   }
   return null; // youtube.com/something-else: let ordinary discovery have a go
 }

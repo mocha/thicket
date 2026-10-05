@@ -9,6 +9,9 @@ import { existingFeedId } from "../feeds/twins.js";
 
 const feedById = async (id: number) => (await db.select().from(schema.feeds).where(eq(schema.feeds.id, id)))[0];
 
+/** How soon a channel followed while its feed wasn't answering is tried again. */
+const WAITING_RETRY_MS = 5 * 60_000;
+
 /** Get-or-create a global feed row from a discovery result and store its first batch of items. */
 export async function ensureFeedFromDiscovery(d: Extract<Discovery, { status: "feed" }>) {
   // Over either scheme: following http://x when thicket has https://x follows the one it has.
@@ -17,6 +20,10 @@ export async function ensureFeedFromDiscovery(d: Extract<Discovery, { status: "f
   if (existing) return existing;
   const { newestAt } = { newestAt: d.parsed.items.reduce<Date | null>((m, i) => (i.publishedAt && (!m || i.publishedAt > m) ? i.publishedAt : m), null) };
   const interval = chooseInterval(newestAt);
+  // A channel whose feed isn't answering (feeds/discover.ts): never fetched, so the scheduler tries it soon.
+  const fetched = d.waiting
+    ? { lastFetchedAt: null, lastStatus: null, nextFetchAt: new Date(Date.now() + WAITING_RETRY_MS) }
+    : { lastFetchedAt: new Date(), lastStatus: 200, nextFetchAt: new Date(Date.now() + interval * 1000) };
   const [feed] = await db
     .insert(schema.feeds)
     .values({
@@ -27,17 +34,15 @@ export async function ensureFeedFromDiscovery(d: Extract<Discovery, { status: "f
       kind: d.parsed.kind,
       etag: d.etag,
       lastModified: d.lastModified,
-      lastFetchedAt: new Date(),
-      lastStatus: 200,
       lastItemAt: newestAt,
       fetchIntervalS: interval,
-      nextFetchAt: new Date(Date.now() + interval * 1000),
+      ...fetched,
     })
     .onConflictDoNothing()
     .returning();
   const row = feed ?? (await db.select().from(schema.feeds).where(eq(schema.feeds.url, d.url)))[0];
   await storeItems(row.id, d.parsed, { firstFetch: true });
-  if (!existing) {
+  if (!d.waiting) {
     // A brand-new feed, not a re-follow of one thicket already knows: worth trying for a deeper
     // history than its live document gave us. Never blocks the request that's adding it.
     // Always logged, not just on success: a quiet 429 here previously looked identical to
@@ -92,7 +97,8 @@ export async function addFeedToCollection(collectionId: number, feedId: number) 
 }
 
 export type SubscribeOutcome =
-  | { status: "subscribed"; feed: typeof schema.feeds.$inferSelect; alreadyFollowed: boolean }
+  // `waiting`: followed, but its posts arrive later (a YouTube channel whose feed wasn't answering).
+  | { status: "subscribed"; feed: typeof schema.feeds.$inferSelect; alreadyFollowed: boolean; waiting: boolean }
   | { status: "choose"; candidates: { url: string; title: string | null; kind: string | null }[] }
   | { status: "none"; pageUrl: string };
 
@@ -105,5 +111,5 @@ export async function subscribe(user: SessionUser, input: string, collectionId?:
   const target = collectionId ?? (await defaultCollectionFor(user));
   const [before] = await db.select({ n: sql<number>`count(*)::int` }).from(schema.collectionFeeds).where(eq(schema.collectionFeeds.feedId, feed.id));
   await addFeedToCollection(target, feed.id);
-  return { status: "subscribed", feed, alreadyFollowed: before.n > 0 };
+  return { status: "subscribed", feed, alreadyFollowed: before.n > 0, waiting: d.waiting === true && feed.lastFetchedAt === null };
 }
