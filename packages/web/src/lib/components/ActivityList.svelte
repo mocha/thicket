@@ -164,7 +164,7 @@
   section { margin-bottom: var(--space-5); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--surface-2); }
+  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--panel); }
   .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
   /* At least 320px so the options aren't cramped, wider when larger text needs
      it, and never wider than the strip. A fixed 320px made the control fall

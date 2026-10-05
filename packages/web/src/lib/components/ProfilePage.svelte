@@ -19,6 +19,7 @@
   import Input from '$lib/components/Input.svelte';
   import Textarea from '$lib/components/Textarea.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import { removeBookmark, withBookmarkBack } from '$lib/saves';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
   import { audienceTag } from '$lib/visibility';
@@ -98,16 +99,49 @@
    * A few recent bookmarks, with the notes on them, shown right on the
    * profile; the rest are one link away. One section with two audiences
    * (issue #84): the server sends only what this viewer may see.
+   *
+   * On your own profile they're yours to note and remove, as on My Bookmarks
+   * (issue #170). One more than is shown is kept in hand, so removing one
+   * moves the next up at once; the list is then fetched again to keep one in
+   * hand for the next removal.
    */
   const BOOKMARKS_SHOWN = 3;
   let recentBookmarks = $state<PublicBookmark[] | null>(null);
+  const shownBookmarks = $derived(recentBookmarks?.slice(0, BOOKMARKS_SHOWN) ?? null);
   let bookmarksFor = $state<string | undefined>(undefined);
+  /* Bumped by every change made here, so a fetch that set out before an Undo can't undo it. */
+  let bookmarksAsked = 0;
+  function loadBookmarks(h: string) {
+    const asked = ++bookmarksAsked;
+    return profilesApi.bookmarks(h, { limit: BOOKMARKS_SHOWN + 1 }).then((r) => { if (bookmarksFor === h && asked === bookmarksAsked) recentBookmarks = r.bookmarks; });
+  }
   $effect(() => {
     if (!profile || profile.private || !profile.bookmarks || profile.bookmarks.count === 0 || bookmarksFor === profile.handle) return;
     const h = profile.handle;
     bookmarksFor = h; recentBookmarks = null;
-    profilesApi.bookmarks(h, { limit: BOOKMARKS_SHOWN }).then((r) => { if (bookmarksFor === h) recentBookmarks = r.bookmarks; }).catch(() => (recentBookmarks = []));
+    loadBookmarks(h).catch(() => (recentBookmarks = []));
   });
+  function removeRecent(b: PublicBookmark) {
+    if (!profile || profile.private || !profile.bookmarks || !recentBookmarks) return;
+    const counts = profile.bookmarks, h = profile.handle, snapshot = recentBookmarks;
+    void removeBookmark(b, 'profile', {
+      drop: () => {
+        bookmarksAsked++;
+        recentBookmarks = (recentBookmarks ?? []).filter((x) => x.id !== b.id);
+        counts.count--;
+      },
+      putBack: (id) => {
+        // Undo still restores it; the cards only change if this profile is still the one on screen.
+        if (bookmarksFor !== h) return;
+        bookmarksAsked++;
+        recentBookmarks = withBookmarkBack(recentBookmarks ?? [], snapshot, b.id, id);
+        counts.count++;
+      }
+    }).then(() => loadBookmarks(h)).catch((e) => {
+      // The cards on screen stay as they are; only the one moving up is missing.
+      api.event('profile_bookmarks_refill_failed', { message: (e instanceof Error ? e.message : String(e)).slice(0, 200) });
+    });
+  }
 
   /** The people this person follows — their own section. */
   let following = $state<PublicUser[] | null>(null);
@@ -160,16 +194,6 @@
    */
   const su = $derived(session.user);
   const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
-  const RANK: Record<ShareLevel, number> = { private: 0, friends: 1, public: 2 };
-  const SEES: Record<ShareLevel, string> = { private: 'Only you can see', friends: 'Only people you follow can see', public: 'Anyone can see' };
-  /** What the two settings on the Bookmarks section add up to, in words. */
-  function sharingSummary(marks: ShareLevel, notes: ShareLevel): string {
-    const lines = [`${SEES[marks]} your bookmarks.`];
-    lines.push(notes === 'private' ? `${SEES.private} your notes.` : `${SEES[notes]} your notes, here and under the post each one is about.`);
-    // Notes shared wider than bookmarks: those extra people see only the noted posts.
-    if (RANK[notes] > RANK[marks]) lines.push(`${notes === 'public' && marks === 'friends' ? 'Everyone else' : 'They'} see${notes === 'public' && marks === 'friends' ? 's' : ''} only the posts you’ve written a note on.`);
-    return lines.join(' ');
-  }
   const VISIBILITY = [
     { value: 'public', label: 'Anyone' },
     { value: 'private', label: 'Only me' }
@@ -499,7 +523,8 @@
       <h2>Bookmarks <Badge>{profile.bookmarks.count}</Badge></h2>
       {#if profile.isMe}
         {#if su && su.profileVisibility !== 'private'}
-          <div class="card">
+          <!-- Settings, not a bookmark: the same strip as the other sections, on its own, so it doesn't read as one more card below. -->
+          <div class="panel">
             <div class="cardhead">
               <span class="ctrl-label">Who sees your bookmarks</span>
               <SectionAudience level={su.bookmarksVisibility} label="your bookmarks" onchange={(l) => save({ bookmarksVisibility: l }, `Bookmarks: ${AUD[l]}`)} />
@@ -508,7 +533,6 @@
               <span class="ctrl-label">Who sees your notes</span>
               <SectionAudience level={su.notesVisibility} label="your notes" onchange={(l) => save({ notesVisibility: l }, `Notes: ${AUD[l]}`)} />
             </div>
-            <div class="pad"><p class="status">{sharingSummary(su.bookmarksVisibility, su.notesVisibility)}</p></div>
           </div>
         {/if}
       {:else if profile.bookmarks.notes !== null && session.user && profile.people.isFollowing}
@@ -518,18 +542,20 @@
       {/if}
       {#if profile.bookmarks.count === 0}
         <p class="status">Press the bookmark on any post to save it, or the note button to write down what you thought of it.</p>
-      {:else if recentBookmarks === null}
+      {:else if shownBookmarks === null}
         <p class="status">Loading…</p>
-      {:else if recentBookmarks.length === 0}
+      {:else if shownBookmarks.length === 0}
         <p class="status">No bookmarks to show.</p>
       {:else}
         <ul class="saves">
-          {#each recentBookmarks as b (b.id)}
-            <BookmarkCard {b} author={profile} onopen={() => api.event('bookmark_opened', { via: 'profile' })} />
+          {#each shownBookmarks as b (b.id)}
+            <BookmarkCard {b} mine={isMe} author={profile} onopen={() => api.event('bookmark_opened', { via: 'profile' })}
+              action={isMe ? { kind: 'remove', on: true, label: b.note ? 'Remove bookmark and note' : 'Remove bookmark', run: () => removeRecent(b) } : undefined} />
           {/each}
         </ul>
-        {#if profile.bookmarks.count > recentBookmarks.length}
-          <a class="all tap" href="/@{profile.handle}/bookmarks">All {profile.bookmarks.count} bookmarks <span aria-hidden="true">›</span></a>
+        {#if profile.bookmarks.count > shownBookmarks.length}
+          <!-- Your own goes to My Bookmarks, where search and filters are; a visitor gets the public list. -->
+          <a class="all tap" href={isMe ? '/bookmarks' : `/@${profile.handle}/bookmarks`}>All {profile.bookmarks.count} bookmarks <span aria-hidden="true">›</span></a>
         {/if}
       {/if}
     </section>
@@ -619,10 +645,12 @@
   /* Every section's content sits in a card — the same surface + shadow the
      lists always used. The audience control rides at the top in a header bar. */
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .panel { background: var(--panel); border-radius: var(--radius); padding: var(--space-2) 0; }
+  .panel .cardhead { background: none; }
   .pad { padding: var(--space-4); }
   /* A tinted control strip, not a list row: the background sets it apart from
      the white rows below, and the label sits right beside its buttons. */
-  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-2) var(--space-4); background: var(--surface-2); }
+  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-2) var(--space-4); background: var(--panel); }
   .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
   /* At least 320px so the options aren't cramped, wider when larger text needs
      it, and never wider than the strip. A fixed 320px made the control fall

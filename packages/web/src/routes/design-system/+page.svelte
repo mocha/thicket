@@ -89,6 +89,7 @@
     { name: 'accent-soft', use: 'The secondary button’s pale wash' },
     { name: 'accent-tint', use: 'The wash behind something chosen or on' },
     { name: 'accent-soft-ink', use: 'Lettering on that wash' },
+    { name: 'panel', use: 'The “Who sees” strip over your own sections' },
     { name: 'danger', use: 'Destructive and errors' },
     { name: 'amber', use: 'Warnings and caution' },
     { name: 'line', use: 'Hairline borders' },

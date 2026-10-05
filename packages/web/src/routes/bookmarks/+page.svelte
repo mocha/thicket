@@ -21,7 +21,7 @@
   import Input from '$lib/components/Input.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
-  import { showToast } from '$lib/toast.svelte';
+  import { removeBookmark, withBookmarkBack } from '$lib/saves';
   import { site, loadSite } from '$lib/site.svelte';
   import { openFeedback } from '$lib/feedback.svelte';
 
@@ -161,18 +161,16 @@
   }
 
   /** Remove a bookmark, and its note with it. Undo puts both back where they were. */
-  async function remove(b: Bookmark) {
+  function remove(b: Bookmark) {
     const snapshot = list;
-    list = list.filter((x) => x.id !== b.id);
-    const removed = await bookmarksApi.remove(b.id);
-    api.event('bookmark_removed', { bookmarkId: b.id, via: 'bookmarks_page', hadNote: !!b.note });
-    sources.total--;
-    if (b.note) sources.noted--;
-    showToast(b.note ? 'Removed bookmark and note' : 'Removed bookmark', {
-      label: 'Undo',
-      run: async () => {
-        const back = await bookmarksApi.restore(removed);
-        list = snapshot.map((x) => (x.id === b.id ? { ...x, id: back.id, note: x.note && { ...x.note, id: back.id } } : x));
+    void removeBookmark(b, 'bookmarks_page', {
+      drop: () => {
+        list = list.filter((x) => x.id !== b.id);
+        sources.total--;
+        if (b.note) sources.noted--;
+      },
+      putBack: (id) => {
+        list = withBookmarkBack(list, snapshot, b.id, id);
         sources.total++;
         if (b.note) sources.noted++;
       }
@@ -211,7 +209,7 @@
 
 <header class="top">
   <h1>My Bookmarks</h1>
-  <p class="sub">Posts you've bookmarked, and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
+  <p class="sub">Posts you've bookmarked and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
 </header>
 
 {#if hasFilters}
@@ -278,7 +276,7 @@
 <div id="bookmark-results" role={hasFilters ? 'tabpanel' : undefined}>
   {#if failed?.fresh}
     {@render failure()}
-  {:else if !loading && list.length === 0}
+  {:else if !loading && done && list.length === 0}
     <div class="empty">
       {#if q}
         <h2>No bookmarks match “{q}”</h2>

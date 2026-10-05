@@ -8,6 +8,7 @@
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import VisitorMore from '$lib/components/VisitorMore.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import { removeBookmark, withBookmarkBack } from '$lib/saves';
 
   /**
    * Someone's bookmarks, and their note on each, when they share notes with
@@ -49,6 +50,16 @@
     } finally {
       loading = false;
     }
+  }
+
+  /** My own list, seen from my profile: remove one of mine, as on My Bookmarks (issue #170). */
+  function remove(b: PublicBookmark) {
+    const snapshot = list, h = handle;
+    void removeBookmark(b, 'public_bookmarks', {
+      drop: () => (list = list.filter((x) => x.id !== b.id)),
+      // Undo still restores it; the list only changes if it's still this one on screen.
+      putBack: (id) => { if (handle === h) list = withBookmarkBack(list, snapshot, b.id, id); }
+    });
   }
 
   /** Save (or unsave) a copy into my own bookmarks. */
@@ -98,7 +109,9 @@
 <nav class="crumbs"><a class="tap" href={profileHref(handle)}>@{handle}</a> <span aria-hidden="true">›</span></nav>
 <header class="top">
   <h1>{isMe ? 'Your bookmarks' : `${owner?.displayName ?? `@${handle}`}’s bookmarks`}</h1>
-  <p class="sub">{#if isMe}This is how others see them. <a href="/bookmarks">Manage them here.</a>{:else if notedOnly}The posts {owner?.displayName ?? `@${handle}`} has written a note on. {/if}{#if !isMe}{#if session.user}Tap the bookmark on any post to save a copy to yours.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save any of these to your own.{/if}{/if}</p>
+  {#if !isMe}
+    <p class="sub">{#if notedOnly}The posts {owner?.displayName ?? `@${handle}`} has written a note on. {/if}{#if session.user}Tap the bookmark on any post to save a copy to yours.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save any of these to your own.{/if}</p>
+  {/if}
 </header>
 
 {#if hasNotesFilter}
@@ -116,13 +129,16 @@
 <div id="bookmark-results">
 {#if error}
   <div class="empty"><h2>Not here</h2><p>{error === 'not found' ? 'These bookmarks aren’t shared.' : error}</p></div>
-{:else if !loading && list.length === 0}
+{:else if !loading && done && list.length === 0}
   <div class="empty"><h2>{notes || notedOnly ? 'No notes yet' : 'No bookmarks yet'}</h2></div>
 {:else}
   <ul class="list">
     {#each list as b (b.id)}
-      <BookmarkCard {b} author={owner} heading="h2" onopen={() => api.event('bookmark_opened', { via: 'public_bookmarks' })}
-        action={session.user && !isMe ? { kind: 'save', on: !!b.myBookmarkId, label: b.myBookmarkId ? 'Remove from my bookmarks' : 'Add to my bookmarks', run: () => toggle(b) } : undefined} />
+      <BookmarkCard {b} mine={isMe} author={owner} heading="h2" onopen={() => api.event('bookmark_opened', { via: 'public_bookmarks' })}
+        onnote={(n) => { if (!n && notes) list = list.filter((x) => x.id !== b.id); }}
+        action={isMe
+          ? { kind: 'remove', on: true, label: b.note ? 'Remove bookmark and note' : 'Remove bookmark', run: () => remove(b) }
+          : session.user ? { kind: 'save', on: !!b.myBookmarkId, label: b.myBookmarkId ? 'Remove from my bookmarks' : 'Add to my bookmarks', run: () => toggle(b) } : undefined} />
     {/each}
   </ul>
   {#if loading}<p class="status">Loading…</p>{/if}
