@@ -84,7 +84,7 @@
   function saved(n: SavedNote) {
     const had = !!b.note;
     showToast(had ? 'Note updated' : 'Note saved');
-    const note: Note = { id: n.id, body: n.body, createdAt: n.createdAt, updatedAt: n.updatedAt };
+    const note: Note = { id: n.id, body: n.body, createdAt: n.createdAt, updatedAt: n.updatedAt, mentions: n.mentions };
     b.note = note;
     forgetNoteMark();
     editing = false;

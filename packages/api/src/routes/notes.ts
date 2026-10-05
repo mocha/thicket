@@ -14,6 +14,7 @@ import { db } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { cleanNote, snapshotOfItem } from "../lib/bookmarks.js";
 import { postAddressSql } from "../lib/notes.js";
+import { mentionsOf } from "../lib/mentions.js";
 import { LIMITS, hit, tooManyFor } from "../lib/ratelimit.js";
 import { NOTED_ENOUGH } from "./bookmarks.js";
 
@@ -41,7 +42,7 @@ notes.put("/items/:itemId", async (c) => {
       note_updated_at = now()
     returning id, note as body, note_created_at as "createdAt", note_updated_at as "updatedAt", (note_created_at = note_updated_at) as created
   `)).rows;
-  return c.json({ id: row.id, body: row.body, createdAt: new Date(row.createdAt).toISOString(), updatedAt: new Date(row.updatedAt).toISOString(), bookmarkId: row.id }, row.created ? 201 : 200);
+  return c.json({ id: row.id, body: row.body, createdAt: new Date(row.createdAt).toISOString(), updatedAt: new Date(row.updatedAt).toISOString(), mentions: await mentionsOf(row.body), bookmarkId: row.id }, row.created ? 201 : 200);
 });
 
 /** Delete my note on a post. The bookmark stays. */

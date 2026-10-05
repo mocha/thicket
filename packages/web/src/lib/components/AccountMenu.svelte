@@ -1,6 +1,9 @@
 <script lang="ts">
   /**
-   * The account menu: plain doors. My page (the page at your address, showing what you share),
+   * The account menu: plain doors. Notifications first wherever the bottom
+   * bar is the navigation (a phone, or the paged layout): the bar has no room
+   * for it, so it lives here with its count, and the You tab shows a dot.
+   * My page (the page at your address, showing what you share),
    * Settings (your reading preferences), and Account (your email and password —
    * how you get in, and back in; importing and exporting live there too).
    * An admin also gets Admin here wherever the bottom bar is the navigation (a
@@ -25,6 +28,8 @@
   import { menu } from '$lib/menu';
   import { site, loadSite } from '$lib/site.svelte';
   import { openFeedback } from '$lib/feedback.svelte';
+  import { notifText } from '$lib/notifications.svelte';
+  import Badge from './Badge.svelte';
 
   let { anchor, onclose }: { anchor: HTMLElement | null; onclose: () => void } = $props();
 
@@ -102,6 +107,13 @@
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
       <span>My page</span>
     </a>
+    {#if sheet || display.layout === 'paged'}
+      <a role="menuitem" href="/notifications" onclick={onclose}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9M10 20.5a2.2 2.2 0 0 0 4 0" /></svg>
+        <span>Notifications</span>
+        {#if notifText()}<Badge tone="accent" class="tail" aria-label="{notifText()} new">{notifText()}</Badge>{/if}
+      </a>
+    {/if}
     <a role="menuitem" href="/settings" onclick={onclose}>
       <Icon name="gear" size={20} />
       <span>Settings</span>
@@ -155,6 +167,8 @@
      lands where Log out appears, and would leave it looking selected. */
   @media (hover: hover) { .panel a:hover, .panel button:hover { background: var(--surface-2); } }
   .panel svg { flex: none; color: var(--text-3); }
+  /* Notifications' count, at the row's end. */
+  .panel :global(.tail) { margin-left: auto; }
   /* The line that sets Log out apart from everything above it. */
   .rule { height: 1px; background: var(--line); margin: var(--space-2) var(--space-3); }
   .panel .out { color: var(--danger); }

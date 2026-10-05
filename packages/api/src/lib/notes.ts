@@ -29,15 +29,20 @@ import { sql, type SQL } from "drizzle-orm";
 import { allowsSql } from "./visibility.js";
 import { feedSlugSql } from "./slug.js";
 import { MAX_LENGTH } from "./ratelimit.js";
+import { mentionsJsonSql } from "./mentions.js";
 
 /** Enough for a margin note, not an essay. The number lives with every other limit (lib/ratelimit.ts). */
 export const NOTE_MAX = MAX_LENGTH.note;
 /** Others' notes shown per post. More than this and the post is a comment thread, which this is not. */
 export const NOTES_PER_ITEM = 8;
 
-/** Bookmark `b`'s note, in the shape the web app calls a Note. Its id is the bookmark's. */
+/**
+ * Bookmark `b`'s note, in the shape the web app calls a Note. Its id is the
+ * bookmark's. `mentions`: the people it @mentions who have an account, so the
+ * note can link to them (lib/mentions.ts).
+ */
 export const noteJson = (b = "n") =>
-  sql.raw(`jsonb_build_object('id', ${b}.id, 'body', ${b}.note, 'createdAt', ${b}.note_created_at, 'updatedAt', ${b}.note_updated_at)`);
+  sql.raw(`jsonb_build_object('id', ${b}.id, 'body', ${b}.note, 'createdAt', ${b}.note_created_at, 'updatedAt', ${b}.note_updated_at, 'mentions', ${mentionsJsonSql(`${b}.note`)})`);
 
 /**
  * Does bookmark `b` belong to the post with this address and id? The address

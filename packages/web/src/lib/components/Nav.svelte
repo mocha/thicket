@@ -14,13 +14,14 @@
   import Badge from './Badge.svelte';
   import { display } from '$lib/display.svelte';
   import { marks, badge, anyNew, countText } from '$lib/marks.svelte';
+  import { notifs, notifText } from '$lib/notifications.svelte';
   import { navWidth, loadNavWidth, setNavWidth, NAV_W_MIN, NAV_W_MAX, NAV_W_DEFAULT } from '$lib/navwidth.svelte';
 
   /**
    * The sidebar, top to bottom: Everything (the whole stream, its own item
    * now), then "Collections" — a group you can fold away — holding each of your
    * collections and "+ New collection", then Bookmarks (notes live there
-   * too) and Explore.
+   * too), Notifications (with a count of what is new) and Explore.
    * Nothing here manages anything: a collection is managed from its
    * own page. Mobile has no room for the list, so its Collections tab opens
    * your profile, which lists them.
@@ -128,6 +129,7 @@
     everything: 'M4 12c3-3 5-3 8 0s5 3 8 0M4 17c3-3 5-3 8 0s5 3 8 0M4 7c3-3 5-3 8 0s5 3 8 0',
     collections: 'M4 6h16M4 12h16M4 18h10',
     bookmarks: 'M6 4h12v17l-6-4-6 4z',
+    notifications: 'M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9M10 20.5a2.2 2.2 0 0 0 4 0',
     explore: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM15.5 8.5l-2 5-5 2 2-5z',
     admin: 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z'
   };
@@ -241,13 +243,17 @@
     <li>
       <a href="/bookmarks" aria-current={current('/bookmarks') ? 'page' : undefined}>{@render icon(icons.bookmarks)}<span class="long">Bookmarks</span><span class="shortl">Bookmarks</span></a>
     </li>
+    <!-- Sidebar only: the bottom bar is full, so on a phone Notifications is in the You menu, and the You tab carries its dot. -->
+    <li class="notifs">
+      <a href="/notifications" aria-current={current('/notifications') ? 'page' : undefined}>{@render icon(icons.notifications)}<span class="long">Notifications</span>{#if notifText()}<Badge tone="accent" class="tail" aria-label="{notifText()} new">{notifText()}</Badge>{/if}</a>
+    </li>
     <li>
       <a href="/explore" aria-current={current('/explore') || inFeeds ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
     </li>
     <!-- Mobile: you. Opens the account menu — your profile, settings, and log out. -->
     {#if me}
       <li class="mobile-only you">
-        <button type="button" class="tab" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}><span class="mono"><Avatar handle={me.handle} name={me.displayName ?? me.handle} size={24} v={me.avatarUpdatedAt} /></span><span class="shortl">You</span></button>
+        <button type="button" class="tab" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}><span class="mono ic"><Avatar handle={me.handle} name={me.displayName ?? me.handle} size={24} v={me.avatarUpdatedAt} />{#if notifs.count}<Badge variant="dot" class="pin" aria-label="New notifications" />{/if}</span><span class="shortl">You</span></button>
       </li>
     {/if}
     {#if me?.isAdmin}
@@ -304,7 +310,7 @@
     backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
     border-top: 1px solid var(--line);
   }
-  .brand, .account, .long, li.admin, li.collections, .resize { display: none; }
+  .brand, .account, .long, li.admin, li.collections, li.notifs, .resize { display: none; }
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
   /* Each tab is as wide as its label plus an even share of the spare room, so
      "Collections" gets more than "You" and none of them touch. Never narrower
@@ -362,6 +368,9 @@
     nav:not(.paged) li.admin { display: block; margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 
     nav:not(.paged) li.collections { display: block; }
+    nav:not(.paged) li.notifs { display: block; }
+    /* Its count sits at the row's end, like Everything's. */
+    nav:not(.paged) li.notifs :global(.tail) { margin-left: auto; }
     /* Breathing room under the expanded list only; collapsed, the row spaces like its neighbors. */
     nav:not(.paged) li.collections .cols { margin-bottom: var(--space-2); }
     /* "My collections": a header you can click to fold the list away. Looks like a row, reads like a heading. */

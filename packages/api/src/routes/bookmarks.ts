@@ -21,6 +21,7 @@ import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { cleanNote, isSavedAddress, noteOf, snapshotOfItem } from "../lib/bookmarks.js";
 import { noteJson, othersNotesSql } from "../lib/notes.js";
+import { mentionsOf } from "../lib/mentions.js";
 import { EXPORT_MAX, renderBookmarkFile, type ExportRow } from "../lib/bookmark-export.js";
 import { isHttpUrl } from "../feeds/normalize.js";
 import { fieldProblem } from "../lib/bookmark-fields.js";
@@ -286,7 +287,7 @@ bookmarks.put("/:id/note", async (c) => {
     .returning();
   if (!row) return c.json({ error: "not found" }, 404);
   const note = noteOf(row)!;
-  return c.json({ ...note, bookmarkId: row.id }, note.createdAt === note.updatedAt ? 201 : 200);
+  return c.json({ ...note, mentions: await mentionsOf(note.body), bookmarkId: row.id }, note.createdAt === note.updatedAt ? 201 : 200);
 });
 
 /** Delete the note on one of my bookmarks. The bookmark stays. */

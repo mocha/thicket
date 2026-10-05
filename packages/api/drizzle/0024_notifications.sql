@@ -1,0 +1,2 @@
+ALTER TABLE "users" ADD COLUMN "notifications_seen_at" timestamp with time zone DEFAULT now() NOT NULL;--> statement-breakpoint
+CREATE INDEX "bookmarks_noted_updated_idx" ON "bookmarks" USING btree ("note_updated_at") WHERE "bookmarks"."note" is not null;

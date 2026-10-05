@@ -6,6 +6,7 @@
 import { ApiError, authApi, setUnauthorizedHandler, type Me } from './api';
 import { resetCollections } from './collections.svelte';
 import { resetMarks } from './marks.svelte';
+import { resetNotifs } from './notifications.svelte';
 import { closeAddFeed } from './addfeed.svelte';
 
 export const session = $state<{ user: Me | null; loaded: boolean; unreachable: string | null }>({ user: null, loaded: false, unreachable: null });
@@ -20,6 +21,7 @@ function applyUser(me: Me | null) {
   if (me?.id !== session.user?.id) {
     resetCollections();
     resetMarks(me?.id ?? null);
+    resetNotifs();
     closeAddFeed();
   }
   session.user = me;
