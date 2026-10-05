@@ -323,10 +323,11 @@
     }
     /* A hairline under the logo sets it apart from Add new feed and the rows below. */
     nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
-    /* Full width, so it reads as the menu's main action rather than one more row. */
     /* A row like the ones below it, in the accent color, its circle drawn a touch finer than their icons, so it reads as the one action in a list of places. */
     nav:not(.paged) .addfeed { display: flex; flex: none; align-items: center; gap: var(--space-3); margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     nav:not(.paged) .addfeed:hover { background: var(--surface-2); }
+    /* The same accent ring, drawn just inside, as the rows below it. */
+    nav:not(.paged) .addfeed:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
     nav:not(.paged) .long { display: inline; }
     nav:not(.paged) .shortl, nav:not(.paged) li.mobile-only { display: none; }
     /* The only scrolling part, so the account block below it never drifts up into the list. */
