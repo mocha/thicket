@@ -380,7 +380,8 @@
   {#if profile.collections}
     <section>
       {#if only}
-        <h1 class="pagetitle">Collections <Badge>{profile.collections.length}</Badge></h1>
+        <h1 class="pagetitle titled">Collections <Badge>{profile.collections.length}</Badge></h1>
+        <p class="sub">Your feeds grouped and named however you choose</p>
       {:else}
         <h2>Collections <Badge>{profile.collections.length}</Badge></h2>
       {/if}
@@ -550,6 +551,9 @@
 <style>
   /* The Collections screen's own title, in the place a page title sits everywhere else. */
   .pagetitle { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.15; margin: 0 0 var(--space-4); }
+  /* The Collections page says what a collection is, under its title, like the New posts and Bookmarks pages (issue #173). */
+  .pagetitle.titled { margin-bottom: 0; }
+  .sub { margin: 2px 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .who { display: flex; gap: var(--space-4); align-items: flex-start; margin: var(--space-2) 0 var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); }
   .names { flex: 1; min-width: 0; }
   /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
