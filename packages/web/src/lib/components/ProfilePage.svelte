@@ -174,16 +174,6 @@
    */
   const su = $derived(session.user);
   const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
-  const RANK: Record<ShareLevel, number> = { private: 0, friends: 1, public: 2 };
-  const SEES: Record<ShareLevel, string> = { private: 'Only you can see', friends: 'Only people you follow can see', public: 'Anyone can see' };
-  /** What the two settings on the Bookmarks section add up to, in words. */
-  function sharingSummary(marks: ShareLevel, notes: ShareLevel): string {
-    const lines = [`${SEES[marks]} your bookmarks.`];
-    lines.push(notes === 'private' ? `${SEES.private} your notes.` : `${SEES[notes]} your notes, here and under the post each one is about.`);
-    // Notes shared wider than bookmarks: those extra people see only the noted posts.
-    if (RANK[notes] > RANK[marks]) lines.push(`${notes === 'public' && marks === 'friends' ? 'Everyone else' : 'They'} see${notes === 'public' && marks === 'friends' ? 's' : ''} only the posts you’ve written a note on.`);
-    return lines.join(' ');
-  }
   const VISIBILITY = [
     { value: 'public', label: 'Anyone' },
     { value: 'private', label: 'Only me' }
@@ -485,7 +475,7 @@
       <h2>Bookmarks <Badge>{profile.bookmarks.count}</Badge></h2>
       {#if profile.isMe}
         {#if su && su.profileVisibility !== 'private'}
-          <!-- Settings, not a bookmark: a flat panel, so it doesn't read as one more card in the list below. -->
+          <!-- Settings, not a bookmark: the same strip as the other sections, on its own, so it doesn't read as one more card below. -->
           <div class="panel">
             <div class="cardhead">
               <span class="ctrl-label">Who sees your bookmarks</span>
@@ -495,7 +485,6 @@
               <span class="ctrl-label">Who sees your notes</span>
               <SectionAudience level={su.notesVisibility} label="your notes" onchange={(l) => save({ notesVisibility: l }, `Notes: ${AUD[l]}`)} />
             </div>
-            <p class="status">{sharingSummary(su.bookmarksVisibility, su.notesVisibility)}</p>
           </div>
         {/if}
       {:else if profile.bookmarks.notes !== null && session.user && profile.people.isFollowing}
@@ -608,11 +597,10 @@
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .panel { background: var(--panel); border-radius: var(--radius); padding: var(--space-2) 0; }
   .panel .cardhead { background: none; }
-  .panel .status { padding: var(--space-1) var(--space-4) var(--space-2); }
   .pad { padding: var(--space-4); }
   /* A tinted control strip, not a list row: the background sets it apart from
      the white rows below, and the label sits right beside its buttons. */
-  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-2) var(--space-4); background: var(--surface-2); }
+  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-2) var(--space-4); background: var(--panel); }
   .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
   /* At least 320px so the options aren't cramped, wider when larger text needs
      it, and never wider than the strip. A fixed 320px made the control fall

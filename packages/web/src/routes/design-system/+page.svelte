@@ -87,7 +87,7 @@
     { name: 'accent', use: 'The one action color' },
     { name: 'accent-ink', use: 'Lettering on a filled accent' },
     { name: 'accent-soft', use: 'The secondary button’s pale wash' },
-    { name: 'panel', use: 'The ground under your own settings mid-page' },
+    { name: 'panel', use: 'The “Who sees” strip over your own sections' },
     { name: 'accent-tint', use: 'The wash behind something chosen or on' },
     { name: 'accent-soft-ink', use: 'Lettering on that wash' },
     { name: 'danger', use: 'Destructive and errors' },
