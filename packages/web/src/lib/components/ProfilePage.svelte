@@ -458,7 +458,8 @@
   <ActivityList handle={profile.handle} isMe={profile.isMe} />
 
   {#if profile.bookmarks && (profile.bookmarks.count > 0 || profile.isMe)}
-    <section>
+    <!-- The note box's "Change" link lands here, on the notes setting. -->
+    <section id="bookmarks">
       <h2>Bookmarks <Badge>{profile.bookmarks.count}</Badge></h2>
       {#if profile.isMe}
         {#if su && su.profileVisibility !== 'private'}
