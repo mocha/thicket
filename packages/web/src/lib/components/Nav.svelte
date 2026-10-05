@@ -8,7 +8,7 @@
   import { showToast } from '$lib/toast.svelte';
   import Avatar from './Avatar.svelte';
   import AccountMenu from './AccountMenu.svelte';
-  import { openAddFeed } from '$lib/addfeed.svelte';
+  import AddFeedButton from './AddFeedButton.svelte';
   import Icon from './Icon.svelte';
   import Field from './Field.svelte';
   import Input from './Input.svelte';
@@ -137,7 +137,7 @@
   <a class="brand" href="/everything"><img src="/icon.svg" alt="" width="28" height="28" /><Wordmark height={23} /></a>
   <!-- Sidebar only, and outside the scrolling list so it never scrolls away. On
        bottom bar screens the same button sits beside each page's title instead. -->
-  {#if me}<button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}><span class="addplus" aria-hidden="true">+</span>Add new feed</button>{/if}
+  {#if me}<div class="addfeed"><AddFeedButton via="sidebar" /></div>{/if}
   <ul>
     <!-- Mobile-only tabs. On desktop, Everything and My collections live in the li.collections block below. -->
     <li class="mobile-only">
@@ -321,11 +321,9 @@
       border-top: 0; border-right: 1px solid var(--line); background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none;
     }
     nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-5); }
-    /* A row like the ones under it, in bold accent, so it reads as the menu's main action without a fill. */
-    nav:not(.paged) .addfeed { display: flex; flex: none; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
-    nav:not(.paged) .addfeed:hover { background: var(--surface-2); }
-    /* The + sits in the same 24px column as the icons below it. */
-    nav:not(.paged) .addplus { width: 24px; text-align: center; font-size: 1.4em; line-height: 1; }
+    /* Full width, so it reads as the menu's main action rather than one more row. */
+    nav:not(.paged) .addfeed { display: block; flex: none; padding: 0 0 var(--space-4); }
+    nav:not(.paged) .addfeed :global(.btn) { width: 100%; }
     nav:not(.paged) .long { display: inline; }
     nav:not(.paged) .shortl, nav:not(.paged) li.mobile-only { display: none; }
     /* The only scrolling part, so the account block below it never drifts up into the list. */
