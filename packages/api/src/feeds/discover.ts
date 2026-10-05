@@ -7,14 +7,16 @@ import { BadStatus, httpGet, MAX_BYTES, TooLargeError, type HttpResult } from ".
 import { Explained } from "./explain.js";
 import { normalizeFeedUrl } from "./normalize.js";
 import { parseFeedDocument, type ParsedFeed } from "./parse.js";
-import { resolveYouTube } from "./youtube.js";
+import { HostCoolingDown } from "./hosts.js";
+import { channelName, resolveYouTube } from "./youtube.js";
 import { resolveReddit } from "./reddit.js";
 
 /** `note` replaces the raw address in the chooser when the address itself would mean nothing to a reader. */
 export type Candidate = { url: string; title: string | null; kind: string | null; note?: string | null };
 
 export type Discovery =
-  | { status: "feed"; url: string; parsed: ParsedFeed; etag: string | null; lastModified: string | null }
+  // `waiting`: a YouTube channel followed while its feed wasn't answering; no posts yet (waitForChannel).
+  | { status: "feed"; url: string; parsed: ParsedFeed; etag: string | null; lastModified: string | null; waiting?: true }
   | { status: "candidates"; pageUrl: string; candidates: Candidate[] }
   | { status: "none"; pageUrl: string };
 
@@ -82,14 +84,43 @@ export function extractFeedLinks(html: string, baseUrl: string): Candidate[] {
   return out;
 }
 
+
+/** The feed itself failed to answer, as opposed to thicket being asked to wait (HostCoolingDown), which always stands. */
+function feedNotAnswering(err: unknown): boolean {
+  if (err instanceof HostCoolingDown || err instanceof TooLargeError) return false;
+  const msg = String((err as { cause?: { code?: string } })?.cause?.code ?? (err instanceof Error ? `${err.name} ${err.message}` : err));
+  return /timeout|TimeoutError|aborted|ECONN|socket|fetch failed/i.test(msg);
+}
+
+/**
+ * Follow a YouTube channel whose feed isn't answering: no posts yet, named from
+ * its page, read if we haven't already (which also proves the channel exists).
+ * ensureFeedFromDiscovery leaves it for the scheduler to fetch.
+ */
+async function waitForChannel(feedUrl: string, channel: { id: string; title: string | null }): Promise<Discovery> {
+  const title = channel.title ?? (await channelName(channel.id));
+  const parsed: ParsedFeed = { kind: "atom", title, description: null, siteUrl: `https://www.youtube.com/channel/${channel.id}`, image: null, language: null, items: [] };
+  return { status: "feed", url: normalizeFeedUrl(feedUrl), parsed, etag: null, lastModified: null, waiting: true };
+}
+
 export async function discover(input: string): Promise<Discovery> {
   // 0. Sites with a known feed shape that never advertise it (feeds/youtube.ts, feeds/reddit.ts).
   //    Each either names the one feed, or offers a short list for the sheet's chooser.
-  const known = (await resolveYouTube(input)) ?? resolveReddit(input);
+  const youtube = await resolveYouTube(input);
+  const known = youtube ?? resolveReddit(input);
   if (known && "candidates" in known) return { status: "candidates", pageUrl: known.pageUrl, candidates: known.candidates };
   if (known) {
     const site = /reddit\.com/i.test(known.feedUrl) ? "Reddit" : "YouTube";
-    const res = await httpGet(known.feedUrl);
+    // A YouTube channel: its page was real, or its address names it (feeds/youtube.ts, "When the feed isn't answering").
+    const channel = youtube?.channelId ? { id: youtube.channelId, title: youtube.title ?? null } : null;
+    let res: HttpResult;
+    try {
+      res = await httpGet(known.feedUrl);
+    } catch (err) {
+      if (channel && feedNotAnswering(err)) return waitForChannel(known.feedUrl, channel);
+      throw err;
+    }
+    if (channel && (res.status === 404 || res.status >= 500)) return waitForChannel(known.feedUrl, channel);
     if (res.status >= 400) throw new BadStatus(`${site}'s feed answered HTTP ${res.status}`, res.status);
     const parsed = tryParse(res.body, res.finalUrl);
     if (!parsed) throw new Explained(`${site} sent back something thicket couldn’t read as a feed. Try again later.`);

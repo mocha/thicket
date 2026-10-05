@@ -91,7 +91,10 @@
       if ('status' in res && res.status === 'choose') { lookedUp = value; picked = []; results = {}; }
       if ('status' in res && res.status === 'subscribed') {
         api.event('feed_added', { feedId: res.feed.id, alreadyFollowed: res.alreadyFollowed, collectionIds: ids, via: addFeed.opts.via ?? 'sheet' });
-        showToast(res.alreadyFollowed ? `Already following ${res.feed.title ?? hostOf(res.feed.url)}` : `Following ${res.feed.title ?? hostOf(res.feed.url)}`);
+        const name = res.feed.title ?? hostOf(res.feed.url);
+        // A YouTube channel followed while its feed wasn't answering: say why its page is empty for now.
+        if (res.waiting) showToast(`Following ${name}. YouTube’s feeds aren’t answering right now, so its videos will show up once they are.`, undefined, 10000);
+        else showToast(res.alreadyFollowed ? `Already following ${name}` : `Following ${name}`);
         void loadCollections(true);
         landing = true;
         dialog?.close();
