@@ -235,7 +235,7 @@ export type Bookmark = {
   savedAt: string; hasIcon: boolean;
   /** When it last saw activity: saved, or its note written or edited. What the list sorts on. */
   activeAt: string;
-  /** The list owner's note on it: mine on my page, theirs on someone's profile (when they share notes with me). */
+  /** The list owner's note on it: mine on my profile, theirs on someone's profile (when they share notes with me). */
   note: Note | null;
   /** Other people's notes on the same post that I may read. My own list only. */
   notes?: PublicNote[];
@@ -289,7 +289,7 @@ export const notificationsApi = {
 };
 
 export type BookmarkSources = {
-  feeds: { feedId: number; title: string | null; count: number }[]; collections: { id: number; name: string; count: number }[];
+  collections: { id: number; name: string; count: number }[];
   /** How many bookmarks I have in all, and how many of them carry a note. */
   total: number; noted: number;
 };
@@ -302,12 +302,11 @@ export const itemsApi = {
 };
 
 export const bookmarksApi = {
-  list: (opts: { before?: string | null; feed?: number | null; collection?: number | null; notes?: boolean; q?: string; limit?: number } = {}) => {
+  list: (opts: { before?: string | null; collection?: number | null; notes?: boolean; q?: string; limit?: number } = {}) => {
     const q = new URLSearchParams();
     if (opts.q) q.set('q', opts.q);
     if (opts.before) q.set('before', opts.before);
     if (opts.notes) q.set('notes', '1');
-    if (opts.feed) q.set('feed', String(opts.feed));
     if (opts.collection) q.set('collection', String(opts.collection));
     if (opts.limit) q.set('limit', String(opts.limit));
     return j<{ bookmarks: Bookmark[]; nextCursor: string | null }>(`/api/bookmarks?${q}`);

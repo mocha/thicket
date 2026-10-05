@@ -3,7 +3,7 @@
    * The account menu: plain doors. Notifications first wherever the bottom
    * bar is the navigation (a phone, or the paged layout): the bar has no room
    * for it, so it lives here with its count, and the You tab shows a dot.
-   * My page (the page at your address, showing what you share),
+   * Profile (the page at your address, showing what you share),
    * Settings (your reading preferences), and Account (your email and password —
    * how you get in, and back in; importing and exporting live there too).
    * An admin also gets Admin here wherever the bottom bar is the navigation (a
@@ -105,7 +105,7 @@
     {/if}
     <a role="menuitem" href={profileHref(me.handle)} onclick={onclose}>
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
-      <span>My page</span>
+      <span>Profile</span>
     </a>
     {#if sheet || display.layout === 'paged'}
       <a role="menuitem" href="/notifications" onclick={onclose}>
