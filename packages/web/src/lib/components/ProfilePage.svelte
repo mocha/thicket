@@ -89,13 +89,20 @@
     if (loadedHandle === handle) return;
     loadedHandle = handle;
     profile = null; error = null;
-    // A link to a section (#bookmarks, from the note box) can only land once the page is drawn, so scroll there then.
-    profilesApi.get(handle).then((p) => {
-      profile = p;
-      if (location.hash) void tick().then(() => document.getElementById(location.hash.slice(1))?.scrollIntoView());
-    }).catch((e) => (error = e instanceof Error ? e.message : String(e)));
+    activityReady = false; jumped = false;
+    profilesApi.get(handle).then((p) => (profile = p)).catch((e) => (error = e instanceof Error ? e.message : String(e)));
   });
   onMount(() => api.event('profile_view', { handle }));
+
+  // A link to a section (#bookmarks, from the note box) can only land once everything above it is drawn: the
+  // profile, and the activity list, which loads on its own and would otherwise push the section down after the jump.
+  let activityReady = $state(false);
+  let jumped = false;
+  $effect(() => {
+    if (jumped || !profile || (!only && !activityReady)) return;
+    jumped = true;
+    if (location.hash) void tick().then(() => document.getElementById(location.hash.slice(1))?.scrollIntoView());
+  });
 
   /**
    * A few recent bookmarks, with the notes on them, shown right on the
@@ -458,7 +465,7 @@
   {/if}
 
   {#if !only}
-  <ActivityList handle={profile.handle} isMe={profile.isMe} />
+  <ActivityList handle={profile.handle} isMe={profile.isMe} onready={() => (activityReady = true)} />
 
   {#if profile.bookmarks && (profile.bookmarks.count > 0 || profile.isMe)}
     <!-- The note box's "Change" link lands here, on the notes setting. -->
