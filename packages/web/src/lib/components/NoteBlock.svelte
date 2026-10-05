@@ -37,7 +37,7 @@
   });
 </script>
 
-<div class="note" class:mine>
+<div class="note">
   <div class="head">
     <span class="who">
       {#if mine}My note{:else if author}<a href={profileHref(author.handle)}>{author.displayName ?? `@${author.handle}`}</a>’s note{/if}

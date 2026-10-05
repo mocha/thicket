@@ -276,7 +276,7 @@
 <div id="bookmark-results" role={hasFilters ? 'tabpanel' : undefined}>
   {#if failed?.fresh}
     {@render failure()}
-  {:else if !loading && list.length === 0}
+  {:else if !loading && done && list.length === 0}
     <div class="empty">
       {#if q}
         <h2>No bookmarks match “{q}”</h2>

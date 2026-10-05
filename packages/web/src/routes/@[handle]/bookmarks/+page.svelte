@@ -54,10 +54,11 @@
 
   /** My own list, seen from my profile: remove one of mine, as on My Bookmarks (issue #170). */
   function remove(b: PublicBookmark) {
-    const snapshot = list;
+    const snapshot = list, h = handle;
     void removeBookmark(b, 'public_bookmarks', {
       drop: () => (list = list.filter((x) => x.id !== b.id)),
-      putBack: (id) => (list = withBookmarkBack(list, snapshot, b.id, id))
+      // Undo still restores it; the list only changes if it's still this one on screen.
+      putBack: (id) => { if (handle === h) list = withBookmarkBack(list, snapshot, b.id, id); }
     });
   }
 
@@ -128,7 +129,7 @@
 <div id="bookmark-results">
 {#if error}
   <div class="empty"><h2>Not here</h2><p>{error === 'not found' ? 'These bookmarks aren’t shared.' : error}</p></div>
-{:else if !loading && list.length === 0}
+{:else if !loading && done && list.length === 0}
   <div class="empty"><h2>{notes || notedOnly ? 'No notes yet' : 'No bookmarks yet'}</h2></div>
 {:else}
   <ul class="list">

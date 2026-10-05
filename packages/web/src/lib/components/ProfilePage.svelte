@@ -108,8 +108,11 @@
   let recentBookmarks = $state<PublicBookmark[] | null>(null);
   const shownBookmarks = $derived(recentBookmarks?.slice(0, BOOKMARKS_SHOWN) ?? null);
   let bookmarksFor = $state<string | undefined>(undefined);
+  /* Bumped by every change made here, so a fetch that set out before an Undo can't undo it. */
+  let bookmarksAsked = 0;
   function loadBookmarks(h: string) {
-    return profilesApi.bookmarks(h, { limit: BOOKMARKS_SHOWN + 1 }).then((r) => { if (bookmarksFor === h) recentBookmarks = r.bookmarks; });
+    const asked = ++bookmarksAsked;
+    return profilesApi.bookmarks(h, { limit: BOOKMARKS_SHOWN + 1 }).then((r) => { if (bookmarksFor === h && asked === bookmarksAsked) recentBookmarks = r.bookmarks; });
   }
   $effect(() => {
     if (!profile || profile.private || !profile.bookmarks || profile.bookmarks.count === 0 || bookmarksFor === profile.handle) return;
@@ -122,14 +125,21 @@
     const counts = profile.bookmarks, h = profile.handle, snapshot = recentBookmarks;
     void removeBookmark(b, 'profile', {
       drop: () => {
+        bookmarksAsked++;
         recentBookmarks = (recentBookmarks ?? []).filter((x) => x.id !== b.id);
         counts.count--;
       },
       putBack: (id) => {
+        // Undo still restores it; the cards only change if this profile is still the one on screen.
+        if (bookmarksFor !== h) return;
+        bookmarksAsked++;
         recentBookmarks = withBookmarkBack(recentBookmarks ?? [], snapshot, b.id, id);
         counts.count++;
       }
-    }).then(() => loadBookmarks(h)).catch(() => { /* the cards on screen stay as they are */ });
+    }).then(() => loadBookmarks(h)).catch((e) => {
+      // The cards on screen stay as they are; only the one moving up is missing.
+      api.event('profile_bookmarks_refill_failed', { message: (e instanceof Error ? e.message : String(e)).slice(0, 200) });
+    });
   }
 
   /** The people this person follows — their own section. */
