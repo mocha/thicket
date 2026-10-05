@@ -27,7 +27,7 @@
   let cursor = $state<string | null>(null);
   let done = $state(false);
   let loading = $state(false);
-  let sources = $state<BookmarkSources>({ feeds: [], collections: [], total: 0, noted: 0 });
+  let sources = $state<BookmarkSources>({ collections: [], total: 0, noted: 0 });
   let sentinel = $state<HTMLElement | null>(null);
 
   // Filters live in the URL: ?c=<collection>, and ?notes=1 on top of it: "With notes" narrows the tab.
@@ -68,9 +68,9 @@
   const hasNotesFilter = $derived(sources.noted > 0 || notes);
   /* Nothing to search until something is saved; a search already in the address always shows its field. */
   const hasSearch = $derived(sources.total > 0 || q.length > 0);
-  /* One tab per collection, plus All. */
+  /* One tab per collection, plus All. Each carries how many bookmarks it holds. */
   const filterTabs = $derived([
-    { value: 'all', label: 'All' },
+    { value: 'all', label: 'All', count: sources.total },
     ...sources.collections.map((c) => ({ value: String(c.id), label: c.name, count: c.count }))
   ]);
   const filterValue = $derived(collection ? String(collection) : 'all');
