@@ -391,7 +391,7 @@
     <section>
       {#if only}
         <h1 class="pagetitle titled">Collections <Badge>{profile.collections.length}</Badge></h1>
-        <p class="sub">Your feeds grouped and named however you choose</p>
+        <p class="sub">Your feeds grouped and named however you choose.</p>
       {:else}
         <h2>Collections <Badge>{profile.collections.length}</Badge></h2>
       {/if}
