@@ -102,13 +102,13 @@ export function dayKey(d: Date): string {
 }
 
 /**
- * The heading over a day's posts in the river. Today is "Latest posts";
- * yesterday says so; anything older is spelled out, with the year once it
+ * The heading over a day's posts in the river. Today and yesterday say so
+ * (not "Latest posts", which read as a second name for New posts, #173); anything older is spelled out, with the year once it
  * differs. Weekday included because "September 9" alone loses its place fast.
  */
 export function dayLabel(key: string, now = new Date()): string {
   const today = dayKey(now);
-  if (key >= today) return 'Latest posts';
+  if (key >= today) return 'Today';
   const y = new Date(now); y.setDate(y.getDate() - 1);
   if (key === dayKey(y)) return 'Yesterday';
   const [Y, M, D] = key.split('-').map(Number);
