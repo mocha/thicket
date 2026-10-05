@@ -221,7 +221,7 @@
 </form>
 
 <style>
-  .editor { border-top: 1px solid var(--line); padding: var(--space-3) var(--space-4); background: var(--surface-2); }
+  .editor { border-top: 1px solid var(--line); padding: var(--space-3) var(--space-4); }
   .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
   /* The suggestions hang just under the box, over whatever follows, as wide as the box: placed by place(), in the top layer. */
   .people {

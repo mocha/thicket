@@ -52,10 +52,11 @@
 </div>
 
 <style>
-  /* The same fill as the strip behind a row of tabs. A lighter wash came out
-     almost exactly the page color in most themes, so a note looked like a hole
-     in its card. Mine and someone else's are told apart by the label. */
-  .note { border-top: 1px solid var(--line); padding: var(--space-3) var(--space-4); background: var(--surface-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  /* No fill of its own: a note is part of the post, so it takes whatever the
+     post sits on, white in a card and the page on a post's own page (issue
+     #170). The rule above and the label set it apart; the label also tells
+     mine from someone else's. */
+  .note { border-top: 1px solid var(--line); padding: var(--space-3) var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); }
   .head { display: flex; align-items: baseline; gap: var(--space-2); margin-bottom: var(--space-1); }
   .who { font-weight: 700; font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2); }
   .mine .who { color: var(--accent); }
@@ -69,8 +70,8 @@
   .body :global(p:last-child), .body :global(ul:last-child), .body :global(ol:last-child), .body :global(blockquote:last-child), .body :global(pre:last-child) { margin-bottom: 0; }
   .body :global(ul), .body :global(ol) { margin: 0 0 var(--space-2); padding-left: var(--space-5); }
   .body :global(blockquote) { margin: 0 0 var(--space-2); padding-left: var(--space-3); border-left: 3px solid var(--line); color: var(--text-2); }
-  .body :global(code) { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; /* The card color, so code shows against the note's own fill. */ background: var(--surface); /* 1px vertical is optical: inline code stays on the text's line. */ padding: 1px var(--space-1); border-radius: var(--radius-xs); }
-  .body :global(pre) { margin: 0 0 var(--space-2); padding: var(--space-2) var(--space-3); background: var(--surface); border-radius: var(--radius-sm); overflow-x: auto; }
+  .body :global(code) { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; /* The quiet shading, so code shows against the note, which has no fill of its own. */ background: var(--surface-2); /* 1px vertical is optical: inline code stays on the text's line. */ padding: 1px var(--space-1); border-radius: var(--radius-xs); }
+  .body :global(pre) { margin: 0 0 var(--space-2); padding: var(--space-2) var(--space-3); background: var(--surface-2); border-radius: var(--radius-sm); overflow-x: auto; }
   .body :global(pre code) { background: none; padding: 0; }
   .body :global(a) { color: var(--accent); font-weight: 600; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); }
   /* The words a search matched. The same highlight as a search result on Explore. */
