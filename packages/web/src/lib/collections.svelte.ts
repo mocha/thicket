@@ -82,8 +82,8 @@ export function childrenOf(id: number): Collection[] {
 }
 
 /**
- * Which parents the sidebar shows open. Kept on this device, like the display
- * settings: a reader who folds a group away wants it to stay folded here.
+ * Which parents the sidebar shows open. Kept on this device, like the sidebar
+ * width: a reader who folds a group away wants it to stay folded here.
  * Closed by default.
  */
 const OPEN_KEY = 'thicket:nav-open';

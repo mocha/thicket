@@ -7,7 +7,7 @@
  */
 import { Hono, type Context } from "hono";
 import { isShareLevel, type ShareLevel } from "../lib/visibility.js";
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import {
   createSession, destroySession, destroyAllSessions, createUser, deleteUser, currentUser, findUserByHandle,
@@ -159,6 +159,36 @@ auth.patch("/me", async (c) => {
   if (typeof body.hideShortsByDefault === "boolean") patch.hideShortsByDefault = body.hideShortsByDefault;
   if (Object.keys(patch).length) await db.update(schema.users).set(patch).where(eq(schema.users.id, user.id));
   return c.json(await me(user.id));
+});
+
+/**
+ * Display settings (issue #186): one record for the account, the same on
+ * every device. The web app shapes and checks it, so all this side asks is
+ * that it be a small object. `onlyIfUnset` is how a device brings up the
+ * settings it had before they were kept here: they land only on an account
+ * that has none yet, so two devices racing to do that can't overwrite each
+ * other, and a fresh device's defaults never replace what an account already
+ * chose. The answer is the account's record either way, for the device to take
+ * up.
+ */
+const MAX_DISPLAY = 4000;
+
+auth.get("/me/display", async (c) => {
+  const user = currentUser(c);
+  const [u] = await db.select({ display: schema.users.display }).from(schema.users).where(eq(schema.users.id, user.id));
+  return c.json({ display: u?.display ?? null });
+});
+
+auth.put("/me/display", async (c) => {
+  const user = currentUser(c);
+  const body = await c.req.json<{ display?: unknown; onlyIfUnset?: boolean }>().catch(() => ({} as { display?: unknown; onlyIfUnset?: boolean }));
+  const d = body.display;
+  if (!d || typeof d !== "object" || Array.isArray(d) || JSON.stringify(d).length > MAX_DISPLAY) return c.json({ error: "bad display settings" }, 400);
+  const value = d as Record<string, unknown>;
+  const mine = eq(schema.users.id, user.id);
+  await db.update(schema.users).set({ display: value }).where(body.onlyIfUnset ? and(mine, isNull(schema.users.display)) : mine);
+  const [u] = await db.select({ display: schema.users.display }).from(schema.users).where(mine);
+  return c.json({ display: u?.display ?? null });
 });
 
 /** Change password. Requires the current one; signs out every other session. */

@@ -70,7 +70,7 @@
 
   const covered = $derived(inApp && display.layout === 'paged' && page.state.reader !== undefined);
 
-  // "What's new" counts, only while this device has the option on and someone is signed in.
+  // "What’s new" counts, only while the option is on and someone is signed in.
   $effect(() => { if (signedIn && display.fresh) return watchMarks(); });
   // The Notifications bubble: whenever someone is signed in, recounted on each move between pages (at most once a minute).
   $effect(() => { if (signedIn) return watchNotifs(); });

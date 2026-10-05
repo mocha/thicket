@@ -15,9 +15,9 @@
    * can see each part of your profile — is edited on the profile itself
    * (routes/@[handle]), so those choices sit where you can see their effect.
    *
-   * Nearly everything here saves the moment it changes. Display is the odd one
-   * out twice over: it is kept in this browser rather than on the account, and
-   * applies the moment you pick it. See lib/display.svelte.ts.
+   * Nearly everything here saves the moment it changes. Display also applies
+   * the moment you pick it, and keeps its own record on the account (with a
+   * copy in this browser for the first paint). See lib/display.svelte.ts.
    */
   const me = $derived(session.user!);
 
@@ -45,7 +45,7 @@
 
 <section class="card">
   <h2>Appearance</h2>
-  <p class="help">Display settings are per device, so each screen you read on can differ. Changes immediately apply.</p>
+  <p class="help">Display settings are saved to your account, so they apply on every device you sign in on. Changes apply immediately.</p>
   <Tiles name="Appearance" options={APPEARANCES} value={display.appearance} art={appearanceArt(display.palette, display.accent)} onchange={(v) => choose({ appearance: v }, 'appearance')} />
 </section>
 

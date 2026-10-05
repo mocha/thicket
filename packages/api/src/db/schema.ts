@@ -93,6 +93,15 @@ export const users = pgTable("users", {
    * so nobody opens the app to a backlog they never asked for.
    */
   notificationsSeenAt: timestamp("notifications_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  /**
+   * How thicket looks and reads for me, on every device (issue #186): light or
+   * dark, theme, fonts, how a post opens. One record, shaped and checked by the
+   * web app (web/src/lib/display.svelte.ts), which also reads any older or
+   * partial record field by field; the server only holds it. Null = never set
+   * up, so the first device to sign in gets the walkthrough, or brings up the
+   * settings it already had.
+   */
+  display: jsonb("display").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   /** Trigram GIN for fuzzy handle search (drizzle/0007). */

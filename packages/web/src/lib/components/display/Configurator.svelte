@@ -1,13 +1,15 @@
 <script lang="ts">
   /**
-   * First time on a new screen: four short steps that set how thicket looks
-   * here. Light or dark, color theme, fonts, then how a post opens. The theme
+   * First time in: four short steps that set how thicket looks, on every
+   * device. Light or dark, color theme, fonts, then how a post opens. The theme
    * gets its own step so a reader who needs Crisp or a Soft theme
    * meets it on day one, not buried in Settings. Every choice applies as it
    * is made, so the page behind the dialog is the preview. Opening the dialog
-   * writes this screen's record, which is what makes it a once-only thing:
-   * closing it any way at all is the same as finishing it. The full set of
-   * options stays on the Settings page.
+   * writes the account's record, which is what makes it a once-only thing:
+   * closing it any way at all is the same as finishing it, and another device
+   * signing in later finds the record and never asks. Anyone happy with what
+   * they see can accept the rest as it stands and skip the remaining steps.
+   * The full set of options stays on the Settings page.
    *
    * A new account (under a day old), or anyone who follows nothing yet, gets
    * an import step first, because bringing their feeds is the thing that
@@ -18,9 +20,7 @@
    * at the top, and the page behind is their copy. Picking a file says what
    * was found, then the appearance steps go by while the feeds are checked in
    * the background, and the last step opens the review instead of starting to
-   * read. The
-   * dialog opens once per screen, not per account, so a second device a day
-   * or more later only asks when there is still nothing followed.
+   * read.
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
@@ -44,8 +44,8 @@
   let withImport = $state(false);
   const IMPORT = { key: 'import', title: 'Import your feeds', lead: 'Coming from another reader?' };
   const DISPLAY = [
-    { key: 'appearance', title: 'Light or dark?', lead: 'Pick what suits this screen. You can also let it follow the device’s own setting.' },
-    { key: 'theme', title: 'Color theme', lead: 'Pick the colors thicket uses on this screen. Crisp has the most contrast; the Soft themes have the least.' },
+    { key: 'appearance', title: 'Light or dark?', lead: 'Pick what suits you. You can also let each device follow its own setting.' },
+    { key: 'theme', title: 'Color theme', lead: 'Pick the colors thicket uses. Crisp has the most contrast; the Soft themes have the least.' },
     { key: 'fonts', title: 'Fonts', lead: 'Headlines, text and the app itself can each have their own face and size. Watch the page behind this box change.' },
     { key: 'reading', title: 'Opening a post', lead: 'Read here, or on the post’s own site. Sites that only send a preview always get a link out.' }
   ];
@@ -74,14 +74,15 @@
       });
   });
 
-  function finish(how: 'done' | 'dismissed' | 'advanced' | 'review') {
+  /** `defaults`: keep everything as it stands now and skip the steps left, ending where the last step would. */
+  function finish(how: 'done' | 'dismissed' | 'advanced' | 'review' | 'defaults') {
     api.event('display_setup_closed', { how, step: current.key, withImport });
     open = false;
     welcome.open = false;
     welcome.copied = null;
     dialog?.close();
     if (how === 'advanced') void goto('/settings#display');
-    if (how === 'review') void goto('/import');
+    if (how === 'review' || (how === 'defaults' && importing)) void goto('/import');
   }
 </script>
 
@@ -90,7 +91,7 @@
     <div class="box">
       <header>
         {#if welcome.copied && step === 0}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
-        <p class="eyebrow">{withImport ? 'Get started' : 'Set up this screen'} · {step + 1} of {STEPS.length}</p>
+        <p class="eyebrow">{withImport ? 'Get started' : 'Set up thicket'} · {step + 1} of {STEPS.length}</p>
         <h2 id="setup-title">{current.title}</h2>
         <p class="lead">{current.lead}</p>
       </header>
@@ -119,6 +120,10 @@
           <Tiles name="Opening a post" options={READING_MODES} value={display.reading} art={READING_ART} notes onchange={(v) => setDisplay({ reading: v })} />
         {/if}
         {#if importing && imp.checking && current.key !== 'import'}<p class="status" aria-live="polite">Checking your feeds</p>{/if}
+        <!-- Not on the last step, where the main button already does this, nor before any setting has been shown. -->
+        {#if current.key !== 'import' && step < STEPS.length - 1}
+          <p class="accept">Like what you see? <button type="button" class="link" onclick={() => finish('defaults')}>Accept the defaults</button></p>
+        {/if}
       </div>
 
       <footer>
@@ -164,6 +169,9 @@
   .count { font-size: calc(var(--text-lg) * var(--size-app)); font-weight: 600; color: var(--text); }
   .found .then { margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .status { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .accept { margin: var(--space-4) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .accept .link { border: 0; padding: var(--space-1) 0; background: none; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
+  .accept .link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .spacer { flex: 1; }
   footer button { padding: var(--space-3) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); }
   footer button.link { border: 0; padding: var(--space-3) var(--space-1); color: var(--accent); }

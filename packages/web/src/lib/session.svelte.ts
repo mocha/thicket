@@ -8,6 +8,7 @@ import { resetCollections } from './collections.svelte';
 import { resetMarks } from './marks.svelte';
 import { resetNotifs } from './notifications.svelte';
 import { closeAddFeed } from './addfeed.svelte';
+import { useAccount } from './display.svelte';
 
 export const session = $state<{ user: Me | null; loaded: boolean; unreachable: string | null }>({ user: null, loaded: false, unreachable: null });
 
@@ -23,6 +24,7 @@ function applyUser(me: Me | null) {
     resetMarks(me?.id ?? null);
     resetNotifs();
     closeAddFeed();
+    useAccount(me);
   }
   session.user = me;
 }

@@ -387,6 +387,8 @@ export type Me = {
    * link while the confirmed one still gets resets.
    */
   email: string | null; emailConfirmedAt: string | null; pendingEmail: string | null;
+  /** How thicket looks for me on every device, or null if no device has set it up yet. Shaped by lib/display.svelte.ts. */
+  display: Record<string, unknown> | null;
 };
 export type SignupPolicy = 'open' | 'invite' | 'closed';
 /**
@@ -417,6 +419,10 @@ export const authApi = {
   logout: () => j<void>('/api/auth/logout', { method: 'POST' }),
   update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'activityVisibility' | 'notesFrom' | 'trackActivity' | 'hideShortsByDefault'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
   changePassword: (current: string, next: string) => j<void>('/api/auth/me/password', { method: 'POST', body: JSON.stringify({ current, next }) }),
+  /** My display settings as the account keeps them, or null if no device has set them up yet. */
+  display: () => j<{ display: Record<string, unknown> | null }>('/api/auth/me/display'),
+  /** Keep my display settings on the account. `onlyIfUnset`: only if it has none yet. Answers with what the account holds afterwards. */
+  setDisplay: (display: object, onlyIfUnset = false) => j<{ display: Record<string, unknown> | null }>('/api/auth/me/display', { method: 'PUT', body: JSON.stringify({ display, onlyIfUnset }) }),
   /** readthicket.com only, like the four below. `sent: false` means the address saved but the confirmation didn't go out; `error` says so. */
   setEmail: (email: string, password: string) => j<{ me: Me; sent: boolean; error?: string }>('/api/auth/me/email', { method: 'PUT', body: JSON.stringify({ email, password }) }),
   resendEmail: () => j<{ email: string }>('/api/auth/me/email/resend', { method: 'POST' }),

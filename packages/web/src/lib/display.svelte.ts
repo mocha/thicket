@@ -1,19 +1,28 @@
 /**
- * How thicket looks and reads on THIS screen. One record, kept in this
- * browser's storage, never on the account.
+ * How thicket looks and reads. One record, kept on the account and the same
+ * on every device (issue #186): someone who sets up thicket once expects their
+ * theme and fonts to follow them to the next screen they sign in on, and not
+ * to be walked through setup again. There are no per-device overrides.
  *
- * That is deliberate: a phone in bed and a desk at noon want different
- * answers, a reader who needs OpenDyslexic needs it on the machine they read
- * from, and an e-ink tablet wants pages and no color while the laptop wants
- * neither. Nothing here reaches the server.
+ * This browser's storage keeps a copy. It is what paints the first frame (a
+ * few lines in app.html read it before anything draws, so a dark reader never
+ * gets a white flash), what keeps tabs on one device in step, and the whole
+ * record for a visitor who isn't signed in. The account's record replaces the
+ * copy when someone signs in or the page loads (useAccount), and again when a
+ * tab comes back into view after a while, in case another device changed it.
+ * Every change made here goes to both.
  *
  * The record is applied as data attributes and a few custom properties on
- * <html>; app.css defines what they mean. A few lines in app.html read the
- * same key before first paint so a dark reader never gets a white flash.
+ * <html>; app.css defines what they mean.
  *
- * Whether the key exists at all is the one bit the configurator cares about:
- * a device with no record has never been set up, and gets the walkthrough.
+ * Whether a record exists at all is the one bit the configurator cares about:
+ * an account (or, signed out, a browser) with no record has never been set
+ * up, and gets the walkthrough. Before records were kept on the account, each
+ * device kept its own; the first device to sign in after that change brings
+ * its record up to an account that has none, and never over one that does.
  */
+import { authApi } from './api';
+
 export type Appearance = 'system' | 'light' | 'dark';
 export type Palette = 'default' | 'slate' | 'ember' | 'parchment' | 'plum' | 'contrast' | 'mono';
 export type Accent = 'blue' | 'orange' | 'green' | 'purple';
@@ -35,11 +44,10 @@ export type Display = {
   reading: ReadingMode;
   layout: Layout;
   /**
-   * "What's new": count posts since I last opened each collection, and mark
-   * the new ones. Off by default. The mark itself is kept on the account (one
-   * timestamp per collection, nothing per post), but only written from a
-   * device where this is on, so turning it off here means this device records
-   * nothing.
+   * "What's new": count posts since I last read in each collection, and mark
+   * the new ones. Off by default. The switch follows the account like the
+   * rest of this record; the point each count starts from is still kept per
+   * device (marks.svelte.ts).
    */
   fresh: boolean;
 };
@@ -236,18 +244,95 @@ function sync() {
  */
 export function watchDisplay() {
   const onStorage = (e: StorageEvent) => { if (e.key === KEY || e.key === null) sync(); };
-  const onVisible = () => { if (document.visibilityState === 'visible') sync(); };
+  const onShow = () => { sync(); refresh(); };
+  // Leaving the tab sends a change still waiting to go, rather than risk losing it with the tab.
+  const onVisible = () => { if (document.visibilityState === 'visible') onShow(); else flush(); };
   window.addEventListener('storage', onStorage);
-  window.addEventListener('pageshow', sync);
+  window.addEventListener('pageshow', onShow);
   document.addEventListener('visibilitychange', onVisible);
   return () => {
     window.removeEventListener('storage', onStorage);
-    window.removeEventListener('pageshow', sync);
+    window.removeEventListener('pageshow', onShow);
     document.removeEventListener('visibilitychange', onVisible);
   };
 }
 
-/** Change one or more fields. Applies immediately and remembers on this device. */
+// ---- the account's copy -----------------------------------------------------
+
+/** Whose record this is, when someone is signed in. */
+let account: number | null = null;
+/** A change waiting to go to the account, gathered so stepping a size five times sends once. */
+let pending: ReturnType<typeof setTimeout> | null = null;
+/** Saves sent and not yet answered. While any are out, what the account says may be older than the screen. */
+let saving = 0;
+let fetchedAt = 0;
+const SAVE_AFTER_MS = 500;
+const REFRESH_AFTER_MS = 60_000;
+
+/** Take up a record from the account: show it, and keep it as this browser's copy. */
+function take(raw: unknown) {
+  const found = coerce(raw);
+  const same = display.configured && JSON.stringify(found) === JSON.stringify(snapshot());
+  display.configured = true;
+  if (same) return;
+  Object.assign(display, found);
+  remember(found);
+  apply();
+}
+
+/**
+ * The signed-in person changed, or was learned on load (session.svelte.ts).
+ * Their account's record wins. An account with none yet takes this browser's,
+ * if it has one: that is how settings made on a device before records were
+ * kept on the account reach it, and only an empty account takes them. With
+ * neither, the configurator asks, and its answer is what the account keeps.
+ */
+export function useAccount(me: { id: number; display: Record<string, unknown> | null } | null) {
+  if (pending) { clearTimeout(pending); pending = null; }
+  account = me?.id ?? null;
+  fetchedAt = Date.now();
+  if (!me) return;
+  if (me.display) take(me.display);
+  else if (display.configured) bringUp(me.id);
+}
+
+/** Offer this browser's record to an account that has none, and take whatever the account ends up holding. */
+function bringUp(id: number) {
+  saving++;
+  authApi.setDisplay(snapshot(), true)
+    // Unless a change made here since has gone or is about to go: that is newer than either.
+    .then((r) => { if (account === id && !pending && saving === 1 && r.display) take(r.display); })
+    .catch(() => { /* it is offered again on the next load */ })
+    .finally(() => { saving--; });
+}
+
+function save() {
+  if (account === null) return;
+  if (pending) clearTimeout(pending);
+  pending = setTimeout(flush, SAVE_AFTER_MS);
+}
+
+function flush() {
+  if (!pending) return;
+  clearTimeout(pending);
+  pending = null;
+  if (account === null) return;
+  saving++;
+  // Not a failure worth a message: it applies here regardless, and the next change sends the whole record again.
+  authApi.setDisplay(snapshot()).catch(() => {}).finally(() => { saving--; });
+}
+
+/** Coming back to a tab after a while: another device may have changed the record since. */
+function refresh() {
+  if (account === null || pending || saving || Date.now() - fetchedAt < REFRESH_AFTER_MS) return;
+  const id = account;
+  fetchedAt = Date.now();
+  authApi.display()
+    .then((r) => { if (account === id && !pending && !saving && r.display) take(r.display); })
+    .catch(() => { /* what is on screen stands */ });
+}
+
+/** Change one or more fields. Applies immediately, here and on the account. */
 export function setDisplay(patch: Partial<Omit<Display, 'fonts'>> & { fonts?: Partial<Record<Role, Partial<{ family: Family; size: Size }>>> }) {
   // Start from the latest record, so only the fields being changed here are changed.
   sync();
@@ -257,6 +342,7 @@ export function setDisplay(patch: Partial<Omit<Display, 'fonts'>> & { fonts?: Pa
   display.configured = true;
   remember(snapshot());
   apply();
+  save();
 }
 
 export function setFont(role: Role, patch: Partial<{ family: Family; size: Size }>) {
@@ -269,15 +355,19 @@ export function stepSize(role: Role, delta: 1 | -1) {
 }
 
 /**
- * Write the current values down as this device's record, even if nothing was
- * changed. The configurator calls this when it opens: from then on the device
- * counts as set up, and dismissing the walkthrough is a choice like any other.
+ * Write the current values down as the record, even if nothing was changed.
+ * The configurator calls this when it opens: from then on the account (and
+ * this browser) counts as set up, and dismissing the walkthrough is a choice
+ * like any other. Only an account still without a record takes it, so a
+ * second device opening setup at the same moment can't undo the first one's
+ * choices.
  */
 export function markConfigured() {
   sync();
   if (display.configured) return;
   display.configured = true;
   remember(snapshot());
+  if (account !== null) bringUp(account);
 }
 
 function snapshot(): Display {
