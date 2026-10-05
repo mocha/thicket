@@ -120,7 +120,6 @@
     bookmarks: 'M6 4h12v17l-6-4-6 4z',
     notifications: 'M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9M10 20.5a2.2 2.2 0 0 0 4 0',
     explore: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM15.5 8.5l-2 5-5 2 2-5z',
-    addfeed: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v8M8 12h8',
     admin: 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z'
   };
 </script>
@@ -229,7 +228,7 @@
   {#if me}
     <!-- Sidebar only, pinned under the scrolling list so it never scrolls away.
          On bottom bar screens the same action sits beside each page's title instead. -->
-    <button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}>{@render icon(icons.addfeed)}<span>Add new feed</span></button>
+    <button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" /><path d="M12 8v8M8 12h8" fill="none" stroke="var(--accent-ink)" stroke-width="2" stroke-linecap="round" /></svg><span>Add new feed</span></button>
     <div class="account">
       <button type="button" class="who" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}>
         <Avatar handle={me.handle} name={me.displayName ?? me.handle} size={34} v={me.avatarUpdatedAt} />
@@ -324,7 +323,7 @@
     }
     nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-5); }
     /* Full width, so it reads as the menu's main action rather than one more row. */
-    /* A row like the ones above it, in the accent color, so it reads as the one action in a list of places. */
+    /* A row like the ones above it, in the accent color, its circle filled like a primary button, so it reads as the one action in a list of places. */
     nav:not(.paged) .addfeed { display: flex; flex: none; align-items: center; gap: var(--space-3); margin: var(--space-2) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     nav:not(.paged) .addfeed:hover { background: var(--surface-2); }
     nav:not(.paged) .long { display: inline; }
