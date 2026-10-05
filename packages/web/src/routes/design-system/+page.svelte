@@ -399,7 +399,7 @@
 
     <section class="entry" id="add-new-feed" aria-labelledby="add-new-feed-h">
       <h3 class="entry-h" id="add-new-feed-h">Add new feed</h3>
-      <p class="section-lede">The app’s main action: a small primary Button that opens the Add a feed Sheet. Where it sits depends on the screen. Wherever the left menu shows, it fills the menu’s width at the top, under the logo, and stays put while the menu scrolls, so it’s one click from every page. Everything, Explore, and Collections then leave it out of their titles. On phones, upright iPads, and in the paged layout, which have the bottom bar instead, it sits beside the title on those three pages. Your own collection’s page keeps it beside the title at every size, because only that one adds the feed straight into the collection. It never shows to someone signed out, and a new account’s welcome screen has its own large “Add your first feed” instead.</p>
+      <p class="section-lede">The app’s main action: a small primary Button that opens the Add a feed Sheet. Where it sits depends on the screen. Wherever the left menu shows, it fills the menu’s width at the top, under the logo, with the menu rows’ squarer corners, and stays put while the menu scrolls, so it’s one click from every page. Everything, Explore, and Collections then leave it out of their titles. On phones, upright iPads, and in the paged layout, which have the bottom bar instead, it sits beside the title on those three pages. Your own collection’s page keeps it beside the title at every size, because only that one adds the feed straight into the collection. It never shows to someone signed out, and a new account’s welcome screen has its own large “Add your first feed” instead.</p>
       <div class="row">
         <div class="menu-demo"><Button variant="primary" size="sm"><span class="plus" aria-hidden="true">+</span> Add new feed</Button></div>
       </div>
@@ -764,7 +764,7 @@
   .prefix { color: var(--text-2); }
   /* Add new feed as it sits in the left menu, and beside a page title. */
   .menu-demo { width: 240px; padding: var(--space-4) var(--space-3); border-right: 1px solid var(--line); }
-  .menu-demo :global(.btn) { width: 100%; }
+  .menu-demo :global(.btn) { width: 100%; border-radius: var(--radius-sm); }
   .title-demo { justify-content: space-between; max-width: 460px; }
   .title-demo-h { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); }
   .plus { font-size: 1.3em; line-height: 1; }

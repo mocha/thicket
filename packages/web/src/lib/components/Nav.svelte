@@ -323,7 +323,8 @@
     nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-5); }
     /* Full width, so it reads as the menu's main action rather than one more row. */
     nav:not(.paged) .addfeed { display: block; flex: none; padding: 0 0 var(--space-4); }
-    nav:not(.paged) .addfeed :global(.btn) { width: 100%; }
+    /* Corners like the menu rows' highlight, so it sits in the menu rather than floating over it. */
+    nav:not(.paged) .addfeed :global(.btn) { width: 100%; border-radius: var(--radius-sm); }
     nav:not(.paged) .long { display: inline; }
     nav:not(.paged) .shortl, nav:not(.paged) li.mobile-only { display: none; }
     /* The only scrolling part, so the account block below it never drifts up into the list. */
