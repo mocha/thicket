@@ -8,7 +8,7 @@
   import { showToast } from '$lib/toast.svelte';
   import Avatar from './Avatar.svelte';
   import AccountMenu from './AccountMenu.svelte';
-  import AddFeedButton from './AddFeedButton.svelte';
+  import { openAddFeed } from '$lib/addfeed.svelte';
   import Icon from './Icon.svelte';
   import Field from './Field.svelte';
   import Input from './Input.svelte';
@@ -22,8 +22,8 @@
    * The sidebar, top to bottom: Everything (the whole stream, its own item
    * now), then "Collections" — a group you can fold away — holding each of your
    * collections and "+ New collection", then Bookmarks (notes live there
-   * too), Notifications (with a count of what is new), Explore, and Add new
-   * feed, the app's main action.
+   * too), Notifications (with a count of what is new) and Explore. Add new
+   * feed, the app's main action, is pinned below the list.
    * Nothing here manages anything: a collection is managed from its
    * own page. Mobile has no room for the list, so its Collections tab opens
    * your profile, which lists them.
@@ -120,6 +120,7 @@
     bookmarks: 'M6 4h12v17l-6-4-6 4z',
     notifications: 'M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9M10 20.5a2.2 2.2 0 0 0 4 0',
     explore: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM15.5 8.5l-2 5-5 2 2-5z',
+    addfeed: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v8M8 12h8',
     admin: 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z'
   };
 </script>
@@ -212,8 +213,6 @@
     <li>
       <a href="/explore" aria-current={current('/explore') || inFeeds ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
     </li>
-    <!-- Sidebar only. On bottom bar screens the same button sits beside each page's title instead. -->
-    {#if me}<li class="addfeed"><AddFeedButton via="sidebar" /></li>{/if}
     <!-- Mobile: you. Opens the account menu — your profile, settings, and log out. -->
     {#if me}
       <li class="mobile-only you">
@@ -228,6 +227,9 @@
   </ul>
 
   {#if me}
+    <!-- Sidebar only, pinned under the scrolling list so it never scrolls away.
+         On bottom bar screens the same action sits beside each page's title instead. -->
+    <button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}>{@render icon(icons.addfeed)}<span>Add new feed</span></button>
     <div class="account">
       <button type="button" class="who" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}>
         <Avatar handle={me.handle} name={me.displayName ?? me.handle} size={34} v={me.avatarUpdatedAt} />
@@ -322,9 +324,9 @@
     }
     nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-5); }
     /* Full width, so it reads as the menu's main action rather than one more row. */
-    nav:not(.paged) li.addfeed { display: block; padding-top: var(--space-3); }
-    /* Corners like the menu rows' highlight, so it sits in the menu rather than floating over it. */
-    nav:not(.paged) .addfeed :global(.btn) { width: 100%; border-radius: var(--radius-sm); }
+    /* A row like the ones above it, in the accent color, so it reads as the one action in a list of places. */
+    nav:not(.paged) .addfeed { display: flex; flex: none; align-items: center; gap: var(--space-3); margin: var(--space-2) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
+    nav:not(.paged) .addfeed:hover { background: var(--surface-2); }
     nav:not(.paged) .long { display: inline; }
     nav:not(.paged) .shortl, nav:not(.paged) li.mobile-only { display: none; }
     /* The only scrolling part, so the account block below it never drifts up into the list. */
