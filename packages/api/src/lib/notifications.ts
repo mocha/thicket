@@ -30,6 +30,9 @@
  *   - A bookmark or note by someone I follow shows when their profile is
  *     public and their recent activity, and that section (bookmarks or notes),
  *     are shared with me — what their Recent activity list would show me.
+ *   - Only what they did after I followed them: following someone is not a
+ *     request for their history. (A mention needs no follow, so it has no such
+ *     line.)
  *   - A note supersedes the bookmark it lives on (issue #84): a noted post is
  *     one act, shown once, as the note, when I may read notes; as the bookmark
  *     otherwise.
@@ -120,8 +123,8 @@ export type FollowRow = { at: string; person: Person & { profileVisibility: "pub
 /** A post, as the one-line notifications name it. */
 export type PostRef = { url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean };
 
-/** A bookmark by someone I follow, noted or not. */
-export type SaveRow = { id: number; author: Author; post: PostRef; savedAt: string; noteCreatedAt: string | null };
+/** A bookmark by someone I follow, noted or not, and when I started following them. */
+export type SaveRow = { id: number; author: Author; post: PostRef; savedAt: string; noteCreatedAt: string | null; followedAt: string };
 
 /**
  * A note that mentions me. `bookmark` is the whole bookmark in the shape a
@@ -174,13 +177,15 @@ export function assemble(meId: number, c: Candidates, opts: { seenAt: string; si
 
   for (const s of c.saves) {
     const a = s.author;
+    const followed = Date.parse(s.followedAt);
+    const fresh = (at: string | null) => inWindow(at) && Date.parse(at!) > followed;
     if (a.id === meId || a.profileVisibility !== "public" || !allows(a.activityVisibility, audience(a))) continue;
     const notes = allows(a.notesVisibility, audience(a));
     const marks = allows(a.bookmarksVisibility, audience(a));
     if (s.noteCreatedAt && notes) {
       // A note I was mentioned in is already here, in full.
-      if (!mentioned.has(s.id) && inWindow(s.noteCreatedAt)) out.push({ kind: "note", key: `note:${s.id}`, at: s.noteCreatedAt, person: who(a), post: s.post });
-    } else if (marks && inWindow(s.savedAt)) {
+      if (!mentioned.has(s.id) && fresh(s.noteCreatedAt)) out.push({ kind: "note", key: `note:${s.id}`, at: s.noteCreatedAt, person: who(a), post: s.post });
+    } else if (marks && fresh(s.savedAt)) {
       out.push({ kind: "bookmark", key: `bookmark:${s.id}`, at: s.savedAt, person: who(a), post: s.post });
     }
   }
@@ -227,9 +232,10 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
   `);
 
   // A note written today on a post saved last year counts too, by when the note was written.
-  const saves = await db.execute<AuthorDbRow & { id: number; url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean; savedAt: Date; noteCreatedAt: Date | null }>(sql`
+  const saves = await db.execute<AuthorDbRow & { id: number; url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean; savedAt: Date; noteCreatedAt: Date | null; followedAt: Date }>(sql`
     select b.id, b.url, b.title, b.site_title as "siteTitle", b.feed_id as "feedId", ${ICON} as "hasIcon",
            b.saved_at as "savedAt", case when b.note is null then null else b.note_created_at end as "noteCreatedAt",
+           mine.created_at as "followedAt",
            ${authorCols(me.id)}
     from user_follows mine
     join bookmarks b on b.user_id = mine.followee_id
@@ -238,6 +244,7 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
     where mine.follower_id = ${me.id} and b.user_id <> ${me.id}
       and ((b.saved_at > ${since}::timestamptz and b.saved_at <= ${until}::timestamptz)
         or (b.note_created_at > ${since}::timestamptz and b.note_created_at <= ${until}::timestamptz))
+      and (b.saved_at > mine.created_at or b.note_created_at > mine.created_at)
     order by greatest(b.saved_at, coalesce(b.note_created_at, b.saved_at)) desc limit ${CAP * 3}
   `);
 
@@ -264,7 +271,7 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
   return {
     follows: follows.rows.map((r) => ({ at: iso(r.at)!, person: { id: Number(r.id), handle: r.handle, displayName: r.displayName, avatarUpdatedAt: iso(r.avatarUpdatedAt), profileVisibility: r.profileVisibility } })),
     saves: saves.rows.map((r) => ({
-      id: Number(r.id), author: authorOf(r), savedAt: iso(r.savedAt)!, noteCreatedAt: iso(r.noteCreatedAt),
+      id: Number(r.id), author: authorOf(r), savedAt: iso(r.savedAt)!, noteCreatedAt: iso(r.noteCreatedAt), followedAt: iso(r.followedAt)!,
       post: { url: r.url, title: r.title, siteTitle: r.siteTitle, feedId: r.feedId === null ? null : Number(r.feedId), hasIcon: r.hasIcon },
     })),
     mentions: mentions.rows.map((r) => ({ id: Number(r.id), author: authorOf(r), at: iso(r.at)!, bookmark: r.bookmark })),
