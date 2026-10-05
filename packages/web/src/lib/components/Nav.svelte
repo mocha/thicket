@@ -8,6 +8,7 @@
   import { showToast } from '$lib/toast.svelte';
   import Avatar from './Avatar.svelte';
   import AccountMenu from './AccountMenu.svelte';
+  import { openAddFeed } from '$lib/addfeed.svelte';
   import Icon from './Icon.svelte';
   import Field from './Field.svelte';
   import Input from './Input.svelte';
@@ -21,7 +22,8 @@
    * The sidebar, top to bottom: Everything (the whole stream, its own item
    * now), then "Collections" — a group you can fold away — holding each of your
    * collections and "+ New collection", then Bookmarks (notes live there
-   * too), Notifications (with a count of what is new) and Explore.
+   * too), Notifications (with a count of what is new) and Explore. Add new
+   * feed, the app's main action, sits above the list, under the logo.
    * Nothing here manages anything: a collection is managed from its
    * own page. Mobile has no room for the list, so its Collections tab opens
    * your profile, which lists them.
@@ -134,6 +136,9 @@
 <!-- Paged layout keeps the bottom bar at every width: a sidebar is a scrolling thing. -->
 <nav aria-label="Primary" class:paged={display.layout === 'paged'}>
   <a class="brand" href="/everything"><img src="/icon.svg" alt="" width="28" height="28" /><Wordmark height={23} /></a>
+  <!-- Sidebar only, above the scrolling list so it never scrolls away. On
+       bottom bar screens the same action sits beside each page's title instead. -->
+  {#if me}<button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg><span>Add new feed</span></button>{/if}
   <ul>
     <!-- Mobile-only tabs. On desktop, Everything and My collections live in the li.collections block below. -->
     <li class="mobile-only">
@@ -270,7 +275,7 @@
     backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
     border-top: 1px solid var(--line);
   }
-  .brand, .account, .long, li.admin, li.collections, li.notifs, .resize { display: none; }
+  .brand, .addfeed, .account, .long, li.admin, li.collections, li.notifs, .resize { display: none; }
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
   /* Each tab is as wide as its label plus an even share of the spare room, so
      "Collections" gets more than "You" and none of them touch. Never narrower
@@ -316,7 +321,13 @@
       display: flex; flex-direction: column;
       border-top: 0; border-right: 1px solid var(--line); background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none;
     }
-    nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-5); }
+    /* A hairline under the logo sets it apart from Add new feed and the rows below. */
+    nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
+    /* A row like the ones below it, in the accent color, its circle drawn a touch finer than their icons, so it reads as the one action in a list of places. */
+    nav:not(.paged) .addfeed { display: flex; flex: none; align-items: center; gap: var(--space-3); margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
+    nav:not(.paged) .addfeed:hover { background: var(--surface-2); }
+    /* The same accent ring, drawn just inside, as the rows below it. */
+    nav:not(.paged) .addfeed:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
     nav:not(.paged) .long { display: inline; }
     nav:not(.paged) .shortl, nav:not(.paged) li.mobile-only { display: none; }
     /* The only scrolling part, so the account block below it never drifts up into the list. */

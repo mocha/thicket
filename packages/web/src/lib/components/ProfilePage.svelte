@@ -13,6 +13,7 @@
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
+  import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
@@ -389,7 +390,10 @@
   {#if profile.collections}
     <section>
       {#if only}
-        <h1 class="pagetitle">Collections <Badge>{profile.collections.length}</Badge></h1>
+        <div class="titlerow">
+          <h1 class="pagetitle">Collections <Badge>{profile.collections.length}</Badge></h1>
+          {#if isMe}<AddFeedButton via="collections" bottomBarOnly />{/if}
+        </div>
         <Field class="colfilter" label="Filter collections" hideLabel>
           {#snippet children({ id })}
             <Input
@@ -583,7 +587,9 @@
 
 <style>
   /* The Collections screen's own title, in the place a page title sits everywhere else. */
-  .pagetitle { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.15; margin: 0 0 var(--space-4); }
+  /* Its title row, with Add new feed beside it where there's no left menu to hold it. */
+  .titlerow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); margin: 0 0 var(--space-4); }
+  .pagetitle { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.15; margin: 0; }
   .who { display: flex; gap: var(--space-4); align-items: flex-start; margin: var(--space-2) 0 var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); }
   .names { flex: 1; min-width: 0; }
   /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
