@@ -19,10 +19,11 @@
   import { navWidth, loadNavWidth, setNavWidth, NAV_W_MIN, NAV_W_MAX, NAV_W_DEFAULT } from '$lib/navwidth.svelte';
 
   /**
-   * The sidebar, top to bottom: Add new feed (the app's main action), Everything (the whole stream, its own item
+   * The sidebar, top to bottom: Everything (the whole stream, its own item
    * now), then "Collections" — a group you can fold away — holding each of your
    * collections and "+ New collection", then Bookmarks (notes live there
-   * too), Notifications (with a count of what is new) and Explore.
+   * too), Notifications (with a count of what is new), Explore, and Add new
+   * feed, the app's main action.
    * Nothing here manages anything: a collection is managed from its
    * own page. Mobile has no room for the list, so its Collections tab opens
    * your profile, which lists them.
@@ -135,9 +136,6 @@
 <!-- Paged layout keeps the bottom bar at every width: a sidebar is a scrolling thing. -->
 <nav aria-label="Primary" class:paged={display.layout === 'paged'}>
   <a class="brand" href="/everything"><img src="/icon.svg" alt="" width="28" height="28" /><Wordmark height={23} /></a>
-  <!-- Sidebar only, and outside the scrolling list so it never scrolls away. On
-       bottom bar screens the same button sits beside each page's title instead. -->
-  {#if me}<div class="addfeed"><AddFeedButton via="sidebar" /></div>{/if}
   <ul>
     <!-- Mobile-only tabs. On desktop, Everything and My collections live in the li.collections block below. -->
     <li class="mobile-only">
@@ -214,6 +212,8 @@
     <li>
       <a href="/explore" aria-current={current('/explore') || inFeeds ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
     </li>
+    <!-- Sidebar only. On bottom bar screens the same button sits beside each page's title instead. -->
+    {#if me}<li class="addfeed"><AddFeedButton via="sidebar" /></li>{/if}
     <!-- Mobile: you. Opens the account menu — your profile, settings, and log out. -->
     {#if me}
       <li class="mobile-only you">
@@ -322,7 +322,7 @@
     }
     nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-5); }
     /* Full width, so it reads as the menu's main action rather than one more row. */
-    nav:not(.paged) .addfeed { display: block; flex: none; padding: 0 0 var(--space-4); }
+    nav:not(.paged) li.addfeed { display: block; padding-top: var(--space-3); }
     /* Corners like the menu rows' highlight, so it sits in the menu rather than floating over it. */
     nav:not(.paged) .addfeed :global(.btn) { width: 100%; border-radius: var(--radius-sm); }
     nav:not(.paged) .long { display: inline; }
