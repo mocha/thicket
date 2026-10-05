@@ -97,6 +97,9 @@ if (WEB_DIR) {
     index: "__no_index__",
     onFound: (path, c) => c.header("cache-control", path.includes("/_app/immutable/") ? "public, max-age=31536000, immutable" : "public, max-age=0, must-revalidate"),
   }));
+  // The main list was called Everything until issue #173. Forward its old address here too, not only in the
+  // browser, so link previews and search engines see the move. (The web app's own redirect covers dev.)
+  app.get("/everything", (c) => c.redirect("/new-posts" + new URL(c.req.url).search, 308));
   // SPA fallback: any other path is a client route. Public pages get a
   // server-rendered <head> (title, Open Graph, OPML link) so shared links unfurl.
   const index = readFileSync(join(WEB_DIR, "index.html"), "utf8");
