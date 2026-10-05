@@ -36,7 +36,7 @@ function author(over: Partial<SaveRow["author"]> = {}): SaveRow["author"] {
 }
 const post = { url: "https://example.com/a", title: "A post", siteTitle: "Example", feedId: 1, hasIcon: false };
 function save(over: Partial<SaveRow> = {}): SaveRow {
-  return { id: nextId++, author: author(), post, savedAt: ago(1), noteCreatedAt: null, ...over };
+  return { id: nextId++, author: author(), post, savedAt: ago(1), noteCreatedAt: null, followedAt: ago(365 * 24), ...over };
 }
 function mention(over: Partial<MentionRow> = {}): MentionRow {
   return { id: nextId++, author: author(), at: ago(1), bookmark: { id: 1 }, ...over };
@@ -205,4 +205,25 @@ test("a range that can't be read is refused before anything is looked up", async
   const r = await a.request("/api/notifications?since=yesterday");
   assert.equal(r.status, 400);
   assert.match((await r.json() as { error: string }).error, /since/);
+});
+
+test("only what they did after I followed them: a new follow brings no history", () => {
+  const followedAt = ago(10);
+  const c = { ...none, saves: [
+    save({ followedAt, savedAt: ago(48), post: { ...post, title: "before" } }),
+    save({ followedAt, savedAt: ago(2), post: { ...post, title: "after" } }),
+    // Saved before, noted after: the note is new to me, so it counts.
+    save({ followedAt, savedAt: ago(48), noteCreatedAt: ago(1), post: { ...post, title: "noted after" } }),
+    // Saved and noted before: neither counts, and the bookmark doesn't stand in for the note.
+    save({ followedAt, savedAt: ago(48), noteCreatedAt: ago(20), post: { ...post, title: "noted before" } }),
+  ] };
+  const r = assemble(ME, c, opts);
+  assert.deepEqual(r.items.map((n) => `${n.kind}:${(n as { post: { title: string } }).post.title}`), ["note:noted after", "bookmark:after"]);
+});
+
+test("a mention from before I followed them still arrives", () => {
+  const ana = author();
+  const n = save({ author: ana, followedAt: ago(1), noteCreatedAt: ago(5) });
+  const r = assemble(ME, { ...none, saves: [n], mentions: [mention({ id: n.id, author: ana, at: ago(5) })] }, opts);
+  assert.deepEqual(kinds(r), ["mention"]);
 });
