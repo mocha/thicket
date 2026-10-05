@@ -2,7 +2,7 @@
   import { onMount, untrack } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { api, bookmarksApi, profileHref, type Bookmark, type BookmarkSources } from '$lib/api';
+  import { api, ApiError, bookmarksApi, profileHref, type Bookmark, type BookmarkSources } from '$lib/api';
   /**
    * My Bookmarks: every post I've saved, and my note on each one that has one
    * (issue #84: a note is part of a bookmark). Newest activity first: saving a
@@ -22,6 +22,8 @@
   import Tabs from '$lib/components/Tabs.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import { site, loadSite } from '$lib/site.svelte';
+  import { openFeedback } from '$lib/feedback.svelte';
 
   let list = $state<Bookmark[]>([]);
   let cursor = $state<string | null>(null);
@@ -79,19 +81,41 @@
      answers come back, so an answer to an older question is dropped. */
   let asked = 0;
 
+  /*
+   * A load that didn't come back, said instead of the list. `fresh` is a new
+   * search or filter, whose answer replaces the cards; otherwise it was the
+   * next page, and the cards above it stay. `ours` is a failure on thicket's
+   * side (the server answered, but with an error), as against no answer at all.
+   */
+  let failed = $state<{ fresh: boolean; ours: boolean } | null>(null);
+  const hosted = $derived(site.status?.hosted ?? false);
+
   async function loadMore(reset = false) {
-    if (!reset && (loading || done)) return;
+    if (!reset && (loading || done || failed)) return;
     const mine = reset ? ++asked : asked;
     loading = true;
+    if (reset) failed = null;
     try {
       const pg = await bookmarksApi.list({ before: reset ? null : cursor, collection, notes, q, limit: 30 });
       if (mine !== asked) return;
       list = reset ? pg.bookmarks : [...list, ...pg.bookmarks];
       cursor = pg.nextCursor;
       done = pg.nextCursor === null;
+    } catch (e) {
+      if (mine !== asked) return;
+      // A proxy's 502 to 504 means thicket itself didn't answer (restarting, say), the same as no answer.
+      const ours = e instanceof ApiError && e.status < 502;
+      failed = { fresh: reset, ours };
+      if (ours && !site.status) void loadSite();
+      // The server logs its own side; this says which page and what came back. Never the search words.
+      api.event('bookmarks_load_failed', { status: e instanceof ApiError ? e.status : null, message: (e instanceof Error ? e.message : String(e)).slice(0, 200), searched: !!q, fresh: reset });
     } finally {
       if (mine === asked) loading = false;
     }
+  }
+
+  function retry() {
+    void loadMore(failed?.fresh ?? true);
   }
 
   /** The page's address with some of its filters changed. Whatever isn't named stays as it was. */
@@ -236,9 +260,25 @@
   </div>
 {/if}
 
+{#snippet failure()}
+  <div class="empty" role="alert">
+    <h2>{q ? 'Couldn’t search your bookmarks' : 'Couldn’t load your bookmarks'}</h2>
+    {#if failed?.ours}
+      <p>Something went wrong on thicket’s side. Try again{#if hosted}, and if it keeps happening, <button type="button" class="inline" onclick={openFeedback}>send feedback</button>{/if}.</p>
+    {:else if typeof navigator !== 'undefined' && !navigator.onLine}
+      <p>You’re offline. Reconnect and try again.</p>
+    {:else}
+      <p>thicket isn’t answering right now. Try again in a minute.</p>
+    {/if}
+    <div class="ctas"><Button onclick={retry} disabled={loading}>Try again</Button></div>
+  </div>
+{/snippet}
+
 <!-- What the tabs above switch between. -->
 <div id="bookmark-results" role={hasFilters ? 'tabpanel' : undefined}>
-  {#if !loading && list.length === 0}
+  {#if failed?.fresh}
+    {@render failure()}
+  {:else if !loading && list.length === 0}
     <div class="empty">
       {#if q}
         <h2>No bookmarks match “{q}”</h2>
@@ -278,7 +318,7 @@
           action={{ kind: 'remove', on: true, label: b.note ? 'Remove bookmark and note' : 'Remove bookmark', run: () => remove(b) }} />
       {/each}
     </ul>
-    {#if loading}<p class="status">Loading…</p>{/if}
+    {#if failed}{@render failure()}{:else if loading}<p class="status">Loading…</p>{/if}
     <div bind:this={sentinel} aria-hidden="true"></div>
   {/if}
 </div>
@@ -306,5 +346,8 @@
   .elsewhere { text-align: center; margin: 0; font-size: calc(var(--text-base) * var(--size-app)); overflow-wrap: anywhere; }
   .elsewhere a { color: var(--accent); font-weight: 600; }
   @media (hover: hover) { .elsewhere a:hover { text-decoration: underline; text-underline-offset: 3px; } }
+  /* "send feedback" reads as a link inside the sentence, but opens the feedback Sheet rather than a page. */
+  .inline { font: inherit; color: var(--accent); font-weight: 600; background: none; border: 0; padding: 0; cursor: pointer; }
+  @media (hover: hover) { .inline:hover { text-decoration: underline; text-underline-offset: 3px; } }
   .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; }
 </style>
