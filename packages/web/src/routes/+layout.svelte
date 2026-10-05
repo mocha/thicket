@@ -46,7 +46,7 @@
   $effect(() => {
     if (!session.loaded) return;
     if (!signedIn && !isPublic) void goto(`/login?next=${encodeURIComponent(path + page.url.search)}`, { replaceState: true });
-    else if (signedIn && (path === '/login' || path === '/signup')) void goto(page.url.searchParams.get('next') || '/everything', { replaceState: true });
+    else if (signedIn && (path === '/login' || path === '/signup')) void goto(page.url.searchParams.get('next') || '/new-posts', { replaceState: true });
   });
   const show = $derived(session.loaded && (signedIn || isPublic));
   /**

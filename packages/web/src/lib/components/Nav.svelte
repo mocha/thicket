@@ -18,7 +18,7 @@
   import { navWidth, loadNavWidth, setNavWidth, NAV_W_MIN, NAV_W_MAX, NAV_W_DEFAULT } from '$lib/navwidth.svelte';
 
   /**
-   * The sidebar, top to bottom: Everything (the whole stream, its own item
+   * The sidebar, top to bottom: New posts (every post you follow, its own item
    * now), then "Collections" — a group you can fold away — holding each of your
    * collections and "+ New collection", then Bookmarks (notes live there
    * too), Notifications (with a count of what is new) and Explore.
@@ -146,18 +146,18 @@
 
 <!-- Paged layout keeps the bottom bar at every width: a sidebar is a scrolling thing. -->
 <nav aria-label="Primary" class:paged={display.layout === 'paged'}>
-  <a class="brand" href="/everything"><img src="/icon.svg" alt="" width="28" height="28" /><Wordmark height={23} /></a>
+  <a class="brand" href="/new-posts"><img src="/icon.svg" alt="" width="28" height="28" /><Wordmark height={23} /></a>
   <ul>
-    <!-- Mobile-only tabs. On desktop, Everything and My collections live in the li.collections block below. -->
+    <!-- Mobile-only tabs. On desktop, New posts and Collections live in the li.collections block below. -->
     <li class="mobile-only">
-      <a href="/everything" aria-current={path === '/everything' ? 'page' : undefined}><span class="ic">{@render icon(icons.everything)}{#if fresh && rootMark?.count}<Badge variant="dot" class="pin" aria-label="New posts" />{/if}</span><span class="shortl">Everything</span></a>
+      <a href="/new-posts" aria-current={path === '/new-posts' ? 'page' : undefined}><span class="ic">{@render icon(icons.everything)}{#if fresh && rootMark?.count}<Badge variant="dot" class="pin" aria-label="New since your last visit" />{/if}</span><span class="shortl">New posts</span></a>
     </li>
     <li class="mobile-only">
       <a href="/collections" aria-current={onAnyCollection ? 'page' : undefined}><span class="ic">{@render icon(icons.collections)}{#if anyColNew}<Badge variant="dot" class="pin" aria-label="New posts" />{/if}</span><span class="shortl">Collections</span></a>
     </li>
     <li class="collections">
-      <!-- Everything: the whole stream, its own item now — the job the old italic "All collections" row did. -->
-      <a class="readall" href="/everything" aria-current={path === '/everything' ? 'page' : undefined}>{@render icon(icons.everything)}<span>Everything</span>{#if fresh && rootMark?.count}<Badge tone="accent" class="tail">{countText(rootMark)}</Badge>{/if}</a>
+      <!-- New posts: every post you follow, its own item now — the job the old italic "All collections" row did. -->
+      <a class="readall" href="/new-posts" aria-current={path === '/new-posts' ? 'page' : undefined}>{@render icon(icons.everything)}<span>New posts</span>{#if fresh && rootMark?.count}<Badge tone="accent" class="tail">{countText(rootMark)}</Badge>{/if}</a>
       <!-- My collections: a group you can fold away. Your collections sit under it.
            The word opens the Collections screen (the same one the bottom bar's
            tab opens on a phone); the caret beside it folds the list. -->

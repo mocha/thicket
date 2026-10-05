@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation';
   import { api, bookmarksApi, profileHref, type Bookmark, type BookmarkSources } from '$lib/api';
   /**
-   * My Bookmarks: every post I've saved, and my note on each one that has one
+   * Bookmarks: every post I've saved, and my note on each one that has one
    * (issue #84: a note is part of a bookmark). Newest activity first: saving a
    * post, or writing or editing its note, brings it to the top.
    *
@@ -185,10 +185,10 @@
   });
 </script>
 
-<svelte:head><title>My Bookmarks · thicket</title></svelte:head>
+<svelte:head><title>Bookmarks · thicket</title></svelte:head>
 
 <header class="top">
-  <h1>My Bookmarks</h1>
+  <h1>Bookmarks</h1>
   <p class="sub">Posts you've bookmarked, and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
 </header>
 
@@ -279,8 +279,8 @@
           <path d="M215 27h14v18l-7-4.5-7 4.5z" fill="var(--accent)" />
         </svg>
         <h2>No bookmarks yet</h2>
-        <p>Every post has a bookmark in its top right corner. Press it and the post is kept here for as long as you like, even after it has scrolled out of All my feeds. Bookmark what you want to read later, come back to, or share from your profile.</p>
-        <div class="ctas"><Button variant="primary" size="lg" href="/everything">Go to All my feeds</Button><Button size="lg" href="/explore">Explore feeds</Button></div>
+        <p>To keep a post, select the bookmark in its top right corner. It stays here until you remove it.</p>
+        <div class="ctas"><Button variant="primary" size="lg" href="/new-posts">Read new posts</Button><Button size="lg" href="/explore">Explore feeds</Button></div>
       {/if}
     </div>
     {#if q}
