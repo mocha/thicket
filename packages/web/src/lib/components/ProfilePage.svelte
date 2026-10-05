@@ -485,7 +485,8 @@
       <h2>Bookmarks <Badge>{profile.bookmarks.count}</Badge></h2>
       {#if profile.isMe}
         {#if su && su.profileVisibility !== 'private'}
-          <div class="card">
+          <!-- Settings, not a bookmark: a flat panel, so it doesn't read as one more card in the list below. -->
+          <div class="panel">
             <div class="cardhead">
               <span class="ctrl-label">Who sees your bookmarks</span>
               <SectionAudience level={su.bookmarksVisibility} label="your bookmarks" onchange={(l) => save({ bookmarksVisibility: l }, `Bookmarks: ${AUD[l]}`)} />
@@ -494,7 +495,7 @@
               <span class="ctrl-label">Who sees your notes</span>
               <SectionAudience level={su.notesVisibility} label="your notes" onchange={(l) => save({ notesVisibility: l }, `Notes: ${AUD[l]}`)} />
             </div>
-            <div class="pad"><p class="status">{sharingSummary(su.bookmarksVisibility, su.notesVisibility)}</p></div>
+            <p class="status">{sharingSummary(su.bookmarksVisibility, su.notesVisibility)}</p>
           </div>
         {/if}
       {:else if profile.bookmarks.notes !== null && session.user && profile.people.isFollowing}
@@ -605,6 +606,9 @@
   /* Every section's content sits in a card — the same surface + shadow the
      lists always used. The audience control rides at the top in a header bar. */
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .panel { background: var(--panel); border-radius: var(--radius); padding: var(--space-2) 0; }
+  .panel .cardhead { background: none; }
+  .panel .status { padding: var(--space-1) var(--space-4) var(--space-2); }
   .pad { padding: var(--space-4); }
   /* A tinted control strip, not a list row: the background sets it apart from
      the white rows below, and the label sits right beside its buttons. */

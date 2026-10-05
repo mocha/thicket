@@ -90,6 +90,15 @@
      the softer themes. At 12% over the card it clears that in every theme. */
   --accent-tint: color-mix(in srgb, var(--accent) 12%, var(--surface));
 
+  /* The ground under your own settings in the middle of a page: the "Who sees"
+     choices above your bookmarks. A faint wash of the accent over the page,
+     flat, so it reads as controls and never as one more card in the list under
+     it (issue #170). Mixed from each theme's own colors, so every theme gets
+     one; the white choices on it, and the outlined chosen one, still stand out.
+     Dark turns the wash up, since the dark cards sit so close to the page. */
+  --panel-mix: 8%;
+  --panel: color-mix(in srgb, var(--accent) var(--panel-mix), var(--bg));
+
   /* The outline of a box you type or pick in. A hairline in --line is far too
      faint to show where such a box is (about 1.3:1 against the card), and its
      outline is the only thing that says it is there. The decoration gray clears
@@ -207,6 +216,7 @@
     --toast-accent: var(--d-toast-accent);
     --line: var(--d-line);
     --shadow: var(--d-shadow);
+    --panel-mix: 14%;
   }
 }
 /* Chose dark, whatever the device is doing. */
@@ -228,6 +238,7 @@
   --toast-accent: var(--d-toast-accent);
   --line: var(--d-line);
   --shadow: var(--d-shadow);
+  --panel-mix: 14%;
   color-scheme: dark;
 }
 :root[data-theme='light'] { color-scheme: light; }
