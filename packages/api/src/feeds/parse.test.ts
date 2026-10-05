@@ -9,8 +9,9 @@ import { feedLanguage, parseFeedDocument } from "./parse.js";
 const url = "https://blog.example.com/feed";
 
 test("a declared language comes down to its bare code", () => {
-  for (const tag of ["en", "en-US", "en-us", "en_GB", "EN", " en-gb ", "en-en"]) assert.equal(feedLanguage(tag), "en", tag);
+  for (const tag of ["en", "en-US", "en-us", "en_GB", "EN", " en-gb ", "en-en", "eng", "ENG", "eng-US"]) assert.equal(feedLanguage(tag), "en", tag);
   assert.equal(feedLanguage("de-DE"), "de");
+  assert.equal(feedLanguage("ger"), "de");
   assert.equal(feedLanguage("zh-Hant-TW"), "zh");
 });
 
@@ -37,4 +38,11 @@ test("JSON Feed: language", () => {
   const json = (extra: string) => parseFeedDocument(`{"version":"https://jsonfeed.org/version/1.1","title":"t"${extra},"items":[{"id":"1","content_text":"x"}]}`, url);
   assert.equal(json(`,"language":"en-GB"`).language, "en");
   assert.equal(json("").language, null);
+});
+
+test("a NUL character in a post is dropped, not stored", () => {
+  const doc = `<?xml version="1.0"?><rss version="2.0"><channel><title>t</title><link>https://blog.example.com/</link><description>d</description><item><title>x\u0000y</title><link>https://blog.example.com/1</link><description>before\u0000after</description></item></channel></rss>`;
+  const [item] = parseFeedDocument(doc, url).items;
+  assert.equal(item.title, "xy");
+  assert.equal(item.summary, "beforeafter");
 });
