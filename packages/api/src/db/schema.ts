@@ -437,6 +437,11 @@ export const feedSettings = pgTable("feed_settings", {
  * the database only so a restart in the middle of a pause does not forget it
  * and ask again straight away. `host` is the registrable domain (reddit.com).
  * A row is removed when a feed on that host next fetches successfully.
+ *
+ * `host` can also be a network: a shared host's ASN ("AS26347") or an address
+ * block ("203.0.113.0/24"), paused because several of its sites asked thicket
+ * to slow down (feeds/networks.ts). Those rows stay a day past `until`, as the
+ * record that the network is to be treated carefully, then are cleared.
  */
 export const hostCooldowns = pgTable("host_cooldowns", {
   host: text("host").primaryKey(),
