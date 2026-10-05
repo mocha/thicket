@@ -4,8 +4,9 @@
  * at least one of the user's collections. Unfollowing removes it from all of
  * them and never touches the shared index.
  */
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import sharp from "sharp";
 import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { subscribe, addFeedToCollection, defaultCollectionFor } from "../lib/subscribe.js";
@@ -297,18 +298,33 @@ feeds.delete("/:id/block", async (c) => {
   return c.json({ feedId, blocked: false });
 });
 
-/** Cached site icon. Long-lived cache headers; the URL is stable per feed and the bytes change at most monthly. */
-feeds.get("/:id/icon", async (c) => {
+/**
+ * Cached site icon. Long-lived cache headers; the URL is stable per feed and the bytes change at most monthly.
+ * icon.png is the same icon as a PNG, for link previews (lib/meta.ts), which only point at it for icons it
+ * can decode (not .ico or SVG); anything it can't decode is a 404, like a feed with no icon.
+ */
+feeds.get("/:id/icon", (c) => serveIcon(c, false));
+feeds.get("/:id/icon.png", (c) => serveIcon(c, true));
+
+async function serveIcon(c: Context, png: boolean) {
   const id = Number(c.req.param("id"));
   const [icon] = await db.select().from(schema.feedIcons).where(eq(schema.feedIcons.feedId, id));
   if (!icon) return c.body(null, 404);
-  const etag = `"${id}-${icon.fetchedAt.getTime()}"`;
+  const etag = `"${id}-${icon.fetchedAt.getTime()}${png ? "-png" : ""}"`;
   if (c.req.header("if-none-match") === etag) return c.body(null, 304);
-  c.header("content-type", icon.contentType);
+  let bytes: Buffer = icon.bytes;
+  if (png) {
+    try {
+      bytes = await sharp(icon.bytes, { limitInputPixels: 25_000_000 }).resize(512, 512, { fit: "inside", withoutEnlargement: true }).png().toBuffer();
+    } catch {
+      return c.body(null, 404);
+    }
+  }
+  c.header("content-type", png ? "image/png" : icon.contentType);
   c.header("cache-control", "public, max-age=86400, stale-while-revalidate=604800");
   c.header("etag", etag);
-  return c.body(new Uint8Array(icon.bytes));
-});
+  return c.body(new Uint8Array(bytes));
+}
 
 /** Re-run icon discovery for one feed now. */
 feeds.post("/:id/icon/refresh", async (c) => {
