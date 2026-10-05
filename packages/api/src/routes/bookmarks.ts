@@ -1,7 +1,7 @@
 /**
  * Bookmarks: one private set per user. Saved from a river item (snapshot taken
- * at save time) or from a bare URL. Filterable by source feed or by any
- * collection the source feed is in; both are joins, not stored membership.
+ * at save time) or from a bare URL. Filterable by any collection the source
+ * feed is in; that is a join, not stored membership.
  *
  * A bookmark can carry my note on the post (issue #84), so this is also where
  * my notes are listed: `notes=1` narrows the list to the noted ones. The list
@@ -82,7 +82,6 @@ bookmarks.get("/", async (c) => {
   const user = currentUser(c);
   const limit = Math.min(100, Math.max(1, Number(c.req.query("limit") ?? 40)));
   const before = c.req.query("before"); // "<iso>|<id>"
-  const feedId = c.req.query("feed") ? Number(c.req.query("feed")) : null;
   const collectionId = c.req.query("collection") ? Number(c.req.query("collection")) : null;
   const notedOnly = c.req.query("notes") === "1";
   const q = (c.req.query("q") ?? "").trim().slice(0, QUERY_MAX);
@@ -92,7 +91,6 @@ bookmarks.get("/", async (c) => {
     const [ts, id] = before.split("|");
     cursor = sql`and (${activeAtSql}, b.id) < (${ts}::timestamptz, ${Number(id)}::bigint)`;
   }
-  const feedFilter = feedId ? sql`and b.feed_id = ${feedId}` : sql``;
   const collectionFilter = collectionId
     ? sql`and b.feed_id in (
         with recursive tree as (select id from collections where id = ${collectionId} and user_id = ${user.id}
@@ -125,7 +123,7 @@ bookmarks.get("/", async (c) => {
            i.link_url as "linkUrl", i.link_label as "linkLabel"
     from bookmarks b
     left join items i on i.id = b.item_id
-    where b.user_id = ${user.id} ${feedFilter} ${collectionFilter} ${noteFilter} ${searchFilter} ${cursor}
+    where b.user_id = ${user.id} ${collectionFilter} ${noteFilter} ${searchFilter} ${cursor}
     order by ${activeAtSql} desc, b.id desc
     limit ${limit + 1}
   `);
@@ -135,15 +133,9 @@ bookmarks.get("/", async (c) => {
   return c.json({ bookmarks: page, nextCursor: last ? `${new Date(last.activeAt).toISOString()}|${last.id}` : null });
 });
 
-/** Distinct sources present in the user's bookmarks, for the filter UI, how many bookmarks there are in all, and how many carry a note. */
+/** The collections my bookmarks come from, for the tabs, how many bookmarks there are in all, and how many carry a note. */
 bookmarks.get("/sources", async (c) => {
   const user = currentUser(c);
-  const feeds = await db.execute(sql`
-    select b.feed_id as "feedId", coalesce(f.title, b.site_title) as title, count(*)::int as count
-    from bookmarks b left join feeds f on f.id = b.feed_id
-    where b.user_id = ${user.id} and b.feed_id is not null
-    group by b.feed_id, coalesce(f.title, b.site_title) order by 3 desc, 2
-  `);
   const collections = await db.execute(sql`
     select col.id, col.name, count(distinct b.id)::int as count
     from bookmarks b
@@ -154,7 +146,7 @@ bookmarks.get("/sources", async (c) => {
   `);
   const [{ total, noted }] = (await db.execute<{ total: number; noted: number }>(sql`
     select count(*)::int as total, count(note)::int as noted from bookmarks where user_id = ${user.id}`)).rows;
-  return c.json({ feeds: feeds.rows, collections: collections.rows, total, noted });
+  return c.json({ collections: collections.rows, total, noted });
 });
 
 /** A stored row as save and remove answer with it. The search vector is the database's own business. */

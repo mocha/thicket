@@ -176,8 +176,8 @@ each bookmark field may be. Past a limit the answer is `429` with
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/bookmarks?collection=&feed=&before=` | My bookmarks, newest saved first |
-| GET | `/api/bookmarks/sources` | Feeds and collections present in my bookmarks, for filters |
+| GET | `/api/bookmarks?q=&collection=&notes=&before=` | My bookmarks, newest activity first; `q` searches them |
+| GET | `/api/bookmarks/sources` | Collections present in my bookmarks, with counts and totals, for the tabs |
 | POST | `/api/bookmarks` `{itemId}` / `{bookmarkId}` / `{url}` | Save a post, copy someone's bookmark, or save a bare URL (idempotent per URL) |
 | DELETE | `/api/bookmarks/:id` | Remove |
 | GET | `/api/notes?before=` | My notes, newest first |
