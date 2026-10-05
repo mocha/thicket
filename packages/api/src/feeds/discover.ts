@@ -85,6 +85,34 @@ export function extractFeedLinks(html: string, baseUrl: string): Candidate[] {
 }
 
 
+/** A site turning feed readers away from an address, as opposed to it not existing or asking us to slow down. */
+const BLOCKED = new Set([401, 403]);
+
+/** The site's front page, when the address is somewhere deeper in it. */
+export function frontPage(url: string): string | null {
+  try {
+    const u = new URL(url);
+    return u.pathname === "/" && !u.search ? null : `${u.origin}/`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The front page, if it answers. Being asked to wait (HostCoolingDown) or to
+ * slow down (a 429, which also pauses the host in feeds/hosts.ts) is reported
+ * as is; anything else that goes wrong leaves the original block to report.
+ */
+async function askFrontPage(front: string): Promise<HttpResult | null> {
+  try {
+    const res = await httpGet(front, {}, { truncate: true });
+    return res.status < 400 || res.status === 429 ? res : null;
+  } catch (err) {
+    if (err instanceof HostCoolingDown) throw err;
+    return null;
+  }
+}
+
 /** The feed itself failed to answer, as opposed to thicket being asked to wait (HostCoolingDown), which always stands. */
 function feedNotAnswering(err: unknown): boolean {
   if (err instanceof HostCoolingDown || err instanceof TooLargeError) return false;
@@ -132,8 +160,18 @@ export async function discover(input: string): Promise<Discovery> {
   // kilobytes. Keep the beginning instead of rejecting the whole page at the
   // shared download limit; direct feeds larger than that were already too big
   // to parse, while HTML discovery only inspects the first 200 KB below.
-  const res = await httpGet(url, {}, { truncate: true });
-  if (res.status >= 400) throw new BadStatus(`HTTP ${res.status} fetching ${url}`, res.status);
+  let res = await httpGet(url, {}, { truncate: true });
+  // Some sites turn feed readers away from their articles but not from their
+  // front page, which is where the feed is advertised anyway (#213). Ask the
+  // front page once; if that's turned away too, the first answer stands.
+  const blocked = BLOCKED.has(res.status) ? new BadStatus(`HTTP ${res.status} fetching ${url}`, res.status) : null;
+  const front = blocked && frontPage(url);
+  if (front) res = (await askFrontPage(front)) ?? res;
+  if (res.status >= 400) throw new BadStatus(`HTTP ${res.status} fetching ${res.finalUrl}`, res.status);
+  // Reached from a blocked address: only what the front page advertises counts.
+  // Probing a site that has just turned us away would be a burst of requests it
+  // doesn't want, so if the advertised feed doesn't answer, the block is the answer.
+  const fellBack = blocked !== null;
 
   // 1. Is it a feed already?
   const direct = tryParse(res.body, res.finalUrl);
@@ -152,6 +190,7 @@ export async function discover(input: string): Promise<Discovery> {
     if (one && parsed) return { status: "feed", url: normalizeFeedUrl(one.finalUrl), parsed, etag: one.headers.get("etag"), lastModified: one.headers.get("last-modified") };
   }
   if (advertised.length > 1) return { status: "candidates", pageUrl: res.finalUrl, candidates: advertised };
+  if (fellBack) throw blocked;
 
   // 3. Nothing advertised: probe the usual suspects, quietly.
   const origin = new URL(res.finalUrl).origin;
