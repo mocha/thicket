@@ -23,7 +23,8 @@ first. It is a reader, not a network, and the difference is the point:
 It speaks RSS, Atom and JSON Feed, finds a feed from any page address you
 paste, and understands YouTube and Reddit URLs directly — a channel can be
 followed with Shorts or without them, a subreddit by whichever listing you
-read. Collections are public by default and copy from one instance to another,
+read. Collections, which group the feeds you follow, are public by default and
+copy from one instance to another,
 so a reading list is something you can hand to someone rather than a thing
 locked in an account.
 
