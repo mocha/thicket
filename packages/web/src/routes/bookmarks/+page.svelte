@@ -187,7 +187,7 @@
 
 <header class="top">
   <h1>My Bookmarks</h1>
-  <p class="sub">Posts you've bookmarked, and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
+  <p class="sub">Posts you've bookmarked and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
 </header>
 
 {#if hasSearch}
