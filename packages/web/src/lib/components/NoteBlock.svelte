@@ -40,8 +40,9 @@
 <div class="note" class:mine>
   <div class="head">
     <span class="who">
-      {#if mine}My note:{:else if author}<a href={profileHref(author.handle)}>{author.displayName ?? `@${author.handle}`}</a>’s note:{/if}
+      {#if mine}My note{:else if author}<a href={profileHref(author.handle)}>{author.displayName ?? `@${author.handle}`}</a>’s note{/if}
     </span>
+    {#if mine || author}<span class="dot" aria-hidden="true">·</span>{/if}
     <span class="when" title={new Date(note.createdAt).toLocaleString()}>{relativeTime(note.createdAt)}{#if edited} · edited {relativeTime(note.updatedAt)}{/if}</span>
     {#if mine && onedit}<button class="edit tap" onclick={onedit}>Edit</button>{/if}
   </div>
@@ -54,17 +55,18 @@
 <style>
   /* No fill of its own: a note is part of the post, so it takes whatever the
      post sits on, white in a card and the page on a post's own page (issue
-     #170). The rule above and the label set it apart; the label also tells
-     mine from someone else's. */
+     #170). The rule above and the line down the left of the words set it
+     apart, the same line a note gets in Recent activity. The label says whose
+     it is in words, in the quiet ink: green would read as a link. */
   .note { border-top: 1px solid var(--line); padding: var(--space-3) var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .head { display: flex; align-items: baseline; gap: var(--space-2); margin-bottom: var(--space-1); }
-  .who { font-weight: 700; font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2); }
-  .mine .who { color: var(--accent); }
+  .head { display: flex; align-items: baseline; gap: var(--space-1); margin-bottom: var(--space-1); }
+  .who { font-weight: 600; color: var(--text-2); }
+  .dot { color: var(--text-2); }
   .who a { color: inherit; }
   .who a:hover { text-decoration: underline; }
   .when { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); flex: 1; }
   .edit { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
-  .body { color: var(--text); line-height: 1.5; overflow-wrap: anywhere; }
+  .body { color: var(--text); line-height: 1.5; overflow-wrap: anywhere; padding-left: var(--space-3); border-left: 2px solid var(--line); }
   .body.clamped { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .body :global(p) { margin: 0 0 var(--space-2); }
   .body :global(p:last-child), .body :global(ul:last-child), .body :global(ol:last-child), .body :global(blockquote:last-child), .body :global(pre:last-child) { margin-bottom: 0; }
@@ -76,6 +78,6 @@
   .body :global(a) { color: var(--accent); font-weight: 600; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); }
   /* The words a search matched. The same highlight as a search result on Explore. */
   .body :global(mark) { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
-  .more { margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  .more { margin-top: var(--space-1); margin-left: calc(var(--space-3) + 2px); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .more:hover { color: var(--accent); }
 </style>
