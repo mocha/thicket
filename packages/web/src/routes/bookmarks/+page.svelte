@@ -21,7 +21,7 @@
   import Tabs from '$lib/components/Tabs.svelte';
   import Select from '$lib/components/Select.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
-  import { showToast } from '$lib/toast.svelte';
+  import { removeBookmark, withBookmarkBack } from '$lib/saves';
 
   let list = $state<Bookmark[]>([]);
   let cursor = $state<string | null>(null);
@@ -139,18 +139,16 @@
   }
 
   /** Remove a bookmark, and its note with it. Undo puts both back where they were. */
-  async function remove(b: Bookmark) {
+  function remove(b: Bookmark) {
     const snapshot = list;
-    list = list.filter((x) => x.id !== b.id);
-    const removed = await bookmarksApi.remove(b.id);
-    api.event('bookmark_removed', { bookmarkId: b.id, via: 'bookmarks_page', hadNote: !!b.note });
-    sources.total--;
-    if (b.note) sources.noted--;
-    showToast(b.note ? 'Removed bookmark and note' : 'Removed bookmark', {
-      label: 'Undo',
-      run: async () => {
-        const back = await bookmarksApi.restore(removed);
-        list = snapshot.map((x) => (x.id === b.id ? { ...x, id: back.id, note: x.note && { ...x.note, id: back.id } } : x));
+    void removeBookmark(b, 'bookmarks_page', {
+      drop: () => {
+        list = list.filter((x) => x.id !== b.id);
+        sources.total--;
+        if (b.note) sources.noted--;
+      },
+      putBack: (id) => {
+        list = withBookmarkBack(list, snapshot, b.id, id);
         sources.total++;
         if (b.note) sources.noted++;
       }

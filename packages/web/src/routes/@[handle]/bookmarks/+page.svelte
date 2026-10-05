@@ -8,6 +8,7 @@
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import VisitorMore from '$lib/components/VisitorMore.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import { removeBookmark, withBookmarkBack } from '$lib/saves';
 
   /**
    * Someone's bookmarks, and their note on each, when they share notes with
@@ -49,6 +50,15 @@
     } finally {
       loading = false;
     }
+  }
+
+  /** My own list, seen from my profile: remove one of mine, as on My Bookmarks (issue #170). */
+  function remove(b: PublicBookmark) {
+    const snapshot = list;
+    void removeBookmark(b, 'public_bookmarks', {
+      drop: () => (list = list.filter((x) => x.id !== b.id)),
+      putBack: (id) => (list = withBookmarkBack(list, snapshot, b.id, id))
+    });
   }
 
   /** Save (or unsave) a copy into my own bookmarks. */
@@ -121,8 +131,11 @@
 {:else}
   <ul class="list">
     {#each list as b (b.id)}
-      <BookmarkCard {b} author={owner} heading="h2" onopen={() => api.event('bookmark_opened', { via: 'public_bookmarks' })}
-        action={session.user && !isMe ? { kind: 'save', on: !!b.myBookmarkId, label: b.myBookmarkId ? 'Remove from my bookmarks' : 'Add to my bookmarks', run: () => toggle(b) } : undefined} />
+      <BookmarkCard {b} mine={isMe} author={owner} heading="h2" onopen={() => api.event('bookmark_opened', { via: 'public_bookmarks' })}
+        onnote={(n) => { if (!n && notes) list = list.filter((x) => x.id !== b.id); }}
+        action={isMe
+          ? { kind: 'remove', on: true, label: b.note ? 'Remove bookmark and note' : 'Remove bookmark', run: () => remove(b) }
+          : session.user ? { kind: 'save', on: !!b.myBookmarkId, label: b.myBookmarkId ? 'Remove from my bookmarks' : 'Add to my bookmarks', run: () => toggle(b) } : undefined} />
     {/each}
   </ul>
   {#if loading}<p class="status">Loading…</p>{/if}

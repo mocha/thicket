@@ -18,6 +18,7 @@
   import Input from '$lib/components/Input.svelte';
   import Textarea from '$lib/components/Textarea.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import { removeBookmark, withBookmarkBack } from '$lib/saves';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
   import { audienceTag } from '$lib/visibility';
@@ -97,16 +98,39 @@
    * A few recent bookmarks, with the notes on them, shown right on the
    * profile; the rest are one link away. One section with two audiences
    * (issue #84): the server sends only what this viewer may see.
+   *
+   * On your own profile they're yours to note and remove, as on My Bookmarks
+   * (issue #170). One more than is shown is kept in hand, so removing one
+   * moves the next up at once; the list is then fetched again to keep one in
+   * hand for the next removal.
    */
   const BOOKMARKS_SHOWN = 3;
   let recentBookmarks = $state<PublicBookmark[] | null>(null);
+  const shownBookmarks = $derived(recentBookmarks?.slice(0, BOOKMARKS_SHOWN) ?? null);
   let bookmarksFor = $state<string | undefined>(undefined);
+  function loadBookmarks(h: string) {
+    return profilesApi.bookmarks(h, { limit: BOOKMARKS_SHOWN + 1 }).then((r) => { if (bookmarksFor === h) recentBookmarks = r.bookmarks; });
+  }
   $effect(() => {
     if (!profile || profile.private || !profile.bookmarks || profile.bookmarks.count === 0 || bookmarksFor === profile.handle) return;
     const h = profile.handle;
     bookmarksFor = h; recentBookmarks = null;
-    profilesApi.bookmarks(h, { limit: BOOKMARKS_SHOWN }).then((r) => { if (bookmarksFor === h) recentBookmarks = r.bookmarks; }).catch(() => (recentBookmarks = []));
+    loadBookmarks(h).catch(() => (recentBookmarks = []));
   });
+  function removeRecent(b: PublicBookmark) {
+    if (!profile || profile.private || !profile.bookmarks || !recentBookmarks) return;
+    const counts = profile.bookmarks, h = profile.handle, snapshot = recentBookmarks;
+    void removeBookmark(b, 'profile', {
+      drop: () => {
+        recentBookmarks = (recentBookmarks ?? []).filter((x) => x.id !== b.id);
+        counts.count--;
+      },
+      putBack: (id) => {
+        recentBookmarks = withBookmarkBack(recentBookmarks ?? [], snapshot, b.id, id);
+        counts.count++;
+      }
+    }).then(() => loadBookmarks(h)).catch(() => { /* the cards on screen stay as they are */ });
+  }
 
   /** The people this person follows — their own section. */
   let following = $state<PublicUser[] | null>(null);
@@ -480,17 +504,18 @@
       {/if}
       {#if profile.bookmarks.count === 0}
         <p class="status">Press the bookmark on any post to save it, or the note button to write down what you thought of it.</p>
-      {:else if recentBookmarks === null}
+      {:else if shownBookmarks === null}
         <p class="status">Loading…</p>
-      {:else if recentBookmarks.length === 0}
+      {:else if shownBookmarks.length === 0}
         <p class="status">No bookmarks to show.</p>
       {:else}
         <ul class="saves">
-          {#each recentBookmarks as b (b.id)}
-            <BookmarkCard {b} author={profile} onopen={() => api.event('bookmark_opened', { via: 'profile' })} />
+          {#each shownBookmarks as b (b.id)}
+            <BookmarkCard {b} mine={isMe} author={profile} onopen={() => api.event('bookmark_opened', { via: 'profile' })}
+              action={isMe ? { kind: 'remove', on: true, label: b.note ? 'Remove bookmark and note' : 'Remove bookmark', run: () => removeRecent(b) } : undefined} />
           {/each}
         </ul>
-        {#if profile.bookmarks.count > recentBookmarks.length}
+        {#if profile.bookmarks.count > shownBookmarks.length}
           <a class="all tap" href="/@{profile.handle}/bookmarks">All {profile.bookmarks.count} bookmarks <span aria-hidden="true">›</span></a>
         {/if}
       {/if}
