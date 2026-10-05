@@ -423,7 +423,7 @@
 <header class="top">
   <div class="titlerow">
     <h1>Explore</h1>
-    <AddFeedButton via="explore" />
+    <AddFeedButton via="explore" bottomBarOnly />
   </div>
   <p class="sub">Find feeds, collections, posts, and people<span class="tail">, all in one search.</span></p>
 </header>

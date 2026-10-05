@@ -4,11 +4,13 @@
 
   /** The primary "Add new feed" call to action. One button, one look, wherever
       it appears. `via` names the place it was pressed, for analytics; pass
-      `collectionIds` to drop the new feed straight into a collection. */
-  let { via, collectionIds }: { via: string; collectionIds?: number[] } = $props();
+      `collectionIds` to drop the new feed straight into a collection.
+      `bottomBarOnly` hides it wherever the left menu shows, because the menu
+      has its own Add new feed at the top. */
+  let { via, collectionIds, bottomBarOnly = false }: { via: string; collectionIds?: number[]; bottomBarOnly?: boolean } = $props();
 </script>
 
-<span class="add-feed-cta">
+<span class="add-feed-cta" class:bottom-bar-only={bottomBarOnly}>
   <Button variant="primary" size="sm" onclick={() => openAddFeed(collectionIds ? { via, collectionIds } : { via })}>
     <span class="plus" aria-hidden="true">+</span> Add new feed
   </Button>
@@ -35,6 +37,13 @@
     }
     .plus {
       font-size: 1.15em;
+    }
+  }
+  /* Where the left menu shows; the same condition as in Nav.svelte. The paged
+     layout keeps the bottom bar at every width, so the button stays there. */
+  @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) {
+    :global(main:not(.paged)) .bottom-bar-only {
+      display: none;
     }
   }
 </style>
