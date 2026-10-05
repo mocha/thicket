@@ -90,19 +90,6 @@
     }
   }
 
-  // Filter the sidebar's collections: a slim field sits at the top of the list
-  // and narrows it to names containing what you type, ignoring case. Shown only
-  // once there are enough collections to bother, so short lists stay clean.
-  let filter = $state('');
-  const showFilter = $derived(namedCollections().length > 6);
-  const filtered = $derived.by(() => {
-    const q = filter.trim().toLowerCase();
-    return q ? namedCollections().filter((c) => c.name.toLowerCase().includes(q)) : [];
-  });
-  // Leaving for a page clears the filter, so you never return to a sidebar
-  // mysteriously narrowed to your last search.
-  $effect(() => { void path; filter = ''; });
-
   // The sidebar's right edge is a handle: drag it, or focus it and use the
   // arrow keys, to set how wide the sidebar is. Double-click puts it back.
   // The sidebar starts at the window's left edge, so the pointer's x is the width.
@@ -169,49 +156,22 @@
       </div>
       {#if collectionsOpen.open}
       <ul class="cols" id="my-collections" aria-label="Your collections">
-        {#if showFilter}
-          <li class="filterrow">
-            <Field label="Filter collections" hideLabel>
-              {#snippet children({ id })}
-                <Input
-                  {id}
-                  variant="search"
-                  size="sm"
-                  bind:value={filter}
-                  placeholder="Filter collections…"
-                  maxlength="60"
-                  autocomplete="off"
-                  onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') filter = ''; }}
-                />
-              {/snippet}
-            </Field>
-          </li>
-        {/if}
-        {#if filter.trim()}
-          <!-- A search wants a flat list of matches, not the folded tree. -->
-          {#each filtered as c (c.id)}
-            <li>{@render row(c)}</li>
-          {:else}
-            <li class="nomatch">No collections match “{filter.trim()}”.</li>
-          {/each}
-        {:else}
-          {#each topLevelCollections() as c (c.id)}
-            {@const kids = childrenOf(c.id)}
-            <li class:parent={kids.length > 0}>
-              {@render row(c)}
-              {#if kids.length}
-                <button type="button" class="caret" aria-expanded={isOpen(c)} aria-label="{isOpen(c) ? 'Hide' : 'Show'} the collections inside {c.name}" onclick={() => toggleNavOpen(c.id)}>
-                  <Icon name="caret" size={14} stroke={2.5} dir={isOpen(c) ? 'down' : 'right'} />
-                </button>
-              {/if}
-            </li>
-            {#if kids.length && isOpen(c)}
-              {#each kids as k (k.id)}
-                <li class="child">{@render row(k)}</li>
-              {/each}
+        {#each topLevelCollections() as c (c.id)}
+          {@const kids = childrenOf(c.id)}
+          <li class:parent={kids.length > 0}>
+            {@render row(c)}
+            {#if kids.length}
+              <button type="button" class="caret" aria-expanded={isOpen(c)} aria-label="{isOpen(c) ? 'Hide' : 'Show'} the collections inside {c.name}" onclick={() => toggleNavOpen(c.id)}>
+                <Icon name="caret" size={14} stroke={2.5} dir={isOpen(c) ? 'down' : 'right'} />
+              </button>
             {/if}
-          {/each}
-        {/if}
+          </li>
+          {#if kids.length && isOpen(c)}
+            {#each kids as k (k.id)}
+              <li class="child">{@render row(k)}</li>
+            {/each}
+          {/if}
+        {/each}
         <li class="new">
           {#if creating}
             <form onsubmit={(e) => { e.preventDefault(); void create(); }}>
@@ -380,9 +340,6 @@
     nav:not(.paged) .headlink { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0 var(--space-2) var(--space-3); border-radius: var(--radius-sm); color: inherit; }
     nav:not(.paged) .groupcaret { flex: none; display: grid; place-items: center; width: 32px; align-self: stretch; margin-right: var(--space-1); border-radius: var(--radius-sm); color: var(--text-3); }
     nav:not(.paged) .groupcaret:hover { color: var(--text); }
-    /* The filter box draws itself; the row only holds it off the list below. */
-    nav:not(.paged) .cols .filterrow { margin-bottom: var(--space-1); }
-    nav:not(.paged) .cols .nomatch { padding: var(--space-2) var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
     /* The Everything row is a normal-height row: undo the full-height stretch the bottom-bar tabs use. */
     nav:not(.paged) .readall { height: auto; }
     /* It carries the whole stream's "what's new" count, pushed to the row's end. */
