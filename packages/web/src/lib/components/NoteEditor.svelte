@@ -24,9 +24,10 @@
    * public by default, and a box with no word about it reads as private.
    */
   import { tick } from 'svelte';
-  import { api, bookmarksApi, notesApi, profileHref, NOTE_MAX, type Note, type PublicUser, type SavedNote, type ShareLevel } from '$lib/api';
+  import { api, bookmarksApi, notesApi, profileHref, NOTE_MAX, type Note, type PublicUser, type SavedNote } from '$lib/api';
   import { mentionAt, mentionablePeople, rankPeople } from '$lib/mentions';
   import { session } from '$lib/session.svelte';
+  import { SEES } from '$lib/visibility';
   import { showToast } from '$lib/toast.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import Button from '$lib/components/Button.svelte';
@@ -49,9 +50,8 @@
   $effect(() => { box?.focus(); });
 
   // ---- who can read it: a private profile hides my notes from everyone, whatever the notes setting says
-  const SEES: Record<ShareLevel, string> = { private: 'Only you can see your notes', friends: 'Only people you follow can see your notes', public: 'Anyone can see your notes' };
   const me = $derived(session.user);
-  const audience = $derived(me ? SEES[me.profileVisibility === 'public' ? me.notesVisibility : 'private'] : null);
+  const audience = $derived(me ? `${SEES[me.profileVisibility === 'public' ? me.notesVisibility : 'private']} your notes` : null);
 
   // ---- @mention suggestions
   const uid = $props.id();

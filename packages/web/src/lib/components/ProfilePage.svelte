@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { page } from '$app/state';
   import { api, authApi, profilesApi, publicCollectionHref, type Profile, type ProfileCollection, type PublicBookmark, type PublicUser, type ShareLevel } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
@@ -20,7 +20,7 @@
   import { showToast } from '$lib/toast.svelte';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
-  import { audienceTag } from '$lib/visibility';
+  import { audienceTag, SEES } from '$lib/visibility';
   import { loadCollections } from '$lib/collections.svelte';
   import { marks, countText } from '$lib/marks.svelte';
   import { display } from '$lib/display.svelte';
@@ -89,7 +89,11 @@
     if (loadedHandle === handle) return;
     loadedHandle = handle;
     profile = null; error = null;
-    profilesApi.get(handle).then((p) => (profile = p)).catch((e) => (error = e instanceof Error ? e.message : String(e)));
+    // A link to a section (#bookmarks, from the note box) can only land once the page is drawn, so scroll there then.
+    profilesApi.get(handle).then((p) => {
+      profile = p;
+      if (location.hash) void tick().then(() => document.getElementById(location.hash.slice(1))?.scrollIntoView());
+    }).catch((e) => (error = e instanceof Error ? e.message : String(e)));
   });
   onMount(() => api.event('profile_view', { handle }));
 
@@ -151,7 +155,6 @@
   const su = $derived(session.user);
   const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
   const RANK: Record<ShareLevel, number> = { private: 0, friends: 1, public: 2 };
-  const SEES: Record<ShareLevel, string> = { private: 'Only you can see', friends: 'Only people you follow can see', public: 'Anyone can see' };
   /** What the two settings on the Bookmarks section add up to, in words. */
   function sharingSummary(marks: ShareLevel, notes: ShareLevel): string {
     const lines = [`${SEES[marks]} your bookmarks.`];
