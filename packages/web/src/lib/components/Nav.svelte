@@ -138,7 +138,7 @@
   <a class="brand" href="/everything"><img src="/icon.svg" alt="" width="28" height="28" /><Wordmark height={23} /></a>
   <!-- Sidebar only, above the scrolling list so it never scrolls away. On
        bottom bar screens the same action sits beside each page's title instead. -->
-  {#if me}<button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" /><path d="M12 8v8M8 12h8" fill="none" stroke="var(--accent-ink)" stroke-width="2" stroke-linecap="round" /></svg><span>Add new feed</span></button>{/if}
+  {#if me}<button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg><span>Add new feed</span></button>{/if}
   <ul>
     <!-- Mobile-only tabs. On desktop, Everything and My collections live in the li.collections block below. -->
     <li class="mobile-only">
@@ -324,7 +324,7 @@
     /* A hairline under the logo sets it apart from Add new feed and the rows below. */
     nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
     /* Full width, so it reads as the menu's main action rather than one more row. */
-    /* A row like the ones above it, in the accent color, its circle filled like a primary button, so it reads as the one action in a list of places. */
+    /* A row like the ones below it, in the accent color, its circle drawn a touch finer than their icons, so it reads as the one action in a list of places. */
     nav:not(.paged) .addfeed { display: flex; flex: none; align-items: center; gap: var(--space-3); margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     nav:not(.paged) .addfeed:hover { background: var(--surface-2); }
     nav:not(.paged) .long { display: inline; }
