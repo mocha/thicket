@@ -108,7 +108,9 @@
 <nav class="crumbs"><a class="tap" href={profileHref(handle)}>@{handle}</a> <span aria-hidden="true">›</span></nav>
 <header class="top">
   <h1>{isMe ? 'Your bookmarks' : `${owner?.displayName ?? `@${handle}`}’s bookmarks`}</h1>
-  <p class="sub">{#if isMe}This is how others see them. <a href="/bookmarks">Manage them here.</a>{:else if notedOnly}The posts {owner?.displayName ?? `@${handle}`} has written a note on. {/if}{#if !isMe}{#if session.user}Tap the bookmark on any post to save a copy to yours.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save any of these to your own.{/if}{/if}</p>
+  {#if !isMe}
+    <p class="sub">{#if notedOnly}The posts {owner?.displayName ?? `@${handle}`} has written a note on. {/if}{#if session.user}Tap the bookmark on any post to save a copy to yours.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save any of these to your own.{/if}</p>
+  {/if}
 </header>
 
 {#if hasNotesFilter}

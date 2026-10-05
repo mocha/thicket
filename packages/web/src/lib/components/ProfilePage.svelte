@@ -516,7 +516,8 @@
           {/each}
         </ul>
         {#if profile.bookmarks.count > shownBookmarks.length}
-          <a class="all tap" href="/@{profile.handle}/bookmarks">All {profile.bookmarks.count} bookmarks <span aria-hidden="true">›</span></a>
+          <!-- Your own goes to My Bookmarks, where search and filters are; a visitor gets the public list. -->
+          <a class="all tap" href={isMe ? '/bookmarks' : `/@${profile.handle}/bookmarks`}>All {profile.bookmarks.count} bookmarks <span aria-hidden="true">›</span></a>
         {/if}
       {/if}
     </section>
