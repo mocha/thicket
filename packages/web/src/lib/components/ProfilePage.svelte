@@ -3,7 +3,7 @@
   import { page } from '$app/state';
   import { api, authApi, profilesApi, publicCollectionHref, type Profile, type ProfileCollection, type PublicBookmark, type PublicUser, type ShareLevel } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
-  import { hostOf } from '$lib/time';
+  import { hostOf, ugcRel } from '$lib/time';
   import Monogram from '$lib/components/Monogram.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import AvatarCropDialog from '$lib/components/AvatarCropDialog.svelte';
@@ -368,7 +368,7 @@
         </div>
       {:else}
         <h1 title={profile.displayName ?? profile.handle}>{profile.displayName ?? profile.handle}</h1>
-        <p class="handle">@{profile.handle}{#if profile.homepageUrl}{' · '}<a class="site" href={profile.homepageUrl} target="_blank" rel="noopener me">{hostOf(profile.homepageUrl)} ↗</a>{/if}</p>
+        <p class="handle">@{profile.handle}{#if profile.homepageUrl}{' · '}<a class="site" href={profile.homepageUrl} target="_blank" rel={ugcRel(profile.homepageUrl, 'me')}>{hostOf(profile.homepageUrl)} ↗</a>{/if}</p>
         {#if profile.bio}<p class="bio">{profile.bio}</p>{/if}
       {/if}
     </div>
