@@ -119,6 +119,24 @@
       pwBusy = false;
     }
   }
+
+  /* Forgot the current password while signed in (issue #124): the same reset
+     link /forgot-password sends, without logging out first. Only to a
+     confirmed address, as there. */
+  let resetBusy = $state(false);
+  let resetError = $state<string | null>(null);
+  async function sendReset() {
+    if (resetBusy) return;
+    resetBusy = true; resetError = null;
+    try {
+      await authApi.forgotPassword(me.handle);
+      showToast(`We sent a reset link to ${me.email}. It expires in 1 hour.`);
+    } catch (e) {
+      resetError = e instanceof Error ? e.message : String(e);
+    } finally {
+      resetBusy = false;
+    }
+  }
 </script>
 
 <svelte:head><title>Account · thicket</title></svelte:head>
@@ -187,6 +205,13 @@
     {#if pwError && !pwError.field}<p class="bad" role="alert">{pwError.message}</p>{/if}
     <div class="row"><Button type="submit" disabled={pwBusy || !current || next.length < 8} loading={pwBusy}>{pwBusy ? 'Changing…' : 'Change password'}</Button></div>
   </form>
+  {#if hosted && confirmed}
+    <p class="note forgot">
+      Forgot your current password?
+      <button type="button" class="link" onclick={sendReset} disabled={resetBusy}>{resetBusy ? 'Sending…' : 'Email me a reset link'}</button>
+    </p>
+    {#if resetError}<p class="bad" role="alert">{resetError}</p>{/if}
+  {/if}
 </section>
 
 <!-- The way in sits beside the way out: bring your reading here, take it with
@@ -236,6 +261,7 @@
   .link:disabled { opacity: 0.6; }
   /* The form opening under an address needs room from it. */
   .address + form, .note + form { margin-top: var(--space-4); }
+  .forgot { margin-top: var(--space-3); }
   form { display: flex; flex-direction: column; gap: var(--space-5); }
   .row { display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; }
   .bad { color: var(--danger); margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
