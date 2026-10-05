@@ -144,6 +144,15 @@
   const childCols = (id: number) => cols.filter((c) => c.parentId === id);
 
   /**
+   * The Collections page has a filter box (issue #178): it narrows the list to
+   * names containing what you type, ignoring capitals. A search wants a flat
+   * list of matches, so ones that sit inside another collection show too.
+   */
+  let colFilter = $state('');
+  const colQuery = $derived(colFilter.trim().toLowerCase());
+  const colMatches = $derived(colQuery ? cols.filter((c) => c.name.toLowerCase().includes(colQuery)) : []);
+
+  /**
    * The owner edits their public page on the page itself. Everything here only
    * appears when you're looking at your own profile; a visitor sees the plain
    * page. The values come from the signed-in user, so a change shows at once.
@@ -381,6 +390,19 @@
     <section>
       {#if only}
         <h1 class="pagetitle">Collections <Badge>{profile.collections.length}</Badge></h1>
+        <Field class="colfilter" label="Filter collections" hideLabel>
+          {#snippet children({ id })}
+            <Input
+              {id}
+              variant="search"
+              bind:value={colFilter}
+              placeholder="Filter collections"
+              maxlength="60"
+              autocomplete="off"
+              onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') colFilter = ''; }}
+            />
+          {/snippet}
+        </Field>
       {:else}
         <h2>Collections <Badge>{profile.collections.length}</Badge></h2>
       {/if}
@@ -394,7 +416,7 @@
         {#if profile.collections.length === 0 && !profile.isMe}
         <div class="pad"><p class="status">No collections to show.</p></div>
       {:else}
-        {#snippet colRow(c: ProfileCollection, depth: number)}
+        {#snippet colRow(c: ProfileCollection, depth: number, withKids = true)}
           <li class:nested={depth > 0}>
             <a href={publicCollectionHref(handle, c.slug)} style:--indent="{depth * 18}px">
               <div class="meta2">
@@ -407,14 +429,14 @@
               <span class="chev" aria-hidden="true">›</span>
             </a>
           </li>
-          {#each childCols(c.id) as k (k.id)}
-            {@render colRow(k, depth + 1)}
-          {/each}
+          {#if withKids}
+            {#each childCols(c.id) as k (k.id)}
+              {@render colRow(k, depth + 1)}
+            {/each}
+          {/if}
         {/snippet}
+        <!-- New collection leads the list, so it's never below a long scroll. -->
         <ul class="list">
-          {#each topCols as c (c.id)}
-            {@render colRow(c, 0)}
-          {/each}
           {#if profile.isMe}
             <li class="new">
               {#if creating}
@@ -444,7 +466,19 @@
               {/if}
             </li>
           {/if}
+          {#if colQuery}
+            {#each colMatches as c (c.id)}
+              {@render colRow(c, 0, false)}
+            {/each}
+          {:else}
+            {#each topCols as c (c.id)}
+              {@render colRow(c, 0)}
+            {/each}
+          {/if}
         </ul>
+        {#if only}
+          <p class="nomatch" aria-live="polite">{#if colQuery && colMatches.length === 0}No collections match “{colFilter.trim()}”{/if}</p>
+        {/if}
         {#if profile.collections.length === 0 && profile.isMe}
           <div class="pad"><p class="status">A collection is a handful of feeds you read together. Make one above, then add feeds to it from any feed’s Follow menu.</p></div>
         {/if}
@@ -618,10 +652,14 @@
   .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   .add { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); text-align: left; }
-  li:first-child .add { border-top: 0; }
+  li:first-child .add, li:first-child form { border-top: 0; }
   .plus { font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; width: 14px; }
   .new form { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .new form :global(.grow) { flex: 1; min-width: 0; }
+  /* The Collections page's filter sits between the title and the card, like the Bookmarks search. */
+  section > :global(.colfilter) { margin: 0 0 var(--space-3); }
+  .nomatch { margin: 0; padding: 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .nomatch:not(:empty) { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
   .status a { color: var(--accent); font-weight: 600; }
   .saves { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-3) 0 0; padding: 0; list-style: none; }
