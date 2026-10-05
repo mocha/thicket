@@ -11,6 +11,7 @@
   import FollowControl from '$lib/components/FollowControl.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Banner from '$lib/components/Banner.svelte';
+  import Badge from '$lib/components/Badge.svelte';
   import { session } from '$lib/session.svelte';
 
   /**
@@ -65,7 +66,10 @@
           </div>
         {/if}
       </div>
-      <a class="host tap" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
+      <div class="addr">
+        <a class="host tap" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
+        {#if feed.requiresSubscription}<Badge title="Posts from this site are behind a paywall: reading them takes a subscription">Requires subscription</Badge>{/if}
+      </div>
       {#if feed.description}<p class="desc">{feed.description}</p>{/if}
     </div>
   </header>
@@ -116,6 +120,8 @@
   /* The site link sits right under the follow and settings buttons, so its
      touch area grows downward only and leaves theirs whole. */
   @media (pointer: coarse) { .host::after { top: 0; } }
+  /* The address, and beside it "Requires subscription" when the site is paywalled; the pill drops under the address when the line runs out. */
+  .addr { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
   /* On a phone the buttons fold under the address and description, so the
      title keeps the full width. */
   @media (max-width: 600px) {

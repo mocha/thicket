@@ -71,6 +71,8 @@ export type Feed = {
   isYouTube: boolean;
   /** Posts from the last 30 days that appear to repeat an earlier post from this feed. */
   repeatsLast30d: number;
+  /** The site's posts are behind a paywall, as marked by an admin. Shown beside the feed's address. */
+  requiresSubscription: boolean;
   /** Conditional-GET state, shown on the settings page for diagnosing a feed. */
   etag: string | null; lastModified: string | null;
 };
@@ -446,6 +448,8 @@ export const adminApi = {
   /** Moderation: what removing this feed from the instance takes with it, then the removal itself. */
   feedImpact: (id: number) => j<{ title: string | null; url: string; posts: number; followers: number; collections: number; bookmarks: number }>(`/api/admin/feeds/${id}/impact`),
   deleteFeed: (id: number) => j<void>(`/api/admin/feeds/${id}`, { method: 'DELETE' }),
+  /** Mark a feed's posts as paywalled, for everyone. */
+  setRequiresSubscription: (id: number, requiresSubscription: boolean) => j<{ id: number; requiresSubscription: boolean }>(`/api/admin/feeds/${id}`, { method: 'PATCH', body: JSON.stringify({ requiresSubscription }) }),
   settings: () => j<InstanceStatus & { signupsStored: SignupPolicy | null; signupsDefault: SignupPolicy }>('/api/admin/settings'),
   update: (patch: { signups?: SignupPolicy; name?: string; visitorLimit?: boolean }) => j<InstanceStatus>('/api/admin/settings', { method: 'PATCH', body: JSON.stringify(patch) }),
   invites: () => j<{ invites: Invite[] }>('/api/admin/invites'),

@@ -53,7 +53,8 @@ export async function mergeFeeds(fromId: number, intoId: number, why = "both fet
     await tx.execute(sql`
       update feeds g set last_item_at = greatest(g.last_item_at, f.last_item_at),
                          description = coalesce(g.description, f.description),
-                         site_url = coalesce(g.site_url, f.site_url)
+                         site_url = coalesce(g.site_url, f.site_url),
+                         requires_subscription = g.requires_subscription or f.requires_subscription
       from feeds f where g.id = ${intoId} and f.id = ${fromId}`);
     await tx.execute(sql`delete from feeds where id = ${fromId}`);
   });
