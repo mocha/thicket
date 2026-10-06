@@ -11,7 +11,7 @@ import { Hono } from "hono";
 process.env.DATABASE_URL ??= "postgres://not-used-by-tests";
 const { auth } = await import("./auth.js");
 const { tokenMay } = await import("../lib/token-access.js");
-const { parseSavedDisplay } = await import("../lib/display.js");
+const { parseSavedDisplay, parseDeviceId } = await import("../lib/display.js");
 
 const GOOD = {
   appearance: "dark", palette: "contrast", accent: "orange",
@@ -46,6 +46,11 @@ test("anything wrong is refused with the reason, never swapped for a default", (
   }
 });
 
+test("only a device id the web app could have made is kept", () => {
+  assert.equal(parseDeviceId("3F2504E0-4F89-41D3-9A0C-0305E82C3301"), "3f2504e0-4f89-41d3-9a0c-0305e82c3301");
+  for (const bad of [undefined, null, 42, "", "short", "<script>", "x".repeat(65)]) assert.equal(parseDeviceId(bad), null, String(bad));
+});
+
 function app() {
   const a = new Hono();
   a.use("*", async (c, next) => { c.set("user", null); await next(); });
@@ -56,11 +61,13 @@ function app() {
 test("signed out, nobody can save settings or answer the offer", async () => {
   assert.equal((await app().request("/api/auth/me/display", { method: "PUT", body: JSON.stringify({ settings: GOOD }) })).status, 401);
   assert.equal((await app().request("/api/auth/me/display-offer", { method: "POST" })).status, 401);
+  assert.equal((await app().request("/api/auth/me/display-source", { method: "DELETE" })).status, 401);
 });
 
 test("no API token can save settings or answer the offer", () => {
   for (const kind of ["read", "full"] as const) {
     assert.equal(tokenMay(kind, "PUT", "/api/auth/me/display").ok, false, kind);
     assert.equal(tokenMay(kind, "POST", "/api/auth/me/display-offer").ok, false, kind);
+    assert.equal(tokenMay(kind, "DELETE", "/api/auth/me/display-source").ok, false, kind);
   }
 });

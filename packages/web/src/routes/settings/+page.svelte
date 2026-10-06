@@ -7,8 +7,7 @@
   import FontTable from '$lib/components/display/FontTable.svelte';
   import { appearanceArt, READING_ART, LAYOUT_ART, FRESH_ART } from '$lib/components/display/art';
   import { showToast } from '$lib/toast.svelte';
-  import { saveForNewDevices } from '$lib/saved-display.svelte';
-  import Button from '$lib/components/Button.svelte';
+  import { isSource, saveForNewDevices, stopBeingSource } from '$lib/saved-display.svelte';
 
   /**
    * Your private preferences: reading, whose notes you see, feed defaults,
@@ -19,14 +18,19 @@
    *
    * Nearly everything here saves the moment it changes. Display is the odd one
    * out twice over: it is kept in this browser rather than on the account, and
-   * applies the moment you pick it. See lib/display.svelte.ts. Use these on new
-   * devices saves a copy to the account for new devices to offer (issue #186).
+   * applies the moment you pick it. See lib/display.svelte.ts. "Use these
+   * settings on new devices" makes this device the one new devices copy, kept
+   * up to date as it changes (issue #186, lib/saved-display.svelte.ts).
    */
   let savingDisplay = $state(false);
-  async function saveDisplay() {
+  async function toggleSource(e: Event & { currentTarget: HTMLInputElement }) {
+    const box = e.currentTarget;
     savingDisplay = true;
-    await saveForNewDevices('settings');
+    const ok = box.checked ? await saveForNewDevices('settings') : await stopBeingSource();
+    if (ok && !box.checked) showToast('New devices will offer the settings saved last');
     savingDisplay = false;
+    // A save that didn't go through leaves the box as it was.
+    box.checked = isSource();
   }
   const me = $derived(session.user!);
 
@@ -52,10 +56,18 @@
   <h1>Settings</h1>
 </header>
 
+<section class="card">
+  <label class="switch">
+    <input type="checkbox" checked={isSource()} disabled={savingDisplay} onchange={toggleSource} />
+    <span>
+      <strong>Use these settings on new devices</strong>
+      <small>New devices you sign into will offer the display settings below, kept up to date as you change them here. Each device keeps its own settings</small>
+    </span>
+  </label>
+</section>
+
 <section class="card" id="display">
   <h2>Appearance</h2>
-  <p class="help">Display settings are per device. Save them to use on new devices</p>
-  <p class="save"><Button loading={savingDisplay} onclick={saveDisplay}>Use these on new devices</Button></p>
   <Tiles name="Appearance" options={APPEARANCES} value={display.appearance} art={appearanceArt(display.palette, display.accent)} onchange={(v) => choose({ appearance: v }, 'appearance')} />
 </section>
 
@@ -148,7 +160,6 @@
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   /* When a description follows the header, pull it up tight; the header's gap then sits under the description. */
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
-  .save { margin: 0 0 var(--space-4); }
   .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   .fine { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.45; max-width: 66ch; }
   fieldset { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; gap: var(--space-3); }

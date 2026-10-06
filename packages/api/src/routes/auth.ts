@@ -15,7 +15,7 @@ import {
   handleProblem, hashPassword, normalizeHandle, verifyPassword, trackingEnabled,
 } from "../lib/auth.js";
 import { HOSTED } from "../lib/config.js";
-import { parseSavedDisplay } from "../lib/display.js";
+import { parseDeviceId, parseSavedDisplay } from "../lib/display.js";
 import { consumeInvite, findUsableInvite, publicStatus, signupPolicy, siteName } from "../lib/instance.js";
 import { cleanEmail, looksLikeEmail, messages, send } from "../lib/mail.js";
 import { issueToken, pendingEmail, takeToken } from "../lib/email-tokens.js";
@@ -175,19 +175,29 @@ auth.post("/me/tour", async (c) => {
  * before. The web app calls this only on purpose: a new account's first setup,
  * "Use these on new devices", or yes to the one-time offer. Saving also counts
  * as answering that offer, and ends a new account's "save my first setup".
+ * `device` makes the sending device the one that keeps them up to date.
  * A refusal says what was wrong and is logged, so support can see it too.
  */
 auth.put("/me/display", bodyLimit({ maxSize: 4096, onError: (c) => c.json({ error: "settings are too large" }, 413) }), async (c) => {
   const user = currentUser(c);
-  const body = await c.req.json<{ settings?: unknown }>().catch(() => ({} as { settings?: unknown }));
+  const body = await c.req.json<{ settings?: unknown; device?: unknown }>().catch(() => ({} as { settings?: unknown; device?: unknown }));
   const parsed = parseSavedDisplay(body.settings);
   if (!parsed.ok) {
     console.warn(`[display] refused saved settings for user ${user.id}: ${parsed.error}`);
     return c.json({ error: parsed.error }, 400);
   }
   await db.update(schema.users)
-    .set({ savedDisplay: parsed.value, saveFirstDisplay: false, displayOfferAnsweredAt: sql`coalesce(${schema.users.displayOfferAnsweredAt}, now())` })
+    .set({ savedDisplay: parsed.value, displaySource: parseDeviceId(body.device), saveFirstDisplay: false, displayOfferAnsweredAt: sql`coalesce(${schema.users.displayOfferAnsweredAt}, now())` })
     .where(eq(schema.users.id, user.id));
+  return c.json(await me(user.id));
+});
+
+/** Stop a device keeping the saved settings up to date. Only that device can: another device unchecking has nothing to stop. The saved settings stay. */
+auth.delete("/me/display-source", async (c) => {
+  const user = currentUser(c);
+  const body = await c.req.json<{ device?: unknown }>().catch(() => ({} as { device?: unknown }));
+  const device = parseDeviceId(body.device);
+  if (device) await db.update(schema.users).set({ displaySource: null }).where(and(eq(schema.users.id, user.id), eq(schema.users.displaySource, device)));
   return c.json(await me(user.id));
 });
 

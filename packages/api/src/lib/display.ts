@@ -34,6 +34,11 @@ const KEYS = ["appearance", "palette", "accent", "fonts", "reading", "layout", "
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const oneOf = (list: readonly string[], v: unknown) => typeof v === "string" && list.includes(v);
 
+/** A device's id as the web app makes it (a random UUID), or null for anything else. */
+export function parseDeviceId(raw: unknown): string | null {
+  return typeof raw === "string" && /^[0-9a-f-]{8,64}$/i.test(raw) ? raw.toLowerCase() : null;
+}
+
 /** The settings exactly as sent, or the first thing wrong with them. Unknown fields are refused too, so nothing extra gets stored. */
 export function parseSavedDisplay(raw: unknown): { ok: true; value: SavedDisplay } | { ok: false; error: string } {
   const bad = (error: string) => ({ ok: false as const, error });

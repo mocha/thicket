@@ -388,6 +388,8 @@ export type Me = {
   tourSeenAt: string | null;
   /** Display settings saved to offer a device that hasn't been set up, or null (issue #186). */
   savedDisplay: Display | null;
+  /** The device keeping the saved settings up to date (its random id, see lib/saved-display), or null for none. */
+  displaySource: string | null;
   /** When the one-time offer to save this device's settings was answered; null means it's still owed. */
   displayOfferAnsweredAt: string | null;
   /** A new account whose first setup hasn't been saved for new devices yet. */
@@ -439,7 +441,9 @@ export const authApi = {
       .catch((e) => console.error("Couldn't record that the setup tour was seen:", e));
   },
   /** Save these display settings to offer new devices, replacing any saved before. Refusals carry the reason. */
-  saveDisplay: (settings: Display) => j<Me>('/api/auth/me/display', { method: 'PUT', body: JSON.stringify({ settings }) }),
+  saveDisplay: (settings: Display, device: string) => j<Me>('/api/auth/me/display', { method: 'PUT', body: JSON.stringify({ settings, device }) }),
+  /** Stop this device keeping the saved settings up to date. The saved settings stay. */
+  stopDisplaySource: (device: string) => j<Me>('/api/auth/me/display-source', { method: 'DELETE', body: JSON.stringify({ device }) }),
   /** Say no to the one-time offer to save this device's settings. Like tourSeen, a failure is only logged: at worst the offer shows once more. */
   declineDisplayOffer: () => {
     void fetch('/api/auth/me/display-offer', { method: 'POST', keepalive: true })

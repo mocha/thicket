@@ -282,6 +282,11 @@ export function markConfigured() {
   remember(snapshot());
 }
 
+/** This device's settings as the screen shows them. Read inside an effect, it reruns on any change. */
+export function displayRecord(): Display {
+  return snapshot();
+}
+
 /** This device's settings as they stand now, including any another tab just changed. */
 export function currentDisplay(): Display {
   sync();

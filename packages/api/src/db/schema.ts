@@ -101,6 +101,13 @@ export const users = pgTable("users", {
    */
   savedDisplay: jsonb("saved_display").$type<SavedDisplay>(),
   /**
+   * The device that keeps the saved settings up to date: "Use these settings
+   * on new devices", checked in Settings there. A random id that device keeps
+   * in its own storage, nothing about the device itself. Null: no device is
+   * checked, and the saved settings stay as last saved.
+   */
+  displaySource: text("display_source"),
+  /**
    * When the one-time offer to save this device's settings was answered,
    * yes or no. Null on accounts from before saved settings existed, which is
    * what makes them see it; new accounts start answered.
