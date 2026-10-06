@@ -55,7 +55,7 @@
   <header class="top">
     <div class="titlerow">
       <h1>New posts</h1>
-      <AddFeedButton via="all_collections" />
+      <AddFeedButton via="all_collections" bottomBarOnly />
     </div>
     {#if stats}
       <p class="sub">{n(stats.feeds, 'feed', 'feeds')} · {n(stats.collections, 'collection', 'collections')} · {#if stats.posts24h}{n(stats.posts24h, 'new post', 'new posts')} in the last 24 hours{:else}No new posts in the last 24 hours{/if}</p>

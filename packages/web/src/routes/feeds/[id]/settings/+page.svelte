@@ -61,6 +61,32 @@
       removing = false;
     }
   }
+  let subscriptionChecked = $state(false);
+  let savingSubscription = $state(false);
+  $effect(() => { subscriptionChecked = feed?.requiresSubscription ?? false; });
+
+  /* One save at a time. Keep the checkbox honest on failure, and never apply
+   * a response to another feed if the admin navigated while it was saving. */
+  async function setRequiresSubscription(on: boolean) {
+    if (!feed || savingSubscription) return;
+    const target = feed;
+    const previous = target.requiresSubscription;
+    savingSubscription = true;
+    try {
+      const r = await adminApi.setRequiresSubscription(target.id, on);
+      api.event('admin_feed_requires_subscription', { feedId: target.id, on: r.requiresSubscription });
+      if (feed !== target || id !== target.id) return;
+      target.requiresSubscription = r.requiresSubscription;
+      subscriptionChecked = r.requiresSubscription;
+      showToast(r.requiresSubscription ? `${feedName(target)} is marked as requiring a subscription` : `${feedName(target)} is no longer marked as requiring a subscription`);
+    } catch (e) {
+      if (feed !== target || id !== target.id) return;
+      subscriptionChecked = previous;
+      showToast(e instanceof Error ? e.message : String(e));
+    } finally {
+      savingSubscription = false;
+    }
+  }
   const n = (v: number, one: string, many: string) => `${v} ${v === 1 ? one : many}`;
 
   async function load() {
@@ -270,13 +296,19 @@
 
   {#if session.user?.isAdmin}
     <hr />
-    <!-- Admins only, and folded like the troubleshooting above it: the question, then what removing does and the button. -->
+    <!-- Admins only, and folded like the troubleshooting above it: what an admin can change about this feed for everyone. First the paywall mark, then removal with what it does. -->
     <details class="fold" bind:open={adminOpen}>
       <summary class="tap">
         <Icon name="caret" dir={adminOpen ? 'down' : 'right'} size={16} stroke={2.4} />
-        <h2>Need to remove this feed for everyone?</h2>
+        <h2>Admin: change this feed for everyone</h2>
       </summary>
       <div class="body admin">
+        <div class="radios">
+          <label>
+            <input type="checkbox" bind:checked={subscriptionChecked} disabled={savingSubscription} onchange={(e) => setRequiresSubscription(e.currentTarget.checked)} />
+            <span><strong>Requires a subscription</strong><small>The site’s posts are behind a paywall. Everyone sees “Requires subscription” next to this feed’s address.</small></span>
+          </label>
+        </div>
         <p class="hint">Feeds are shared. Removing this one takes it away from everyone on thicket: its posts and its place in every collection. Bookmarks, and the notes on them, keep their saved copy. Use it for spam, abuse, or a feed that should never have been indexed.</p>
         <Button variant="danger" onclick={askRemove}>Remove from thicket</Button>
       </div>
@@ -323,6 +355,7 @@
   .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .admin { align-items: flex-start; }
   .admin .hint { margin: 0; }
+  .admin .radios { align-self: stretch; }
   dialog.remove { max-width: 440px; padding: var(--space-5) var(--space-5) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: var(--shadow-dialog); }
   dialog.remove::backdrop { background: var(--scrim); }
   dialog.remove h2 { margin: 0 0 var(--space-3); font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }

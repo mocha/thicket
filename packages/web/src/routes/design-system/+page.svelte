@@ -89,6 +89,7 @@
     { name: 'accent-soft', use: 'The secondary button’s pale wash' },
     { name: 'accent-tint', use: 'The wash behind something chosen or on' },
     { name: 'accent-soft-ink', use: 'Lettering on that wash' },
+    { name: 'panel', use: 'The “Who sees” strip over your own sections' },
     { name: 'danger', use: 'Destructive and errors' },
     { name: 'amber', use: 'Warnings and caution' },
     { name: 'line', use: 'Hairline borders' },
@@ -397,6 +398,18 @@
     <h2 id="components-h">Components</h2>
     <p class="section-lede">The parts every screen is assembled from, one of each, A to Z.</p>
 
+    <section class="entry" id="add-new-feed" aria-labelledby="add-new-feed-h">
+      <h3 class="entry-h" id="add-new-feed-h">Add new feed</h3>
+      <p class="section-lede">The app’s main action, which opens the Add a feed Sheet. Where it sits, and how it looks, depends on the screen. Wherever the left menu shows, it’s the menu’s first row, under the logo and a thin line: a plus in a thin-lined circle and its label, both in the accent color, with no fill. It stays put while the menu scrolls, so it’s one click from every page. Everything, Explore, and Collections then leave it out of their titles. On phones, upright iPads, and in the paged layout, which have the bottom bar instead, it’s a small primary Button beside the title on those three pages. Your own collection’s page keeps it beside the title at every size, because only that one adds the feed straight into the collection. It never shows to someone signed out, and a new account’s welcome screen has its own large “Add your first feed” instead.</p>
+      <div class="row">
+        <div class="menu-demo"><span class="menu-demo-row"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg>Add new feed</span></div>
+      </div>
+      <div class="row title-demo">
+        <span class="title-demo-h">Everything</span>
+        <Button variant="primary" size="sm"><span class="plus" aria-hidden="true">+</span> Add new feed</Button>
+      </div>
+    </section>
+
     <section class="entry" id="avatar" aria-labelledby="avatar-h">
       <h3 class="entry-h" id="avatar-h">Avatar</h3>
       <p class="section-lede">A person's face. With no picture it falls back to a monogram, drawn here, so nothing depends on a service that could go away.</p>
@@ -520,7 +533,7 @@
 
     <section class="entry" id="input" aria-labelledby="input-h">
       <h3 class="entry-h" id="input-h">Input</h3>
-      <p class="section-lede">Every text box is the same rounded rectangle, with a focus ring that only thickens for someone arriving by keyboard. The whole box is the field: pressing anywhere in it, including an icon or fixed text beside the words, puts the cursor at the end of what’s typed. Hint text is the placeholder color, which in dark themes sits well below typed text so an empty field never looks filled in. On a touchscreen the text inside a field is never smaller than 16px, even in the small size, so an iPhone doesn’t zoom in when you tap one.</p>
+      <p class="section-lede">Every text box is the same rounded rectangle, with a focus ring that only thickens for someone arriving by keyboard. The whole box is the field: pressing anywhere in it, including an icon or fixed text beside the words, puts the cursor at the end of what’s typed. Hint text is the placeholder color, which in dark themes sits well below typed text so an empty field never looks filled in. On a touchscreen the text inside a field is never smaller than 16px, even in the small size, so an iPhone doesn’t zoom in when you tap one. A password field has an eye at its end that shows the password as plain text and hides it again; it is a toggle button named “Show password” or “Hide password”, works from the keyboard, and has the full 44px touch area on a phone. It is on for every password field; <code>revealable=&#123;false&#125;</code> turns it off for one that must never be shown.</p>
       <div class="stack">
         <Field label="Feed name" hideLabel>
           {#snippet children({ id, describedBy })}
@@ -531,6 +544,12 @@
         <Field label="Search" hideLabel>
           {#snippet children({ id, describedBy })}
             <Input {id} aria-describedby={describedBy} variant="search" placeholder="Search feeds…" value="" />
+          {/snippet}
+        </Field>
+
+        <Field label="Password" hint="Every password field has the eye. Press it to see what you typed; press again to hide it. Your cursor and what you typed stay put.">
+          {#snippet children({ id, describedBy })}
+            <Input {id} aria-describedby={describedBy} type="password" value="correct horse" autocomplete="off" />
           {/snippet}
         </Field>
       </div>
@@ -750,6 +769,12 @@
   .strip-demo { position: relative; display: grid; place-items: center; width: var(--pager-w); height: 160px; border: 1px solid var(--line); }
   .stack { display: flex; flex-direction: column; gap: var(--space-4); max-width: 460px; }
   .prefix { color: var(--text-2); }
+  /* Add new feed as it sits in the left menu, and beside a page title. */
+  .menu-demo { width: 240px; padding: var(--space-4) var(--space-3); border-right: 1px solid var(--line); }
+  .menu-demo-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); }
+  .title-demo { justify-content: space-between; max-width: 460px; }
+  .title-demo-h { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); }
+  .plus { font-size: 1.3em; line-height: 1; }
   .dot-demo { display: inline-flex; align-items: center; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
 
   /* ---- Footer ---- */

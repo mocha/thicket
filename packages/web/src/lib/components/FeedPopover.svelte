@@ -11,6 +11,7 @@
   import FollowControl from './FollowControl.svelte';
   import IconButton from './IconButton.svelte';
   import Button from './Button.svelte';
+  import Badge from './Badge.svelte';
   import { session } from '$lib/session.svelte';
 
   let { feedId, onclose }: { feedId: number; onclose: () => void } = $props();
@@ -31,7 +32,10 @@
         <SourceIcon feedId={feed.id} hasIcon={feed.hasIcon} name={feed.title ?? hostOf(feed.url)} size={48} />
         <div class="who">
           <h2>{feed.title ?? hostOf(feed.url)}</h2>
-          <a class="host tap" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
+          <div class="addr">
+            <a class="host tap" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
+            {#if feed.requiresSubscription}<Badge title="Posts from this site are behind a paywall: reading them takes a subscription">Requires subscription</Badge>{/if}
+          </div>
         </div>
         <IconButton class="close" icon="close" label="Close" onclick={() => dialog?.close()} />
       </header>
@@ -66,6 +70,8 @@
   .who { flex: 1; min-width: 0; }
   h2 { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); line-height: 1.2; overflow-wrap: anywhere; }
   .host { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
+  /* "Requires subscription" sits beside the address, and drops under it when the line runs out. */
+  .addr { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
   header :global(.close) { align-self: flex-start; }
   .desc { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: var(--space-4) 0 0; padding: var(--space-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }

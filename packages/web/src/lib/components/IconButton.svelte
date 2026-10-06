@@ -27,7 +27,7 @@
    * reader tapped to open it.
    */
   interface Props {
-    icon: 'gear' | 'pencil' | 'close' | 'caret' | 'back' | 'dots' | 'bookmark' | 'note';
+    icon: 'gear' | 'pencil' | 'close' | 'caret' | 'back' | 'dots' | 'bookmark' | 'note' | 'eye' | 'eye-off';
     label: string;
     /** Which way a caret points. Ignored by the glyphs that have no direction. */
     dir?: 'right' | 'down' | 'left' | 'up';

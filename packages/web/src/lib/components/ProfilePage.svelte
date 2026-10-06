@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { page } from '$app/state';
-  import { api, authApi, profilesApi, publicCollectionHref, type Profile, type ProfileCollection, type PublicBookmark, type PublicUser, type ShareLevel } from '$lib/api';
+  import { api, authApi, profilesApi, profileHref, publicCollectionHref, type Profile, type ProfileCollection, type PublicBookmark, type PublicUser, type ShareLevel } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
-  import { hostOf } from '$lib/time';
+  import { hostOf, ugcRel } from '$lib/time';
   import Monogram from '$lib/components/Monogram.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import AvatarCropDialog from '$lib/components/AvatarCropDialog.svelte';
@@ -13,14 +13,16 @@
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Button from '$lib/components/Button.svelte';
+  import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
   import Textarea from '$lib/components/Textarea.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import { removeBookmark, withBookmarkBack } from '$lib/saves';
   import { goto } from '$app/navigation';
   import { collectionsApi, collectionHref } from '$lib/api';
-  import { audienceTag, SEES } from '$lib/visibility';
+  import { audienceTag } from '$lib/visibility';
   import { loadCollections } from '$lib/collections.svelte';
   import { marks, countText } from '$lib/marks.svelte';
   import { display } from '$lib/display.svelte';
@@ -108,16 +110,49 @@
    * A few recent bookmarks, with the notes on them, shown right on the
    * profile; the rest are one link away. One section with two audiences
    * (issue #84): the server sends only what this viewer may see.
+   *
+   * On your own profile they're yours to note and remove, as on My Bookmarks
+   * (issue #170). One more than is shown is kept in hand, so removing one
+   * moves the next up at once; the list is then fetched again to keep one in
+   * hand for the next removal.
    */
   const BOOKMARKS_SHOWN = 3;
   let recentBookmarks = $state<PublicBookmark[] | null>(null);
+  const shownBookmarks = $derived(recentBookmarks?.slice(0, BOOKMARKS_SHOWN) ?? null);
   let bookmarksFor = $state<string | undefined>(undefined);
+  /* Bumped by every change made here, so a fetch that set out before an Undo can't undo it. */
+  let bookmarksAsked = 0;
+  function loadBookmarks(h: string) {
+    const asked = ++bookmarksAsked;
+    return profilesApi.bookmarks(h, { limit: BOOKMARKS_SHOWN + 1 }).then((r) => { if (bookmarksFor === h && asked === bookmarksAsked) recentBookmarks = r.bookmarks; });
+  }
   $effect(() => {
     if (!profile || profile.private || !profile.bookmarks || profile.bookmarks.count === 0 || bookmarksFor === profile.handle) return;
     const h = profile.handle;
     bookmarksFor = h; recentBookmarks = null;
-    profilesApi.bookmarks(h, { limit: BOOKMARKS_SHOWN }).then((r) => { if (bookmarksFor === h) recentBookmarks = r.bookmarks; }).catch(() => (recentBookmarks = []));
+    loadBookmarks(h).catch(() => (recentBookmarks = []));
   });
+  function removeRecent(b: PublicBookmark) {
+    if (!profile || profile.private || !profile.bookmarks || !recentBookmarks) return;
+    const counts = profile.bookmarks, h = profile.handle, snapshot = recentBookmarks;
+    void removeBookmark(b, 'profile', {
+      drop: () => {
+        bookmarksAsked++;
+        recentBookmarks = (recentBookmarks ?? []).filter((x) => x.id !== b.id);
+        counts.count--;
+      },
+      putBack: (id) => {
+        // Undo still restores it; the cards only change if this profile is still the one on screen.
+        if (bookmarksFor !== h) return;
+        bookmarksAsked++;
+        recentBookmarks = withBookmarkBack(recentBookmarks ?? [], snapshot, b.id, id);
+        counts.count++;
+      }
+    }).then(() => loadBookmarks(h)).catch((e) => {
+      // The cards on screen stay as they are; only the one moving up is missing.
+      api.event('profile_bookmarks_refill_failed', { message: (e instanceof Error ? e.message : String(e)).slice(0, 200) });
+    });
+  }
 
   /** The people this person follows — their own section. */
   let following = $state<PublicUser[] | null>(null);
@@ -155,21 +190,22 @@
   const childCols = (id: number) => cols.filter((c) => c.parentId === id);
 
   /**
+   * The Collections page has a filter box (issue #178): it narrows the list to
+   * names containing what you type, ignoring capitals. A search wants a flat
+   * list of matches, so ones that sit inside another collection show too.
+   */
+  let colFilter = $state('');
+  const colQuery = $derived(colFilter.trim().toLowerCase());
+  const colMatches = $derived(colQuery ? cols.filter((c) => c.name.toLowerCase().includes(colQuery)) : []);
+
+  /**
    * The owner edits their public page on the page itself. Everything here only
    * appears when you're looking at your own profile; a visitor sees the plain
    * page. The values come from the signed-in user, so a change shows at once.
    */
   const su = $derived(session.user);
+  const collectionsShared = $derived(su?.profileVisibility === 'public' && su.collectionsVisibility !== 'private' ? su.collectionsVisibility : null);
   const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
-  const RANK: Record<ShareLevel, number> = { private: 0, friends: 1, public: 2 };
-  /** What the two settings on the Bookmarks section add up to, in words. */
-  function sharingSummary(marks: ShareLevel, notes: ShareLevel): string {
-    const lines = [`${SEES[marks]} your bookmarks.`];
-    lines.push(notes === 'private' ? `${SEES.private} your notes.` : `${SEES[notes]} your notes, here and under the post each one is about.`);
-    // Notes shared wider than bookmarks: those extra people see only the noted posts.
-    if (RANK[notes] > RANK[marks]) lines.push(`${notes === 'public' && marks === 'friends' ? 'Everyone else' : 'They'} see${notes === 'public' && marks === 'friends' ? 's' : ''} only the posts you’ve written a note on.`);
-    return lines.join(' ');
-  }
   const VISIBILITY = [
     { value: 'public', label: 'Anyone' },
     { value: 'private', label: 'Only me' }
@@ -344,7 +380,7 @@
         </div>
       {:else}
         <h1 title={profile.displayName ?? profile.handle}>{profile.displayName ?? profile.handle}</h1>
-        <p class="handle">@{profile.handle}{#if profile.homepageUrl}{' · '}<a class="site" href={profile.homepageUrl} target="_blank" rel="noopener me">{hostOf(profile.homepageUrl)} ↗</a>{/if}</p>
+        <p class="handle">@{profile.handle}{#if profile.homepageUrl}{' · '}<a class="site" href={profile.homepageUrl} target="_blank" rel={ugcRel(profile.homepageUrl, 'me')}>{hostOf(profile.homepageUrl)} ↗</a>{/if}</p>
         {#if profile.bio}<p class="bio">{profile.bio}</p>{/if}
       {/if}
     </div>
@@ -390,8 +426,24 @@
   {#if profile.collections}
     <section>
       {#if only}
-        <h1 class="pagetitle titled">Collections <Badge>{profile.collections.length}</Badge></h1>
-        <p class="sub">Your feeds grouped and named however you choose.</p>
+        <div class="titlerow">
+          <h1 class="pagetitle">Collections <Badge>{profile.collections.length}</Badge></h1>
+          {#if isMe}<AddFeedButton via="collections" bottomBarOnly />{/if}
+        </div>
+        <p class="sub">Your feeds grouped and named however you choose. {#if !collectionsShared}Only you can see them.{:else}Shown on <a href={profileHref(handle)}>your profile</a>{collectionsShared === 'friends' ? ' to the people you follow' : ''}, with each collection’s own sharing setting.{/if}</p>
+        <Field class="colfilter" label="Filter collections" hideLabel>
+          {#snippet children({ id })}
+            <Input
+              {id}
+              variant="search"
+              bind:value={colFilter}
+              placeholder="Filter collections"
+              maxlength="60"
+              autocomplete="off"
+              onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') colFilter = ''; }}
+            />
+          {/snippet}
+        </Field>
       {:else}
         <h2>Collections <Badge>{profile.collections.length}</Badge></h2>
       {/if}
@@ -405,7 +457,7 @@
         {#if profile.collections.length === 0 && !profile.isMe}
         <div class="pad"><p class="status">No collections to show.</p></div>
       {:else}
-        {#snippet colRow(c: ProfileCollection, depth: number)}
+        {#snippet colRow(c: ProfileCollection, depth: number, withKids = true)}
           <li class:nested={depth > 0}>
             <a href={publicCollectionHref(handle, c.slug)} style:--indent="{depth * 18}px">
               <div class="meta2">
@@ -418,14 +470,14 @@
               <span class="chev" aria-hidden="true">›</span>
             </a>
           </li>
-          {#each childCols(c.id) as k (k.id)}
-            {@render colRow(k, depth + 1)}
-          {/each}
+          {#if withKids}
+            {#each childCols(c.id) as k (k.id)}
+              {@render colRow(k, depth + 1)}
+            {/each}
+          {/if}
         {/snippet}
+        <!-- New collection leads the list, so it's never below a long scroll. -->
         <ul class="list">
-          {#each topCols as c (c.id)}
-            {@render colRow(c, 0)}
-          {/each}
           {#if profile.isMe}
             <li class="new">
               {#if creating}
@@ -455,7 +507,19 @@
               {/if}
             </li>
           {/if}
+          {#if colQuery}
+            {#each colMatches as c (c.id)}
+              {@render colRow(c, 0, false)}
+            {/each}
+          {:else}
+            {#each topCols as c (c.id)}
+              {@render colRow(c, 0)}
+            {/each}
+          {/if}
         </ul>
+        {#if only}
+          <p class="nomatch" aria-live="polite">{#if colQuery && colMatches.length === 0}No collections match “{colFilter.trim()}”{/if}</p>
+        {/if}
         {#if profile.collections.length === 0 && profile.isMe}
           <div class="pad"><p class="status">A collection is a handful of feeds you read together. Make one above, then add feeds to it from any feed’s Follow menu.</p></div>
         {/if}
@@ -473,7 +537,8 @@
       <h2>Bookmarks <Badge>{profile.bookmarks.count}</Badge></h2>
       {#if profile.isMe}
         {#if su && su.profileVisibility !== 'private'}
-          <div class="card">
+          <!-- Settings, not a bookmark: the same strip as the other sections, on its own, so it doesn't read as one more card below. -->
+          <div class="panel">
             <div class="cardhead">
               <span class="ctrl-label">Who sees your bookmarks</span>
               <SectionAudience level={su.bookmarksVisibility} label="your bookmarks" onchange={(l) => save({ bookmarksVisibility: l }, `Bookmarks: ${AUD[l]}`)} />
@@ -482,7 +547,6 @@
               <span class="ctrl-label">Who sees your notes</span>
               <SectionAudience level={su.notesVisibility} label="your notes" onchange={(l) => save({ notesVisibility: l }, `Notes: ${AUD[l]}`)} />
             </div>
-            <div class="pad"><p class="status">{sharingSummary(su.bookmarksVisibility, su.notesVisibility)}</p></div>
           </div>
         {/if}
       {:else if profile.bookmarks.notes !== null && session.user && profile.people.isFollowing}
@@ -492,18 +556,20 @@
       {/if}
       {#if profile.bookmarks.count === 0}
         <p class="status">Press the bookmark on any post to save it, or the note button to write down what you thought of it.</p>
-      {:else if recentBookmarks === null}
+      {:else if shownBookmarks === null}
         <p class="status">Loading…</p>
-      {:else if recentBookmarks.length === 0}
+      {:else if shownBookmarks.length === 0}
         <p class="status">No bookmarks to show.</p>
       {:else}
         <ul class="saves">
-          {#each recentBookmarks as b (b.id)}
-            <BookmarkCard {b} author={profile} onopen={() => api.event('bookmark_opened', { via: 'profile' })} />
+          {#each shownBookmarks as b (b.id)}
+            <BookmarkCard {b} mine={isMe} author={profile} onopen={() => api.event('bookmark_opened', { via: 'profile' })}
+              action={isMe ? { kind: 'remove', on: true, label: b.note ? 'Remove bookmark and note' : 'Remove bookmark', run: () => removeRecent(b) } : undefined} />
           {/each}
         </ul>
-        {#if profile.bookmarks.count > recentBookmarks.length}
-          <a class="all tap" href="/@{profile.handle}/bookmarks">All {profile.bookmarks.count} bookmarks <span aria-hidden="true">›</span></a>
+        {#if profile.bookmarks.count > shownBookmarks.length}
+          <!-- Your own goes to My Bookmarks, where search and filters are; a visitor gets the public list. -->
+          <a class="all tap" href={isMe ? '/bookmarks' : `/@${profile.handle}/bookmarks`}>All {profile.bookmarks.count} bookmarks <span aria-hidden="true">›</span></a>
         {/if}
       {/if}
     </section>
@@ -561,10 +627,11 @@
 
 <style>
   /* The Collections screen's own title, in the place a page title sits everywhere else. */
-  .pagetitle { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.15; margin: 0 0 var(--space-4); }
-  /* The Collections page says what a collection is, under its title, like the New posts and Bookmarks pages (issue #173). */
-  .pagetitle.titled { margin-bottom: 0; }
+  /* Its title row, with Add new feed beside it where there's no left menu to hold it. */
+  .titlerow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); margin: 0; }
+  .pagetitle { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.15; margin: 0; }
   .sub { margin: 2px 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .sub a { color: var(--accent); }
   .who { display: flex; gap: var(--space-4); align-items: flex-start; margin: var(--space-2) 0 var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); }
   .names { flex: 1; min-width: 0; }
   /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
@@ -594,10 +661,12 @@
   /* Every section's content sits in a card — the same surface + shadow the
      lists always used. The audience control rides at the top in a header bar. */
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .panel { background: var(--panel); border-radius: var(--radius); padding: var(--space-2) 0; }
+  .panel .cardhead { background: none; }
   .pad { padding: var(--space-4); }
   /* A tinted control strip, not a list row: the background sets it apart from
      the white rows below, and the label sits right beside its buttons. */
-  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-2) var(--space-4); background: var(--surface-2); }
+  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-2) var(--space-4); background: var(--panel); }
   .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
   /* At least 320px so the options aren't cramped, wider when larger text needs
      it, and never wider than the strip. A fixed 320px made the control fall
@@ -633,10 +702,14 @@
   .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   .add { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); text-align: left; }
-  li:first-child .add { border-top: 0; }
+  li:first-child .add, li:first-child form { border-top: 0; }
   .plus { font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; width: 14px; }
   .new form { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .new form :global(.grow) { flex: 1; min-width: 0; }
+  /* The Collections page's filter sits between the title and the card, like the Bookmarks search. */
+  section > :global(.colfilter) { margin: 0 0 var(--space-3); }
+  .nomatch { margin: 0; padding: 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .nomatch:not(:empty) { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
   .status a { color: var(--accent); font-weight: 600; }
   .saves { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-3) 0 0; padding: 0; list-style: none; }

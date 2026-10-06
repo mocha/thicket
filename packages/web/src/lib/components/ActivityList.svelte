@@ -10,7 +10,7 @@
   import { api, authApi, profilesApi, publicCollectionHref, type ActivityEntry, type ShareLevel } from '$lib/api';
   import SourceIcon from './SourceIcon.svelte';
   import SectionAudience from './SectionAudience.svelte';
-  import { relativeTime, hostOf, savedHref } from '$lib/time';
+  import { relativeTime, hostOf, savedHref, ugcRel } from '$lib/time';
   import { audienceTag } from '$lib/visibility';
   import { session, setMe } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
@@ -133,7 +133,7 @@
             <div class="row">
               <SourceIcon feedId={e.payload.feedId} hasIcon={e.payload.hasIcon} name={e.payload.siteTitle ?? e.payload.title} size={20} />
               <p class="what">
-                Bookmarked <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel="noopener">{e.payload.title ?? e.payload.url}</a>
+                Bookmarked <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(e.payload.url))}>{e.payload.title ?? e.payload.url}</a>
                 <span class="src">{e.payload.siteTitle ?? hostOf(e.payload.url)}</span>
               </p>
               <span class="when">{relativeTime(e.at)}</span>
@@ -142,7 +142,7 @@
             <div class="row">
               <SourceIcon feedId={e.payload.feedId} hasIcon={e.payload.hasIcon} name={e.payload.siteTitle ?? e.payload.title} size={20} />
               <p class="what">
-                Noted on <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel="noopener">{e.payload.title ?? e.payload.url}</a>
+                Noted on <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(e.payload.url))}>{e.payload.title ?? e.payload.url}</a>
                 <span class="src">{e.payload.siteTitle ?? hostOf(e.payload.url)}</span>
               </p>
               <span class="when">{relativeTime(e.at)}</span>
@@ -165,7 +165,7 @@
   section { margin-bottom: var(--space-5); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--surface-2); }
+  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--panel); }
   .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
   /* At least 320px so the options aren't cramped, wider when larger text needs
      it, and never wider than the strip. A fixed 320px made the control fall

@@ -27,6 +27,7 @@ const feedColumns = (userId: number) => sql`
   f.last_fetched_at as "lastFetchedAt", f.next_fetch_at as "nextFetchAt", f.fetch_interval_s as "fetchIntervalS",
   f.consecutive_failures as "consecutiveFailures", f.last_status as "lastStatus", f.last_error as "lastError",
   f.last_item_at as "lastItemAt", f.created_at as "createdAt", f.etag, f.last_modified as "lastModified",
+  f.requires_subscription as "requiresSubscription",
   exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon",
   (select count(*)::int from feeds g where g.title = f.title) as "sameTitle",
   (select count(*)::int from items i where i.feed_id = f.id) as "itemCount",

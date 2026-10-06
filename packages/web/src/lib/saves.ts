@@ -41,3 +41,44 @@ export async function unsaveItem(item: RiverItem, via: string): Promise<void> {
     showToast(err instanceof Error ? err.message : String(err));
   }
 }
+
+/**
+ * Remove one of my bookmarks from a list of them, its note with it: My
+ * Bookmarks, and my own profile (issue #170). `drop` takes the card out at
+ * once. `putBack` returns it, with the id it now has: after Undo that is a new
+ * one, and after a failed remove it is the same one.
+ */
+export async function removeBookmark(
+  b: { id: number; note: Note | null },
+  via: string,
+  list: { drop: () => void; putBack: (id: number) => void }
+): Promise<void> {
+  list.drop();
+  try {
+    const removed = await bookmarksApi.remove(b.id);
+    api.event('bookmark_removed', { bookmarkId: b.id, via, hadNote: !!b.note });
+    showToast(b.note ? 'Removed bookmark and note' : 'Removed bookmark', {
+      label: 'Undo',
+      run: async () => list.putBack((await bookmarksApi.restore(removed)).id)
+    });
+  } catch (err) {
+    list.putBack(b.id);
+    showToast(err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * The list now, with one removed bookmark back where it was and under the id
+ * it now has. Anything else removed meanwhile stays gone, and anything loaded
+ * meanwhile stays, at the end.
+ */
+export function withBookmarkBack<T extends { id: number; note: Note | null }>(now: T[], before: T[], oldId: number, newId: number): T[] {
+  const byId = new Map(now.map((x) => [x.id, x]));
+  const out = before.flatMap((x) => {
+    if (x.id === oldId) return [{ ...x, id: newId, note: x.note && { ...x.note, id: newId } }];
+    const kept = byId.get(x.id);
+    return kept ? [kept] : [];
+  });
+  const placed = new Set(out.map((x) => x.id));
+  return [...out, ...now.filter((x) => !placed.has(x.id))];
+}

@@ -125,6 +125,8 @@
       {/if}
     </footer>
 
+    <!-- The notes sit on the page here, not in a card, so they line up with the post's text. -->
+    <div class="notes">
     {#if session.user}
       {#if editing}
         <NoteEditor itemId={item.id} note={myNote}
@@ -136,6 +138,7 @@
       {/if}
     {/if}
     {#each others as n (n.id)}<NoteBlock note={n} />{/each}
+    </div>
   </article>
 {:else if error}
   <p class="empty">This post isn’t here. It may have been pruned, or the address may be wrong. <a href={backHref}>Go to the feed</a></p>
@@ -149,6 +152,8 @@
   .crumbs a:hover { color: var(--text); }
 
   .post { max-width: 680px; }
+  .notes { margin-top: var(--space-4); }
+  .notes :global(.note), .notes :global(.editor) { padding-left: 0; padding-right: 0; }
   header { display: flex; align-items: center; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); min-width: 0; }
   .who { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: inherit; }
   .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

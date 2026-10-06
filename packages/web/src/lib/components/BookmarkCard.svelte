@@ -17,7 +17,7 @@
    */
   import type { Bookmark, Note, PublicBookmark, PublicUser, SavedNote } from '$lib/api';
   import { api, itemsApi } from '$lib/api';
-  import { hostOf, relativeTime, savedHref, webHref } from '$lib/time';
+  import { hostOf, relativeTime, savedHref, ugcRel, webHref } from '$lib/time';
   import { openReader, readsInline } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { highlight, unmarked } from '$lib/words';
@@ -103,7 +103,7 @@
 {#snippet marked(text: string)}{#each highlight(text) as part}{#if part.hit}<mark>{part.text}</mark>{:else}{part.text}{/if}{/each}{/snippet}
 
 <Card as="li" class="bm" pad={false}>
-  <a class="body" href={savedHref(b.url) ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
+  <a class="body" href={savedHref(b.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(b.url))} onclick={opened} onauxclick={opened}>
     <div class="text" class:two={mine && action}>
       {#if marks?.site}
         <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt}>
@@ -121,7 +121,7 @@
   </a>
   {#if webHref(b.linkUrl) && b.linkLabel}
     <!-- The source post's discussion-style link (e.g. Hacker News's "Comments"), outside the body's own link. -->
-    <a class="card-extralink tap" href={webHref(b.linkUrl)} target="_blank" rel="noopener">{b.linkLabel} →</a>
+    <a class="card-extralink tap" href={webHref(b.linkUrl)} target="_blank" rel={ugcRel(b.linkUrl)}>{b.linkLabel} →</a>
   {/if}
   <div class="corner">
     {#if mine}

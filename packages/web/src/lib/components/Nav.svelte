@@ -8,6 +8,7 @@
   import { showToast } from '$lib/toast.svelte';
   import Avatar from './Avatar.svelte';
   import AccountMenu from './AccountMenu.svelte';
+  import { openAddFeed } from '$lib/addfeed.svelte';
   import Icon from './Icon.svelte';
   import Field from './Field.svelte';
   import Input from './Input.svelte';
@@ -21,7 +22,8 @@
    * The sidebar, top to bottom: New posts (every post you follow, its own item
    * now), then "Collections" — a group you can fold away — holding each of your
    * collections and "+ New collection", then Bookmarks (notes live there
-   * too), Notifications (with a count of what is new) and Explore.
+   * too), Notifications (with a count of what is new) and Explore. Add new
+   * feed, the app's main action, sits above the list, under the logo.
    * Nothing here manages anything: a collection is managed from its
    * own page. Mobile has no room for the list, so its Collections tab opens
    * your profile, which lists them.
@@ -90,19 +92,6 @@
     }
   }
 
-  // Filter the sidebar's collections: a slim field sits at the top of the list
-  // and narrows it to names containing what you type, ignoring case. Shown only
-  // once there are enough collections to bother, so short lists stay clean.
-  let filter = $state('');
-  const showFilter = $derived(namedCollections().length > 6);
-  const filtered = $derived.by(() => {
-    const q = filter.trim().toLowerCase();
-    return q ? namedCollections().filter((c) => c.name.toLowerCase().includes(q)) : [];
-  });
-  // Leaving for a page clears the filter, so you never return to a sidebar
-  // mysteriously narrowed to your last search.
-  $effect(() => { void path; filter = ''; });
-
   // The sidebar's right edge is a handle: drag it, or focus it and use the
   // arrow keys, to set how wide the sidebar is. Double-click puts it back.
   // The sidebar starts at the window's left edge, so the pointer's x is the width.
@@ -147,6 +136,9 @@
 <!-- Paged layout keeps the bottom bar at every width: a sidebar is a scrolling thing. -->
 <nav aria-label="Primary" class:paged={display.layout === 'paged'}>
   <a class="brand" href="/new-posts"><img src="/icon.svg" alt="" width="28" height="28" /><Wordmark height={23} /></a>
+  <!-- Sidebar only, above the scrolling list so it never scrolls away. On
+       bottom bar screens the same action sits beside each page's title instead. -->
+  {#if me}<button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg><span>Add new feed</span></button>{/if}
   <ul>
     <!-- Mobile-only tabs. On desktop, New posts and Collections live in the li.collections block below. -->
     <li class="mobile-only">
@@ -169,49 +161,22 @@
       </div>
       {#if collectionsOpen.open}
       <ul class="cols" id="my-collections" aria-label="Your collections">
-        {#if showFilter}
-          <li class="filterrow">
-            <Field label="Filter collections" hideLabel>
-              {#snippet children({ id })}
-                <Input
-                  {id}
-                  variant="search"
-                  size="sm"
-                  bind:value={filter}
-                  placeholder="Filter collections…"
-                  maxlength="60"
-                  autocomplete="off"
-                  onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') filter = ''; }}
-                />
-              {/snippet}
-            </Field>
-          </li>
-        {/if}
-        {#if filter.trim()}
-          <!-- A search wants a flat list of matches, not the folded tree. -->
-          {#each filtered as c (c.id)}
-            <li>{@render row(c)}</li>
-          {:else}
-            <li class="nomatch">No collections match “{filter.trim()}”.</li>
-          {/each}
-        {:else}
-          {#each topLevelCollections() as c (c.id)}
-            {@const kids = childrenOf(c.id)}
-            <li class:parent={kids.length > 0}>
-              {@render row(c)}
-              {#if kids.length}
-                <button type="button" class="caret" aria-expanded={isOpen(c)} aria-label="{isOpen(c) ? 'Hide' : 'Show'} the collections inside {c.name}" onclick={() => toggleNavOpen(c.id)}>
-                  <Icon name="caret" size={14} stroke={2.5} dir={isOpen(c) ? 'down' : 'right'} />
-                </button>
-              {/if}
-            </li>
-            {#if kids.length && isOpen(c)}
-              {#each kids as k (k.id)}
-                <li class="child">{@render row(k)}</li>
-              {/each}
+        {#each topLevelCollections() as c (c.id)}
+          {@const kids = childrenOf(c.id)}
+          <li class:parent={kids.length > 0}>
+            {@render row(c)}
+            {#if kids.length}
+              <button type="button" class="caret" aria-expanded={isOpen(c)} aria-label="{isOpen(c) ? 'Hide' : 'Show'} the collections inside {c.name}" onclick={() => toggleNavOpen(c.id)}>
+                <Icon name="caret" size={14} stroke={2.5} dir={isOpen(c) ? 'down' : 'right'} />
+              </button>
             {/if}
-          {/each}
-        {/if}
+          </li>
+          {#if kids.length && isOpen(c)}
+            {#each kids as k (k.id)}
+              <li class="child">{@render row(k)}</li>
+            {/each}
+          {/if}
+        {/each}
         <li class="new">
           {#if creating}
             <form onsubmit={(e) => { e.preventDefault(); void create(); }}>
@@ -310,7 +275,7 @@
     backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
     border-top: 1px solid var(--line);
   }
-  .brand, .account, .long, li.admin, li.collections, li.notifs, .resize { display: none; }
+  .brand, .addfeed, .account, .long, li.admin, li.collections, li.notifs, .resize { display: none; }
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
   /* Each tab is as wide as its label plus an even share of the spare room, so
      "Collections" gets more than "You" and none of them touch. Never narrower
@@ -356,7 +321,13 @@
       display: flex; flex-direction: column;
       border-top: 0; border-right: 1px solid var(--line); background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none;
     }
-    nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-5); }
+    /* A hairline under the logo sets it apart from Add new feed and the rows below. */
+    nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
+    /* A row like the ones below it, in the accent color, its circle drawn a touch finer than their icons, so it reads as the one action in a list of places. */
+    nav:not(.paged) .addfeed { display: flex; flex: none; align-items: center; gap: var(--space-3); margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
+    nav:not(.paged) .addfeed:hover { background: var(--surface-2); }
+    /* The same accent ring, drawn just inside, as the rows below it. */
+    nav:not(.paged) .addfeed:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
     nav:not(.paged) .long { display: inline; }
     nav:not(.paged) .shortl, nav:not(.paged) li.mobile-only { display: none; }
     /* The only scrolling part, so the account block below it never drifts up into the list. */
@@ -380,9 +351,6 @@
     nav:not(.paged) .headlink { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0 var(--space-2) var(--space-3); border-radius: var(--radius-sm); color: inherit; }
     nav:not(.paged) .groupcaret { flex: none; display: grid; place-items: center; width: 32px; align-self: stretch; margin-right: var(--space-1); border-radius: var(--radius-sm); color: var(--text-3); }
     nav:not(.paged) .groupcaret:hover { color: var(--text); }
-    /* The filter box draws itself; the row only holds it off the list below. */
-    nav:not(.paged) .cols .filterrow { margin-bottom: var(--space-1); }
-    nav:not(.paged) .cols .nomatch { padding: var(--space-2) var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
     /* The Everything row is a normal-height row: undo the full-height stretch the bottom-bar tabs use. */
     nav:not(.paged) .readall { height: auto; }
     /* It carries the whole stream's "what's new" count, pushed to the row's end. */
