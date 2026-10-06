@@ -7,8 +7,7 @@
   import { MENU_ICONS } from '$lib/menu-icons';
   import SceneLoop from './SceneLoop.svelte';
   import MiniCard from './MiniCard.svelte';
-
-  const WHO = ['Anyone', 'People I follow', 'Only me'];
+  import MiniChoice from './MiniChoice.svelte';
 </script>
 
 {#snippet mark()}
@@ -25,9 +24,7 @@
     </MiniCard>
     <div class="who-sees">
       <span class="label">Who sees your notes</span>
-      <span class="track">
-        {#each WHO as w, i (w)}<span class="opt" class:was={i === 0} class:now={i === 1}>{w}</span>{/each}
-      </span>
+      <MiniChoice from="Anyone" to="People I follow" at={3900} />
     </div>
   </div>
 </SceneLoop>
@@ -51,11 +48,5 @@
   /* Who sees your notes: the choice moves from Anyone to People I follow. */
   .who-sees { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; animation: rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 3100ms backwards; }
   .label { font-size: 11px; font-weight: 600; color: var(--text); }
-  .track { display: inline-flex; padding: 2px; border-radius: var(--radius-pill); background: var(--surface); box-shadow: var(--shadow); border: var(--card-border, 0); }
-  .opt { padding: 3px 8px; border-radius: var(--radius-pill); font-size: 10px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
-  .opt.now { background: var(--accent); color: var(--accent-ink); animation: picked 240ms ease-out 3900ms backwards; }
-  .opt.was { animation: unpicked 3900ms steps(1) backwards; }
-  @keyframes picked { from { background: transparent; color: var(--text-2); } }
-  @keyframes unpicked { from { background: var(--accent); color: var(--accent-ink); } }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 </style>
