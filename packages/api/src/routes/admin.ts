@@ -136,8 +136,9 @@ admin.get("/feeds/:id/impact", async (c) => {
 admin.patch("/feeds/:id", async (c) => {
   await requireAdmin(c);
   const id = Number(c.req.param("id"));
-  const body = await c.req.json<{ requiresSubscription?: boolean }>().catch(() => ({} as { requiresSubscription?: boolean }));
-  if (typeof body.requiresSubscription !== "boolean") return c.json({ error: "requiresSubscription (boolean) is required" }, 400);
+  if (!Number.isSafeInteger(id) || id <= 0) return c.json({ error: "not found" }, 404);
+  const body = await c.req.json<{ requiresSubscription?: boolean } | null>().catch(() => null);
+  if (typeof body?.requiresSubscription !== "boolean") return c.json({ error: "requiresSubscription (boolean) is required" }, 400);
   const [row] = await db.update(schema.feeds).set({ requiresSubscription: body.requiresSubscription }).where(eq(schema.feeds.id, id))
     .returning({ id: schema.feeds.id, requiresSubscription: schema.feeds.requiresSubscription });
   return row ? c.json(row) : c.json({ error: "not found" }, 404);

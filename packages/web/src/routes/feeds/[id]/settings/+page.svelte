@@ -61,16 +61,30 @@
       removing = false;
     }
   }
-  /* Admin only: mark the site as paywalled, for everyone. Saved on change; the feed page then shows "Requires subscription" by its address. */
+  let subscriptionChecked = $state(false);
+  let savingSubscription = $state(false);
+  $effect(() => { subscriptionChecked = feed?.requiresSubscription ?? false; });
+
+  /* One save at a time. Keep the checkbox honest on failure, and never apply
+   * a response to another feed if the admin navigated while it was saving. */
   async function setRequiresSubscription(on: boolean) {
-    if (!feed) return;
+    if (!feed || savingSubscription) return;
+    const target = feed;
+    const previous = target.requiresSubscription;
+    savingSubscription = true;
     try {
-      const r = await adminApi.setRequiresSubscription(feed.id, on);
-      feed.requiresSubscription = r.requiresSubscription;
-      api.event('admin_feed_requires_subscription', { feedId: feed.id, on });
-      showToast(on ? `${feedName(feed)} is marked as requiring a subscription` : `${feedName(feed)} is no longer marked as requiring a subscription`);
+      const r = await adminApi.setRequiresSubscription(target.id, on);
+      api.event('admin_feed_requires_subscription', { feedId: target.id, on: r.requiresSubscription });
+      if (feed !== target || id !== target.id) return;
+      target.requiresSubscription = r.requiresSubscription;
+      subscriptionChecked = r.requiresSubscription;
+      showToast(r.requiresSubscription ? `${feedName(target)} is marked as requiring a subscription` : `${feedName(target)} is no longer marked as requiring a subscription`);
     } catch (e) {
+      if (feed !== target || id !== target.id) return;
+      subscriptionChecked = previous;
       showToast(e instanceof Error ? e.message : String(e));
+    } finally {
+      savingSubscription = false;
     }
   }
   const n = (v: number, one: string, many: string) => `${v} ${v === 1 ? one : many}`;
@@ -291,7 +305,7 @@
       <div class="body admin">
         <div class="radios">
           <label>
-            <input type="checkbox" checked={feed.requiresSubscription} onchange={(e) => setRequiresSubscription(e.currentTarget.checked)} />
+            <input type="checkbox" bind:checked={subscriptionChecked} disabled={savingSubscription} onchange={(e) => setRequiresSubscription(e.currentTarget.checked)} />
             <span><strong>Requires a subscription</strong><small>The site’s posts are behind a paywall. Everyone sees “Requires subscription” next to this feed’s address.</small></span>
           </label>
         </div>
