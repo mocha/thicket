@@ -70,8 +70,11 @@ export async function verifyPassword(password: string, stored: string | null): P
 // ---- handles --------------------------------------------------------------
 
 export const HANDLE_RE = /^[a-z0-9][a-z0-9_-]{1,29}$/;
-/** Routes and words that would collide with URLs or read as official. */
-const RESERVED = new Set(["me", "admin", "administrator", "thicket", "api", "feeds", "feed", "collections", "collection", "bookmarks", "bookmark", "add", "login", "logout", "signup", "settings", "about", "help", "support", "root", "system", "everything", "river", "static", "assets", "null", "undefined"]);
+/**
+ * Routes and words that would collide with URLs or read as official, plus the
+ * sample person in the setup tour's Profile picture, so nobody owns it.
+ */
+const RESERVED = new Set(["brambleandbooks", "me", "admin", "administrator", "thicket", "api", "feeds", "feed", "collections", "collection", "bookmarks", "bookmark", "add", "login", "logout", "signup", "settings", "about", "help", "support", "root", "system", "everything", "river", "static", "assets", "null", "undefined"]);
 
 export function normalizeHandle(raw: string): string {
   return raw.trim().toLowerCase().replace(/^@/, "");

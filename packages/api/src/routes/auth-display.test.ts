@@ -12,6 +12,7 @@ process.env.DATABASE_URL ??= "postgres://not-used-by-tests";
 const { auth } = await import("./auth.js");
 const { tokenMay } = await import("../lib/token-access.js");
 const { parseSavedDisplay, parseDeviceId } = await import("../lib/display.js");
+const { handleProblem } = await import("../lib/auth.js");
 
 const GOOD = {
   appearance: "dark", palette: "contrast", accent: "orange",
@@ -68,4 +69,8 @@ test("no API token can save settings or stop a device keeping them", () => {
     assert.equal(tokenMay(kind, "PUT", "/api/auth/me/display").ok, false, kind);
     assert.equal(tokenMay(kind, "DELETE", "/api/auth/me/display-source").ok, false, kind);
   }
+});
+
+test("the setup tour's sample handle is reserved, so no real account can have it", () => {
+  assert.match(handleProblem("brambleandbooks") ?? "", /reserved/);
 });

@@ -17,8 +17,9 @@
       <!-- A hand-drawn person, not your real picture: the picture stands for anyone's profile. -->
       <img class="pic" src="/intro/reader.webp?v=3" alt="" width="52" height="52" />
       <div class="names">
-        <span class="dn">Robin Ellis</span>
-        <span class="h">@robin</span>
+        <!-- A made-up reader. The handle is reserved (api lib/auth.ts), so no real account can have it. -->
+        <span class="dn">Ottoline Bramble</span>
+        <span class="h">@brambleandbooks</span>
         <span class="bio" aria-hidden="true"><span></span><span></span></span>
       </div>
     </div>
