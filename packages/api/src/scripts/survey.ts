@@ -15,7 +15,7 @@
  *
  * Politeness. Every request goes through feeds/http.ts and feeds/hosts.ts, the
  * same code the app uses: per-host spacing, Retry-After, 429 cooldowns, host
- * outage detection, 20s timeout, 5 MB cap. hosts.ts records its pauses in
+ * outage detection, 20s timeout, 20 MiB feed cap. hosts.ts records its pauses in
  * Postgres, and this script must not touch Postgres at all, so before loading
  * anything it registers a module hook that resolves `db/client.js` to an
  * in-memory stub whose `execute` returns no rows. Pauses still work — they live
@@ -41,7 +41,7 @@ register("data:text/javascript," + encodeURIComponent(`
     return next(specifier, context);
   }`));
 // Dynamic imports so the hook above is in place first.
-const { httpGet } = await import("../feeds/http.js");
+const { httpGet, isHttpProtocolError, TooLargeError } = await import("../feeds/http.js");
 const { hostKey, HostCoolingDown, feedOutcome } = await import("../feeds/hosts.js");
 const { normalizeFeedUrl } = await import("../feeds/normalize.js");
 const { parseFeedDocument, stripHtml } = await import("../feeds/parse.js");
@@ -95,7 +95,7 @@ create table if not exists feeds (
   url text primary key,
   host text not null,
   status integer,            -- HTTP status, null when the request itself failed
-  error text,                -- http / timeout / dns / tls / refused / reset / too_large / parse / other:<msg>; null when parsed
+  error text,                -- http / timeout / dns / tls / refused / reset / too_large / protocol / parse / other:<msg>; null when parsed
   final_url text,            -- where redirects ended up, when not the url itself
   content_type text,
   format text,               -- rss / atom / json / rdf / unknown
@@ -170,6 +170,7 @@ function languageHint(text: string): string | null {
 
 /** The shape of a failed request, so the summary groups. */
 function classify(e: unknown): string {
+  if (isHttpProtocolError(e)) return "protocol";
   const err = e as { name?: string; message?: string; cause?: { code?: string; message?: string } };
   const s = `${err?.name ?? ""} ${err?.message ?? ""} ${err?.cause?.code ?? ""} ${err?.cause?.message ?? ""}`;
   if (/TimeoutError|timeout|aborted/i.test(s)) return "timeout";
@@ -194,6 +195,11 @@ async function survey(url: string): Promise<Row> {
   } catch (e) {
     if (e instanceof HostCoolingDown) throw e;
     row.error = classify(e);
+    if (e instanceof TooLargeError) {
+      row.bytes = e.bytes;
+      row.status = e.status;
+      row.content_type = e.contentType;
+    }
     return finish();
   }
   row.status = res.status;

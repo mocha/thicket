@@ -7,7 +7,10 @@
 import { afterResponse, awaitTurn } from "./hosts.js";
 
 export const USER_AGENT = "thicket/0.1 (feed reader; +https://github.com/mocha/thicket)";
-export const MAX_BYTES = 5 * 1024 * 1024;
+// Full-archive feeds (including METR and Baby Steps) exceed 5 MiB. Keep a
+// finite decoded-body budget; pages and binary downloads retain the smaller cap.
+export const MAX_BYTES = 20 * 1024 * 1024;
+const SMALL_MAX_BYTES = 5 * 1024 * 1024;
 const TIMEOUT_MS = 20_000;
 
 export type HttpResult = {
@@ -41,6 +44,18 @@ export class BadStatus extends Error {
   }
 }
 
+/** Recognize parser failures through fetch's cause wrapper without exposing raw headers. */
+export function isHttpProtocolError(err: unknown): boolean {
+  const seen = new Set<unknown>();
+  while (err && typeof err === "object" && !seen.has(err)) {
+    seen.add(err);
+    const e = err as { code?: string; message?: string; cause?: unknown };
+    if (/^HPE_|^UND_ERR_RES_CONTENT_LENGTH_MISMATCH$/.test(e.code ?? "") || /Response does not match the HTTP\/1\.1 protocol/i.test(e.message ?? "")) return true;
+    err = e.cause;
+  }
+  return false;
+}
+
 export type HttpBytes = Omit<HttpResult, "body" | "truncated"> & { bytes: Buffer };
 
 export type HttpOptions = {
@@ -60,7 +75,7 @@ export async function httpGet(url: string, extra: Record<string, string> = {}, o
 
 /** The same polite request, for images and anything else that isn't text. */
 export async function httpGetBytes(url: string, extra: Record<string, string> = {}, opts: HttpOptions = {}): Promise<HttpBytes> {
-  const { res, bytes } = await request(url, { accept: "image/*, */*;q=0.5", ...extra }, opts);
+  const { res, bytes } = await request(url, { accept: "image/*, */*;q=0.5", ...extra }, { ...opts, maxBytes: opts.maxBytes ?? SMALL_MAX_BYTES });
   return { status: res.status, finalUrl: res.url || url, headers: res.headers, bytes };
 }
 
@@ -74,7 +89,7 @@ async function request(url: string, headers: Record<string, string>, opts: HttpO
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     await afterResponse(turn, res.status, res.headers);
-    const limit = opts.maxBytes ?? MAX_BYTES;
+    const limit = opts.maxBytes ?? (opts.truncate ? SMALL_MAX_BYTES : MAX_BYTES);
     if (res.status === 304 || !res.body) return { res, bytes: Buffer.alloc(0), truncated: false };
     const len = Number(res.headers.get("content-length") ?? 0);
     if (len > limit && !opts.truncate) {
