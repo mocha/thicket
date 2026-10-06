@@ -316,7 +316,7 @@ export function describeDisplay(d: Display): { key: 'appearance' | 'theme' | 'fo
     { key: 'theme', label: 'Color theme', value: label(PALETTES, d.palette) + (d.palette === 'contrast' ? `, ${label(ACCENTS, d.accent).toLowerCase()}` : '') },
     { key: 'fonts', label: 'Fonts', value: fonts[0].toUpperCase() + fonts.slice(1) },
     { key: 'reading', label: 'Opening a post', value: label(READING_MODES, d.reading) },
-    { key: 'layout', label: 'Moving through the list', value: label(LAYOUTS, d.layout) },
+    { key: 'layout', label: 'Scrolling or pages', value: label(LAYOUTS, d.layout) },
     { key: 'fresh', label: 'Unread posts', value: d.fresh ? 'On' : 'Off' }
   ];
 }

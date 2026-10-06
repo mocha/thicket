@@ -69,7 +69,7 @@
     theme: { title: 'Color theme', lead: 'Crisp has the most contrast, the Soft themes the least' },
     fonts: { title: 'Fonts', lead: 'Headlines, text, and the app can each have their own' },
     reading: { title: 'Opening a post', lead: 'Read here or on the post’s own site' },
-    layout: { title: 'Moving through the list', lead: 'One long list, or a page at a time' },
+    layout: { title: 'Scrolling or pages', lead: 'Scroll through posts, or turn a page at a time' },
     fresh: { title: 'Unread posts', lead: 'A count of new posts beside each collection' }
   };
   const header = $derived(
@@ -320,7 +320,7 @@
         {:else if view === 'reading'}
           <Tiles name="Opening a post" options={READING_MODES} value={display.reading} art={READING_ART} notes onchange={(v) => setDisplay({ reading: v })} />
         {:else if view === 'layout'}
-          <Tiles name="Moving through the list" options={LAYOUTS} value={display.layout} art={LAYOUT_ART} notes onchange={(v) => setDisplay({ layout: v })} />
+          <Tiles name="Scrolling or pages" options={LAYOUTS} value={display.layout} art={LAYOUT_ART} notes onchange={(v) => setDisplay({ layout: v })} />
         {:else if view === 'fresh'}
           <Tiles name="Unread posts" options={FRESH_OPTIONS} value={display.fresh ? 'on' : 'off'} art={FRESH_ART} notes onchange={(v) => setDisplay({ fresh: v === 'on' })} />
         {/if}

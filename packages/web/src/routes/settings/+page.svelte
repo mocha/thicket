@@ -81,8 +81,8 @@
 </section>
 
 <section class="card">
-  <h2>Moving through the list</h2>
-  <Tiles name="Moving through the list" options={LAYOUTS} value={display.layout} art={LAYOUT_ART} notes onchange={(v) => choose({ layout: v }, 'layout')} />
+  <h2>Scrolling or pages</h2>
+  <Tiles name="Scrolling or pages" options={LAYOUTS} value={display.layout} art={LAYOUT_ART} notes onchange={(v) => choose({ layout: v }, 'layout')} />
 </section>
 
 
