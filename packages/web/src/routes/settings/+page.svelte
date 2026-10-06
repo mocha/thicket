@@ -61,7 +61,7 @@
     <input type="checkbox" checked={isSource()} disabled={savingDisplay} onchange={toggleSource} />
     <span>
       <strong>Use these settings on new devices</strong>
-      <small>New devices you sign into will offer the display settings below, kept up to date as you change them here. Each device keeps its own settings</small>
+      <small>New devices you sign into will offer the display settings below, kept up to date as you change them here. Each device keeps its own settings.</small>
     </span>
   </label>
 </section>
