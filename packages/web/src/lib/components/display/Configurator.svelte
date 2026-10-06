@@ -21,6 +21,11 @@
    * read. The
    * dialog opens once per screen, not per account, so a second device a day
    * or more later only asks when there is still nothing followed.
+   *
+   * After the questions, the window grows and turns into a short tour of how
+   * thicket works: one screen per thing in the menu, each with a picture of
+   * it that plays once. Skip leaves the tour from any of them and lands where
+   * the last one would.
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
@@ -34,6 +39,7 @@
   import ImportHelp from '$lib/components/ImportHelp.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Banner from '$lib/components/Banner.svelte';
+  import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import { imp } from '$lib/importer.svelte';
   import { session } from '$lib/session.svelte';
   import { welcome } from '$lib/copyintent.svelte';
@@ -49,8 +55,22 @@
     { key: 'fonts', title: 'Fonts', lead: 'Headlines, text and the app itself can each have their own face and size. Watch the page behind this box change.' },
     { key: 'reading', title: 'Opening a post', lead: 'Read here, or on the post’s own site. Sites that only send a preview always get a link out.' }
   ];
-  const STEPS = $derived(withImport ? [IMPORT, ...DISPLAY] : DISPLAY);
+  /** The tour. Titles are the menu's own names, so they're the words people meet next. */
+  const INTRO = [
+    { key: 'intro-new', title: 'New posts', lead: 'Every post from every feed you follow, newest first. No algorithm ranks or hides anything.' },
+    { key: 'intro-collections', title: 'Collections', lead: 'Group your feeds by topic to read one thing at a time. Share a collection and others can copy it.' },
+    { key: 'intro-bookmarks', title: 'Bookmarks', lead: 'Save a post to come back to, and add a note of your own. You choose whether your notes are public.' },
+    { key: 'intro-feeds', title: 'Adding feeds', lead: 'Use Add new feed for a site you already know, or Explore to find new ones.' },
+    { key: 'intro-profile', title: 'Your profile', lead: 'Your profile is what other people see. You choose who sees each part of it.' }
+  ];
+  const STEPS = $derived([...(withImport ? [IMPORT] : []), ...DISPLAY, ...INTRO]);
   const current = $derived(STEPS[step]);
+  const touring = $derived(current.key.startsWith('intro-'));
+  const tourStart = $derived(STEPS.length - INTRO.length);
+  const last = $derived(step === STEPS.length - 1);
+  let nextButton = $state<HTMLElement | null>(null);
+  // Arriving on a tour screen swaps the footer for the tour's, so keep the keyboard on its main button.
+  $effect(() => { if (touring && step >= tourStart) nextButton?.querySelector('button')?.focus(); });
   /** A file has been read, so the last step leads to its review. */
   const importing = $derived(withImport && imp.step === 'review');
 
@@ -74,8 +94,12 @@
       });
   });
 
-  function finish(how: 'done' | 'dismissed' | 'advanced' | 'review') {
-    api.event('display_setup_closed', { how, step: current.key, withImport });
+  /** Leave the tour, finished or skipped, for wherever the last step goes. */
+  const leave = (skipped: boolean) => finish(importing ? 'review' : 'done', skipped);
+
+  function finish(how: 'done' | 'dismissed' | 'advanced' | 'review', skipped = false) {
+    const intro = !touring ? 'not reached' : skipped ? 'skipped' : last && how !== 'dismissed' ? 'finished' : 'left';
+    api.event('display_setup_closed', { how, step: current.key, withImport, intro });
     open = false;
     welcome.open = false;
     welcome.copied = null;
@@ -87,7 +111,39 @@
 
 {#if open}
   <dialog bind:this={dialog} onclose={() => { if (open) finish('dismissed'); }} onclick={(e) => { if (e.target === dialog) finish('dismissed'); }} aria-labelledby="setup-title">
-    <div class="box">
+    <div class="box" class:tour={touring}>
+      {#if touring}
+        <div class="stage" aria-hidden="true">
+          {#key current.key}
+            <div class="scene">
+              {#if current.key === 'intro-new'}<NewPostsScene />{:else}<p class="soon">Picture coming next</p>{/if}
+            </div>
+          {/key}
+        </div>
+        <div class="words" aria-live="polite">
+          {#key current.key}
+            <div class="enter">
+              <h2 id="setup-title">{current.title}</h2>
+              <p class="lead">{current.lead}</p>
+            </div>
+          {/key}
+        </div>
+        <footer class="tourfoot">
+          <span class="skip">{#if !last}<button type="button" class="link" onclick={() => leave(true)}>Skip</button>{/if}</span>
+          <span class="dots">
+            {#each INTRO as s, i (s.key)}
+              <button type="button" class="dot" class:on={step === tourStart + i} aria-label={s.title} aria-current={step === tourStart + i ? 'step' : undefined} onclick={() => (step = tourStart + i)}></button>
+            {/each}
+          </span>
+          <span class="go" bind:this={nextButton}>
+            {#if !last}
+              <Button variant="primary" onclick={() => step++}>Next</Button>
+            {:else}
+              <Button variant="primary" onclick={() => leave(false)}>{importing ? 'Review your feeds' : 'Start reading'}</Button>
+            {/if}
+          </span>
+        </footer>
+      {:else}
       <header>
         {#if welcome.copied && step === 0}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
         <p class="eyebrow">{withImport ? 'Get started' : 'Set up this screen'} · {step + 1} of {STEPS.length}</p>
@@ -135,6 +191,7 @@
           <Button variant="primary" onclick={() => finish('done')}>Start reading</Button>
         {/if}
       </footer>
+      {/if}
     </div>
   </dialog>
 {/if}
@@ -165,6 +222,34 @@
   .found .then { margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .status { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .spacer { flex: 1; }
+
+  /* The tour: the window grows, and a stage for the picture fills its top. */
+  .box { transition: width 450ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  @media (min-width: 700px) { .box.tour { width: min(800px, calc(100vw - 48px)); } }
+  .stage {
+    position: relative; flex: none; height: clamp(190px, 36vh, 300px); overflow: hidden;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 16%, var(--surface-2)), var(--surface-2));
+    border-bottom: 1px solid var(--line);
+    animation: stage 500ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  }
+  @keyframes stage { from { height: 0; } }
+  /* The picture fades out at the bottom edge rather than being cut off. */
+  .scene { position: absolute; inset: 0; mask-image: linear-gradient(to bottom, #000 70%, transparent); animation: scene 420ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  @keyframes scene { from { opacity: 0; transform: translateX(28px); } }
+  .soon { display: grid; place-items: center; height: 100%; margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .words { padding: var(--space-5) var(--space-5) 0; min-height: 0; overflow-y: auto; }
+  .enter { animation: words 380ms ease-out 80ms backwards; }
+  @keyframes words { from { opacity: 0; transform: translateY(6px); } }
+  .words .lead { font-size: calc(var(--text-base) * var(--size-app)); margin-top: var(--space-2); line-height: 1.45; }
+  .tourfoot { display: grid; grid-template-columns: 1fr auto 1fr; border-top: 0; }
+  .tourfoot .go { justify-self: end; }
+  .dots { display: flex; gap: 6px; align-items: center; }
+  footer .dot {
+    width: 8px; height: 8px; padding: 0; border: 0; border-radius: 4px; background: var(--text-3);
+    transition: width 300ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 300ms;
+  }
+  footer .dot.on { width: 22px; background: var(--accent); }
   footer button { padding: var(--space-3) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); }
   footer button.link { border: 0; padding: var(--space-3) var(--space-1); color: var(--accent); }
   footer button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
