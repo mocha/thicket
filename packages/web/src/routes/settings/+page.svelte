@@ -52,7 +52,7 @@
   <h1>Settings</h1>
 </header>
 
-<section class="card">
+<section class="card" id="display">
   <h2>Appearance</h2>
   <p class="help">Display settings are per device. Save them to use on new devices</p>
   <p class="save"><Button loading={savingDisplay} onclick={saveDisplay}>Use these on new devices</Button></p>
