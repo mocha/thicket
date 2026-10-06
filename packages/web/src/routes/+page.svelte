@@ -9,6 +9,6 @@
   import { session } from '$lib/session.svelte';
 
   $effect(() => {
-    if (session.loaded) void goto(session.user ? '/everything' : '/login', { replaceState: true });
+    if (session.loaded) void goto(session.user ? '/new-posts' : '/login', { replaceState: true });
   });
 </script>

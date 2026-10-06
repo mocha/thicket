@@ -1,5 +1,5 @@
 <script lang="ts">
-  /** Everything: every post from every feed you follow. The front door lives at /, for everyone. */
+  /** New posts (once "Everything", issue #173): every post from every feed you follow. The front door lives at /, for everyone. */
   import { onMount } from 'svelte';
   import { api } from '$lib/api';
   import River from '$lib/components/River.svelte';
@@ -30,7 +30,7 @@
   const emailNudge = $derived(site.status?.hosted && me && !me.emailConfirmedAt ? (me.email ? 'confirm' : 'add') : null);
 </script>
 
-<svelte:head><title>Everything · thicket</title></svelte:head>
+<svelte:head><title>New posts · thicket</title></svelte:head>
 
 {#if emailNudge === 'add'}
   <div class="nudge"><Banner tone="warning" title="Add an email to your account" href="/account">If you forget your password, an email is the only way back in.</Banner></div>
@@ -54,7 +54,7 @@
 {:else}
   <header class="top">
     <div class="titlerow">
-      <h1>Everything</h1>
+      <h1>New posts</h1>
       <AddFeedButton via="all_collections" bottomBarOnly />
     </div>
     {#if stats}

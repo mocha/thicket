@@ -1,0 +1,1 @@
+ALTER TABLE "feeds" ADD COLUMN "requires_subscription" boolean DEFAULT false NOT NULL;

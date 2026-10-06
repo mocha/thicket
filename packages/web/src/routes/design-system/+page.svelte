@@ -385,7 +385,7 @@
       <div class="faces">
         {#each faces as f}
           <div class="face">
-            <span class="face-sample" style={`font-family: var(${f.varName});`}>Everything you follow, newest first.</span>
+            <span class="face-sample" style={`font-family: var(${f.varName});`}>New posts from every feed you follow.</span>
             <span class="face-meta"><strong>{f.name}</strong> — {f.note}</span>
           </div>
         {/each}
@@ -533,7 +533,7 @@
 
     <section class="entry" id="input" aria-labelledby="input-h">
       <h3 class="entry-h" id="input-h">Input</h3>
-      <p class="section-lede">Every text box is the same rounded rectangle, with a focus ring that only thickens for someone arriving by keyboard. The whole box is the field: pressing anywhere in it, including an icon or fixed text beside the words, puts the cursor at the end of what’s typed. Hint text is the placeholder color, which in dark themes sits well below typed text so an empty field never looks filled in. On a touchscreen the text inside a field is never smaller than 16px, even in the small size, so an iPhone doesn’t zoom in when you tap one.</p>
+      <p class="section-lede">Every text box is the same rounded rectangle, with a focus ring that only thickens for someone arriving by keyboard. The whole box is the field: pressing anywhere in it, including an icon or fixed text beside the words, puts the cursor at the end of what’s typed. Hint text is the placeholder color, which in dark themes sits well below typed text so an empty field never looks filled in. On a touchscreen the text inside a field is never smaller than 16px, even in the small size, so an iPhone doesn’t zoom in when you tap one. A password field has an eye at its end that shows the password as plain text and hides it again; it is a toggle button named “Show password” or “Hide password”, works from the keyboard, and has the full 44px touch area on a phone. It is on for every password field; <code>revealable=&#123;false&#125;</code> turns it off for one that must never be shown.</p>
       <div class="stack">
         <Field label="Feed name" hideLabel>
           {#snippet children({ id, describedBy })}
@@ -544,6 +544,12 @@
         <Field label="Search" hideLabel>
           {#snippet children({ id, describedBy })}
             <Input {id} aria-describedby={describedBy} variant="search" placeholder="Search feeds…" value="" />
+          {/snippet}
+        </Field>
+
+        <Field label="Password" hint="Every password field has the eye. Press it to see what you typed; press again to hide it. Your cursor and what you typed stay put.">
+          {#snippet children({ id, describedBy })}
+            <Input {id} aria-describedby={describedBy} type="password" value="correct horse" autocomplete="off" />
           {/snippet}
         </Field>
       </div>

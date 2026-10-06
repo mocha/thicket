@@ -129,6 +129,22 @@ admin.get("/feeds/:id/impact", async (c) => {
 });
 
 /**
+ * Facts about a feed that hold for everyone, set by an admin. For now only
+ * whether its posts are behind a paywall (issue #216), which shows as
+ * "Requires subscription" beside the feed's address.
+ */
+admin.patch("/feeds/:id", async (c) => {
+  await requireAdmin(c);
+  const id = Number(c.req.param("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) return c.json({ error: "not found" }, 404);
+  const body = await c.req.json<{ requiresSubscription?: boolean } | null>().catch(() => null);
+  if (typeof body?.requiresSubscription !== "boolean") return c.json({ error: "requiresSubscription (boolean) is required" }, 400);
+  const [row] = await db.update(schema.feeds).set({ requiresSubscription: body.requiresSubscription }).where(eq(schema.feeds.id, id))
+    .returning({ id: schema.feeds.id, requiresSubscription: schema.feeds.requiresSubscription });
+  return row ? c.json(row) : c.json({ error: "not found" }, 404);
+});
+
+/**
  * Remove a feed from the instance. Cascades: its posts, its place in every
  * collection, everyone's settings and blocks on it, its icon and fetch log.
  * Bookmarks, and the notes on them, keep their copy of the post and lose the

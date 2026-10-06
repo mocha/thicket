@@ -9,7 +9,7 @@
  * with any embedded metadata (including camera location) dropped. So the stored
  * image is small, uniform, and can't smuggle anything past us.
  */
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
@@ -73,9 +73,16 @@ users.delete("/me/avatar", async (c) => {
  * Serve a person's picture. Long-lived cache; the client hangs a ?v= off the
  * updatedAt so a new picture shows at once despite the cache. A private profile
  * shows its picture only to its owner, matching every other section.
+ *
+ * avatar.png is the same picture as a PNG, for link previews (lib/meta.ts):
+ * not every unfurler takes the stored WebP. A 256px square converts in a few
+ * milliseconds, and unfurlers fetch it once and keep it.
  */
-users.get("/:handle/avatar", async (c) => {
-  const handle = normalizeHandle(c.req.param("handle"));
+users.get("/:handle/avatar", (c) => serveAvatar(c, false));
+users.get("/:handle/avatar.png", (c) => serveAvatar(c, true));
+
+async function serveAvatar(c: Context, png: boolean) {
+  const handle = normalizeHandle(c.req.param("handle") ?? "");
   const [row] = await db
     .select({
       userId: schema.userAvatars.userId,
@@ -91,10 +98,10 @@ users.get("/:handle/avatar", async (c) => {
   const viewer = c.get("user");
   if (row.visibility === "private" && viewer?.id !== row.userId) return c.body(null, 404);
 
-  const etag = `"${row.hash}"`;
+  const etag = `"${row.hash}${png ? "-png" : ""}"`;
   if (c.req.header("if-none-match") === etag) return c.body(null, 304);
-  c.header("content-type", row.contentType);
+  c.header("content-type", png ? "image/png" : row.contentType);
   c.header("cache-control", "public, max-age=86400, stale-while-revalidate=604800");
   c.header("etag", etag);
-  return c.body(new Uint8Array(row.bytes));
-});
+  return c.body(new Uint8Array(png ? await sharp(row.bytes).png().toBuffer() : row.bytes));
+}

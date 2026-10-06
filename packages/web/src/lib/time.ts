@@ -87,6 +87,19 @@ export function savedHref(url: string | null | undefined): string | null {
   return webHref(url);
 }
 
+/**
+ * The rel for a link a person put here rather than one thicket found: a saved
+ * bookmark's address, a profile's homepage (issue #137; links in notes get the
+ * same in lib/markdown.ts). `nofollow ugc` tells search engines it earns no
+ * credit, so an account made just to plant links gains nothing. `noopener`
+ * stays, plus anything in `extra` (e.g. `me`). A post's own page here is ours,
+ * so it gets no nofollow.
+ */
+export function ugcRel(href: string | null | undefined, extra = ''): string {
+  const own = !!href && href.startsWith('/');
+  return ['noopener', extra, own ? '' : 'nofollow ugc'].filter(Boolean).join(' ');
+}
+
 export function hostOf(url: string | null): string {
   if (!url) return '';
   try {
@@ -102,13 +115,13 @@ export function dayKey(d: Date): string {
 }
 
 /**
- * The heading over a day's posts in the river. Today is "Latest posts";
- * yesterday says so; anything older is spelled out, with the year once it
+ * The heading over a day's posts in the river. Today and yesterday say so
+ * (not "Latest posts", which read as a second name for New posts, #173); anything older is spelled out, with the year once it
  * differs. Weekday included because "September 9" alone loses its place fast.
  */
 export function dayLabel(key: string, now = new Date()): string {
   const today = dayKey(now);
-  if (key >= today) return 'Latest posts';
+  if (key >= today) return 'Today';
   const y = new Date(now); y.setDate(y.getDate() - 1);
   if (key === dayKey(y)) return 'Yesterday';
   const [Y, M, D] = key.split('-').map(Number);

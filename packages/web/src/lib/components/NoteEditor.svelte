@@ -18,11 +18,16 @@
    * the note. The box is an ARIA combobox and the suggestions its listbox, so
    * a screen reader hears each one as it is highlighted. Mentioned people hear
    * about it on their Notifications page, if they may read the note.
+   *
+   * Under the box, a line says who can read the note, from my sharing
+   * settings, with a link to change them on my profile (issue #173). Notes are
+   * public by default, and a box with no word about it reads as private.
    */
   import { tick } from 'svelte';
-  import { api, bookmarksApi, notesApi, NOTE_MAX, type Note, type PublicUser, type SavedNote } from '$lib/api';
+  import { api, bookmarksApi, notesApi, profileHref, NOTE_MAX, type Note, type PublicUser, type SavedNote } from '$lib/api';
   import { mentionAt, mentionablePeople, rankPeople } from '$lib/mentions';
   import { session } from '$lib/session.svelte';
+  import { SEES } from '$lib/visibility';
   import { showToast } from '$lib/toast.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import Button from '$lib/components/Button.svelte';
@@ -43,6 +48,10 @@
   const over = $derived(body.length > NOTE_MAX);
 
   $effect(() => { box?.focus(); });
+
+  // ---- who can read it: a private profile hides my notes from everyone, whatever the notes setting says
+  const me = $derived(session.user);
+  const audience = $derived(me ? `${SEES[me.profileVisibility === 'public' ? me.notesVisibility : 'private']} your notes` : null);
 
   // ---- @mention suggestions
   const uid = $props.id();
@@ -175,7 +184,7 @@
       <div class="combo" bind:this={combo}>
         <Textarea
           {id}
-          aria-describedby={describedBy}
+          aria-describedby={[describedBy, audience && `${uid}-audience`].filter(Boolean).join(' ') || undefined}
           {invalid}
           bind:element={box}
           bind:value={body}
@@ -184,7 +193,7 @@
           limit={NOTE_MAX}
           counter
           disabled={busy}
-          placeholder="What do you want to remember about this? Markdown works: **bold**, *italic*, [links](https://…), - lists. Type @ to mention someone."
+          placeholder="Add a note. Markdown works: **bold**, *italic*, [links](https://…), - lists. Type @ to mention someone."
           role="combobox"
           aria-multiline="true"
           aria-autocomplete="list"
@@ -213,6 +222,7 @@
       </div>
     {/snippet}
   </Field>
+  {#if me && audience}<p class="audience" id="{uid}-audience">{audience} · <a href={profileHref(me.handle) + (me.profileVisibility === 'public' ? '#bookmarks' : '')}>Change</a></p>{/if}
   <div class="row">
     <Button type="submit" variant="primary" disabled={busy || !dirty || !body.trim() || over}>{busy ? 'Saving…' : 'Save'}</Button>
     <Button onclick={oncancel} disabled={busy}>Cancel</Button>
@@ -222,6 +232,9 @@
 
 <style>
   .editor { border-top: 1px solid var(--line); padding: var(--space-3) var(--space-4); }
+  /* Read like the field's own note: same size and gray. */
+  .audience { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
+  .audience a { color: var(--accent); font-weight: 600; }
   .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
   /* The suggestions hang just under the box, over whatever follows, as wide as the box: placed by place(), in the top layer. */
   .people {

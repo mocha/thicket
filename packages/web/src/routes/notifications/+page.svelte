@@ -18,7 +18,7 @@
   import { api, notificationsApi, profileHref, type Notification } from '$lib/api';
   import { clearNotifs } from '$lib/notifications.svelte';
   import { session } from '$lib/session.svelte';
-  import { hostOf, relativeTime, savedHref } from '$lib/time';
+  import { hostOf, relativeTime, savedHref, ugcRel } from '$lib/time';
   import Avatar from '$lib/components/Avatar.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import Button from '$lib/components/Button.svelte';
@@ -80,7 +80,7 @@
             {@render who(n.person)}
             <span class="verb">{n.kind === 'note' ? 'noted' : 'bookmarked'}</span>
             <SourceIcon feedId={n.post.feedId} hasIcon={n.post.hasIcon} name={n.post.siteTitle ?? hostOf(n.post.url)} size={16} />
-            <a class="post" href={savedHref(n.post.url) ?? '#'} target="_blank" rel="noopener" title={n.post.siteTitle ?? hostOf(n.post.url)}>{n.post.title ?? n.post.url}</a>
+            <a class="post" href={savedHref(n.post.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(n.post.url))} title={n.post.siteTitle ?? hostOf(n.post.url)}>{n.post.title ?? n.post.url}</a>
             <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time>
           </p>
         {/if}

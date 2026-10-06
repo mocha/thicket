@@ -10,14 +10,15 @@
   import { api, authApi, profilesApi, publicCollectionHref, type ActivityEntry, type ShareLevel } from '$lib/api';
   import SourceIcon from './SourceIcon.svelte';
   import SectionAudience from './SectionAudience.svelte';
-  import { relativeTime, hostOf, savedHref } from '$lib/time';
+  import { relativeTime, hostOf, savedHref, ugcRel } from '$lib/time';
   import { audienceTag } from '$lib/visibility';
   import { session, setMe } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
   import VisitorMore from './VisitorMore.svelte';
   import Badge from './Badge.svelte';
 
-  let { handle, isMe }: { handle: string; isMe: boolean } = $props();
+  /** `onready` fires once the first page has arrived (or failed), so the profile can jump to a section below this list without it then growing underneath. */
+  let { handle, isMe, onready }: { handle: string; isMe: boolean; onready?: () => void } = $props();
 
   /** The owner sets who sees this list; it saves the moment they pick. */
   const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
@@ -65,7 +66,7 @@
     if (loadedFor === handle) return;
     loadedFor = handle;
     entries = null; cursor = null; failed = null; cappedAt = null; shown = PAGE;
-    void load(null);
+    void load(null).then(() => onready?.());
   });
 
   async function more() {
@@ -132,7 +133,7 @@
             <div class="row">
               <SourceIcon feedId={e.payload.feedId} hasIcon={e.payload.hasIcon} name={e.payload.siteTitle ?? e.payload.title} size={20} />
               <p class="what">
-                Bookmarked <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel="noopener">{e.payload.title ?? e.payload.url}</a>
+                Bookmarked <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(e.payload.url))}>{e.payload.title ?? e.payload.url}</a>
                 <span class="src">{e.payload.siteTitle ?? hostOf(e.payload.url)}</span>
               </p>
               <span class="when">{relativeTime(e.at)}</span>
@@ -141,7 +142,7 @@
             <div class="row">
               <SourceIcon feedId={e.payload.feedId} hasIcon={e.payload.hasIcon} name={e.payload.siteTitle ?? e.payload.title} size={20} />
               <p class="what">
-                Noted on <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel="noopener">{e.payload.title ?? e.payload.url}</a>
+                Noted on <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(e.payload.url))}>{e.payload.title ?? e.payload.url}</a>
                 <span class="src">{e.payload.siteTitle ?? hostOf(e.payload.url)}</span>
               </p>
               <span class="when">{relativeTime(e.at)}</span>

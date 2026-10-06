@@ -34,7 +34,7 @@
   {:else if phase === 'done'}
     <h1>Email confirmed</h1>
     <p class="lede">If you forget your password, you can reset it from the login page.</p>
-    <p class="alt">{#if session.user}<a href="/everything">Go to Everything</a>{:else}<a href="/login">Log in</a>{/if}</p>
+    <p class="alt">{#if session.user}<a href="/new-posts">Read new posts</a>{:else}<a href="/login">Log in</a>{/if}</p>
   {:else if phase === 'dead'}
     <h1>That link doesn’t work anymore</h1>
     <p class="lede">Links expire after 24 hours and work only once. You can send a new one from your <a href="/account">Account page</a>.</p>

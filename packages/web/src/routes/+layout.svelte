@@ -25,7 +25,8 @@
    * The auth gate. We learn who is signed in before rendering any page, so no
    * page ever fires a request as the wrong person or flashes an empty state.
    * Public paths (/@handle…, /login, /signup) render for anyone; everything
-   * else bounces to /login and comes back afterwards.
+   * else bounces to /login and comes back afterwards. The pages for getting
+   * in (/login, /signup, /forgot-password) send someone already in onward.
    */
   onMount(() => { loadDisplay(); void loadMe(); return watchDisplay(); });
 
@@ -46,7 +47,9 @@
   $effect(() => {
     if (!session.loaded) return;
     if (!signedIn && !isPublic) void goto(`/login?next=${encodeURIComponent(path + page.url.search)}`, { replaceState: true });
-    else if (signedIn && (path === '/login' || path === '/signup')) void goto(page.url.searchParams.get('next') || '/everything', { replaceState: true });
+    else if (signedIn && (path === '/login' || path === '/signup')) void goto(page.url.searchParams.get('next') || '/new-posts', { replaceState: true });
+    // Signed in, you change your password on Account (which can also email you a reset link). A reset link from an email still opens.
+    else if (signedIn && path === '/forgot-password') void goto('/account', { replaceState: true });
   });
   const show = $derived(session.loaded && (signedIn || isPublic));
   /**
