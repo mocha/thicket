@@ -35,7 +35,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { api, authApi } from '$lib/api';
-  import { display, describeDisplay, currentDisplay, markConfigured, setDisplay, useDisplay, APPEARANCES, READING_MODES } from '$lib/display.svelte';
+  import { display, describeDisplay, markConfigured, setDisplay, useDisplay, APPEARANCES, READING_MODES, type Display } from '$lib/display.svelte';
   import Tiles from './Tiles.svelte';
   import ThemePicker from './ThemePicker.svelte';
   import FontTable from './FontTable.svelte';
@@ -70,7 +70,7 @@
     fonts: { title: 'Fonts', lead: 'Headlines, text, and the app can each have their own' },
     reading: { title: 'Opening a post', lead: 'Read here or on the post’s own site' }
   };
-  const HEADER = $derived(
+  const header = $derived(
     view === 'offer' ? { title: 'Use your saved settings?', lead: 'These are the settings you saved on another device' }
     : view === 'import' ? { title: 'Import your feeds', lead: 'Coming from another reader?' }
     : view === 'list' ? { title: 'How thicket looks here', lead: 'Change any of these, or keep them as they are' }
@@ -102,7 +102,7 @@
    */
   let tourOnly = $state(false);
   /** The account's saved settings, as offered when setup opened. */
-  let offered = $state<ReturnType<typeof currentDisplay> | null>(null);
+  let offered = $state<Display | null>(null);
   let nextButton = $state<HTMLElement | null>(null);
   let heading = $state<HTMLElement | null>(null);
   let rows = $state<HTMLElement | null>(null);
@@ -155,7 +155,10 @@
     withTour = again || !session.user?.tourSeenAt;
     offered = !again && !display.configured ? session.user?.savedDisplay ?? null : null;
     tourOnly = !again && display.configured && withTour;
-    markConfigured();
+    // Saved settings wait for an answer before the device counts as set up:
+    // closing the window on that question asks it again next time, rather
+    // than leaving this device on the defaults for good.
+    if (!offered) markConfigured();
     welcome.open = true;
     // Ask about importing on a new account, or when nothing is followed yet.
     // If that can't be found out, the dialog opens without it rather than not at all.
@@ -169,7 +172,7 @@
         view = offered ? 'offer' : withImport ? 'import' : tourOnly ? 'tour' : 'list';
         open = true;
         api.event('display_setup_shown', { withImport, offered: !!offered, tourOnly });
-        queueMicrotask(() => dialog?.showModal());
+        queueMicrotask(() => { dialog?.showModal(); heading?.focus(); });
       });
   }
 
@@ -184,6 +187,7 @@
 
   function declineOffered() {
     api.event('display_offer_answered', { use: false });
+    markConfigured();
     view = withImport ? 'import' : 'list';
   }
 
@@ -270,8 +274,8 @@
       <header>
         {#if welcome.copied && (view === 'import' || (view === 'list' && !withImport))}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
         {#if view !== 'offer'}<p class="eyebrow">{withImport ? 'Get started' : 'Set up this device'}</p>{/if}
-        <h2 id="setup-title" tabindex="-1" bind:this={heading}>{HEADER.title}</h2>
-        <p class="lead">{HEADER.lead}</p>
+        <h2 id="setup-title" tabindex="-1" bind:this={heading}>{header.title}</h2>
+        <p class="lead">{header.lead}</p>
       </header>
 
       <div class="body">
@@ -319,7 +323,7 @@
         {:else if view === 'import'}
           <Button variant={importing ? 'primary' : 'ghost'} onclick={afterImport}>{importing ? 'Next' : 'Skip'}</Button>
         {:else if view === 'list'}
-          {#if withImport}<Button onclick={() => (view = 'import')}>Back</Button>{/if}
+          {#if withImport}<Button onclick={() => { cameFrom = null; view = 'import'; }}>Back</Button>{/if}
           <Button variant="primary" onclick={afterList}>{withTour ? 'Next' : importing ? 'Review your feeds' : 'Start reading'}</Button>
         {:else}
           <Button variant="primary" onclick={closeSetting}>Done</Button>

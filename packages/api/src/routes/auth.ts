@@ -6,6 +6,7 @@
  * self-hosted copy those routes answer 404, and sign up never asks for email.
  */
 import { Hono, type Context } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { isShareLevel, type ShareLevel } from "../lib/visibility.js";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
@@ -176,7 +177,7 @@ auth.post("/me/tour", async (c) => {
  * as answering that offer, and ends a new account's "save my first setup".
  * A refusal says what was wrong and is logged, so support can see it too.
  */
-auth.put("/me/display", async (c) => {
+auth.put("/me/display", bodyLimit({ maxSize: 4096, onError: (c) => c.json({ error: "settings are too large" }, 413) }), async (c) => {
   const user = currentUser(c);
   const body = await c.req.json<{ settings?: unknown }>().catch(() => ({} as { settings?: unknown }));
   const parsed = parseSavedDisplay(body.settings);

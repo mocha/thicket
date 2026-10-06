@@ -22,7 +22,9 @@ export type SaveVia = 'setup' | 'settings' | 'offer';
 export async function saveForNewDevices(via: SaveVia, { quiet = false } = {}): Promise<boolean> {
   try {
     const me = await authApi.saveDisplay(currentDisplay());
-    if (session.user?.id === me.id) session.user = me;
+    // Only what saving changed: the reply may predate something else this visit
+    // just recorded (the tour, sent at the same moment), and must not undo it.
+    if (session.user?.id === me.id) Object.assign(session.user, { savedDisplay: me.savedDisplay, saveFirstDisplay: me.saveFirstDisplay, displayOfferAnsweredAt: me.displayOfferAnsweredAt });
     api.event('display_saved', { via });
     if (!quiet) showToast('Saved. New devices will offer these settings');
     return true;

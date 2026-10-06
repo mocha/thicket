@@ -39,7 +39,7 @@ export function parseSavedDisplay(raw: unknown): { ok: true; value: SavedDisplay
   const bad = (error: string) => ({ ok: false as const, error });
   if (!isObject(raw)) return bad("settings must be an object");
   const extra = Object.keys(raw).find((k) => !KEYS.includes(k));
-  if (extra) return bad(`unknown setting "${extra}"`);
+  if (extra) return bad(`unknown setting ${JSON.stringify(extra).slice(0, 40)}`);
   if (!oneOf(APPEARANCES, raw.appearance)) return bad("appearance is not one of " + APPEARANCES.join(", "));
   if (!oneOf(PALETTES, raw.palette)) return bad("palette is not one of " + PALETTES.join(", "));
   if (!oneOf(ACCENTS, raw.accent)) return bad("accent is not one of " + ACCENTS.join(", "));
@@ -48,7 +48,7 @@ export function parseSavedDisplay(raw: unknown): { ok: true; value: SavedDisplay
   if (typeof raw.fresh !== "boolean") return bad("fresh must be true or false");
   if (!isObject(raw.fonts)) return bad("fonts must be an object");
   const fontsExtra = Object.keys(raw.fonts).find((k) => !oneOf(ROLES, k));
-  if (fontsExtra) return bad(`unknown font role "${fontsExtra}"`);
+  if (fontsExtra) return bad(`unknown font role ${JSON.stringify(fontsExtra).slice(0, 40)}`);
   const fonts = {} as SavedDisplay["fonts"];
   for (const role of ROLES) {
     const f = raw.fonts[role];

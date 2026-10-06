@@ -4,17 +4,19 @@
    * #186): on a device they already use, ask whether new devices should offer
    * its settings. Use these saves them; ✕ is a no. Either answer is kept on
    * the account, so it never comes back on any device. It waits while setup
-   * is open, and for a visit after setup, so the two never stack.
+   * is open, and for a visit after setup, so the two never stack. Settings
+   * has its own button for this, so it isn't offered there.
    */
   import { api, authApi } from '$lib/api';
   import { display } from '$lib/display.svelte';
+  import { page } from '$app/state';
   import { session } from '$lib/session.svelte';
   import { saveForNewDevices, setupVisit } from '$lib/saved-display.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import Button from '$lib/components/Button.svelte';
 
   const u = $derived(session.user);
-  const show = $derived(!!u && !u.displayOfferAnsweredAt && !u.savedDisplay && !!u.tourSeenAt && display.configured && !setupVisit.opened);
+  const show = $derived(!!u && !u.displayOfferAnsweredAt && !u.savedDisplay && !!u.tourSeenAt && display.configured && !setupVisit.opened && page.url.pathname !== '/settings');
   let saving = $state(false);
   let seen = false;
   $effect(() => { if (show && !seen) { seen = true; api.event('display_offer_shown'); } });
