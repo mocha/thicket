@@ -2,10 +2,11 @@
  * Saving this device's display settings to the account, to offer new devices
  * (issue #186). Saving makes this device the source: while it stays one
  * ("Use these settings on new devices", checked in Settings), its changes
- * keep the saved copy up to date. Three deliberate actions make a source: a
- * new account's first setup, checking that box, and yes to the one-time offer
- * older accounts see. Other devices never change on their own: a device only
- * takes the saved copy when it's first set up, and only if asked.
+ * keep the saved copy up to date. The box starts checked on an account's
+ * first device: a new account's first setup, or the first device an account
+ * from before this change opens. After that only checking the box moves it.
+ * Other devices never change on their own: a device only takes the saved
+ * copy when it's first set up, and only if asked.
  *
  * Saving can fail without anything on this device changing, so a failure
  * says why in a message, is written to the browser console for support, and
@@ -16,10 +17,10 @@ import { currentDisplay, display, displayRecord, type Display } from './display.
 import { session } from './session.svelte';
 import { showToast } from './toast.svelte';
 
-/** Setup opened during this visit, so the one-time offer waits for another (it never shows on top of setup or right after it). */
+/** Setup opened during this visit; it handles its own saving, so the older-account default waits for another visit. */
 export const setupVisit = $state({ opened: false });
 
-export type SaveVia = 'setup' | 'settings' | 'offer' | 'sync';
+export type SaveVia = 'setup' | 'settings' | 'first-device' | 'sync';
 
 const DEVICE_KEY = 'thicket:device';
 let device: string | null = null;
@@ -52,7 +53,12 @@ const failed = (via: SaveVia, e: unknown) => {
   return reason;
 };
 
-/** True if it saved. `quiet` leaves out the success message, for setup, which is already moving on. */
+/**
+ * True if it saved. `quiet` leaves out the success message, for saving
+ * nobody pressed a button for. A failure is still shown, except for the
+ * older-account default, which nobody asked for: that is only logged, and
+ * tried again next visit.
+ */
 export async function saveForNewDevices(via: SaveVia, { quiet = false } = {}): Promise<boolean> {
   try {
     takeSaved(await authApi.saveDisplay(currentDisplay(), deviceId()));
@@ -60,7 +66,8 @@ export async function saveForNewDevices(via: SaveVia, { quiet = false } = {}): P
     if (!quiet) showToast('Saved. New devices will offer these settings');
     return true;
   } catch (e) {
-    showToast(`Couldn’t save your settings: ${failed(via, e)}. They still apply on this device`);
+    const reason = failed(via, e);
+    if (via !== 'first-device') showToast(`Couldn’t save your settings: ${reason}. They still apply on this device`);
     return false;
   }
 }
@@ -85,9 +92,18 @@ const same = (a: Display, b: Display) => {
 
 /**
  * While this device is the source, keep the saved copy in step with it: a
- * second after the last change, save again. Call once, from the root layout.
+ * second after the last change, save again. Also makes an older account's
+ * first device the source. Call once, from the root layout.
  */
 export function keepSavedInStep() {
+  // An account from before saved settings: the first device it opens, once set up, becomes the source.
+  let firstTried = false;
+  $effect(() => {
+    const u = session.user;
+    if (firstTried || !u || u.displayOfferAnsweredAt || u.savedDisplay || !display.configured || setupVisit.opened) return;
+    firstTried = true;
+    void saveForNewDevices('first-device', { quiet: true });
+  });
   $effect(() => {
     if (!session.user || !display.configured || !isSource()) return;
     const now = displayRecord();

@@ -390,7 +390,7 @@ export type Me = {
   savedDisplay: Display | null;
   /** The device keeping the saved settings up to date (its random id, see lib/saved-display), or null for none. */
   displaySource: string | null;
-  /** When the one-time offer to save this device's settings was answered; null means it's still owed. */
+  /** When the account first had a device chosen for new devices to copy; null on an older account that hasn't opened a device since. */
   displayOfferAnsweredAt: string | null;
   /** A new account whose first setup hasn't been saved for new devices yet. */
   saveFirstDisplay: boolean;
@@ -444,12 +444,6 @@ export const authApi = {
   saveDisplay: (settings: Display, device: string) => j<Me>('/api/auth/me/display', { method: 'PUT', body: JSON.stringify({ settings, device }) }),
   /** Stop this device keeping the saved settings up to date. The saved settings stay. */
   stopDisplaySource: (device: string) => j<Me>('/api/auth/me/display-source', { method: 'DELETE', body: JSON.stringify({ device }) }),
-  /** Say no to the one-time offer to save this device's settings. Like tourSeen, a failure is only logged: at worst the offer shows once more. */
-  declineDisplayOffer: () => {
-    void fetch('/api/auth/me/display-offer', { method: 'POST', keepalive: true })
-      .then((r) => { if (!r.ok) console.error(`Couldn't record the answer to the saved-settings offer: ${r.status} ${r.statusText}`); })
-      .catch((e) => console.error("Couldn't record the answer to the saved-settings offer:", e));
-  },
   changePassword: (current: string, next: string) => j<void>('/api/auth/me/password', { method: 'POST', body: JSON.stringify({ current, next }) }),
   /** readthicket.com only, like the four below. `sent: false` means the address saved but the confirmation didn't go out; `error` says so. */
   setEmail: (email: string, password: string) => j<{ me: Me; sent: boolean; error?: string }>('/api/auth/me/email', { method: 'PUT', body: JSON.stringify({ email, password }) }),

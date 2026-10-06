@@ -108,9 +108,11 @@ export const users = pgTable("users", {
    */
   displaySource: text("display_source"),
   /**
-   * When the one-time offer to save this device's settings was answered,
-   * yes or no. Null on accounts from before saved settings existed, which is
-   * what makes them see it; new accounts start answered.
+   * When the account first had a device chosen for new devices to copy. Null
+   * on accounts from before saved settings existed: the first device such an
+   * account opens becomes that device on its own, once (the box in Settings
+   * starts checked there). New accounts start set, since their first setup
+   * chooses.
    */
   displayOfferAnsweredAt: timestamp("display_offer_answered_at", { withTimezone: true }),
   /**

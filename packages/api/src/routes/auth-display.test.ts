@@ -58,16 +58,14 @@ function app() {
   return a;
 }
 
-test("signed out, nobody can save settings or answer the offer", async () => {
+test("signed out, nobody can save settings or stop a device keeping them", async () => {
   assert.equal((await app().request("/api/auth/me/display", { method: "PUT", body: JSON.stringify({ settings: GOOD }) })).status, 401);
-  assert.equal((await app().request("/api/auth/me/display-offer", { method: "POST" })).status, 401);
   assert.equal((await app().request("/api/auth/me/display-source", { method: "DELETE" })).status, 401);
 });
 
-test("no API token can save settings or answer the offer", () => {
+test("no API token can save settings or stop a device keeping them", () => {
   for (const kind of ["read", "full"] as const) {
     assert.equal(tokenMay(kind, "PUT", "/api/auth/me/display").ok, false, kind);
-    assert.equal(tokenMay(kind, "POST", "/api/auth/me/display-offer").ok, false, kind);
     assert.equal(tokenMay(kind, "DELETE", "/api/auth/me/display-source").ok, false, kind);
   }
 });

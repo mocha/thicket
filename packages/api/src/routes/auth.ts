@@ -173,8 +173,10 @@ auth.post("/me/tour", async (c) => {
 /**
  * Save display settings to offer new devices (issue #186), replacing any saved
  * before. The web app calls this only on purpose: a new account's first setup,
- * "Use these on new devices", or yes to the one-time offer. Saving also counts
- * as answering that offer, and ends a new account's "save my first setup".
+ * "Use these settings on new devices", or an older account's first device
+ * after this change. Saving marks the account as having had a first device
+ * (so the default never applies twice), and ends a new account's "save my
+ * first setup".
  * `device` makes the sending device the one that keeps them up to date.
  * A refusal says what was wrong and is logged, so support can see it too.
  */
@@ -199,13 +201,6 @@ auth.delete("/me/display-source", async (c) => {
   const device = parseDeviceId(body.device);
   if (device) await db.update(schema.users).set({ displaySource: null }).where(and(eq(schema.users.id, user.id), eq(schema.users.displaySource, device)));
   return c.json(await me(user.id));
-});
-
-/** Record a no to the one-time offer to save this device's settings, so it doesn't come back. The first answer stands. */
-auth.post("/me/display-offer", async (c) => {
-  const user = currentUser(c);
-  await db.update(schema.users).set({ displayOfferAnsweredAt: new Date() }).where(and(eq(schema.users.id, user.id), isNull(schema.users.displayOfferAnsweredAt)));
-  return c.body(null, 204);
 });
 
 /** Change password. Requires the current one; signs out every other session. */
