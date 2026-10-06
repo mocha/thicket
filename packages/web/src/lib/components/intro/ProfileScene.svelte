@@ -22,20 +22,18 @@
         <circle cx="32" cy="32" r="31" fill="var(--surface)" />
         <g clip-path="url(#intro-pic)" fill="none" stroke="var(--text)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
           <g transform="translate(0 -3)"><!-- the whole figure sits a little high, so the book clears the frame -->
-            <g transform="translate(0 -2)"><!-- body and book, up to a short neck -->
-              <path d="M9 66c0-15 10-24.5 23-24.5S55 51 55 66" fill="var(--surface)" />
+            <g transform="translate(0 -2)"><!-- shoulders and arms, and the book held against the chest -->
+              <path d="M14.5 66V53.6c0-5.4 3.2-9.2 8.4-10.6l5.4-1.4h7.4l5.4 1.4c5.2 1.4 8.4 5.2 8.4 10.6V66" fill="var(--surface)" />
               <path d="M27.4 41.8l4.6 4.4 4.6-4.4" />
               <path d="M17 51.2l15 3.2 15-3.2v10.4l-15 3.2-15-3.2z" fill="var(--accent-tint)" stroke="var(--accent)" />
               <path d="M32 54.4v10.4" stroke="var(--accent)" />
               <path d="M20.4 55.2l8 1.7M20.4 58.2l8 1.7M35.6 56.9l8-1.7M35.6 59.9l8-1.7" stroke="var(--accent)" stroke-width="0.9" />
-              <path d="M17 57.6c-2.2-.3-3-3-1.3-4.6M47 57.6c2.2-.3 3-3 1.3-4.6" />
             </g>
             <path d="M29.2 34.4v5.2M34.8 34.4v5.2" />
             <path d="M23.5 25.6c-1.7-.1-2.4 2.8-.4 3.6M40.5 25.6c1.7-.1 2.4 2.8.4 3.6" />
             <ellipse cx="32" cy="25.4" rx="8.6" ry="9.6" fill="var(--surface)" />
-            <path d="M23.5 24.6c-1-7.6 3.2-12.6 8.9-12.6 5.9 0 9.8 4.7 8.6 12.3" />
-            <path d="M24 20.4c4-.4 7.6-2.4 9.8-5.6 1.3 2.6 3.6 4.6 6.8 5.4" />
-            <path d="M28.4 13.6c-1 1.4-1.6 2.6-1.8 4" stroke-width="1" />
+            <!-- Hair: one shape, a soft tone of the ink, parted on the right and swept across. -->
+            <path d="M23.3 26.4C21.6 16.8 26.2 11.4 32.4 11.4c6.4 0 10.6 5.2 8.4 15C40.4 19.6 37.6 17.4 35.4 17.2 33.2 17 27.4 20.4 23.3 26.4z" fill="color-mix(in srgb, var(--text) 24%, var(--surface))" />
             <circle cx="28.5" cy="26.2" r="2.6" stroke-width="1.1" />
             <circle cx="35.5" cy="26.2" r="2.6" stroke-width="1.1" />
             <path d="M31.1 26h1.8" stroke-width="1.1" />
