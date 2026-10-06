@@ -70,8 +70,11 @@ export async function verifyPassword(password: string, stored: string | null): P
 // ---- handles --------------------------------------------------------------
 
 export const HANDLE_RE = /^[a-z0-9][a-z0-9_-]{1,29}$/;
-/** Routes and words that would collide with URLs or read as official. */
-const RESERVED = new Set(["me", "admin", "administrator", "thicket", "api", "feeds", "feed", "collections", "collection", "bookmarks", "bookmark", "add", "login", "logout", "signup", "settings", "about", "help", "support", "root", "system", "everything", "river", "static", "assets", "null", "undefined"]);
+/**
+ * Routes and words that would collide with URLs or read as official, plus the
+ * sample person in the setup tour's Profile picture, so nobody owns it.
+ */
+const RESERVED = new Set(["brambleandbooks", "me", "admin", "administrator", "thicket", "api", "feeds", "feed", "collections", "collection", "bookmarks", "bookmark", "add", "login", "logout", "signup", "settings", "about", "help", "support", "root", "system", "everything", "river", "static", "assets", "null", "undefined"]);
 
 export function normalizeHandle(raw: string): string {
   return raw.trim().toLowerCase().replace(/^@/, "");
@@ -233,7 +236,11 @@ export async function createUser(input: { handle: string; password: string; disp
   return db.transaction(async (tx) => {
     // First account on the instance is the admin.
     const [{ n }] = (await tx.execute<{ n: number }>(sql`select count(*)::int as n from users`)).rows;
-    const [user] = await tx.insert(schema.users).values({ handle: input.handle, passwordHash, displayName: input.displayName?.trim() || null, email: input.email ?? null, isAdmin: n === 0 }).returning();
+    const [user] = await tx.insert(schema.users).values({
+      handle: input.handle, passwordHash, displayName: input.displayName?.trim() || null, email: input.email ?? null, isAdmin: n === 0,
+      // A new account saves its first setup for new devices, and never needs the one-time offer made to older accounts (issue #186).
+      saveFirstDisplay: true, displayOfferAnsweredAt: new Date(),
+    }).returning();
     const [root] = await tx.insert(schema.collections).values({ userId: user.id, parentId: null, name: "All collections", slug: ROOT_SLUG }).returning();
     await tx.insert(schema.collections).values({ userId: user.id, parentId: root.id, name: FIRST_COLLECTION_NAME, slug: FIRST_COLLECTION_SLUG });
     return user;

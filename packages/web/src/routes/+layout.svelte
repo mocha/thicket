@@ -8,6 +8,7 @@
   import AddFeedSheet from '$lib/components/AddFeedSheet.svelte';
   import Reader from '$lib/components/Reader.svelte';
   import Configurator from '$lib/components/display/Configurator.svelte';
+  import { keepSavedInStep } from '$lib/saved-display.svelte';
   import { addFeed } from '$lib/addfeed.svelte';
   import FeedbackSheet from '$lib/components/FeedbackSheet.svelte';
   import { feedback } from '$lib/feedback.svelte';
@@ -29,6 +30,7 @@
    * in (/login, /signup, /forgot-password) send someone already in onward.
    */
   onMount(() => { loadDisplay(); void loadMe(); return watchDisplay(); });
+  keepSavedInStep();
 
   const path = $derived(page.url.pathname);
   const isPublic = $derived(isPublicPath(path));

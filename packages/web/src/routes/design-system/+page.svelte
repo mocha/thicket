@@ -23,6 +23,7 @@
   import Select from '$lib/components/Select.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import Monogram from '$lib/components/Monogram.svelte';
+  import SettingRow from '$lib/components/SettingRow.svelte';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import { showToast } from '$lib/toast.svelte';
 
@@ -584,6 +585,16 @@
       </div>
     </section>
 
+    <section class="entry" id="setting-row" aria-labelledby="setting-row-h">
+      <h3 class="entry-h" id="setting-row-h">Setting row</h3>
+      <p class="section-lede">One setting and what it’s set to: the name in bold, the current choice in quieter text, and an arrow at the far end when the row opens something. Rows stack with a thin line between them and read as one list. The whole row is the tap target, at least 48px tall. A setting changed since the list opened gets a check on a light accent-tinted disc beside the arrow. Without an action it only states the value, with no arrow, as the saved-settings offer shows. On a phone the choice moves under the name. Used in setup’s list of display settings.</p>
+      <div class="setting-rows">
+        <SettingRow label="Light or dark" value="Match my device" onclick={() => {}} />
+        <SettingRow label="Color theme" value="Crisp, orange" changed onclick={() => {}} />
+        <SettingRow label="Fonts" value="Serif headlines, sans text" />
+      </div>
+    </section>
+
     <section class="entry" id="setup-tour" aria-labelledby="setup-tour-h">
       <h3 class="entry-h" id="setup-tour-h">Setup tour</h3>
       <p class="section-lede">Five screens at the end of first-run setup that explain thicket: New posts, Add new feed and Explore, Bookmarks, Collections, and Profile. The setup window grows when the tour starts, and a tinted stage across its top holds the picture. Each screen opens with the menu item it’s about, drawn with the menu’s own icon and words, then a serif headline and a line on how to use it. The picture is a miniature of the real thing built from the real colors, cards, and choice group, never a screenshot, so it repaints with every theme. It acts its idea out, rests a few seconds, fades, and plays again. When a device asks for less motion, or the theme is Black and white, the finished picture shows and stays still. Skip this tour sits bottom left on every screen but the last, the dots jump between screens, and the last button is Start reading, or Review your feeds after an import. It shows once per account. In development, adding ?setup to an address brings setup back with the tour, for review.</p>
@@ -795,4 +806,5 @@
   .ds-foot code { font-family: ui-monospace, monospace; }
   .ds-foot a { color: var(--accent); font-weight: 600; }
   .ds-foot a:hover { text-decoration: underline; }
+  .setting-rows { max-width: 520px; }
 </style>
