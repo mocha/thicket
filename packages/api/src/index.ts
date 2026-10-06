@@ -21,6 +21,7 @@ import { startFeedbackRetry } from "./lib/feedback.js";
 import { ensureAdmin, publicStatus } from "./lib/instance.js";
 import { runMigrations } from "./db/migrate.js";
 import { headForPath } from "./lib/meta.js";
+import { alternateLinks, llmsTxt, noscriptNote } from "./lib/agents.js";
 import { openApiDocument } from "./lib/openapi.js";
 import { EMAIL_REQUIRED, FETCH_CONCURRENCY, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, SITE_URL, SMTP_URL, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
 
@@ -57,6 +58,8 @@ app.get("/api/health", async (c) => c.json({
 }));
 // What an API token can do, described for applications and assistants (lib/openapi.ts). Readable by anyone.
 app.get("/api/openapi.json", (c) => c.json(openApiDocument(PUBLIC_URL), 200, { "cache-control": "public, max-age=300" }));
+// Wayfinding for AI agents (lib/agents.ts): what pages are made of, and how a token reads the rest.
+app.get("/llms.txt", async (c) => c.text(llmsTxt((await publicStatus()).name, PUBLIC_URL), 200, { "content-type": "text/markdown; charset=utf-8", "cache-control": "public, max-age=300" }));
 // Where the landing page was reviewed before it went live. Links to it were shared.
 app.get("/preview/landing", (c) => c.redirect("/", 301));
 app.notFound((c) => (c.req.path.startsWith("/api/") ? c.json({ error: "not found" }, 404) : c.text("not found", 404)));
@@ -103,11 +106,14 @@ if (WEB_DIR) {
   // SPA fallback: any other path is a client route. Public pages get a
   // server-rendered <head> (title, Open Graph, OPML link) so shared links unfurl.
   const index = readFileSync(join(WEB_DIR, "index.html"), "utf8");
+  // Programs that don't run JavaScript are pointed at the page's JSON and /llms.txt (lib/agents.ts).
   const HEAD_OPEN = /<head>\s*/;
+  const BODY_OPEN = /<body[^>]*>\s*/;
   app.get("*", async (c) => {
     if (c.req.path.startsWith("/api/")) return c.notFound();
-    const head = await headForPath(c.req.path);
-    return c.html(index.replace(HEAD_OPEN, (m) => `${m}${head}\n\t\t`), 200, { "cache-control": "no-cache" });
+    const head = [await headForPath(c.req.path), ...alternateLinks(c.req.path, PUBLIC_URL)].join("\n\t\t");
+    const html = index.replace(HEAD_OPEN, (m) => `${m}${head}\n\t\t`).replace(BODY_OPEN, (m) => `${m}${noscriptNote(c.req.path, PUBLIC_URL)}\n\t\t`);
+    return c.html(html, 200, { "cache-control": "no-cache" });
   });
 }
 
