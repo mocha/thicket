@@ -89,7 +89,7 @@
 <section class="card">
   <h2>Unread posts</h2>
   <Tiles name="Unread posts" options={FRESH_OPTIONS} value={display.fresh ? 'on' : 'off'} art={FRESH_ART} notes onchange={(v) => choose({ fresh: v === 'on' }, 'fresh')} />
-  <p class="fine">Keep track of how many posts are new in New posts and each collection, and show a count in the sidebar.</p>
+  <p class="fine">Keep track of which posts are new since you last looked, and show a count in the sidebar.</p>
 </section>
 
 <section class="card">

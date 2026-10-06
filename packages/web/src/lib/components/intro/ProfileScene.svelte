@@ -1,17 +1,14 @@
 <script lang="ts">
   /**
-   * The tour's Profile picture: your own profile page in miniature, as you see
-   * it, with your name and a hand-drawn person at the top and each
+   * The tour's Profile picture: a profile page in miniature, with a sample
+   * name and a hand-drawn person at the top (never the reader's own name;
+   * the picture stands for anyone's profile) and each
    * section's "Who sees this" strip under its heading. Collections changes
    * to People I follow; Bookmarks starts below it, fading out, so the page
    * reads as going on.
    */
-  import { session } from '$lib/session.svelte';
   import SceneLoop from './SceneLoop.svelte';
   import MiniChoice from './MiniChoice.svelte';
-
-  const me = $derived(session.user);
-  const name = $derived(me?.displayName ?? me?.handle ?? 'You');
 </script>
 
 <SceneLoop round={7000}>
@@ -20,8 +17,8 @@
       <!-- A hand-drawn person, not your real picture: the picture stands for anyone's profile. -->
       <img class="pic" src="/intro/reader.webp?v=3" alt="" width="52" height="52" />
       <div class="names">
-        <span class="dn">{name}</span>
-        {#if me}<span class="h">@{me.handle}</span>{/if}
+        <span class="dn">Robin Ellis</span>
+        <span class="h">@robin</span>
         <span class="bio" aria-hidden="true"><span></span><span></span></span>
       </div>
     </div>

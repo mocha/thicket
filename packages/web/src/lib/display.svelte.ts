@@ -332,6 +332,6 @@ function snapshot(): Display {
 }
 
 export const FRESH_OPTIONS: { id: 'on' | 'off'; label: string; note: string }[] = [
-  { id: 'off', label: 'Off', note: 'Don’t show a count of new posts next to New posts or your collections.' },
-  { id: 'on', label: 'On', note: 'Show a count of new posts next to New posts and each collection.' }
+  { id: 'off', label: 'Off', note: 'Don’t show a count of new posts in the sidebar.' },
+  { id: 'on', label: 'On', note: 'Show a count of new posts in the sidebar.' }
 ];
