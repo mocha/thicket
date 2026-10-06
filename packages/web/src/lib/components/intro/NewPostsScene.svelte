@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Monogram from '$lib/components/Monogram.svelte';
   /**
    * The intro's New posts picture: a few miniature article cards, then two new
    * posts arrive at the top and push the rest down, in order, nothing jumping
@@ -39,7 +40,7 @@
 {#snippet card(c: { site: string; time: string; was?: string; title: string })}
   <div class="card">
     <p class="meta">
-      <span class="fav">{c.site[0]}</span><span class="site">{c.site}</span><span aria-hidden="true">·</span>
+      <Monogram name={c.site} size={16} /><span class="site">{c.site}</span><span aria-hidden="true">·</span>
       {#if c.was}<span class="time swap"><span class="was">{c.was}</span><span class="now">{c.time}</span></span>{:else}<span class="time">{c.time}</span>{/if}
     </p>
     <p class="title">{c.title}</p>
@@ -66,10 +67,6 @@
     padding: var(--space-2) var(--space-3) var(--space-3);
   }
   .meta { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 11px; color: var(--text-2); white-space: nowrap; }
-  .fav {
-    display: grid; place-items: center; width: 16px; height: 16px; border-radius: 4px; flex: none;
-    background: var(--surface-2); color: var(--text-2); font-size: 10px; font-weight: 700;
-  }
   .site { font-weight: 600; color: var(--text); }
   .title {
     margin: var(--space-1) 0 0; font-family: var(--font-headings); font-weight: 600; font-size: 14px; line-height: 1.3; color: var(--text);

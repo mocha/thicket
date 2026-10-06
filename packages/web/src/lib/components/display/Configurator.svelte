@@ -39,6 +39,7 @@
   import ImportHelp from '$lib/components/ImportHelp.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Banner from '$lib/components/Banner.svelte';
+  import { MENU_ICONS } from '$lib/menu-icons';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import { imp } from '$lib/importer.svelte';
   import { session } from '$lib/session.svelte';
@@ -55,15 +56,19 @@
     { key: 'fonts', title: 'Fonts', lead: 'Headlines, text and the app itself can each have their own face and size. Watch the page behind this box change.' },
     { key: 'reading', title: 'Opening a post', lead: 'Read here, or on the post’s own site. Sites that only send a preview always get a link out.' }
   ];
-  /** The tour. Titles are the menu's own names, so they're the words people meet next. */
+  /**
+   * The tour. Each screen starts with the menu item it's about, drawn as the
+   * menu draws it, so people can find it again; the headline says why it
+   * matters and the line under it how to use it.
+   */
   const INTRO = [
-    { key: 'intro-new', title: 'New posts', lead: 'Every post from every feed you follow, newest first. No algorithm ranks or hides anything.' },
-    { key: 'intro-collections', title: 'Collections', lead: 'Group your feeds by topic to read one thing at a time. Share a collection and others can copy it.' },
-    { key: 'intro-bookmarks', title: 'Bookmarks', lead: 'Save a post to come back to, and add a note of your own. You choose whether your notes are public.' },
-    { key: 'intro-feeds', title: 'Adding feeds', lead: 'Use Add new feed for a site you already know, or Explore to find new ones.' },
-    { key: 'intro-profile', title: 'Your profile', lead: 'Your profile is what other people see. You choose who sees each part of it.' }
+    { key: 'intro-new', items: [{ icon: MENU_ICONS.everything, label: 'New posts' }], title: 'Everything you follow, in order', lead: 'Every post from every feed lands here, newest first. No algorithm decides what you see, so nothing gets buried.' },
+    { key: 'intro-feeds', items: [{ icon: MENU_ICONS.addFeed, label: 'Add new feed', accent: true }, { icon: MENU_ICONS.explore, label: 'Explore' }], title: 'Bring in the sites you love', lead: 'Already know a site? Add it with its web address. Looking for something new? See what other readers here follow.' },
+    { key: 'intro-bookmarks', items: [{ icon: MENU_ICONS.bookmarks, label: 'Bookmarks' }], title: 'Keep what’s worth coming back to', lead: 'Bookmark a post to save it for later, and add a note with your thoughts. You choose who sees your notes.' },
+    { key: 'intro-collections', items: [{ icon: MENU_ICONS.collections, label: 'Collections' }], title: 'Read one topic at a time', lead: 'Group your feeds into collections, like Cooking or Tech, and read just that topic. Share a collection, and others can copy it to follow the same feeds.' },
+    { key: 'intro-profile', items: [{ icon: MENU_ICONS.profile, label: 'Profile' }], title: 'Your corner of thicket', lead: 'This is the page other people see. You decide who sees each part of it: anyone, people you follow, or only you.' }
   ];
-  const STEPS = $derived([...(withImport ? [IMPORT] : []), ...DISPLAY, ...INTRO]);
+  const STEPS: { key: string; title: string; lead: string; items?: { icon: string; label: string; accent?: boolean }[] }[] = $derived([...(withImport ? [IMPORT] : []), ...DISPLAY, ...INTRO]);
   const current = $derived(STEPS[step]);
   const touring = $derived(current.key.startsWith('intro-'));
   const tourStart = $derived(STEPS.length - INTRO.length);
@@ -123,6 +128,11 @@
         <div class="words" aria-live="polite">
           {#key current.key}
             <div class="enter">
+              <p class="items">
+                {#each current.items ?? [] as m (m.label)}
+                  <span class="item" class:accent={m.accent}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width={m.accent ? 1.5 : 2} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={m.icon} /></svg>{m.label}</span>
+                {/each}
+              </p>
               <h2 id="setup-title">{current.title}</h2>
               <p class="lead">{current.lead}</p>
             </div>
@@ -132,7 +142,7 @@
           <span class="skip">{#if !last}<button type="button" class="link" onclick={() => leave(true)}>Skip this tour</button>{/if}</span>
           <span class="dots">
             {#each INTRO as s, i (s.key)}
-              <button type="button" class="dot" class:on={step === tourStart + i} aria-label={s.title} aria-current={step === tourStart + i ? 'step' : undefined} onclick={() => (step = tourStart + i)}></button>
+              <button type="button" class="dot" class:on={step === tourStart + i} aria-label={s.items.map((m) => m.label).join(' and ')} aria-current={step === tourStart + i ? 'step' : undefined} onclick={() => (step = tourStart + i)}></button>
             {/each}
           </span>
           <span class="go" bind:this={nextButton}>
@@ -241,6 +251,15 @@
   .words { padding: var(--space-5) var(--space-5) 0; min-height: 0; overflow-y: auto; }
   .enter { animation: words 380ms ease-out 80ms backwards; }
   @keyframes words { from { opacity: 0; transform: translateY(6px); } }
+  /* The menu item a screen is about, as a small label in the menu's own icon and words. */
+  .items { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-3); }
+  .item {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px var(--space-3) 4px var(--space-2);
+    border-radius: var(--radius-pill); background: var(--surface-2); border: var(--card-border, 0);
+    font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text);
+  }
+  .item svg { color: var(--text-2); }
+  .item.accent, .item.accent svg { color: var(--accent); }
   .words .lead { font-size: calc(var(--text-base) * var(--size-app)); margin-top: var(--space-2); line-height: 1.45; }
   .tourfoot { display: grid; grid-template-columns: 1fr auto 1fr; border-top: 0; }
   .tourfoot .go { justify-self: end; }
