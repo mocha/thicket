@@ -16,7 +16,7 @@
 
 <SceneLoop round={7500}>
   <div class="wrap">
-    <MiniCard site="Slow Kitchen" time="2 hr" title="A soup that tastes like all day" end={mark}>
+    <MiniCard site="Slow Kitchen" time="2 hr" title="Ginger soup in 30 minutes" end={mark}>
       <div class="note">
         <p class="who">Your note</p>
         <p class="body"><span class="typed">Made this tonight. More ginger next time.</span></p>

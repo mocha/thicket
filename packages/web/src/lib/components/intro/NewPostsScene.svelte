@@ -21,7 +21,7 @@
   <div class="list">
     <!-- Slow Kitchen arrives first, then Backyard Birding lands above it. -->
     <div class="arrive" style="--at: 1700ms"><MiniCard site="Backyard Birding" time="just now" title="Warblers are passing through early" /></div>
-    <div class="arrive" style="--at: 700ms"><MiniCard site="Slow Kitchen" time={slowTime} title="A soup that tastes like all day" /></div>
+    <div class="arrive" style="--at: 700ms"><MiniCard site="Slow Kitchen" time={slowTime} title="Ginger soup in 30 minutes" /></div>
     {#each WAITING as c (c.site)}<div class="row"><MiniCard {...c} /></div>{/each}
   </div>
 </SceneLoop>
