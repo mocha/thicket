@@ -573,7 +573,8 @@
         {#each c.sample.slice(0, 3) as s (s.id)}<SourceIcon feedId={s.id} hasIcon={s.hasIcon} name={s.title ?? '?'} size={22} />{/each}
       </span>
       <div class="meta">
-        <span class="title">{c.name}</span>
+        <!-- The same pills as a profile's Collections: whose it is shows beside the name, not only in the byline. -->
+        <span class="named"><span class="title">{c.name}</span>{#if ev?.isMine}<Badge class="own">Yours</Badge>{:else if ev?.copiedByMe}<Badge class="own">Copied</Badge>{/if}</span>
         {#if ev && ev.matches > 0}
           <span class="why">
             <strong>{plural(ev.matchingFeeds, 'feed')}</strong> in it {ev.matchingFeeds === 1 ? 'has' : 'have'} posted about “{q}”
@@ -802,6 +803,8 @@
   li:first-child { border-top: 0; }
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .named { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  .named :global(.own) { flex: none; }
   .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .handle { font-weight: 400; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin-left: var(--space-1); }
   /* Wraps rather than truncates: every part of it is a fact someone is deciding on.

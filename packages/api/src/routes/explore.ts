@@ -5,9 +5,10 @@
  * collection public, and it has to have something in it.
  */
 import { Hono } from "hono";
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { getSetting } from "../lib/instance.js";
+import { notARepeatOf } from "../lib/visibility.js";
 
 export const explore = new Hono();
 
@@ -18,18 +19,36 @@ explore.get("/collections", async (c) => {
   const network = c.req.query("network") === "1"; // only collections by people I follow
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 6)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
-  // Never my own, and never one I already copied: both are already on my shelf.
-  const where = [sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public' and u.collections_visibility = 'public'
-      and exists(select 1 from collection_feeds cf where cf.collection_id = col.id) and col.user_id <> ${viewerId}
-      and not exists(select 1 from collections mine where mine.user_id = ${viewerId} and mine.copied_from_id = col.id)`];
+  const filters = [sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public' and u.collections_visibility = 'public'
+      and exists(select 1 from collection_feeds cf where cf.collection_id = col.id)`];
   if (q) {
     const like = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
-    where.push(sql`(col.name ilike ${like} or col.description ilike ${like})`);
+    filters.push(sql`(col.name ilike ${like} or col.description ilike ${like})`);
   }
-  if (network) where.push(sql`exists(select 1 from user_follows uf where uf.follower_id = ${viewerId} and uf.followee_id = col.user_id)`);
-  const [{ total }] = (await db.execute<{ total: number }>(sql`select count(*)::int as total from collections col join users u on u.id = col.user_id where ${sql.join(where, sql` and `)}`)).rows;
-  const [{ indexTotal }] = (await db.execute<{ indexTotal: number }>(sql`select count(*)::int as "indexTotal" from collections col join users u on u.id = col.user_id where ${where[0]}`)).rows;
+  if (network) filters.push(sql`exists(select 1 from user_follows uf where uf.follower_id = ${viewerId} and uf.followee_id = col.user_id)`);
+  /**
+   * What the list shows, as `shown(id)`. Everything that passes the filters,
+   * then two things left out:
+   *  - what's already on my shelf: my own, one I copied, or a copy of either
+   *  - a repeat: a copy whose original or earlier copy is also in this list
+   * Repeats are judged after the filters, so a copy never steps aside for an
+   * original the filters then drop.
+   */
+  const shown = (where: SQL[]) => sql`
+    with listed as (
+      select col.id, col.copied_from_id, col.user_id from collections col join users u on u.id = col.user_id
+      where ${sql.join(where, sql` and `)}
+    ), shelf as (select id, copied_from_id from collections where user_id = ${viewerId})
+    , shown as (
+      select l.id from listed l
+      where l.user_id <> ${viewerId}
+        and not exists(select 1 from shelf m where m.copied_from_id = l.id or m.id = l.copied_from_id or m.copied_from_id = l.copied_from_id)
+        and ${notARepeatOf("l", "listed")}
+    )`;
+  const [{ total }] = (await db.execute<{ total: number }>(sql`${shown(filters)} select count(*)::int as total from shown`)).rows;
+  const [{ indexTotal }] = (await db.execute<{ indexTotal: number }>(sql`${shown(filters.slice(0, 1))} select count(*)::int as "indexTotal" from shown`)).rows;
   const rows = await db.execute(sql`
+    ${shown(filters)}
     select col.id, col.name, col.slug, col.description, u.handle, u.display_name as "displayName",
            (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount",
            (select coalesce(json_agg(x), '[]'::json) from (
@@ -38,7 +57,7 @@ explore.get("/collections", async (c) => {
               from collection_feeds cf join feeds f on f.id = cf.feed_id
               where cf.collection_id = col.id order by f.last_item_at desc nulls last limit 4) x) as sample
     from collections col join users u on u.id = col.user_id
-    where ${sql.join(where, sql` and `)}
+    where col.id in (select id from shown)
     order by "feedCount" desc, col.created_at desc limit ${limit + 1} offset ${offset}
   `);
   // The answer depends on who is asking, so a shared cache must key on the cookie.

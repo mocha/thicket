@@ -20,7 +20,7 @@
 import { Hono } from "hono";
 import { sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { allowsSql } from "../lib/visibility.js";
+import { allowsSql, notARepeatOf } from "../lib/visibility.js";
 import { myBookmarkIdSql } from "../lib/notes.js";
 
 export const search = new Hono();
@@ -326,7 +326,7 @@ async function searchCollections(q: string, viewerId: number | null, limit: numb
   const base = sql`
     with ${feedEvidence(q)}
     , cand as (
-      select col.id, col.name, col.slug, col.description, col.user_id,
+      select col.id, col.name, col.slug, col.description, col.user_id, col.copied_from_id,
              u.handle, u.display_name as "displayName",
              (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount",
              coalesce((select sum(a.matches)::int from collection_feeds cf join feedw a on a.feed_id = cf.feed_id where cf.collection_id = col.id), 0) as matches,
@@ -344,7 +344,11 @@ async function searchCollections(q: string, viewerId: number | null, limit: numb
         case when matches = 0 then 0 else
           ln(1 + weight) * (("matchingFeeds" + 1.0) / ("feedCount" + 3))
         end * (1 + 2 * name_score) + 0.35 * name_score as score
-      from cand
+      from cand c
+      -- Repeats are judged among what this search found, after every filter:
+      -- a copy steps aside only for an original or earlier copy that is itself
+      -- in the results. My own copy always shows beside the original.
+      where c.user_id = ${me} or ${notARepeatOf("c", "cand")}
     )`;
   const [{ total }] = (await db.execute<{ total: number }>(sql`${base} select count(*)::int as total from scored`)).rows;
   const rows = await db.execute(sql`
@@ -352,6 +356,7 @@ async function searchCollections(q: string, viewerId: number | null, limit: numb
     select s.id, s.name, s.slug, s.description, s.handle, s."displayName", s."feedCount",
            s.matches, s."matchingFeeds", s.last_match as "lastMatchAt", s.name_match as "nameMatch",
            s.user_id = ${me} as "isMine",
+           exists(select 1 from collections mine where mine.user_id = ${me} and mine.copied_from_id = s.id) as "copiedByMe",
            (select coalesce(json_agg(x), '[]'::json) from (
               select f.id, coalesce(cf.title_override, f.title) as title,
                      exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon"

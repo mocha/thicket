@@ -627,7 +627,7 @@ export type SearchFeed = {
   displayName: string | null;
 };
 export type SearchCollection = ExploreCollection & {
-  isMine: boolean; matches: number; matchingFeeds: number; lastMatchAt: string | null; nameMatch: boolean;
+  isMine: boolean; copiedByMe: boolean; matches: number; matchingFeeds: number; lastMatchAt: string | null; nameMatch: boolean;
 };
 export type SearchPost = {
   id: number; feedId: number; feedTitle: string | null; siteUrl: string | null; url: string | null;

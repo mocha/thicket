@@ -67,3 +67,22 @@ export function allowedLevelsSql(level: string, who: Audience): SQL {
   if (who.isFriend) return sql`${lvl} in ('public', 'friends')`;
   return sql`${lvl} = 'public'`;
 }
+
+/**
+ * A copied collection is a separate row, but to a reader it is the same
+ * collection, so a list of collections shows it once. A copy is left out when
+ * its original, or an earlier copy of the same original, is also in the list.
+ * Only when the original isn't there (gone private, deleted, or filtered out)
+ * does one copy stand in for it.
+ *
+ * `set` names the list *after* every filter it has (search words, "People I
+ * follow"), as a relation with `id` and `copied_from_id`. Judging against
+ * anything wider would hide a copy for an original the list then drops, and
+ * neither would show. `col` is the row being tested.
+ */
+export function notARepeatOf(col: string, set: string): SQL {
+  const c = sql.raw(col);
+  const s = sql.raw(set);
+  return sql`(${c}.copied_from_id is null or not exists(
+    select 1 from ${s} rep where rep.id = ${c}.copied_from_id or (rep.copied_from_id = ${c}.copied_from_id and rep.id < ${c}.id)))`;
+}
