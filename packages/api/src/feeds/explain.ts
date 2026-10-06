@@ -8,7 +8,7 @@
  * A status number stays in brackets at the end when it helps someone report it.
  */
 import { HostCoolingDown, hostKey, PAUSE_REASONS } from "./hosts.js";
-import { BadStatus, MAX_BYTES, TooLargeError } from "./http.js";
+import { BadStatus, isHttpProtocolError, MAX_BYTES, TooLargeError } from "./http.js";
 
 /** A failure whose message was already written for a reader (feeds/youtube.ts). */
 export class Explained extends Error {}
@@ -53,6 +53,7 @@ export function explainAddFailure(err: unknown, url: string): string {
   if (err instanceof Explained) return err.message;
   if (err instanceof HostCoolingDown) return forPause(err);
   if (err instanceof BadStatus) return forStatus(site, err.status);
+  if (isHttpProtocolError(err)) return `${site} answered with a malformed web response that thicket can’t safely read.`;
   const msg = String((err as { cause?: { code?: string } })?.cause?.code ?? (err instanceof Error ? `${err.name} ${err.message}` : err));
   if (err instanceof TooLargeError || /too large/i.test(msg)) return `This feed is too large for thicket to read (over ${MAX_BYTES / 1024 / 1024} MB).`;
   if (/ENOTFOUND|EAI_AGAIN/.test(msg)) return `There’s no site at ${site}. Check the spelling and try again.`;

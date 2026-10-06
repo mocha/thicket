@@ -44,8 +44,9 @@ table([
   ["dns", one("select count(*) from feeds where error = 'dns'")],
   ["tls", one("select count(*) from feeds where error = 'tls'")],
   ["refused / reset", one("select count(*) from feeds where error in ('refused', 'reset')")],
+  ["malformed HTTP", one("select count(*) from feeds where error = 'protocol'")],
   ["too large", one("select count(*) from feeds where error = 'too_large'")],
-  ["other", one("select count(*) from feeds where error is not null and error not in ('parse', 'http', 'timeout', 'dns', 'tls', 'refused', 'reset', 'too_large')")],
+  ["other", one("select count(*) from feeds where error is not null and error not in ('parse', 'http', 'timeout', 'dns', 'tls', 'refused', 'reset', 'too_large', 'protocol')")],
 ]);
 const others = q("select error, count(*) n from feeds where error like 'other:%' group by error order by n desc limit 4");
 if (others.length) console.log(`  other, most common: ${others.map((r) => `${String(r.error).slice(6)} (${r.n})`).join("; ")}`);
