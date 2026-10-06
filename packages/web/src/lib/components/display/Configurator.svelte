@@ -274,12 +274,17 @@
   .tourfoot .skip { min-height: 44px; display: flex; align-items: center; }
   /* A wide window has room to show the pictures a size up. */
   @media (min-width: 700px) { .scene { zoom: 1.2; } }
-  .dots { display: flex; gap: 6px; align-items: center; }
+  .dots { display: flex; align-items: center; }
+  /* Each dot is a 44px-tall tap area with the small mark drawn in its middle, so a thumb can hit it. */
   footer .dot {
-    width: 8px; height: 8px; padding: 0; border: 0; border-radius: 4px; background: var(--text-3);
+    display: grid; place-items: center; min-width: 20px; height: 44px; padding: 0 3px; border: 0; border-radius: 0; background: none;
+  }
+  footer .dot::before {
+    content: ''; width: 8px; height: 8px; border-radius: 4px; background: var(--text-3);
     transition: width 300ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 300ms;
   }
-  footer .dot.on { width: 22px; background: var(--accent); }
+  footer .dot.on::before { width: 22px; background: var(--accent); }
+  footer .dot:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; border-radius: var(--radius-sm); }
   footer button { padding: var(--space-3) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--line); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); background: var(--surface); }
   footer button.link { border: 0; padding: var(--space-3) var(--space-1); color: var(--accent); }
   footer button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

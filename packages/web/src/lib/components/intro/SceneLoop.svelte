@@ -13,9 +13,18 @@
   const FADE = 400;
   let n = $state(0);
   let fading = $state(false);
+  // Asking for less motion partway through stops the loop at once, rather than
+  // leaving it to blank the picture every round.
+  const calm = typeof matchMedia === 'undefined' ? null : matchMedia('(prefers-reduced-motion: reduce)');
+  let reduced = $state(calm?.matches ?? false);
   $effect(() => {
-    const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.palette === 'mono';
-    if (still) return;
+    if (!calm) return;
+    const changed = () => { reduced = calm.matches; };
+    calm.addEventListener('change', changed);
+    return () => calm.removeEventListener('change', changed);
+  });
+  $effect(() => {
+    if (reduced || document.documentElement.dataset.palette === 'mono') { fading = false; return; }
     let out: ReturnType<typeof setTimeout>;
     const timer = setInterval(() => {
       fading = true;
