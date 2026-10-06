@@ -29,6 +29,7 @@
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import { api } from '$lib/api';
   import { display, markConfigured, setDisplay, APPEARANCES, READING_MODES } from '$lib/display.svelte';
   import Tiles from './Tiles.svelte';
@@ -83,10 +84,25 @@
   /** A file has been read, so the last step leads to its review. */
   const importing = $derived(withImport && imp.step === 'review');
 
-  onMount(() => {
-    // In development, ?setup opens the walkthrough again on a screen that has already seen it.
-    const again = import.meta.env.DEV && new URLSearchParams(location.search).has('setup');
-    if (display.configured && !again) return;
+  onMount(() => { if (!display.configured) start(); });
+
+  // In development, ?setup opens the walkthrough again on a screen that has
+  // already seen it. Watched rather than read once: signing in lands on the
+  // address without reloading the page, after this has already started.
+  let reopenedFor = '';
+  $effect(() => {
+    if (!import.meta.env.DEV || !page.url.searchParams.has('setup') || open || reopenedFor === page.url.href) return;
+    reopenedFor = page.url.href;
+    start();
+  });
+
+  /** Between asking to open and the dialog showing, so the two ways in can't both open it. */
+  let starting = false;
+
+  function start() {
+    if (starting || open) return;
+    starting = true;
+    step = 0;
     markConfigured();
     welcome.open = true;
     // Ask about importing on a new account, or when nothing is followed yet.
@@ -97,11 +113,12 @@
       .then((s) => { withImport = newAccount || s.feeds === 0; })
       .catch(() => {})
       .finally(() => {
+        starting = false;
         open = true;
         api.event('display_setup_shown', { withImport });
         queueMicrotask(() => dialog?.showModal());
       });
-  });
+  }
 
   /** Leave the tour, finished or skipped, for wherever the last step goes. */
   const leave = (skipped: boolean) => finish(importing ? 'review' : 'done', skipped);
