@@ -11,8 +11,7 @@
  * "how many posts are newer" and "how busy is this collection" and keeps
  * nothing (api/src/routes/marks.ts).
  *
- * The count is a glance, not a debt: exact for a quiet collection, capped for
- * a medium one, a mere dot for a firehose, where no number would mean anything.
+ * The count is a glance, not a debt: exact up to 98, then "99+".
  * The list itself shows where the new part ends (River.svelte).
  */
 import { api, type Mark } from './api';
@@ -122,26 +121,18 @@ export function loadMarks(force = false): Promise<void> {
   return inflight;
 }
 
-/** Posts a week past which a collection is a firehose: a number would always be saturated, so it gets a dot. */
-const FIREHOSE_WEEKLY = 200;
-/** Under this many a week the collection is quiet, and the exact number is the useful answer. */
-const QUIET_WEEKLY = 20;
+export type Badge = { kind: 'none' } | { kind: 'count'; text: string };
 
-export type Badge = { kind: 'none' } | { kind: 'dot'; title: string } | { kind: 'count'; text: string };
-
-/** What the sidebar shows for a collection: nothing, a dot, or a number sized to how busy it is. */
+/** What the sidebar shows for a collection: nothing, or how many are new. */
 export function badge(m: Mark | undefined): Badge {
-  if (!m || !m.count) return { kind: 'none' };
-  const exact = m.more ? '100+' : String(m.count);
-  if (m.weekly >= FIREHOSE_WEEKLY) return { kind: 'dot', title: `${exact} new` };
-  if (m.weekly < QUIET_WEEKLY) return { kind: 'count', text: exact };
-  return { kind: 'count', text: m.count > 50 ? '50+' : String(m.count) };
+  const text = countText(m);
+  return text ? { kind: 'count', text } : { kind: 'none' };
 }
 
-/** The plain number, for a list with room for it. */
+/** How many are new: the number, or "99+" past 98. */
 export function countText(m: Mark | undefined): string {
   if (!m || !m.count) return '';
-  return m.more ? '100+' : String(m.count);
+  return m.more || m.count >= 99 ? '99+' : String(m.count);
 }
 
 /** Anything new in any of these? For a parent's row and for a tab with no room for numbers. */
