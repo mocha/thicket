@@ -12,10 +12,10 @@ import { notificationsApi } from './api';
 
 export const notifs = $state<{ count: number; more: boolean; at: number }>({ count: 0, more: false, at: 0 });
 
-/** What the bubble says: nothing, the number, or "100+". */
+/** What the bubble says: nothing, the number, or "99+". */
 export function notifText(): string {
   if (!notifs.count) return '';
-  return notifs.more ? '100+' : String(notifs.count);
+  return notifs.more || notifs.count >= 99 ? '99+' : String(notifs.count);
 }
 
 /** The signed-in person changed: forget their count. */
