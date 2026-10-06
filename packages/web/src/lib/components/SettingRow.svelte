@@ -31,6 +31,8 @@
     font: inherit; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text); text-align: left;
   }
   .row:first-child { border-top: 1px solid var(--line); }
+  /* The last row ends the list without a line of its own; whatever follows sets its own edge. */
+  .row:last-child { border-bottom: 0; }
   button.row { cursor: pointer; }
   button.row:hover .label { color: var(--accent); }
   button.row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
