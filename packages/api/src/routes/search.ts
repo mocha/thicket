@@ -20,7 +20,7 @@
 import { Hono } from "hono";
 import { sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { allowsSql, notARepeatCopy } from "../lib/visibility.js";
+import { allowsSql, notARepeatOf } from "../lib/visibility.js";
 import { myBookmarkIdSql } from "../lib/notes.js";
 
 export const search = new Hono();
@@ -321,14 +321,12 @@ async function searchCollections(q: string, viewerId: number | null, limit: numb
     ${fuzzy(q, "col.name")},
     (case when col.name ilike ${like} then 0.85 else 0 end)::real,
     (case when col.description ilike ${like} then 0.35 else 0 end)::real)`;
-  const readableAs = (c: string, u: string) => sql`${sql.raw(c)}.parent_id is not null and (${sql.raw(c)}.user_id = ${me} or (
-    ${sql.raw(u)}.profile_visibility = 'public' and ${allowsSql(`${c}.visibility`, `${c}.user_id`, viewerId)} and ${allowsSql(`${u}.collections_visibility`, `${u}.id`, viewerId)}))`;
-  // My own copy always shows beside the original: same collection, two owners.
-  const readable = sql`${readableAs("col", "u")} and (col.user_id = ${me} or ${notARepeatCopy("col", readableAs)})`;
+  const readable = sql`col.parent_id is not null and (col.user_id = ${me} or (
+    u.profile_visibility = 'public' and ${allowsSql("col.visibility", "col.user_id", viewerId)} and ${allowsSql("u.collections_visibility", "u.id", viewerId)}))`;
   const base = sql`
     with ${feedEvidence(q)}
     , cand as (
-      select col.id, col.name, col.slug, col.description, col.user_id,
+      select col.id, col.name, col.slug, col.description, col.user_id, col.copied_from_id,
              u.handle, u.display_name as "displayName",
              (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount",
              coalesce((select sum(a.matches)::int from collection_feeds cf join feedw a on a.feed_id = cf.feed_id where cf.collection_id = col.id), 0) as matches,
@@ -346,7 +344,11 @@ async function searchCollections(q: string, viewerId: number | null, limit: numb
         case when matches = 0 then 0 else
           ln(1 + weight) * (("matchingFeeds" + 1.0) / ("feedCount" + 3))
         end * (1 + 2 * name_score) + 0.35 * name_score as score
-      from cand
+      from cand c
+      -- Repeats are judged among what this search found, after every filter:
+      -- a copy steps aside only for an original or earlier copy that is itself
+      -- in the results. My own copy always shows beside the original.
+      where c.user_id = ${me} or ${notARepeatOf("c", "cand")}
     )`;
   const [{ total }] = (await db.execute<{ total: number }>(sql`${base} select count(*)::int as total from scored`)).rows;
   const rows = await db.execute(sql`
