@@ -73,7 +73,7 @@
   const header = $derived(
     view === 'offer' ? { title: 'Use your saved settings?', lead: 'These are the settings you saved on another device' }
     : view === 'import' ? { title: 'Import your feeds', lead: 'Coming from another reader?' }
-    : view === 'list' ? { title: 'How thicket looks here', lead: 'Change any of these, or keep them as they are' }
+    : view === 'list' ? { title: 'How thicket looks', lead: 'Change any setting, or keep them as they are' }
     : view === 'tour' ? { title: '', lead: '' }
     : SETTINGS[view]
   );
@@ -330,7 +330,7 @@
           {#if withImport}<Button onclick={() => { cameFrom = null; view = 'import'; }}>Back</Button>{/if}
           <Button variant="primary" onclick={afterList}>{withTour ? 'Next' : importing ? 'Review your feeds' : 'Start reading'}</Button>
         {:else}
-          <Button variant="primary" onclick={closeSetting}>Done</Button>
+          <Button variant="primary" onclick={closeSetting}>Back</Button>
         {/if}
       </footer>
       {/if}
