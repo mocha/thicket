@@ -152,7 +152,9 @@
     setupVisit.opened = true;
     tourStep = 0;
     cameFrom = null;
-    withTour = again || !session.user?.tourSeenAt;
+    // ?setup in development always includes the tour, also when it's this
+    // device's real first setup (a new dev port is a new device to the browser).
+    withTour = again || (import.meta.env.DEV && page.url.searchParams.has('setup')) || !session.user?.tourSeenAt;
     offered = !again && !display.configured ? session.user?.savedDisplay ?? null : null;
     tourOnly = !again && display.configured && withTour;
     // Saved settings wait for an answer before the device counts as set up:
