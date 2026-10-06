@@ -1,11 +1,13 @@
 /**
  * How thicket looks and reads on THIS screen. One record, kept in this
- * browser's storage, never on the account.
+ * browser's storage; changing it never changes another device.
  *
  * That is deliberate: a phone in bed and a desk at noon want different
  * answers, a reader who needs OpenDyslexic needs it on the machine they read
  * from, and an e-ink tablet wants pages and no color while the laptop wants
- * neither. Nothing here reaches the server.
+ * neither. The account can keep one saved copy to offer a device that hasn't
+ * been set up (issue #186, lib/saved-display.svelte.ts), but only when someone
+ * saves it on purpose: nothing here sends it.
  *
  * The record is applied as data attributes and a few custom properties on
  * <html>; app.css defines what they mean. A few lines in app.html read the
@@ -278,6 +280,43 @@ export function markConfigured() {
   if (display.configured) return;
   display.configured = true;
   remember(snapshot());
+}
+
+/** This device's settings as they stand now, including any another tab just changed. */
+export function currentDisplay(): Display {
+  sync();
+  return snapshot();
+}
+
+/**
+ * Take on a whole set of saved settings, as if picked here: applies now, is
+ * remembered on this device, and counts as set up. Read the same tolerant way
+ * as this device's own record, so a theme retired since it was saved moves to
+ * its replacement.
+ */
+export function useDisplay(saved: unknown) {
+  Object.assign(display, coerce(saved));
+  display.configured = true;
+  remember(snapshot());
+  apply();
+}
+
+/** One line per setting setup asks about, saying what it's set to, for the setup list and the saved-settings offer. */
+export function describeDisplay(d: Display): { key: 'appearance' | 'theme' | 'fonts' | 'reading'; label: string; value: string }[] {
+  const label = <T extends string>(list: { id: T; label: string }[], id: T) => list.find((x) => x.id === id)?.label ?? id;
+  const face = (f: Family) => (f === 'dyslexic' ? 'OpenDyslexic' : f === 'serif' ? 'serif' : 'sans');
+  const { headings, reading, app } = d.fonts;
+  let fonts = `${face(headings.family)} headlines, ${face(reading.family)} text`;
+  if (app.family !== reading.family) fonts += `, ${face(app.family)} app`;
+  const sizes = new Set([headings.size, reading.size, app.size]);
+  if (sizes.size > 1) fonts += ', custom sizes';
+  else if (headings.size !== 0) fonts += `, ${sizeLabel(headings.size)}`;
+  return [
+    { key: 'appearance', label: 'Light or dark', value: label(APPEARANCES, d.appearance) },
+    { key: 'theme', label: 'Color theme', value: label(PALETTES, d.palette) + (d.palette === 'contrast' ? `, ${label(ACCENTS, d.accent).toLowerCase()}` : '') },
+    { key: 'fonts', label: 'Fonts', value: fonts[0].toUpperCase() + fonts.slice(1) },
+    { key: 'reading', label: 'Opening a post', value: label(READING_MODES, d.reading) }
+  ];
 }
 
 function snapshot(): Display {

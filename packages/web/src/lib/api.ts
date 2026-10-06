@@ -1,4 +1,5 @@
 /** The only file that knows the API's shape. UI components import from here. */
+import type { Display } from './display.svelte';
 /**
  * My note on a post. One per post; edits keep createdAt and move updatedAt. A
  * note is part of a bookmark (issue #84), so its id is the bookmark's.
@@ -385,6 +386,12 @@ export type Me = {
   avatarUpdatedAt: string | null;
   /** When the setup tour was finished, skipped, or closed, or null if it hasn't been seen (issue #172). Shown once per account. */
   tourSeenAt: string | null;
+  /** Display settings saved to offer a device that hasn't been set up, or null (issue #186). */
+  savedDisplay: Display | null;
+  /** When the one-time offer to save this device's settings was answered; null means it's still owed. */
+  displayOfferAnsweredAt: string | null;
+  /** A new account whose first setup hasn't been saved for new devices yet. */
+  saveFirstDisplay: boolean;
   /**
    * readthicket.com only: where password-reset links go, and when it was confirmed
    * (null = waiting on the link). `pendingEmail` is a new address waiting on its
@@ -430,6 +437,14 @@ export const authApi = {
     void fetch('/api/auth/me/tour', { method: 'POST', keepalive: true })
       .then((r) => { if (!r.ok) console.error(`Couldn't record that the setup tour was seen: ${r.status} ${r.statusText}`); })
       .catch((e) => console.error("Couldn't record that the setup tour was seen:", e));
+  },
+  /** Save these display settings to offer new devices, replacing any saved before. Refusals carry the reason. */
+  saveDisplay: (settings: Display) => j<Me>('/api/auth/me/display', { method: 'PUT', body: JSON.stringify({ settings }) }),
+  /** Say no to the one-time offer to save this device's settings. Like tourSeen, a failure is only logged: at worst the offer shows once more. */
+  declineDisplayOffer: () => {
+    void fetch('/api/auth/me/display-offer', { method: 'POST', keepalive: true })
+      .then((r) => { if (!r.ok) console.error(`Couldn't record the answer to the saved-settings offer: ${r.status} ${r.statusText}`); })
+      .catch((e) => console.error("Couldn't record the answer to the saved-settings offer:", e));
   },
   changePassword: (current: string, next: string) => j<void>('/api/auth/me/password', { method: 'POST', body: JSON.stringify({ current, next }) }),
   /** readthicket.com only, like the four below. `sent: false` means the address saved but the confirmation didn't go out; `error` says so. */

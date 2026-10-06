@@ -182,7 +182,7 @@ auth.put("/me/display", async (c) => {
   const parsed = parseSavedDisplay(body.settings);
   if (!parsed.ok) {
     console.warn(`[display] refused saved settings for user ${user.id}: ${parsed.error}`);
-    return c.json({ error: `Those settings couldn’t be saved: ${parsed.error}.` }, 400);
+    return c.json({ error: parsed.error }, 400);
   }
   await db.update(schema.users)
     .set({ savedDisplay: parsed.value, saveFirstDisplay: false, displayOfferAnsweredAt: sql`coalesce(${schema.users.displayOfferAnsweredAt}, now())` })
