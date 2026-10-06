@@ -35,11 +35,11 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { api, authApi } from '$lib/api';
-  import { display, describeDisplay, markConfigured, setDisplay, useDisplay, APPEARANCES, READING_MODES, type Display } from '$lib/display.svelte';
+  import { display, describeDisplay, markConfigured, setDisplay, useDisplay, APPEARANCES, READING_MODES, LAYOUTS, FRESH_OPTIONS, type Display } from '$lib/display.svelte';
   import Tiles from './Tiles.svelte';
   import ThemePicker from './ThemePicker.svelte';
   import FontTable from './FontTable.svelte';
-  import { appearanceArt, READING_ART } from './art';
+  import { appearanceArt, READING_ART, LAYOUT_ART, FRESH_ART } from './art';
   import Button from '$lib/components/Button.svelte';
   import ImportHelp from '$lib/components/ImportHelp.svelte';
   import Icon from '$lib/components/Icon.svelte';
@@ -56,7 +56,7 @@
   import { welcome } from '$lib/copyintent.svelte';
   import { saveForNewDevices, setupVisit } from '$lib/saved-display.svelte';
 
-  type Setting = 'appearance' | 'theme' | 'fonts' | 'reading';
+  type Setting = 'appearance' | 'theme' | 'fonts' | 'reading' | 'layout' | 'fresh';
   /** Where setup is: the saved-settings offer, import, the list, one setting opened from it, or the tour. */
   type View = 'offer' | 'import' | 'list' | Setting | 'tour';
 
@@ -68,7 +68,9 @@
     appearance: { title: 'Light or dark', lead: 'Or match your device' },
     theme: { title: 'Color theme', lead: 'Crisp has the most contrast, the Soft themes the least' },
     fonts: { title: 'Fonts', lead: 'Headlines, text, and the app can each have their own' },
-    reading: { title: 'Opening a post', lead: 'Read here or on the post’s own site' }
+    reading: { title: 'Opening a post', lead: 'Read here or on the post’s own site' },
+    layout: { title: 'Moving through the list', lead: 'One long list, or a page at a time' },
+    fresh: { title: 'Unread posts', lead: 'A count of new posts beside each collection' }
   };
   const header = $derived(
     view === 'offer' ? { title: 'Use your saved settings?', lead: 'These are the settings you saved on another device' }
@@ -317,6 +319,10 @@
           <FontTable compact />
         {:else if view === 'reading'}
           <Tiles name="Opening a post" options={READING_MODES} value={display.reading} art={READING_ART} notes onchange={(v) => setDisplay({ reading: v })} />
+        {:else if view === 'layout'}
+          <Tiles name="Moving through the list" options={LAYOUTS} value={display.layout} art={LAYOUT_ART} notes onchange={(v) => setDisplay({ layout: v })} />
+        {:else if view === 'fresh'}
+          <Tiles name="Unread posts" options={FRESH_OPTIONS} value={display.fresh ? 'on' : 'off'} art={FRESH_ART} notes onchange={(v) => setDisplay({ fresh: v === 'on' })} />
         {/if}
         {#if importing && imp.checking && view !== 'import'}<p class="status" aria-live="polite">Checking your feeds</p>{/if}
       </div>

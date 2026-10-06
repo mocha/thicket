@@ -301,8 +301,8 @@ export function useDisplay(saved: unknown) {
   apply();
 }
 
-/** One line per setting setup asks about, saying what it's set to, for the setup list and the saved-settings offer. */
-export function describeDisplay(d: Display): { key: 'appearance' | 'theme' | 'fonts' | 'reading'; label: string; value: string }[] {
+/** One line per display setting, saying what it's set to, for the setup list and the saved-settings offer. */
+export function describeDisplay(d: Display): { key: 'appearance' | 'theme' | 'fonts' | 'reading' | 'layout' | 'fresh'; label: string; value: string }[] {
   const label = <T extends string>(list: { id: T; label: string }[], id: T) => list.find((x) => x.id === id)?.label ?? id;
   const face = (f: Family) => (f === 'dyslexic' ? 'OpenDyslexic' : f === 'serif' ? 'serif' : 'sans');
   const { headings, reading, app } = d.fonts;
@@ -315,7 +315,9 @@ export function describeDisplay(d: Display): { key: 'appearance' | 'theme' | 'fo
     { key: 'appearance', label: 'Light or dark', value: label(APPEARANCES, d.appearance) },
     { key: 'theme', label: 'Color theme', value: label(PALETTES, d.palette) + (d.palette === 'contrast' ? `, ${label(ACCENTS, d.accent).toLowerCase()}` : '') },
     { key: 'fonts', label: 'Fonts', value: fonts[0].toUpperCase() + fonts.slice(1) },
-    { key: 'reading', label: 'Opening a post', value: label(READING_MODES, d.reading) }
+    { key: 'reading', label: 'Opening a post', value: label(READING_MODES, d.reading) },
+    { key: 'layout', label: 'Moving through the list', value: label(LAYOUTS, d.layout) },
+    { key: 'fresh', label: 'Unread posts', value: d.fresh ? 'On' : 'Off' }
   ];
 }
 

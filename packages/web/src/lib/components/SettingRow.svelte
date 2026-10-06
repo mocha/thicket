@@ -39,13 +39,13 @@
   button.row { cursor: pointer; }
   button.row:hover .label { color: var(--accent); }
   button.row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
-  .label { flex: none; width: 9.5em; font-weight: 600; }
+  .label { flex: none; width: 12em; font-weight: 600; }
   .value { flex: 1; min-width: 0; color: var(--text-2); }
   .row :global(.arrow) { flex: none; color: var(--text-2); }
   .changed { flex: none; display: inline-flex; color: var(--accent); }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   /* A phone has no room for the two side by side: the choice goes under the name. */
-  @media (max-width: 480px) {
+  @media (max-width: 540px) {
     .row { flex-wrap: wrap; row-gap: 2px; }
     .label { width: auto; flex: 1; }
     .value { order: 3; flex-basis: 100%; font-size: calc(var(--text-sm) * var(--size-app)); }
