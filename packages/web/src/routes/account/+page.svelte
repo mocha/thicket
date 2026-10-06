@@ -130,7 +130,8 @@
     resetBusy = true; resetError = null;
     try {
       await authApi.forgotPassword(me.handle);
-      showToast(`We sent a reset link to ${me.email}. It expires in 1 hour.`);
+      // This endpoint acknowledges requests even when throttled or delivery fails.
+      showToast(`Reset link requested for ${me.email}. Check your inbox. If a link arrives, it expires in 1 hour.`);
     } catch (e) {
       resetError = e instanceof Error ? e.message : String(e);
     } finally {
