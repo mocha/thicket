@@ -1,37 +1,41 @@
 <script lang="ts">
   /**
-   * First time on a new screen: four short steps that set how thicket looks
-   * here. Light or dark, color theme, fonts, then how a post opens. The theme
-   * gets its own step so a reader who needs Crisp or a Soft theme
-   * meets it on day one, not buried in Settings. Every choice applies as it
-   * is made, so the page behind the dialog is the preview. Opening the dialog
-   * writes this screen's record, which is what makes it a once-only thing:
-   * closing it any way at all is the same as finishing it. The full set of
-   * options stays on the Settings page.
+   * First time on a new device: one screen that lists how thicket looks here
+   * (light or dark, color theme, fonts, how a post opens), each with its
+   * current choice. Open any of them to change it and come back, or keep them
+   * all and go on in one step. Every choice applies as it is made, so the page
+   * behind the dialog is the preview. Opening the dialog writes this device's
+   * record, which is what makes it a once-only thing: closing it any way at
+   * all is the same as finishing it. The full set of options stays on the
+   * Settings page.
+   *
+   * When the account has saved settings (issue #186), a device that hasn't
+   * been set up first asks whether to use them. Yes skips the list; no opens
+   * it. A new account's first setup becomes its saved settings, however it
+   * ends.
    *
    * A new account (under a day old), or anyone who follows nothing yet, gets
    * an import step first, because bringing their feeds is the thing that
-   * matters most on day one and it shouldn't wait behind four appearance
-   * questions. A new account counts even if it already follows feeds: one
-   * shared collection copied on sign-up says nothing about the reader they
-   * came from. When that copy is what brought them, the first step says so
-   * at the top, and the page behind is their copy. Picking a file says what
-   * was found, then the appearance steps go by while the feeds are checked in
-   * the background, and the last step opens the review instead of starting to
-   * read. The
-   * dialog opens once per screen, not per account, so a second device a day
-   * or more later only asks when there is still nothing followed.
+   * matters most on day one. A new account counts even if it already follows
+   * feeds: one shared collection copied on sign-up says nothing about the
+   * reader they came from. When that copy is what brought them, the first
+   * step says so at the top, and the page behind is their copy. Picking a
+   * file says what was found, then the rest goes by while the feeds are
+   * checked in the background, and leaving setup any way at all opens their
+   * review. The dialog opens once per device, not per account, so a second
+   * device a day or more later only asks when there is still nothing
+   * followed.
    *
-   * After the questions, the window grows and turns into a short tour of how
-   * thicket works: one screen per thing in the menu, each with a picture of
-   * it that plays on a loop. Skip this tour leaves from any of them and
-   * lands where the last one would.
+   * After the list, the window grows and turns into a short tour of how
+   * thicket works, once per account: one screen per thing in the menu, each
+   * with a picture of it that plays on a loop. Skip this tour leaves from any
+   * of them and lands where the last one would.
    */
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { api, authApi } from '$lib/api';
-  import { display, markConfigured, setDisplay, APPEARANCES, READING_MODES } from '$lib/display.svelte';
+  import { display, describeDisplay, currentDisplay, markConfigured, setDisplay, useDisplay, APPEARANCES, READING_MODES } from '$lib/display.svelte';
   import Tiles from './Tiles.svelte';
   import ThemePicker from './ThemePicker.svelte';
   import FontTable from './FontTable.svelte';
@@ -40,6 +44,7 @@
   import ImportHelp from '$lib/components/ImportHelp.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Banner from '$lib/components/Banner.svelte';
+  import SettingRow from '$lib/components/SettingRow.svelte';
   import { MENU_ICONS } from '$lib/menu-icons';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import FeedsScene from '$lib/components/intro/FeedsScene.svelte';
@@ -49,18 +54,29 @@
   import { imp } from '$lib/importer.svelte';
   import { session } from '$lib/session.svelte';
   import { welcome } from '$lib/copyintent.svelte';
+  import { saveForNewDevices, setupVisit } from '$lib/saved-display.svelte';
+
+  type Setting = 'appearance' | 'theme' | 'fonts' | 'reading';
+  /** Where setup is: the saved-settings offer, import, the list, one setting opened from it, or the tour. */
+  type View = 'offer' | 'import' | 'list' | Setting | 'tour';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let open = $state(false);
-  let step = $state(0);
+  let view = $state<View>('list');
   let withImport = $state(false);
-  const IMPORT = { key: 'import', title: 'Import your feeds', lead: 'Coming from another reader?' };
-  const DISPLAY = [
-    { key: 'appearance', title: 'Light or dark?', lead: 'Pick what suits this screen. You can also let it follow the device’s own setting.' },
-    { key: 'theme', title: 'Color theme', lead: 'Pick the colors thicket uses on this screen. Crisp has the most contrast; the Soft themes have the least.' },
-    { key: 'fonts', title: 'Fonts', lead: 'Headlines, text and the app itself can each have their own face and size. Watch the page behind this box change.' },
-    { key: 'reading', title: 'Opening a post', lead: 'Read here, or on the post’s own site. Sites that only send a preview always get a link out.' }
-  ];
+  const SETTINGS: Record<Setting, { title: string; lead: string }> = {
+    appearance: { title: 'Light or dark', lead: 'Or match your device' },
+    theme: { title: 'Color theme', lead: 'Crisp has the most contrast, the Soft themes the least' },
+    fonts: { title: 'Fonts', lead: 'Headlines, text, and the app can each have their own' },
+    reading: { title: 'Opening a post', lead: 'Read here or on the post’s own site' }
+  };
+  const HEADER = $derived(
+    view === 'offer' ? { title: 'Use your saved settings?', lead: 'These are the settings you saved on another device' }
+    : view === 'import' ? { title: 'Import your feeds', lead: 'Coming from another reader?' }
+    : view === 'list' ? { title: 'How thicket looks here', lead: 'Change any of these, or keep them as they are' }
+    : view === 'tour' ? { title: '', lead: '' }
+    : SETTINGS[view]
+  );
   /**
    * The tour. Each screen starts with the menu item it's about, drawn as the
    * menu draws it, so people can find it again; the headline says why it
@@ -73,24 +89,41 @@
     { key: 'intro-collections', items: [{ icon: MENU_ICONS.collections, label: 'Collections' }], title: 'Read one topic at a time', lead: 'Group your feeds into collections, like Cooking or Tech, and read just that topic. Share a collection, and others can copy it to follow the same feeds.' },
     { key: 'intro-profile', items: [{ icon: MENU_ICONS.profile, label: 'Profile' }], title: 'Your corner of thicket', lead: 'This is the page other people see. You decide who sees each part of it: anyone, people you follow, or only you.' }
   ];
+  let tourStep = $state(0);
+  const scene = $derived(INTRO[tourStep]);
+  const touring = $derived(view === 'tour');
+  const lastScene = $derived(tourStep === INTRO.length - 1);
   /** The tour shows once per account: decided when setup opens, so recording it partway can't reshuffle the steps. */
   let withTour = $state(false);
-  /** A browser that's already set up opening for an account that hasn't seen the tour: only the tour (and import, for a new account), not the appearance questions again. */
+  /**
+   * Skip the list: a device that's already set up opening for an account that
+   * hasn't seen the tour, or one that just took on its saved settings. Only
+   * import (if it applies) and the tour are left.
+   */
   let tourOnly = $state(false);
-  const STEPS: { key: string; title: string; lead: string; items?: { icon: string; label: string; accent?: boolean }[] }[] = $derived([...(withImport ? [IMPORT] : []), ...(tourOnly ? [] : DISPLAY), ...(withTour ? INTRO : [])]);
-  const current = $derived(STEPS[step]);
-  const touring = $derived(current.key.startsWith('intro-'));
-  const tourStart = $derived(STEPS.length - INTRO.length);
-  const last = $derived(step === STEPS.length - 1);
+  /** The account's saved settings, as offered when setup opened. */
+  let offered = $state<ReturnType<typeof currentDisplay> | null>(null);
   let nextButton = $state<HTMLElement | null>(null);
-  // Arriving on a tour screen swaps the footer for the tour's, so keep the keyboard on its main button.
-  $effect(() => { if (touring && step >= tourStart) nextButton?.querySelector('button')?.focus(); });
-  /** A file has been read, so the last step leads to its review. */
+  let heading = $state<HTMLElement | null>(null);
+  let rows = $state<HTMLElement | null>(null);
+  /** The setting just closed, so the keyboard lands back on its row. */
+  let cameFrom: Setting | null = null;
+  // Each new screen moves the keyboard to its heading, or back to the row it came from, or the tour's main button.
+  $effect(() => {
+    const v = view;
+    void tourStep;
+    tick().then(() => {
+      if (v === 'tour') nextButton?.querySelector('button')?.focus();
+      else if (v === 'list' && cameFrom) rows?.querySelector<HTMLElement>(`[data-key="${cameFrom}"]`)?.focus();
+      else heading?.focus();
+    });
+  });
+  /** A file has been read, so leaving setup leads to its review. */
   const importing = $derived(withImport && imp.step === 'review');
 
-  // Setup opens on a browser that's never been set up, and also for an account
-  // that hasn't seen the tour: display settings belong to the browser, so a
-  // second account made on a set-up browser would otherwise never get it.
+  // Setup opens on a device that's never been set up, and also for an account
+  // that hasn't seen the tour: display settings belong to the device, so a
+  // second account made on a set-up device would otherwise never get it.
   onMount(() => { if (!display.configured || (session.user && !session.user.tourSeenAt)) start(); });
 
   // In development, ?setup opens the walkthrough again on a screen that has
@@ -106,12 +139,21 @@
   /** Between asking to open and the dialog showing, so the two ways in can't both open it. */
   let starting = false;
 
-  /** `again`: the dev reopening, which includes the tour even for an account that has seen it, so it can be reviewed. */
+  /**
+   * Everything about what this visit shows is decided here, once: opening
+   * marks the device set up and the tour can be recorded partway, so deciding
+   * again later would match other rules mid-flow. `again`: the dev reopening,
+   * which includes the tour even for an account that has seen it, so it can
+   * be reviewed.
+   */
   function start(again = false) {
     if (starting || open) return;
     starting = true;
-    step = 0;
+    setupVisit.opened = true;
+    tourStep = 0;
+    cameFrom = null;
     withTour = again || !session.user?.tourSeenAt;
+    offered = !again && !display.configured ? session.user?.savedDisplay ?? null : null;
     tourOnly = !again && display.configured && withTour;
     markConfigured();
     welcome.open = true;
@@ -124,29 +166,60 @@
       .catch(() => {})
       .finally(() => {
         starting = false;
+        view = offered ? 'offer' : withImport ? 'import' : tourOnly ? 'tour' : 'list';
         open = true;
-        api.event('display_setup_shown', { withImport });
+        api.event('display_setup_shown', { withImport, offered: !!offered, tourOnly });
         queueMicrotask(() => dialog?.showModal());
       });
   }
 
-  /** Leave the tour, finished or skipped, for wherever the last step goes. */
-  const leave = (skipped: boolean) => finish(importing ? 'review' : 'done', skipped);
+  /** Yes to the saved settings: take them on, and skip the list. */
+  function useOffered() {
+    useDisplay(offered);
+    api.event('display_offer_answered', { use: true });
+    tourOnly = true;
+    if (withImport) view = 'import';
+    else afterImport();
+  }
 
-  function finish(how: 'done' | 'dismissed' | 'advanced' | 'review', skipped = false) {
-    const intro = !withTour ? 'already seen' : !touring ? 'not reached' : skipped ? 'skipped' : last && how !== 'dismissed' ? 'finished' : 'left';
-    api.event('display_setup_closed', { how, step: current.key, withImport, intro });
+  function declineOffered() {
+    api.event('display_offer_answered', { use: false });
+    view = withImport ? 'import' : 'list';
+  }
+
+  /** On from import: the list, or straight to the tour (or out) when the list is skipped. */
+  function afterImport() {
+    if (!tourOnly) view = 'list';
+    else if (withTour) view = 'tour';
+    else finish('done');
+  }
+
+  /** On from the list: the tour if it's owed, otherwise out. */
+  function afterList() {
+    if (withTour) view = 'tour';
+    else finish('done');
+  }
+
+  function openSetting(key: Setting) { cameFrom = null; view = key; }
+  function closeSetting() { cameFrom = view as Setting; view = 'list'; }
+
+  function finish(how: 'done' | 'dismissed' | 'advanced', skipped = false) {
+    const intro = !withTour ? 'already seen' : !touring ? 'not reached' : skipped ? 'skipped' : lastScene && how !== 'dismissed' ? 'finished' : 'left';
+    api.event('display_setup_closed', { how, step: touring ? scene.key : view, withImport, importing, intro });
     // Reaching the tour and leaving it any way at all counts as seeing it.
     if (touring && session.user && !session.user.tourSeenAt) {
       session.user.tourSeenAt = new Date().toISOString();
       authApi.tourSeen();
     }
+    // A new account's first setup becomes its saved settings, however it ends.
+    if (session.user?.saveFirstDisplay && !session.user.savedDisplay) void saveForNewDevices('setup', { quiet: true });
     open = false;
     welcome.open = false;
     welcome.copied = null;
     dialog?.close();
-    if (how === 'advanced') void goto('/settings#display');
-    if (how === 'review') void goto('/import');
+    // Once a file has been read, every way out leads to choosing its feeds.
+    if (importing) void goto('/import');
+    else if (how === 'advanced') void goto('/settings#display');
   }
 </script>
 
@@ -155,54 +228,58 @@
     <div class="box" class:tour={touring}>
       {#if touring}
         <div class="stage" aria-hidden="true">
-          {#key current.key}
+          {#key scene.key}
             <div class="scene">
-              {#if current.key === 'intro-new'}<NewPostsScene />
-              {:else if current.key === 'intro-feeds'}<FeedsScene />
-              {:else if current.key === 'intro-bookmarks'}<BookmarksScene />
-              {:else if current.key === 'intro-collections'}<CollectionsScene />
+              {#if scene.key === 'intro-new'}<NewPostsScene />
+              {:else if scene.key === 'intro-feeds'}<FeedsScene />
+              {:else if scene.key === 'intro-bookmarks'}<BookmarksScene />
+              {:else if scene.key === 'intro-collections'}<CollectionsScene />
               {:else}<ProfileScene />{/if}
             </div>
           {/key}
         </div>
         <div class="words" aria-live="polite">
-          {#key current.key}
+          {#key scene.key}
             <div class="enter">
               <p class="items">
-                {#each current.items ?? [] as m (m.label)}
+                {#each scene.items as m (m.label)}
                   <span class="item" class:accent={m.accent}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width={m.accent ? 1.5 : 2} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={m.icon} /></svg>{m.label}</span>
                 {/each}
               </p>
-              <h2 id="setup-title">{current.title}</h2>
-              <p class="lead">{current.lead}</p>
+              <h2 id="setup-title">{scene.title}</h2>
+              <p class="lead">{scene.lead}</p>
             </div>
           {/key}
         </div>
         <footer class="tourfoot">
-          <span class="skip">{#if !last}<button type="button" class="link" onclick={() => leave(true)}>Skip this tour</button>{/if}</span>
+          <span class="skip">{#if !lastScene}<button type="button" class="link" onclick={() => finish('done', true)}>Skip this tour</button>{/if}</span>
           <span class="dots">
             {#each INTRO as s, i (s.key)}
-              <button type="button" class="dot" class:on={step === tourStart + i} aria-label={s.items.map((m) => m.label).join(' and ')} aria-current={step === tourStart + i ? 'step' : undefined} onclick={() => (step = tourStart + i)}></button>
+              <button type="button" class="dot" class:on={tourStep === i} aria-label={s.items.map((m) => m.label).join(' and ')} aria-current={tourStep === i ? 'step' : undefined} onclick={() => (tourStep = i)}></button>
             {/each}
           </span>
           <span class="go" bind:this={nextButton}>
-            {#if !last}
-              <Button variant="primary" onclick={() => step++}>Next</Button>
+            {#if !lastScene}
+              <Button variant="primary" onclick={() => tourStep++}>Next</Button>
             {:else}
-              <Button variant="primary" onclick={() => leave(false)}>{importing ? 'Review your feeds' : 'Start reading'}</Button>
+              <Button variant="primary" onclick={() => finish('done')}>{importing ? 'Review your feeds' : 'Start reading'}</Button>
             {/if}
           </span>
         </footer>
       {:else}
       <header>
-        {#if welcome.copied && step === 0}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
-        <p class="eyebrow">{withImport ? 'Get started' : 'Set up this screen'} · {step + 1} of {STEPS.length}</p>
-        <h2 id="setup-title">{current.title}</h2>
-        <p class="lead">{current.lead}</p>
+        {#if welcome.copied && (view === 'import' || (view === 'list' && !withImport))}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
+        {#if view !== 'offer'}<p class="eyebrow">{withImport ? 'Get started' : 'Set up this device'}</p>{/if}
+        <h2 id="setup-title" tabindex="-1" bind:this={heading}>{HEADER.title}</h2>
+        <p class="lead">{HEADER.lead}</p>
       </header>
 
       <div class="body">
-        {#if current.key === 'import'}
+        {#if view === 'offer' && offered}
+          <div class="rows">
+            {#each describeDisplay(offered) as r (r.key)}<SettingRow label={r.label} value={r.value} />{/each}
+          </div>
+        {:else if view === 'import'}
           {#if importing && imp.preview}
             {@const feeds = new Set(imp.groups.flatMap((g) => g.feeds.map((f) => f.url))).size}
             <div class="found" role="status">
@@ -215,30 +292,37 @@
           {:else}
             <ImportHelp via="setup" />
           {/if}
-        {:else if current.key === 'appearance'}
+        {:else if view === 'list'}
+          <div class="rows" bind:this={rows}>
+            {#each describeDisplay(display) as r (r.key)}
+              <SettingRow label={r.label} value={r.value} onclick={() => openSetting(r.key)} data-key={r.key} />
+            {/each}
+          </div>
+        {:else if view === 'appearance'}
           <Tiles name="Appearance" options={APPEARANCES} value={display.appearance} art={appearanceArt(display.palette, display.accent)} onchange={(v) => setDisplay({ appearance: v })} />
-        {:else if current.key === 'theme'}
+        {:else if view === 'theme'}
           <ThemePicker />
-        {:else if current.key === 'fonts'}
+        {:else if view === 'fonts'}
           <FontTable compact />
-        {:else}
+        {:else if view === 'reading'}
           <Tiles name="Opening a post" options={READING_MODES} value={display.reading} art={READING_ART} notes onchange={(v) => setDisplay({ reading: v })} />
         {/if}
-        {#if importing && imp.checking && current.key !== 'import'}<p class="status" aria-live="polite">Checking your feeds</p>{/if}
+        {#if importing && imp.checking && view !== 'import'}<p class="status" aria-live="polite">Checking your feeds</p>{/if}
       </div>
 
       <footer>
-        {#if current.key !== 'import'}<button type="button" class="link" onclick={() => finish('advanced')}>Advanced options</button>{/if}
+        {#if view !== 'import' && view !== 'offer'}<button type="button" class="link" onclick={() => finish('advanced')}>Advanced options</button>{/if}
         <span class="spacer"></span>
-        {#if step > 0}<Button onclick={() => step--}>Back</Button>{/if}
-        {#if current.key === 'import' && !importing}
-          <Button onclick={() => step++}>Skip</Button>
-        {:else if step < STEPS.length - 1}
-          <Button variant="primary" onclick={() => step++}>Next</Button>
-        {:else if importing}
-          <Button variant="primary" onclick={() => finish('review')}>Review your feeds</Button>
+        {#if view === 'offer'}
+          <Button onclick={declineOffered}>Set up this device</Button>
+          <Button variant="primary" onclick={useOffered}>Use these</Button>
+        {:else if view === 'import'}
+          <Button variant={importing ? 'primary' : 'ghost'} onclick={afterImport}>{importing ? 'Next' : 'Skip'}</Button>
+        {:else if view === 'list'}
+          {#if withImport}<Button onclick={() => (view = 'import')}>Back</Button>{/if}
+          <Button variant="primary" onclick={afterList}>{withTour ? 'Next' : importing ? 'Review your feeds' : 'Start reading'}</Button>
         {:else}
-          <Button variant="primary" onclick={() => finish('done')}>Start reading</Button>
+          <Button variant="primary" onclick={closeSetting}>Done</Button>
         {/if}
       </footer>
       {/if}
@@ -260,6 +344,8 @@
   header { padding: var(--space-5) var(--space-5) 0; }
   .copied { margin-bottom: var(--space-4); }
   .eyebrow { margin: 0 0 var(--space-1); font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); font-weight: 600; }
+  h2:focus { outline: none; }
+  .rows { display: flex; flex-direction: column; }
   h2 { margin: 0; font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; }
   .lead { margin: var(--space-1) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 56ch; }
   .body { padding: var(--space-4) var(--space-5) var(--space-1); overflow-y: auto; min-height: 0; }
