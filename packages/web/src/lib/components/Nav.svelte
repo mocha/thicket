@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { MENU_ICONS } from '$lib/menu-icons';
   import { page } from '$app/state';
   import Wordmark from './Wordmark.svelte';
   import { goto } from '$app/navigation';
@@ -114,14 +115,7 @@
     setNavWidth(next);
   }
 
-  const icons = {
-    everything: 'M4 12c3-3 5-3 8 0s5 3 8 0M4 17c3-3 5-3 8 0s5 3 8 0M4 7c3-3 5-3 8 0s5 3 8 0',
-    collections: 'M4 6h16M4 12h16M4 18h10',
-    bookmarks: 'M6 4h12v17l-6-4-6 4z',
-    notifications: 'M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9M10 20.5a2.2 2.2 0 0 0 4 0',
-    explore: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM15.5 8.5l-2 5-5 2 2-5z',
-    admin: 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z'
-  };
+  const icons = MENU_ICONS;
 </script>
 
 {#snippet row(c: { id: number; name: string; slug: string })}

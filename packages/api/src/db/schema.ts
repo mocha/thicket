@@ -85,6 +85,13 @@ export const users = pgTable("users", {
   /** When the owner clicked the confirmation link. Resets only go to a confirmed address. */
   emailConfirmedAt: timestamp("email_confirmed_at", { withTimezone: true }),
   /**
+   * When they finished or skipped the setup tour, or closed setup once it had
+   * reached the tour (issue #172). Set, the tour is left out of setup on every
+   * device; null, it's shown. Accounts made before the tour count as having
+   * seen it.
+   */
+  tourSeenAt: timestamp("tour_seen_at", { withTimezone: true }),
+  /**
    * How far down Notifications I have looked (issue #184): anything newer is
    * "new" and counts toward the sidebar bubble. Notifications themselves are
    * not stored; they are derived from follows, bookmarks and notes

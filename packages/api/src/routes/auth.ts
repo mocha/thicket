@@ -7,7 +7,7 @@
  */
 import { Hono, type Context } from "hono";
 import { isShareLevel, type ShareLevel } from "../lib/visibility.js";
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import {
   createSession, destroySession, destroyAllSessions, createUser, deleteUser, currentUser, findUserByHandle,
@@ -34,7 +34,7 @@ async function me(userId: number) {
   const { passwordHash, ...rest } = u;
   return {
     ...rest, hasPassword: !!passwordHash, createdAt: u.createdAt.toISOString(), claimVerifiedAt: u.claimVerifiedAt?.toISOString() ?? null,
-    emailConfirmedAt: u.emailConfirmedAt?.toISOString() ?? null, pendingEmail: await pendingEmail(u.id, u.emailConfirmedAt ? u.email : null),
+    emailConfirmedAt: u.emailConfirmedAt?.toISOString() ?? null, tourSeenAt: u.tourSeenAt?.toISOString() ?? null, pendingEmail: await pendingEmail(u.id, u.emailConfirmedAt ? u.email : null),
     avatarUpdatedAt: avatar?.updatedAt.toISOString() ?? null, instanceTracking: trackingEnabled(),
   };
 }
@@ -159,6 +159,13 @@ auth.patch("/me", async (c) => {
   if (typeof body.hideShortsByDefault === "boolean") patch.hideShortsByDefault = body.hideShortsByDefault;
   if (Object.keys(patch).length) await db.update(schema.users).set(patch).where(eq(schema.users.id, user.id));
   return c.json(await me(user.id));
+});
+
+/** Record that the setup tour has been seen, so no device shows it again. The first time stands. */
+auth.post("/me/tour", async (c) => {
+  const user = currentUser(c);
+  await db.update(schema.users).set({ tourSeenAt: new Date() }).where(and(eq(schema.users.id, user.id), isNull(schema.users.tourSeenAt)));
+  return c.body(null, 204);
 });
 
 /** Change password. Requires the current one; signs out every other session. */
