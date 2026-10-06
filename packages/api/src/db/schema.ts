@@ -219,6 +219,12 @@ export const feeds = pgTable("feeds", {
    * "en". See ParsedFeed.language.
    */
   language: text("language"),
+  /**
+   * The site's posts are behind a paywall: the feed shows what they publish,
+   * but reading a post takes a subscription (issue #216). Set by an admin on
+   * the feed's settings page, shown to everyone beside the feed's address.
+   */
+  requiresSubscription: boolean("requires_subscription").notNull().default(false),
   /** Conditional-GET state. */
   etag: text("etag"),
   lastModified: text("last_modified"),
