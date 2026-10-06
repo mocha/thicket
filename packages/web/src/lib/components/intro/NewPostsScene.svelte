@@ -2,11 +2,29 @@
   /**
    * The intro's New posts picture: a few miniature article cards, then two new
    * posts arrive at the top and push the rest down, in order, nothing jumping
-   * the queue. It plays once and rests. Every card's resting style is its final
+   * the queue. It loops: holds the finished list a few seconds, fades, and
+   * plays again from the start. Every card's resting style is its final
    * state and the animations only run from hidden to there, so when motion is
-   * off (reduced motion, or Black and white) the finished picture shows at once.
+   * off (reduced motion, or Black and white) the finished picture shows at once
+   * and stays: looping would only make it blink.
    * The sites are made up: real publishers here would read as partners.
    */
+  /** One round: the arrivals take about 2.2s, then the list rests until the fade. */
+  const ROUND = 6000;
+  const FADE = 400;
+  let round = $state(0);
+  let fading = $state(false);
+  $effect(() => {
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.palette === 'mono';
+    if (still) return;
+    let out: ReturnType<typeof setTimeout>;
+    const timer = setInterval(() => {
+      fading = true;
+      out = setTimeout(() => { round++; fading = false; }, FADE);
+    }, ROUND);
+    return () => { clearInterval(timer); clearTimeout(out); };
+  });
+
   const ARRIVING = [
     { site: 'Backyard Birding', time: 'just now', title: 'Warblers are passing through early' },
     { site: 'Slow Kitchen', time: '1 min', was: 'just now', title: 'A soup that tastes like all day' }
@@ -28,16 +46,20 @@
   </div>
 {/snippet}
 
-<div class="list">
+{#key round}
+<div class="list" class:fading>
   {#each ARRIVING as c, i (c.site)}
     <!-- Slow Kitchen (the second) arrives first, then Backyard Birding lands above it. -->
     <div class="arrive" style="--at: {i === 0 ? 1700 : 700}ms">{@render card(c)}</div>
   {/each}
   {#each WAITING as c (c.site)}<div class="row">{@render card(c)}</div>{/each}
 </div>
+{/key}
 
 <style>
   .list { display: flex; flex-direction: column; width: min(340px, 86%); margin: 0 auto; padding-top: var(--space-5); }
+  .list { transition: opacity 400ms ease; }
+  .list.fading { opacity: 0; }
   .row, .arrive { padding-bottom: var(--space-2); }
   .card {
     background: var(--surface); border-radius: var(--radius-sm); box-shadow: var(--shadow); border: var(--card-border, 0);

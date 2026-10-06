@@ -24,8 +24,8 @@
    *
    * After the questions, the window grows and turns into a short tour of how
    * thicket works: one screen per thing in the menu, each with a picture of
-   * it that plays once. Skip leaves the tour from any of them and lands where
-   * the last one would.
+   * it that plays on a loop. Skip this tour leaves from any of them and
+   * lands where the last one would.
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
@@ -129,7 +129,7 @@
           {/key}
         </div>
         <footer class="tourfoot">
-          <span class="skip">{#if !last}<button type="button" class="link" onclick={() => leave(true)}>Skip</button>{/if}</span>
+          <span class="skip">{#if !last}<button type="button" class="link" onclick={() => leave(true)}>Skip this tour</button>{/if}</span>
           <span class="dots">
             {#each INTRO as s, i (s.key)}
               <button type="button" class="dot" class:on={step === tourStart + i} aria-label={s.title} aria-current={step === tourStart + i ? 'step' : undefined} onclick={() => (step = tourStart + i)}></button>
