@@ -30,7 +30,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { api } from '$lib/api';
+  import { api, authApi } from '$lib/api';
   import { display, markConfigured, setDisplay, APPEARANCES, READING_MODES } from '$lib/display.svelte';
   import Tiles from './Tiles.svelte';
   import ThemePicker from './ThemePicker.svelte';
@@ -73,7 +73,9 @@
     { key: 'intro-collections', items: [{ icon: MENU_ICONS.collections, label: 'Collections' }], title: 'Read one topic at a time', lead: 'Group your feeds into collections, like Cooking or Tech, and read just that topic. Share a collection, and others can copy it to follow the same feeds.' },
     { key: 'intro-profile', items: [{ icon: MENU_ICONS.profile, label: 'Profile' }], title: 'Your corner of thicket', lead: 'This is the page other people see. You decide who sees each part of it: anyone, people you follow, or only you.' }
   ];
-  const STEPS: { key: string; title: string; lead: string; items?: { icon: string; label: string; accent?: boolean }[] }[] = $derived([...(withImport ? [IMPORT] : []), ...DISPLAY, ...INTRO]);
+  /** The tour shows once per account: decided when setup opens, so recording it partway can't reshuffle the steps. */
+  let withTour = $state(false);
+  const STEPS: { key: string; title: string; lead: string; items?: { icon: string; label: string; accent?: boolean }[] }[] = $derived([...(withImport ? [IMPORT] : []), ...DISPLAY, ...(withTour ? INTRO : [])]);
   const current = $derived(STEPS[step]);
   const touring = $derived(current.key.startsWith('intro-'));
   const tourStart = $derived(STEPS.length - INTRO.length);
@@ -93,16 +95,18 @@
   $effect(() => {
     if (!import.meta.env.DEV || !page.url.searchParams.has('setup') || open || reopenedFor === page.url.href) return;
     reopenedFor = page.url.href;
-    start();
+    start(true);
   });
 
   /** Between asking to open and the dialog showing, so the two ways in can't both open it. */
   let starting = false;
 
-  function start() {
+  /** `again`: the dev reopening, which includes the tour even for an account that has seen it, so it can be reviewed. */
+  function start(again = false) {
     if (starting || open) return;
     starting = true;
     step = 0;
+    withTour = again || !session.user?.tourSeenAt;
     markConfigured();
     welcome.open = true;
     // Ask about importing on a new account, or when nothing is followed yet.
@@ -124,8 +128,13 @@
   const leave = (skipped: boolean) => finish(importing ? 'review' : 'done', skipped);
 
   function finish(how: 'done' | 'dismissed' | 'advanced' | 'review', skipped = false) {
-    const intro = !touring ? 'not reached' : skipped ? 'skipped' : last && how !== 'dismissed' ? 'finished' : 'left';
+    const intro = !withTour ? 'already seen' : !touring ? 'not reached' : skipped ? 'skipped' : last && how !== 'dismissed' ? 'finished' : 'left';
     api.event('display_setup_closed', { how, step: current.key, withImport, intro });
+    // Reaching the tour and leaving it any way at all counts as seeing it.
+    if (touring && session.user && !session.user.tourSeenAt) {
+      session.user.tourSeenAt = new Date().toISOString();
+      authApi.tourSeen();
+    }
     open = false;
     welcome.open = false;
     welcome.copied = null;

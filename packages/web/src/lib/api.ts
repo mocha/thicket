@@ -383,6 +383,8 @@ export type Me = {
   hideShortsByDefault: boolean;
   /** When my profile picture was last set, or null for none. The UI hangs a ?v= off it so a change shows at once. */
   avatarUpdatedAt: string | null;
+  /** When the setup tour was finished, skipped, or closed, or null if it hasn't been seen (issue #172). Shown once per account. */
+  tourSeenAt: string | null;
   /**
    * readthicket.com only: where password-reset links go, and when it was confirmed
    * (null = waiting on the link). `pendingEmail` is a new address waiting on its
@@ -418,6 +420,17 @@ export const authApi = {
   login: (handle: string, password: string) => j<Me>('/api/auth/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   logout: () => j<void>('/api/auth/logout', { method: 'POST' }),
   update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'activityVisibility' | 'notesFrom' | 'trackActivity' | 'hideShortsByDefault'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
+  /**
+   * Record that the setup tour was seen, so no device shows it again. Sent
+   * while setup may be navigating away, so it outlives the page. A failure
+   * only means another device may show the tour once more; it's logged for
+   * support rather than shown.
+   */
+  tourSeen: () => {
+    void fetch('/api/auth/me/tour', { method: 'POST', keepalive: true })
+      .then((r) => { if (!r.ok) console.error(`Couldn't record that the setup tour was seen: ${r.status} ${r.statusText}`); })
+      .catch((e) => console.error("Couldn't record that the setup tour was seen:", e));
+  },
   changePassword: (current: string, next: string) => j<void>('/api/auth/me/password', { method: 'POST', body: JSON.stringify({ current, next }) }),
   /** readthicket.com only, like the four below. `sent: false` means the address saved but the confirmation didn't go out; `error` says so. */
   setEmail: (email: string, password: string) => j<{ me: Me; sent: boolean; error?: string }>('/api/auth/me/email', { method: 'PUT', body: JSON.stringify({ email, password }) }),

@@ -183,6 +183,13 @@
       "when": 1791240445067,
       "tag": "0025_feed_requires_subscription",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791298680319,
+      "tag": "0026_tour_seen_at",
+      "breakpoints": true
     }
   ]
 }
