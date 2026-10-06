@@ -221,8 +221,10 @@
     welcome.open = false;
     welcome.copied = null;
     dialog?.close();
-    // Once a file has been read, every way out leads to choosing its feeds.
-    if (importing) void goto('/import');
+    // Once a file has been picked, every way out leads to choosing its feeds,
+    // even while it's still being read: the import page picks up the reading
+    // and shows the feeds when it finishes.
+    if (importing || (withImport && imp.busy)) void goto('/import');
     else if (how === 'advanced') void goto('/settings#display');
   }
 </script>
