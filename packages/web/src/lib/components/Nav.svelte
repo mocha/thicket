@@ -120,7 +120,7 @@
 
 {#snippet row(c: { id: number; name: string; slug: string })}
   {@const b = fresh ? badge(marks.byId[c.id]) : { kind: 'none' as const }}
-  <a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined} class:new={b.kind !== 'none'}><span class="name">{c.name}</span>{#if b.kind === 'count'}<Badge tone="accent">{b.text}</Badge>{:else if b.kind === 'dot'}<Badge variant="dot" class="inrow" title={b.title} />{/if}</a>
+  <a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined} class:new={b.kind !== 'none'}><span class="name">{c.name}</span>{#if b.kind === 'count'}<Badge tone="accent">{b.text}</Badge>{/if}</a>
 {/snippet}
 
 {#snippet icon(d: string)}
@@ -300,8 +300,6 @@
   /* Pinned to the corner of a tab's icon; the dot itself is a Badge. The offsets
      are optical, set against the icon's own shape rather than the spacing scale. */
   .ic :global(.pin) { position: absolute; top: -1px; right: -5px; }
-  /* Sitting inline before a collection's name, where it needs no ring to lift it. */
-  nav :global(.inrow) { box-shadow: none; margin-right: var(--space-1); }
   li.you > .tab[aria-expanded='true'] .mono { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   /* Desktop: the sidebar. A phone turned on its side can be wider than 900px
@@ -319,7 +317,6 @@
     nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
     /* A row like the ones below it, in the accent color, its circle drawn a touch finer than their icons, so it reads as the one action in a list of places. */
     nav:not(.paged) .addfeed { display: flex; flex: none; align-items: center; gap: var(--space-3); margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
-    nav:not(.paged) .addfeed:hover { background: var(--surface-2); }
     /* The same accent ring, drawn just inside, as the rows below it. */
     nav:not(.paged) .addfeed:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
     nav:not(.paged) .long { display: inline; }
@@ -328,7 +325,6 @@
     nav:not(.paged) ul { flex-direction: column; height: auto; /* 2px is an optical hairline between rows, not spacing. */ gap: 2px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     nav:not(.paged) li { flex: none; }
     nav:not(.paged) li > a { flex-direction: row; justify-content: flex-start; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); white-space: normal; }
-    nav:not(.paged) li > a:hover { background: var(--surface-2); }
     nav:not(.paged) li > a[aria-current='page'] { background: var(--surface-2); color: var(--text); font-weight: 600; }
     nav:not(.paged) li.admin { display: block; margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 
@@ -338,13 +334,13 @@
     nav:not(.paged) li.notifs :global(.tail) { margin-left: auto; }
     /* Breathing room under the expanded list only; collapsed, the row spaces like its neighbors. */
     nav:not(.paged) li.collections .cols { margin-bottom: var(--space-2); }
-    /* "My collections": a header you can click to fold the list away. Looks like a row, reads like a heading. */
+    /* "Collections": a row you can click to fold the list away. */
     /* One row, two things to press: the word is a link, the caret folds the list. */
-    nav:not(.paged) .heading { display: flex; align-items: center; width: 100%; border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); }
-    nav:not(.paged) .heading:hover, nav:not(.paged) .heading.current { background: var(--surface-2); }
+    /* Styled like its neighbors, so it only looks current on the Collections screen. */
+    nav:not(.paged) .heading { display: flex; align-items: center; width: 100%; border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
+    nav:not(.paged) .heading.current { background: var(--surface-2); color: var(--text); font-weight: 600; }
     nav:not(.paged) .headlink { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0 var(--space-2) var(--space-3); border-radius: var(--radius-sm); color: inherit; }
     nav:not(.paged) .groupcaret { flex: none; display: grid; place-items: center; width: 32px; align-self: stretch; margin-right: var(--space-1); border-radius: var(--radius-sm); color: var(--text-3); }
-    nav:not(.paged) .groupcaret:hover { color: var(--text); }
     /* The Everything row is a normal-height row: undo the full-height stretch the bottom-bar tabs use. */
     nav:not(.paged) .readall { height: auto; }
     /* It carries the whole stream's "what's new" count, pushed to the row's end. */
@@ -355,23 +351,28 @@
     nav:not(.paged) .cols li.parent { display: flex; align-items: center; /* 2px is an optical gap: the caret tucks against the name. */ gap: 2px; }
     nav:not(.paged) .cols li.parent > a { flex: 1; min-width: 0; }
     nav:not(.paged) .cols .caret { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: var(--radius-sm); color: var(--text-3); }
-    nav:not(.paged) .cols .caret:hover { background: var(--surface-2); color: var(--text); }
     nav:not(.paged) .cols li.child > a { padding-left: var(--space-5); }
     nav:not(.paged) .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* Something new: the name goes bold, the count or dot sits beside it. Bold reads in grayscale where a color would not. */
     nav:not(.paged) .cols a.new .name { font-weight: 500; color: var(--text); }
 
     nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: var(--space-2); width: 100%; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
-    nav:not(.paged) .cols .new button:hover { background: var(--surface-2); }
     nav:not(.paged) .plus { font-size: calc(var(--text-base) * var(--size-app)); line-height: 1; width: 10px; }
 
     nav:not(.paged) .account { display: flex; flex: none; align-items: center; gap: var(--space-1); padding: var(--space-3) 0 var(--space-4); border-top: 1px solid var(--line); background: var(--bg); }
     nav:not(.paged) .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); text-align: left; }
-    nav:not(.paged) .who:hover { background: var(--surface-2); }
     nav:not(.paged) .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
     nav:not(.paged) .dn { font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     nav:not(.paged) .h { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     nav:not(.paged) .who .chev { flex: none; margin-left: auto; display: flex; color: var(--text-3); }
+
+    /* Hover shading only where there's a mouse. A tap on a touchscreen leaves
+       hover stuck on, so the row you last tapped stays shaded like the current page. */
+    @media (hover: hover) {
+      nav:not(.paged) .addfeed:hover, nav:not(.paged) li > a:hover, nav:not(.paged) .heading:hover,
+      nav:not(.paged) .cols .caret:hover, nav:not(.paged) .cols .new button:hover, nav:not(.paged) .who:hover { background: var(--surface-2); }
+      nav:not(.paged) .groupcaret:hover, nav:not(.paged) .cols .caret:hover { color: var(--text); }
+    }
 
     /* The drag handle: an 8px strip along the sidebar's edge. The edge's own
        hairline turns accent while you hover, drag, or tab to it. */

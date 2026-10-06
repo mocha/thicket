@@ -97,14 +97,14 @@ export function toggleNavOpen(id: number) {
 }
 
 /**
- * Whether the sidebar's "My collections" group is unfolded. Kept on this
- * device like the per-group state above. Open by default: the collections are
- * the point of the list, so we show them until you fold them away.
+ * Whether the sidebar's Collections group is unfolded. Kept on this device
+ * like the per-group state above. Collapsed by default, to keep the menu short
+ * until you open it.
  */
 const COLS_OPEN_KEY = 'thicket:nav-collections-open';
-export const collectionsOpen = $state<{ open: boolean }>({ open: true });
+export const collectionsOpen = $state<{ open: boolean }>({ open: false });
 export function loadCollectionsOpen() {
-  try { const v = localStorage.getItem(COLS_OPEN_KEY); if (v !== null) collectionsOpen.open = v === '1'; } catch { /* open, then */ }
+  try { const v = localStorage.getItem(COLS_OPEN_KEY); if (v !== null) collectionsOpen.open = v === '1'; } catch { /* collapsed, then */ }
 }
 export function toggleCollectionsOpen() {
   collectionsOpen.open = !collectionsOpen.open;
