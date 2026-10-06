@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * The tour's Profile picture: your own profile page in miniature, as you see
-   * it, with your name and a drawn person at the top and each section's "Who sees
+   * it, with your name and a line drawing of a reader at the top and each section's "Who sees
    * this" strip under its heading. Collections changes to People I follow;
    * Bookmarks starts below it, fading out, so the page reads as going on.
    */
@@ -16,16 +16,34 @@
 <SceneLoop round={7000}>
   <div class="page">
     <div class="who">
-      <!-- A drawn person, not your real picture: the picture stands for anyone's profile. -->
-      <svg class="pic" viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
-        <rect width="40" height="40" rx="10" fill="color-mix(in srgb, var(--accent) 20%, var(--surface))" />
-        <path d="M7 40c0-8.5 5.8-12.6 13-12.6S33 31.5 33 40z" fill="var(--accent)" />
-        <rect x="17.7" y="22" width="4.6" height="6.4" rx="2.2" fill="var(--surface)" stroke="var(--text)" stroke-opacity="0.15" />
-        <circle cx="20" cy="17.2" r="7.4" fill="var(--surface)" stroke="var(--text)" stroke-opacity="0.15" />
-        <path d="M12.5 16.6c-.2-5.2 3.3-8.4 7.7-8.4 4.7 0 7.7 3.3 7.4 7.8-3-.1-6.4-1.3-8.7-3.6-1.3 2.2-3.6 3.8-6.4 4.2z" fill="var(--text)" fill-opacity="0.78" />
-        <circle cx="17.3" cy="18" r="0.85" fill="var(--text)" />
-        <circle cx="22.7" cy="18" r="0.85" fill="var(--text)" />
-        <path d="M17.8 20.9c1.3 1 3.1 1 4.4 0" fill="none" stroke="var(--text)" stroke-width="1.1" stroke-linecap="round" />
+      <!-- A drawn reader, not your real picture: ink lines in the theme's own text color, the book in its accent. -->
+      <svg class="pic" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true">
+        <defs><clipPath id="intro-pic"><circle cx="32" cy="32" r="31" /></clipPath></defs>
+        <circle cx="32" cy="32" r="31" fill="var(--surface)" />
+        <g clip-path="url(#intro-pic)" fill="none" stroke="var(--text)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <g transform="translate(0 -3)"><!-- the whole figure sits a little high, so the book clears the frame -->
+            <g transform="translate(0 -2)"><!-- body and book, up to a short neck -->
+              <path d="M9 66c0-15 10-24.5 23-24.5S55 51 55 66" fill="var(--surface)" />
+              <path d="M27.4 41.8l4.6 4.4 4.6-4.4" />
+              <path d="M17 51.2l15 3.2 15-3.2v10.4l-15 3.2-15-3.2z" fill="var(--accent-tint)" stroke="var(--accent)" />
+              <path d="M32 54.4v10.4" stroke="var(--accent)" />
+              <path d="M20.4 55.2l8 1.7M20.4 58.2l8 1.7M35.6 56.9l8-1.7M35.6 59.9l8-1.7" stroke="var(--accent)" stroke-width="0.9" />
+              <path d="M17 57.6c-2.2-.3-3-3-1.3-4.6M47 57.6c2.2-.3 3-3 1.3-4.6" />
+            </g>
+            <path d="M29.2 34.4v5.2M34.8 34.4v5.2" />
+            <path d="M23.5 25.6c-1.7-.1-2.4 2.8-.4 3.6M40.5 25.6c1.7-.1 2.4 2.8.4 3.6" />
+            <ellipse cx="32" cy="25.4" rx="8.6" ry="9.6" fill="var(--surface)" />
+            <path d="M23.5 24.6c-1-7.6 3.2-12.6 8.9-12.6 5.9 0 9.8 4.7 8.6 12.3" />
+            <path d="M24 20.4c4-.4 7.6-2.4 9.8-5.6 1.3 2.6 3.6 4.6 6.8 5.4" />
+            <path d="M28.4 13.6c-1 1.4-1.6 2.6-1.8 4" stroke-width="1" />
+            <circle cx="28.5" cy="26.2" r="2.6" stroke-width="1.1" />
+            <circle cx="35.5" cy="26.2" r="2.6" stroke-width="1.1" />
+            <path d="M31.1 26h1.8" stroke-width="1.1" />
+            <path d="M27.5 26.8c.6.4 1.4.4 2 0M34.5 26.8c.6.4 1.4.4 2 0" stroke-width="1" />
+            <path d="M30.6 31c.9.5 1.9.5 2.8 0" stroke-width="1.1" />
+          </g>
+        </g>
+        <circle cx="32" cy="32" r="31" fill="none" stroke="var(--line)" stroke-width="1.5" />
       </svg>
       <div class="names">
         <span class="dn">{name}</span>
