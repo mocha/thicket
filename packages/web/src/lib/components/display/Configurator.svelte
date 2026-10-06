@@ -69,7 +69,7 @@
     fonts: { title: 'Fonts', lead: 'Headlines, text, and the app can each have their own' },
     reading: { title: 'Opening a post', lead: 'Read here or on the post’s own site' },
     layout: { title: 'Scrolling or pages', lead: 'Scroll through posts, or turn a page at a time' },
-    fresh: { title: 'Unread posts', lead: 'A count of new posts beside each collection' }
+    fresh: { title: 'Unread posts', lead: 'A count of new posts beside New posts and each collection' }
   };
   const header = $derived(
     view === 'offer' ? { title: 'Use your saved settings?', lead: 'These are the settings you saved on another device' }
