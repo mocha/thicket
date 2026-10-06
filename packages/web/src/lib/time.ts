@@ -87,6 +87,19 @@ export function savedHref(url: string | null | undefined): string | null {
   return webHref(url);
 }
 
+/**
+ * The rel for a link a person put here rather than one thicket found: a saved
+ * bookmark's address, a profile's homepage (issue #137; links in notes get the
+ * same in lib/markdown.ts). `nofollow ugc` tells search engines it earns no
+ * credit, so an account made just to plant links gains nothing. `noopener`
+ * stays, plus anything in `extra` (e.g. `me`). A post's own page here is ours,
+ * so it gets no nofollow.
+ */
+export function ugcRel(href: string | null | undefined, extra = ''): string {
+  const own = !!href && href.startsWith('/');
+  return ['noopener', extra, own ? '' : 'nofollow ugc'].filter(Boolean).join(' ');
+}
+
 export function hostOf(url: string | null): string {
   if (!url) return '';
   try {
