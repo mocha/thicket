@@ -56,7 +56,7 @@ export const ENDPOINTS: Endpoint[] = [
   { method: "POST", path: "/api/feeds", tag: "Feeds", summary: "Follow a feed by address. Give a site's page or its feed; thicket finds the feed. Answers `subscribed`, `choose` (several candidates to pick from) or `none`.", body: { url: "The address of a site or a feed.", "collectionId?": "The collection to put it in. Default: my first collection.", "collectionIds?": "Several collections to put it in." } },
   { method: "GET", path: "/api/feeds/:id", tag: "Feeds", summary: "One feed, with its stats and which of my collections hold it." },
   { method: "GET", path: "/api/feeds/:id/icon", tag: "Feeds", summary: "The feed's site icon, or 404 if it has none.", produces: "image/*" },
-  { method: "GET", path: "/api/feeds/:id/icon.png", tag: "Feeds", summary: "The feed's site icon as a PNG (at most 512px), or 404 if it has none or it can't be converted.", produces: "image/png" },
+  { method: "GET", path: "/api/feeds/:id/icon.png", tag: "Feeds", summary: "The feed's site icon padded to a 512px square PNG, or a redirect to the instance logo if missing or unconvertible.", produces: "image/png" },
   { method: "POST", path: "/api/feeds/:id/icon/refresh", tag: "Feeds", summary: "Look for the feed's site icon again." },
   { method: "POST", path: "/api/feeds/:id/refresh", tag: "Feeds", summary: "Fetch the feed now. Answers 429 with `retryAfterS` if it was fetched in the last five minutes." },
   { method: "PUT", path: "/api/feeds/:id/settings", tag: "Feeds", summary: "My own settings for a feed: the name I see it under, and whether YouTube Shorts are left out.", body: { "displayName?": "My name for the feed, or null for its own.", "hideShorts?": "true to hide Shorts, false to show them, null to follow my default." } },
