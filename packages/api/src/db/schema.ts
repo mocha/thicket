@@ -20,6 +20,7 @@ import {
   primaryKey, uniqueIndex, index, pgEnum, customType, type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import type { SavedDisplay } from "../lib/display.js";
 
 export const feedKind = pgEnum("feed_kind", ["rss", "atom", "json", "rdf", "unknown"]);
 
@@ -91,6 +92,27 @@ export const users = pgTable("users", {
    * seen it.
    */
   tourSeenAt: timestamp("tour_seen_at", { withTimezone: true }),
+  /**
+   * Display settings to offer a device that hasn't been set up (issue #186).
+   * How thicket looks stays per device; this is one saved copy, replaced
+   * whole, and only by deliberate actions: finishing a new account's first
+   * setup, "Use these on new devices" in Settings, or saying yes to the
+   * one-time offer. Checked strictly on the way in (lib/display.ts).
+   */
+  savedDisplay: jsonb("saved_display").$type<SavedDisplay>(),
+  /**
+   * When the one-time offer to save this device's settings was answered,
+   * yes or no. Null on accounts from before saved settings existed, which is
+   * what makes them see it; new accounts start answered.
+   */
+  displayOfferAnsweredAt: timestamp("display_offer_answered_at", { withTimezone: true }),
+  /**
+   * A new account whose first setup hasn't been saved yet. Set only when the
+   * account is created, cleared once anything is saved. Separate from the
+   * offer answer because a new account and an old one that said no would
+   * otherwise look the same.
+   */
+  saveFirstDisplay: boolean("save_first_display").notNull().default(false),
   /**
    * How far down Notifications I have looked (issue #184): anything newer is
    * "new" and counts toward the sidebar bubble. Notifications themselves are

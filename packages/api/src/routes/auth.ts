@@ -14,6 +14,7 @@ import {
   handleProblem, hashPassword, normalizeHandle, verifyPassword, trackingEnabled,
 } from "../lib/auth.js";
 import { HOSTED } from "../lib/config.js";
+import { parseSavedDisplay } from "../lib/display.js";
 import { consumeInvite, findUsableInvite, publicStatus, signupPolicy, siteName } from "../lib/instance.js";
 import { cleanEmail, looksLikeEmail, messages, send } from "../lib/mail.js";
 import { issueToken, pendingEmail, takeToken } from "../lib/email-tokens.js";
@@ -34,7 +35,7 @@ async function me(userId: number) {
   const { passwordHash, ...rest } = u;
   return {
     ...rest, hasPassword: !!passwordHash, createdAt: u.createdAt.toISOString(), claimVerifiedAt: u.claimVerifiedAt?.toISOString() ?? null,
-    emailConfirmedAt: u.emailConfirmedAt?.toISOString() ?? null, tourSeenAt: u.tourSeenAt?.toISOString() ?? null, pendingEmail: await pendingEmail(u.id, u.emailConfirmedAt ? u.email : null),
+    emailConfirmedAt: u.emailConfirmedAt?.toISOString() ?? null, tourSeenAt: u.tourSeenAt?.toISOString() ?? null, displayOfferAnsweredAt: u.displayOfferAnsweredAt?.toISOString() ?? null, pendingEmail: await pendingEmail(u.id, u.emailConfirmedAt ? u.email : null),
     avatarUpdatedAt: avatar?.updatedAt.toISOString() ?? null, instanceTracking: trackingEnabled(),
   };
 }
@@ -165,6 +166,34 @@ auth.patch("/me", async (c) => {
 auth.post("/me/tour", async (c) => {
   const user = currentUser(c);
   await db.update(schema.users).set({ tourSeenAt: new Date() }).where(and(eq(schema.users.id, user.id), isNull(schema.users.tourSeenAt)));
+  return c.body(null, 204);
+});
+
+/**
+ * Save display settings to offer new devices (issue #186), replacing any saved
+ * before. The web app calls this only on purpose: a new account's first setup,
+ * "Use these on new devices", or yes to the one-time offer. Saving also counts
+ * as answering that offer, and ends a new account's "save my first setup".
+ * A refusal says what was wrong and is logged, so support can see it too.
+ */
+auth.put("/me/display", async (c) => {
+  const user = currentUser(c);
+  const body = await c.req.json<{ settings?: unknown }>().catch(() => ({} as { settings?: unknown }));
+  const parsed = parseSavedDisplay(body.settings);
+  if (!parsed.ok) {
+    console.warn(`[display] refused saved settings for user ${user.id}: ${parsed.error}`);
+    return c.json({ error: `Those settings couldn’t be saved: ${parsed.error}.` }, 400);
+  }
+  await db.update(schema.users)
+    .set({ savedDisplay: parsed.value, saveFirstDisplay: false, displayOfferAnsweredAt: sql`coalesce(${schema.users.displayOfferAnsweredAt}, now())` })
+    .where(eq(schema.users.id, user.id));
+  return c.json(await me(user.id));
+});
+
+/** Record a no to the one-time offer to save this device's settings, so it doesn't come back. The first answer stands. */
+auth.post("/me/display-offer", async (c) => {
+  const user = currentUser(c);
+  await db.update(schema.users).set({ displayOfferAnsweredAt: new Date() }).where(and(eq(schema.users.id, user.id), isNull(schema.users.displayOfferAnsweredAt)));
   return c.body(null, 204);
 });
 
