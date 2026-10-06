@@ -18,7 +18,7 @@
   <div class="page">
     <div class="who">
       <!-- A hand-drawn person, not your real picture: the picture stands for anyone's profile. -->
-      <img class="pic" src="/intro/reader.webp" alt="" width="52" height="52" />
+      <img class="pic" src="/intro/reader.webp?v=3" alt="" width="52" height="52" />
       <div class="names">
         <span class="dn">{name}</span>
         {#if me}<span class="h">@{me.handle}</span>{/if}
