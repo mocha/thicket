@@ -74,7 +74,7 @@
   const header = $derived(
     view === 'offer' ? { title: 'Use your saved settings?', lead: 'These are the settings you saved on another device' }
     : view === 'import' ? { title: 'Import your feeds', lead: 'Coming from another reader?' }
-    : view === 'list' ? { title: 'How thicket looks', lead: 'Change any setting, or keep them as they are' }
+    : view === 'list' ? { title: 'Set up your device', lead: 'You can update your choices at any time in Settings' }
     : view === 'tour' ? { title: '', lead: '' }
     : SETTINGS[view]
   );
@@ -280,7 +280,6 @@
       {:else}
       <header>
         {#if welcome.copied && (view === 'import' || (view === 'list' && !withImport))}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
-        {#if view !== 'offer'}<p class="eyebrow">{withImport ? 'Get started' : 'Set up this device'}</p>{/if}
         <h2 id="setup-title" tabindex="-1" bind:this={heading}>{header.title}</h2>
         <p class="lead">{header.lead}</p>
       </header>
@@ -357,7 +356,6 @@
   }
   header { padding: var(--space-5) var(--space-5) 0; }
   .copied { margin-bottom: var(--space-4); }
-  .eyebrow { margin: 0 0 var(--space-1); font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); font-weight: 600; }
   h2:focus { outline: none; }
   .rows { display: flex; flex-direction: column; }
   h2 { margin: 0; font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; }
