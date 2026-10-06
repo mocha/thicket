@@ -4,8 +4,9 @@
  * at least one of the user's collections. Unfollowing removes it from all of
  * them and never touches the shared index.
  */
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import sharp from "sharp";
 import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { subscribe, addFeedToCollection, defaultCollectionFor } from "../lib/subscribe.js";
@@ -15,6 +16,7 @@ import { isHttpUrl, normalizeFeedUrl } from "../feeds/normalize.js";
 import { refreshIcon } from "../feeds/icons.js";
 import { isYouTubeUrl, YOUTUBE_FEED_PATTERN } from "../feeds/youtube.js";
 import { feedSlugSql } from "../lib/slug.js";
+import { PUBLIC_URL } from "../lib/config.js";
 
 export const feeds = new Hono();
 
@@ -298,18 +300,41 @@ feeds.delete("/:id/block", async (c) => {
   return c.json({ feedId, blocked: false });
 });
 
-/** Cached site icon. Long-lived cache headers; the URL is stable per feed and the bytes change at most monthly. */
-feeds.get("/:id/icon", async (c) => {
+/**
+ * Cached site icon. Long-lived cache headers; the URL is stable per feed and the bytes change at most monthly.
+ * icon.png pads the icon to a square PNG for link previews (lib/meta.ts). Header sniffing during
+ * discovery does not guarantee decoding will work; missing or broken icons redirect to the logo.
+ */
+feeds.get("/:id/icon", (c) => serveIcon(c, false));
+feeds.get("/:id/icon.png", (c) => serveIcon(c, true));
+
+async function serveIcon(c: Context, png: boolean) {
   const id = Number(c.req.param("id"));
   const [icon] = await db.select().from(schema.feedIcons).where(eq(schema.feedIcons.feedId, id));
-  if (!icon) return c.body(null, 404);
-  const etag = `"${id}-${icon.fetchedAt.getTime()}"`;
-  if (c.req.header("if-none-match") === etag) return c.body(null, 304);
-  c.header("content-type", icon.contentType);
+  const fallback = () => {
+    // Retry on the next scrape: a missing or broken icon may later be refreshed.
+    c.header("cache-control", "no-store");
+    return c.redirect(`${PUBLIC_URL}/og-image.png`, 302);
+  };
+  if (!icon) return png ? fallback() : c.body(null, 404);
+  const etag = `"${id}-${icon.fetchedAt.getTime()}${png ? "-png-v2" : ""}"`;
+  let bytes: Buffer = icon.bytes;
+  if (png) {
+    try {
+      bytes = await sharp(icon.bytes, { limitInputPixels: 25_000_000 })
+        .resize(512, 512, { fit: "contain", withoutEnlargement: true, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .png().toBuffer();
+    } catch {
+      return fallback();
+    }
+  }
+  c.header("content-type", png ? "image/png" : icon.contentType);
   c.header("cache-control", "public, max-age=86400, stale-while-revalidate=604800");
   c.header("etag", etag);
-  return c.body(new Uint8Array(icon.bytes));
-});
+  // Only validate a PNG after decoding: a header-sniffed icon can still be corrupt.
+  if (c.req.header("if-none-match") === etag) return c.body(null, 304);
+  return c.body(new Uint8Array(bytes));
+}
 
 /** Re-run icon discovery for one feed now. */
 feeds.post("/:id/icon/refresh", async (c) => {
