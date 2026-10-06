@@ -20,7 +20,7 @@
 import { Hono } from "hono";
 import { sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { allowsSql } from "../lib/visibility.js";
+import { allowsSql, notARepeatCopy } from "../lib/visibility.js";
 import { myBookmarkIdSql } from "../lib/notes.js";
 
 export const search = new Hono();
@@ -321,8 +321,10 @@ async function searchCollections(q: string, viewerId: number | null, limit: numb
     ${fuzzy(q, "col.name")},
     (case when col.name ilike ${like} then 0.85 else 0 end)::real,
     (case when col.description ilike ${like} then 0.35 else 0 end)::real)`;
-  const readable = sql`col.parent_id is not null and (col.user_id = ${me} or (
-    u.profile_visibility = 'public' and ${allowsSql("col.visibility", "col.user_id", viewerId)} and ${allowsSql("u.collections_visibility", "u.id", viewerId)}))`;
+  const readableAs = (c: string, u: string) => sql`${sql.raw(c)}.parent_id is not null and (${sql.raw(c)}.user_id = ${me} or (
+    ${sql.raw(u)}.profile_visibility = 'public' and ${allowsSql(`${c}.visibility`, `${c}.user_id`, viewerId)} and ${allowsSql(`${u}.collections_visibility`, `${u}.id`, viewerId)}))`;
+  // My own copy always shows beside the original: same collection, two owners.
+  const readable = sql`${readableAs("col", "u")} and (col.user_id = ${me} or ${notARepeatCopy("col", readableAs)})`;
   const base = sql`
     with ${feedEvidence(q)}
     , cand as (
@@ -352,6 +354,7 @@ async function searchCollections(q: string, viewerId: number | null, limit: numb
     select s.id, s.name, s.slug, s.description, s.handle, s."displayName", s."feedCount",
            s.matches, s."matchingFeeds", s.last_match as "lastMatchAt", s.name_match as "nameMatch",
            s.user_id = ${me} as "isMine",
+           exists(select 1 from collections mine where mine.user_id = ${me} and mine.copied_from_id = s.id) as "copiedByMe",
            (select coalesce(json_agg(x), '[]'::json) from (
               select f.id, coalesce(cf.title_override, f.title) as title,
                      exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon"

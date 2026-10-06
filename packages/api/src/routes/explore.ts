@@ -8,6 +8,7 @@ import { Hono } from "hono";
 import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { getSetting } from "../lib/instance.js";
+import { notARepeatCopy } from "../lib/visibility.js";
 
 export const explore = new Hono();
 
@@ -18,10 +19,14 @@ explore.get("/collections", async (c) => {
   const network = c.req.query("network") === "1"; // only collections by people I follow
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 6)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
+  const listed = (c: string, u: string) => sql`${sql.raw(c)}.parent_id is not null and ${sql.raw(c)}.visibility = 'public'
+      and ${sql.raw(u)}.profile_visibility = 'public' and ${sql.raw(u)}.collections_visibility = 'public'
+      and exists(select 1 from collection_feeds cf where cf.collection_id = ${sql.raw(c)}.id)`;
   // Never my own, and never one I already copied: both are already on my shelf.
-  const where = [sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public' and u.collections_visibility = 'public'
-      and exists(select 1 from collection_feeds cf where cf.collection_id = col.id) and col.user_id <> ${viewerId}
-      and not exists(select 1 from collections mine where mine.user_id = ${viewerId} and mine.copied_from_id = col.id)`];
+  // A copy shows only when nothing it repeats is listed or mine.
+  const where = [sql`${listed("col", "u")} and col.user_id <> ${viewerId}
+      and not exists(select 1 from collections mine where mine.user_id = ${viewerId} and mine.copied_from_id = col.id)
+      and ${notARepeatCopy("col", (c, u) => sql`(${sql.raw(c)}.user_id = ${viewerId} or (${listed(c, u)}))`)}`];
   if (q) {
     const like = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
     where.push(sql`(col.name ilike ${like} or col.description ilike ${like})`);

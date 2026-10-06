@@ -67,3 +67,21 @@ export function allowedLevelsSql(level: string, who: Audience): SQL {
   if (who.isFriend) return sql`${lvl} in ('public', 'friends')`;
   return sql`${lvl} = 'public'`;
 }
+
+/**
+ * A copied collection is a separate row, but to a reader it is the same
+ * collection, so a list of other people's collections shows it once. A copy is
+ * left out when the reader can already see its original, or an earlier copy of
+ * the same original. Only when the original has gone private or been deleted
+ * does one copy stand in for it.
+ *
+ * `col` is the collection alias in the caller's query; `seen(c, u)` is that
+ * list's own "would this one be on the page" test for collection alias `c` and
+ * owner alias `u`, so each list keeps its own visibility rules.
+ */
+export function notARepeatCopy(col: string, seen: (c: string, u: string) => SQL): SQL {
+  const c = sql.raw(col);
+  return sql`(${c}.copied_from_id is null or not exists(
+    select 1 from collections rc join users ru on ru.id = rc.user_id
+    where (rc.id = ${c}.copied_from_id or (rc.copied_from_id = ${c}.copied_from_id and rc.id < ${c}.id)) and ${seen("rc", "ru")}))`;
+}
