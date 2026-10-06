@@ -21,7 +21,7 @@ const rss = `<?xml version="1.0"?><rss version="2.0"><channel><title>Example</ti
 
 const fakeDns = { lookup: async () => "203.0.113.7", asn: async () => 64500 };
 
-type Answer = number | [number, string] | [number, string, Record<string, string>];
+type Answer = number | Error | [number, string, Record<string, string>?, string?];
 
 /** Answer each address from `routes`, and record what was asked. An address not listed fails the test. */
 async function withSite<T>(routes: Record<string, Answer>, run: () => Promise<T>): Promise<{ result: T; asked: string[] }> {
@@ -33,8 +33,11 @@ async function withSite<T>(routes: Record<string, Answer>, run: () => Promise<T>
     asked.push(url);
     const r = routes[url];
     if (r === undefined) throw new Error(`unexpected request: ${url}`);
+    if (r instanceof Error) throw r;
     const [status, body, headers] = typeof r === "number" ? [r, "", {}] : [r[0], r[1], r[2] ?? {}];
-    return new Response(body, { status, headers: { "content-type": body.startsWith("<?xml") ? "application/rss+xml" : "text/html", ...headers } });
+    const response = new Response(body, { status, headers: { "content-type": body.startsWith("<?xml") ? "application/rss+xml" : "text/html", ...headers } });
+    if (typeof r !== "number" && r[3]) Object.defineProperty(response, "url", { value: r[3] });
+    return response;
   }) as typeof fetch;
   try {
     return { result: await run(), asked };
@@ -50,6 +53,110 @@ test("the front page is only asked about addresses deeper in the site", () => {
   assert.equal(frontPage("https://www.example.com/?p=12"), FRONT);
   assert.equal(frontPage(FRONT), null);
   assert.equal(frontPage("https://www.example.com"), null);
+});
+
+test("a 401 article also succeeds through an advertised feed", async () => {
+  const { result, asked } = await withSite({ [ARTICLE]: 401, [FRONT]: [200, frontHtml], [FEED]: [200, rss] }, () => discover(ARTICLE));
+  assert.equal(result.status, "feed");
+  assert.deepEqual(asked, [ARTICLE, FRONT, FEED]);
+});
+
+test("a query-based article falls back without retaining its query", async () => {
+  const article = "https://www.example.com?p=12";
+  const { result, asked } = await withSite({ [article]: 403, [FRONT]: [200, frontHtml], [FEED]: [200, rss] }, () => discover(article));
+  assert.equal(result.status, "feed");
+  assert.deepEqual(asked, [article, FRONT, FEED]);
+});
+
+test("multiple advertised feeds return a chooser without fetching or probing", async () => {
+  const html = frontHtml.replace("</head>", '<link rel="alternate" type="application/atom+xml" href="https://feeds.example.net/atom"></head>');
+  const { result, asked } = await withSite({ [ARTICLE]: 403, [FRONT]: [200, html] }, () => discover(ARTICLE));
+  assert.equal(result.status, "candidates");
+  assert.equal(result.status === "candidates" && result.candidates.length, 2);
+  assert.deepEqual(asked, [ARTICLE, FRONT]);
+});
+
+test("a redirected front page resolves relative feed links against its final address", async () => {
+  const feed = "https://other.example/blog/feed/";
+  const html = frontHtml.replace('href="/feed/"', 'href="feed/"');
+  const { result, asked } = await withSite({ [ARTICLE]: 403, [FRONT]: [200, html, {}, "https://other.example/blog/"], [feed]: [200, rss] }, () => discover(ARTICLE));
+  assert.equal(result.status === "feed" && result.url, feed);
+  assert.deepEqual(asked, [ARTICLE, FRONT, feed]);
+});
+
+test("a front page which is itself a feed is accepted", async () => {
+  const { result, asked } = await withSite({ [ARTICLE]: 403, [FRONT]: [200, rss] }, () => discover(ARTICLE));
+  assert.equal(result.status, "feed");
+  assert.deepEqual(asked, [ARTICLE, FRONT]);
+});
+
+test("front-page HTTP errors and network errors retain the original block", async () => {
+  for (const answer of [404, 500, new TypeError("fetch failed")]) {
+    const { result: err, asked } = await withSite({ [ARTICLE]: 401, [FRONT]: answer }, () => settle(discover(ARTICLE)));
+    assert.ok(err instanceof BadStatus && err.status === 401);
+    assert.deepEqual(asked, [ARTICLE, FRONT]);
+  }
+});
+
+test("article server errors do not cause front-page requests", async () => {
+  for (const status of [500, 503]) {
+    const { result: err, asked } = await withSite({ [ARTICLE]: status }, () => settle(discover(ARTICLE)));
+    assert.ok(err instanceof BadStatus && err.status === status);
+    assert.deepEqual(asked, [ARTICLE]);
+  }
+});
+
+test("a malformed advertised feed retains the original block without probing", async () => {
+  const { result: err, asked } = await withSite({ [ARTICLE]: 403, [FRONT]: [200, frontHtml], [FEED]: [200, "not a feed"] }, () => settle(discover(ARTICLE)));
+  assert.ok(err instanceof BadStatus && err.status === 403);
+  assert.deepEqual(asked, [ARTICLE, FRONT, FEED]);
+});
+
+test("an advertised feed's 429 is reported and its host remains paused", async () => {
+  const { result, asked } = await withSite({ [ARTICLE]: 403, [FRONT]: [200, frontHtml], [FEED]: [429, "", { "retry-after": "600" }] }, async () => ({
+    err: await settle(discover(ARTICLE)),
+    again: await settle(discover(ARTICLE)),
+  }));
+  assert.ok(result.again instanceof HostCoolingDown);
+  assert.deepEqual(asked, [ARTICLE, FRONT, FEED]);
+  assert.ok(result.err instanceof BadStatus && result.err.status === 429);
+});
+
+test("an advertised feed with an error status is never accepted even if its body parses", async () => {
+  for (const status of [401, 403, 404, 500, 429]) {
+    const { result: err, asked } = await withSite({ [ARTICLE]: 403, [FRONT]: [200, frontHtml], [FEED]: [status, rss] }, () => settle(discover(ARTICLE)));
+    assert.deepEqual(asked, [ARTICLE, FRONT, FEED]);
+    assert.ok(err instanceof BadStatus);
+    assert.equal(err.status, status === 429 ? 429 : 403);
+  }
+});
+
+test("a healthy article's advertised feed rate limit also stops discovery", async () => {
+  const { result: err, asked } = await withSite({ [ARTICLE]: [200, frontHtml], [FEED]: [429, rss] }, () => settle(discover(ARTICLE)));
+  assert.ok(err instanceof BadStatus && err.status === 429);
+  assert.deepEqual(asked, [ARTICLE, FEED]);
+});
+
+test("a healthy article still probes after an advertised feed returns an error", async () => {
+  const probe = "https://www.example.com/feed";
+  const { result, asked } = await withSite({ [ARTICLE]: [200, frontHtml], [FEED]: [500, rss.replace("<title>Example", "<title>Error")], [probe]: [200, rss] }, () => discover(ARTICLE));
+  assert.equal(result.status === "feed" && result.url, probe);
+  assert.deepEqual(asked, [ARTICLE, FEED, probe]);
+});
+
+test("a redirected blocked article uses the final site's front page", async () => {
+  const finalArticle = "https://canonical.example/2026/article/";
+  const finalFront = "https://canonical.example/";
+  const feed = "https://canonical.example/feed/";
+  const { result, asked } = await withSite({ [ARTICLE]: [403, "", {}, finalArticle], [finalFront]: [200, frontHtml], [feed]: [200, rss] }, () => discover(ARTICLE));
+  assert.equal(result.status, "feed");
+  assert.deepEqual(asked, [ARTICLE, finalFront, feed]);
+});
+
+test("an article redirected to a blocked front page does not fetch it again", async () => {
+  const { result: err, asked } = await withSite({ [ARTICLE]: [403, "", {}, "https://canonical.example/"] }, () => settle(discover(ARTICLE)));
+  assert.ok(err instanceof BadStatus && err.status === 403);
+  assert.deepEqual(asked, [ARTICLE]);
 });
 
 test("an article that turns feed readers away is followed through its site's front page", async () => {

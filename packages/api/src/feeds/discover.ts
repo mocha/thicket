@@ -164,8 +164,8 @@ export async function discover(input: string): Promise<Discovery> {
   // Some sites turn feed readers away from their articles but not from their
   // front page, which is where the feed is advertised anyway (#213). Ask the
   // front page once; if that's turned away too, the first answer stands.
-  const blocked = BLOCKED.has(res.status) ? new BadStatus(`HTTP ${res.status} fetching ${url}`, res.status) : null;
-  const front = blocked && frontPage(url);
+  const blocked = BLOCKED.has(res.status) ? new BadStatus(`HTTP ${res.status} fetching ${res.finalUrl}`, res.status) : null;
+  const front = blocked && frontPage(res.finalUrl);
   if (front) res = (await askFrontPage(front)) ?? res;
   if (res.status >= 400) throw new BadStatus(`HTTP ${res.status} fetching ${res.finalUrl}`, res.status);
   // Reached from a blocked address: only what the front page advertises counts.
@@ -186,7 +186,10 @@ export async function discover(input: string): Promise<Discovery> {
   const advertised = extractFeedLinks(res.body, res.finalUrl);
   if (advertised.length === 1) {
     const one = await fetchFeed(advertised[0].url);
-    const parsed = one && tryParse(one.body, one.finalUrl);
+    // A rate limit stands even when discovery began with a different error.
+    // Other error responses cannot be feeds, however readable their bodies.
+    if (one?.status === 429) throw new BadStatus(`HTTP 429 fetching ${one.finalUrl}`, 429);
+    const parsed = one && one.status >= 200 && one.status < 300 && tryParse(one.body, one.finalUrl);
     if (one && parsed) return { status: "feed", url: normalizeFeedUrl(one.finalUrl), parsed, etag: one.headers.get("etag"), lastModified: one.headers.get("last-modified") };
   }
   if (advertised.length > 1) return { status: "candidates", pageUrl: res.finalUrl, candidates: advertised };
