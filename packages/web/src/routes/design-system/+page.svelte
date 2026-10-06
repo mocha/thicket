@@ -587,7 +587,7 @@
 
     <section class="entry" id="setting-row" aria-labelledby="setting-row-h">
       <h3 class="entry-h" id="setting-row-h">Setting row</h3>
-      <p class="section-lede">One setting and what it’s set to: the name in bold, the current choice in quieter text, and an arrow at the far end when the row opens something. Rows stack with a thin line between them and read as one list. The whole row is the tap target, at least 48px tall. A setting changed since the list opened gets a check in the accent color beside the arrow. Without an action it only states the value, with no arrow, as the saved-settings offer shows. On a phone the choice moves under the name. Used in setup’s list of display settings.</p>
+      <p class="section-lede">One setting and what it’s set to: the name in bold, the current choice in quieter text, and an arrow at the far end when the row opens something. Rows stack with a thin line between them and read as one list. The whole row is the tap target, at least 48px tall. A setting changed since the list opened gets a check on a light accent-tinted disc beside the arrow. Without an action it only states the value, with no arrow, as the saved-settings offer shows. On a phone the choice moves under the name. Used in setup’s list of display settings.</p>
       <div class="setting-rows">
         <SettingRow label="Light or dark" value="Match my device" onclick={() => {}} />
         <SettingRow label="Color theme" value="Crisp, orange" changed onclick={() => {}} />
