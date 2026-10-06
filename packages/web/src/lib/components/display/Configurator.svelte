@@ -106,6 +106,8 @@
   let nextButton = $state<HTMLElement | null>(null);
   let heading = $state<HTMLElement | null>(null);
   let rows = $state<HTMLElement | null>(null);
+  /** What each setting was when setup opened; a row whose choice differs since gets a check. */
+  let initial = $state<Record<string, string>>({});
   /** The setting just closed, so the keyboard lands back on its row. */
   let cameFrom: Setting | null = null;
   // Each new screen moves the keyboard to its heading, or back to the row it came from, or the tour's main button.
@@ -161,6 +163,7 @@
     // closing the window on that question asks it again next time, rather
     // than leaving this device on the defaults for good.
     if (!offered) markConfigured();
+    initial = Object.fromEntries(describeDisplay(display).map((r) => [r.key, r.value]));
     welcome.open = true;
     // Ask about importing on a new account, or when nothing is followed yet.
     // If that can't be found out, the dialog opens without it rather than not at all.
@@ -303,7 +306,7 @@
         {:else if view === 'list'}
           <div class="rows" bind:this={rows}>
             {#each describeDisplay(display) as r (r.key)}
-              <SettingRow label={r.label} value={r.value} onclick={() => openSetting(r.key)} data-key={r.key} />
+              <SettingRow label={r.label} value={r.value} changed={r.value !== initial[r.key]} onclick={() => openSetting(r.key)} data-key={r.key} />
             {/each}
           </div>
         {:else if view === 'appearance'}

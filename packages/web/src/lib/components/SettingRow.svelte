@@ -5,16 +5,19 @@
    * a hairline between them, so a few in a row read as one list. Given
    * `onclick`, the whole row is the button (a 44px-plus tap target); without
    * it, the row only states the value, as the saved-settings offer does.
+   * `changed` adds a check in the accent color beside the arrow, for a
+   * setting changed since the list first opened.
    */
   import Icon from './Icon.svelte';
 
-  let { label, value, onclick, ...rest }: { label: string; value: string; onclick?: () => void; [key: string]: unknown } = $props();
+  let { label, value, onclick, changed = false, ...rest }: { label: string; value: string; onclick?: () => void; changed?: boolean; [key: string]: unknown } = $props();
 </script>
 
 {#if onclick}
   <button type="button" class="row" {onclick} {...rest}>
     <span class="label">{label}</span>
     <span class="value">{value}</span>
+    {#if changed}<span class="changed"><Icon name="check" size={18} /><span class="sr">Changed</span></span>{/if}
     <Icon name="caret" size={16} class="arrow" />
   </button>
 {:else}
@@ -39,6 +42,8 @@
   .label { flex: none; width: 9.5em; font-weight: 600; }
   .value { flex: 1; min-width: 0; color: var(--text-2); }
   .row :global(.arrow) { flex: none; color: var(--text-2); }
+  .changed { flex: none; display: inline-flex; color: var(--accent); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   /* A phone has no room for the two side by side: the choice goes under the name. */
   @media (max-width: 480px) {
     .row { flex-wrap: wrap; row-gap: 2px; }
