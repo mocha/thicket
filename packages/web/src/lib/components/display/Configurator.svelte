@@ -6,8 +6,7 @@
    * all and go on in one step. Every choice applies as it is made, so the page
    * behind the dialog is the preview. Opening the dialog writes this device's
    * record, which is what makes it a once-only thing: closing it any way at
-   * all is the same as finishing it. The full set of options stays on the
-   * Settings page.
+   * all is the same as finishing it. Settings has the same choices later.
    *
    * When the account has saved settings (issue #186), a device that hasn't
    * been set up first asks whether to use them. Yes skips the list; no opens
@@ -214,7 +213,7 @@
   function openSetting(key: Setting) { cameFrom = null; view = key; }
   function closeSetting() { cameFrom = view as Setting; view = 'list'; }
 
-  function finish(how: 'done' | 'dismissed' | 'advanced', skipped = false) {
+  function finish(how: 'done' | 'dismissed', skipped = false) {
     const intro = !withTour ? 'already seen' : !touring ? 'not reached' : skipped ? 'skipped' : lastScene && how !== 'dismissed' ? 'finished' : 'left';
     api.event('display_setup_closed', { how, step: touring ? scene.key : view, withImport, importing, intro });
     // Reaching the tour and leaving it any way at all counts as seeing it.
@@ -232,7 +231,6 @@
     // even while it's still being read: the import page picks up the reading
     // and shows the feeds when it finishes.
     if (importing || (withImport && imp.busy)) void goto('/import');
-    else if (how === 'advanced') void goto('/settings#display');
   }
 </script>
 
@@ -328,7 +326,6 @@
       </div>
 
       <footer>
-        {#if view !== 'import' && view !== 'offer'}<button type="button" class="link" onclick={() => finish('advanced')}>Advanced options</button>{/if}
         <span class="spacer"></span>
         {#if view === 'offer'}
           <Button onclick={declineOffered}>Set up this device</Button>
