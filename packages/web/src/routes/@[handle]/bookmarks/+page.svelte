@@ -155,7 +155,7 @@
   /* 2px is an optical nudge under the title, not a spacing step. */
   .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
-  /* The With notes choice gets the same air under it as on My Bookmarks. */
+  /* The With notes choice gets the same air under it as on Bookmarks. */
   .filters { margin-bottom: var(--space-3); }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }

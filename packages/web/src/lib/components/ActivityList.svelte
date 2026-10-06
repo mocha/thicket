@@ -17,7 +17,8 @@
   import VisitorMore from './VisitorMore.svelte';
   import Badge from './Badge.svelte';
 
-  let { handle, isMe }: { handle: string; isMe: boolean } = $props();
+  /** `onready` fires once the first page has arrived (or failed), so the profile can jump to a section below this list without it then growing underneath. */
+  let { handle, isMe, onready }: { handle: string; isMe: boolean; onready?: () => void } = $props();
 
   /** The owner sets who sees this list; it saves the moment they pick. */
   const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
@@ -65,7 +66,7 @@
     if (loadedFor === handle) return;
     loadedFor = handle;
     entries = null; cursor = null; failed = null; cappedAt = null; shown = PAGE;
-    void load(null);
+    void load(null).then(() => onready?.());
   });
 
   async function more() {

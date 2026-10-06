@@ -10,3 +10,6 @@ import type { ShareLevel } from '$lib/api';
 export function audienceTag(v: ShareLevel): string | null {
   return v === 'private' ? 'Private' : v === 'friends' ? 'People I follow' : null;
 }
+
+/** The start of "… can see your notes" for each audience: the profile's sharing summary and the line under the note box. */
+export const SEES: Record<ShareLevel, string> = { private: 'Only you can see', friends: 'Only people you follow can see', public: 'Anyone can see' };

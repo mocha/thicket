@@ -25,7 +25,7 @@
     busy = true; error = null;
     try {
       setMe(await authApi.login(handle, password));
-      await goto(safeNext ?? '/everything', { replaceState: true });
+      await goto(safeNext ?? '/new-posts', { replaceState: true });
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {

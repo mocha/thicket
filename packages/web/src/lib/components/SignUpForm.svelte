@@ -62,7 +62,7 @@
     try {
       setMe(await authApi.signup(handleClean, password, undefined, undefined, hosted ? email.trim() : undefined));
       api.event('signed_up', { via: onGreen ? 'home' : 'signup_page', next: safeNext });
-      await goto(safeNext ?? '/everything', { replaceState: true });
+      await goto(safeNext ?? '/new-posts', { replaceState: true });
     } catch (e) {
       error = e instanceof ApiError ? { message: e.message, field: e.field } : { message: e instanceof Error ? e.message : String(e) };
     } finally {

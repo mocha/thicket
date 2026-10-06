@@ -39,7 +39,7 @@ export const shortsDefault = (userId: number) => sql`coalesce((select u.hide_sho
 const hidesShorts = (userId: number, feedId: SQL) =>
   sql`coalesce((select fs.hide_shorts from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = ${feedId}), ${shortsDefault(userId)})`;
 
-/** The numbers under "All my feeds": what you follow, and what arrived in the last day. */
+/** The numbers under New posts: what you follow, and what arrived in the last day. */
 river.get("/stats", async (c) => {
   const user = currentUser(c);
   const [row] = (await db.execute<{ feeds: number; collections: number; posts24h: number; feeds24h: number }>(sql`

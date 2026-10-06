@@ -126,7 +126,7 @@ export const api = {
     if (opts.limit) q.set('limit', String(opts.limit));
     return j<RiverPage>(`/api/river?${q}`);
   },
-  /** What you follow and what arrived today, for the top of All my feeds. */
+  /** What you follow and what arrived today, for the top of New posts. */
   riverStats: () => j<{ feeds: number; collections: number; posts24h: number; feeds24h: number }>('/api/river/stats'),
   /** What's new: how many posts are newer than each point this device remembers. The server keeps nothing. */
   marksCounts: (anchors: Record<string, string>) => j<{ marks: Mark[] }>('/api/marks/counts', { method: 'POST', body: JSON.stringify({ anchors }) }),

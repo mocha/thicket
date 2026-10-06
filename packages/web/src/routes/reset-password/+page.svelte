@@ -25,7 +25,7 @@
     try {
       setMe(await authApi.resetPassword(token, password));
       showToast('Password changed. Other devices were signed out.');
-      await goto('/everything', { replaceState: true });
+      await goto('/new-posts', { replaceState: true });
     } catch (e) {
       if (e instanceof ApiError && e.status === 410) dead = true;
       else error = e instanceof ApiError ? { message: e.message, field: e.field } : { message: e instanceof Error ? e.message : String(e) };

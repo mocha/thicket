@@ -385,7 +385,7 @@
       <div class="faces">
         {#each faces as f}
           <div class="face">
-            <span class="face-sample" style={`font-family: var(${f.varName});`}>Everything you follow, newest first.</span>
+            <span class="face-sample" style={`font-family: var(${f.varName});`}>New posts from every feed you follow.</span>
             <span class="face-meta"><strong>{f.name}</strong> — {f.note}</span>
           </div>
         {/each}

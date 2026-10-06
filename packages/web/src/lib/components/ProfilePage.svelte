@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { page } from '$app/state';
-  import { api, authApi, profilesApi, publicCollectionHref, type Profile, type ProfileCollection, type PublicBookmark, type PublicUser, type ShareLevel } from '$lib/api';
+  import { api, authApi, profilesApi, profileHref, publicCollectionHref, type Profile, type ProfileCollection, type PublicBookmark, type PublicUser, type ShareLevel } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { hostOf, ugcRel } from '$lib/time';
   import Monogram from '$lib/components/Monogram.svelte';
@@ -91,9 +91,20 @@
     if (loadedHandle === handle) return;
     loadedHandle = handle;
     profile = null; error = null;
+    activityReady = false; jumped = false;
     profilesApi.get(handle).then((p) => (profile = p)).catch((e) => (error = e instanceof Error ? e.message : String(e)));
   });
   onMount(() => api.event('profile_view', { handle }));
+
+  // A link to a section (#bookmarks, from the note box) can only land once everything above it is drawn: the
+  // profile, and the activity list, which loads on its own and would otherwise push the section down after the jump.
+  let activityReady = $state(false);
+  let jumped = false;
+  $effect(() => {
+    if (jumped || !profile || (!only && !activityReady)) return;
+    jumped = true;
+    if (location.hash) void tick().then(() => document.getElementById(location.hash.slice(1))?.scrollIntoView());
+  });
 
   /**
    * A few recent bookmarks, with the notes on them, shown right on the
@@ -193,6 +204,7 @@
    * page. The values come from the signed-in user, so a change shows at once.
    */
   const su = $derived(session.user);
+  const collectionsShared = $derived(su?.profileVisibility === 'public' && su.collectionsVisibility !== 'private' ? su.collectionsVisibility : null);
   const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
   const VISIBILITY = [
     { value: 'public', label: 'Anyone' },
@@ -418,6 +430,7 @@
           <h1 class="pagetitle">Collections <Badge>{profile.collections.length}</Badge></h1>
           {#if isMe}<AddFeedButton via="collections" bottomBarOnly />{/if}
         </div>
+        <p class="sub">Your feeds grouped and named however you choose. {#if !collectionsShared}Only you can see them.{:else}Shown on <a href={profileHref(handle)}>your profile</a>{collectionsShared === 'friends' ? ' to the people you follow' : ''}, with each collection’s own sharing setting.{/if}</p>
         <Field class="colfilter" label="Filter collections" hideLabel>
           {#snippet children({ id })}
             <Input
@@ -516,10 +529,11 @@
   {/if}
 
   {#if !only}
-  <ActivityList handle={profile.handle} isMe={profile.isMe} />
+  <ActivityList handle={profile.handle} isMe={profile.isMe} onready={() => (activityReady = true)} />
 
   {#if profile.bookmarks && (profile.bookmarks.count > 0 || profile.isMe)}
-    <section>
+    <!-- The note box's "Change" link lands here, on the notes setting. -->
+    <section id="bookmarks">
       <h2>Bookmarks <Badge>{profile.bookmarks.count}</Badge></h2>
       {#if profile.isMe}
         {#if su && su.profileVisibility !== 'private'}
@@ -614,8 +628,10 @@
 <style>
   /* The Collections screen's own title, in the place a page title sits everywhere else. */
   /* Its title row, with Add new feed beside it where there's no left menu to hold it. */
-  .titlerow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); margin: 0 0 var(--space-4); }
+  .titlerow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); margin: 0; }
   .pagetitle { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.15; margin: 0; }
+  .sub { margin: 2px 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .sub a { color: var(--accent); }
   .who { display: flex; gap: var(--space-4); align-items: flex-start; margin: var(--space-2) 0 var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); }
   .names { flex: 1; min-width: 0; }
   /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
