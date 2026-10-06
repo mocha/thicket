@@ -31,3 +31,25 @@ display settings:
 docker exec thicket-dev-db psql -U thicket -d thicket \
   -c "update users set tour_seen_at = null where handle = '<handle>'"
 ```
+
+## Saved display settings for new devices
+
+Each browser keeps its own display settings. The account keeps one saved
+copy, kept up to date by the device with "Use these settings on new devices"
+checked at the top of Settings. Each localhost port counts as a separate
+device to the browser.
+
+- **New-device question:** with the box checked somewhere, open a private
+  window and sign in. Setup asks "Use your saved settings?" first.
+- **Older-account default:** make an account look like it's from before saved
+  settings existed. The next device it opens gets the box checked
+  automatically, with no prompt:
+
+  ```sh
+  docker exec thicket-dev-db psql -U thicket -d thicket \
+    -c "update users set display_offer_answered_at = null, saved_display = null, display_source = null where handle = '<handle>'"
+  ```
+
+- **Test in the front tab.** Chrome holds a closing window's signal while
+  its tab is in the background, so setup's save-on-close only happens once
+  the tab is shown again.
