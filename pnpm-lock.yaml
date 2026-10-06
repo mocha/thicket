@@ -8,6 +8,8 @@ importers:
 
   .: {}
 
+  packages/extension: {}
+
   packages/api:
     dependencies:
       '@anthropic-ai/sdk':
