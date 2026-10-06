@@ -41,6 +41,10 @@
   import Banner from '$lib/components/Banner.svelte';
   import { MENU_ICONS } from '$lib/menu-icons';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
+  import FeedsScene from '$lib/components/intro/FeedsScene.svelte';
+  import BookmarksScene from '$lib/components/intro/BookmarksScene.svelte';
+  import CollectionsScene from '$lib/components/intro/CollectionsScene.svelte';
+  import ProfileScene from '$lib/components/intro/ProfileScene.svelte';
   import { imp } from '$lib/importer.svelte';
   import { session } from '$lib/session.svelte';
   import { welcome } from '$lib/copyintent.svelte';
@@ -121,7 +125,11 @@
         <div class="stage" aria-hidden="true">
           {#key current.key}
             <div class="scene">
-              {#if current.key === 'intro-new'}<NewPostsScene />{:else}<p class="soon">Picture coming next</p>{/if}
+              {#if current.key === 'intro-new'}<NewPostsScene />
+              {:else if current.key === 'intro-feeds'}<FeedsScene />
+              {:else if current.key === 'intro-bookmarks'}<BookmarksScene />
+              {:else if current.key === 'intro-collections'}<CollectionsScene />
+              {:else}<ProfileScene />{/if}
             </div>
           {/key}
         </div>
@@ -247,7 +255,6 @@
   /* The picture fades out at the bottom edge rather than being cut off. */
   .scene { position: absolute; inset: 0; mask-image: linear-gradient(to bottom, #000 70%, transparent); animation: scene 420ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
   @keyframes scene { from { opacity: 0; transform: translateX(28px); } }
-  .soon { display: grid; place-items: center; height: 100%; margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .words { padding: var(--space-5) var(--space-5) 0; min-height: 0; overflow-y: auto; }
   .enter { animation: words 380ms ease-out 80ms backwards; }
   @keyframes words { from { opacity: 0; transform: translateY(6px); } }
@@ -263,6 +270,10 @@
   .words .lead { font-size: calc(var(--text-base) * var(--size-app)); margin-top: var(--space-2); line-height: 1.45; }
   .tourfoot { display: grid; grid-template-columns: 1fr auto 1fr; border-top: 0; }
   .tourfoot .go { justify-self: end; }
+  /* Holds the row's height when the last screen drops Skip this tour, so the window doesn't shift. */
+  .tourfoot .skip { min-height: 44px; display: flex; align-items: center; }
+  /* A wide window has room to show the pictures a size up. */
+  @media (min-width: 700px) { .scene { zoom: 1.2; } }
   .dots { display: flex; gap: 6px; align-items: center; }
   footer .dot {
     width: 8px; height: 8px; padding: 0; border: 0; border-radius: 4px; background: var(--text-3);
