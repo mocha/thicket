@@ -89,7 +89,6 @@
 <section class="card">
   <h2>Unread posts</h2>
   <Tiles name="Unread posts" options={FRESH_OPTIONS} value={display.fresh ? 'on' : 'off'} art={FRESH_ART} notes onchange={(v) => choose({ fresh: v === 'on' }, 'fresh')} />
-  <p class="fine">Keep track of which posts are new since you last looked, and show a count in the sidebar.</p>
 </section>
 
 <section class="card">
@@ -161,7 +160,6 @@
   /* When a description follows the header, pull it up tight; the header's gap then sits under the description. */
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
   .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
-  .fine { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.45; max-width: 66ch; }
   fieldset { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
   .radio input, .switch input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
