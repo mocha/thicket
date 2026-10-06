@@ -135,6 +135,7 @@ test('background paints cached follows as checkmarks without fetching during nav
   assert.equal(icons.at(-1).path, 'icon.svg');
   await listener({ type: 'feeds-discovered', url: 'https://another.blog', feeds: [{ url: 'https://another.blog/feed' }] }, { frameId: 0, tab: { id: 4 } });
   assert.equal(badges.at(-1).text, '1');
+  assert.equal(icons.at(-1).path, 'icon-orange.svg');
   await listener({ type: 'feeds-discovered', url: 'https://no-feed.example', feeds: [] }, { frameId: 0, tab: { id: 5 } });
   assert.equal(badges.at(-1).text, '');
   assert.equal(icons.at(-1).path, 'icon-grey.svg');
@@ -143,4 +144,42 @@ test('background paints cached follows as checkmarks without fetching during nav
   updated(3, { status: 'loading' });
   assert.equal(badges.at(-1).text, '');
   removed(4);
+});
+
+test('popup hides the follow form when no feeds exist and keeps known follows actionable', async () => {
+  const core = await import('../core.js');
+  const source = (await readFile(new URL('../popup.js', import.meta.url), 'utf8')).replace(/^import .*\n/, '');
+  for (const scenario of [
+    { advertised: [], following: [], formHidden: true, messageHidden: false },
+    { advertised: [{ url: 'https://example.com/feed', title: 'RSS' }], following: [], formHidden: false, messageHidden: true },
+    { advertised: [], following: [{ id: 1, url: 'https://example.com/feed', siteUrl: 'https://example.com', title: 'Blog', myCollectionIds: [7] }], formHidden: false, messageHidden: true },
+  ]) {
+    const elements = new Map();
+    const element = id => {
+      if (!elements.has(id)) elements.set(id, {
+        hidden: false, value: '', textContent: '', disabled: false,
+        addEventListener() {},
+        replaceChildren(...options) { this.value = String(options[0]?.value || ''); },
+      });
+      return elements.get(id);
+    };
+    const api = {
+      storage: { local: { get: async () => ({ settings: { instance: 'https://thicket.example', token: 'token' }, following: { feeds: scenario.following, updatedAt: Date.now() } }) } },
+      tabs: { query: async () => [{ id: 1, url: 'https://example.com', title: 'Example' }], sendMessage: async () => ({ url: 'https://example.com', title: 'Example', feeds: scenario.advertised }) },
+      runtime: { sendMessage: async () => {} },
+    };
+    const context = {
+      ...core, api, createClient: () => async () => ({ collections: [{ id: 7, name: 'Tech News' }], rootId: 0 }),
+      document: { getElementById: element, querySelectorAll: () => [] },
+      Option: class { constructor(label, value) { this.label = label; this.value = value; } },
+    };
+    await vm.runInNewContext(`(async () => { ${source} })()`, context);
+    assert.equal(element('follow').hidden, scenario.formHidden);
+    assert.equal(element('no-feed').hidden, scenario.messageHidden);
+    assert.equal(element('actions').hidden, false);
+    if (scenario.following.length) {
+      assert.equal(element('membership').textContent, 'In Tech News');
+      assert.equal(element('follow-button').disabled, true);
+    }
+  }
 });

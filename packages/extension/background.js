@@ -15,9 +15,9 @@ function canonical(value) {
 function paint(tabId, page) {
   const followed = following.feeds.some(feed => host(feed.siteUrl || feed.url) === host(page.url) || (page.feeds || []).some(candidate => canonical(candidate.url) === canonical(feed.url)));
   const count = page.count ?? page.feeds?.length ?? 0;
-  api.action.setIcon({ tabId, path: followed || count ? 'icon.svg' : 'icon-grey.svg' }).catch(() => {});
+  api.action.setIcon({ tabId, path: followed ? 'icon.svg' : count ? 'icon-orange.svg' : 'icon-grey.svg' }).catch(() => {});
   api.action.setBadgeText({ tabId, text: followed ? '✓' : count ? String(count) : '' }).catch(() => {});
-  api.action.setBadgeBackgroundColor({ tabId, color: '#305b43' }).catch(() => {});
+  api.action.setBadgeBackgroundColor({ tabId, color: followed ? '#305b43' : '#b85c24' }).catch(() => {});
   api.action.setTitle({ tabId, title: followed ? 'thicket · Following this site' : count ? `thicket · ${count} feeds available` : 'thicket' }).catch(() => {});
 }
 const ready = api.storage.local.get(['following', 'automaticDetection']).then(stored => {

@@ -19,6 +19,8 @@ function updateMembership() {
 $('feed').addEventListener('change', updateMembership);
 $('collection').addEventListener('change', updateMembership);
 function feedChoices(feeds) {
+  $('follow').hidden = !feeds.length || !collections.length;
+  $('no-feed').hidden = feeds.length > 0;
   $('feed').replaceChildren(...feeds.map(feed => new Option(`${feed.title || feed.url}${followed.some(f => normalizedFeedUrl(f.url) === normalizedFeedUrl(feed.url)) ? ' · Following' : ''}`, feed.url)));
   updateMembership();
 }
@@ -36,7 +38,7 @@ $('follow').addEventListener('submit', event => {
     const result = await request('/feeds', 'POST', { url: $('feed').value, collectionId: Number($('collection').value) });
     if (result.status === 'choose') {
       feedChoices(result.candidates);
-      $('status').textContent = 'Several feeds are available. Choose one and click Add this feed.';
+      $('status').textContent = 'Several feeds are available. Choose one and click Follow.';
     } else if (result.status === 'subscribed') {
       const id = Number($('collection').value);
       const known = followed.find(feed => feed.id === result.feed.id);
@@ -51,7 +53,10 @@ $('follow').addEventListener('submit', event => {
       membershipLoaded = true;
       $('status').textContent = result.alreadyFollowed ? 'Already following · added to this collection.' : 'Following · added to this collection.';
     }
-    else $('status').textContent = 'No feed was found for this address.';
+    else {
+      feedChoices([]);
+      $('status').textContent = '';
+    }
   });
 });
 $('bookmark').addEventListener('submit', event => {
@@ -76,7 +81,7 @@ try {
     } catch { /* Restricted pages can still be bookmarked by URL. */ }
   }
   $('page').textContent = page.title;
-  feedChoices(page.feeds.length ? page.feeds : [{ url: page.url, title: 'Find a feed from this page' }]);
+  feedChoices(page.feeds);
   request = createClient(settings);
   const result = await request('/collections');
   collections = result.collections.filter(collection => collection.id !== result.rootId);
@@ -84,6 +89,7 @@ try {
     $('follow').hidden = true;
   }
   $('collection').replaceChildren(...collections.map(collection => new Option(collection.name, collection.id)));
+  feedChoices(page.feeds);
   $('actions').hidden = false;
   try {
     const stored = await api.storage.local.get('following');
@@ -93,17 +99,17 @@ try {
       await api.storage.local.set({ following: snapshot });
     }
     followed = snapshot.feeds.filter(feed => siteHost(feed.siteUrl || feed.url) === siteHost(page.url) || page.feeds.some(candidate => normalizedFeedUrl(candidate.url) === normalizedFeedUrl(feed.url)));
-    await api.runtime.sendMessage({ type: 'refresh-badge', tabId: tab.id, url: page.url, count: page.feeds.length });
+    await api.runtime.sendMessage({ type: 'refresh-badge', tabId: tab.id, url: page.url, feeds: page.feeds });
     membershipLoaded = true;
     // Keep existing follows visible even if a publisher changed its feed link.
     const choices = [...page.feeds];
     for (const feed of followed) if (!choices.some(f => normalizedFeedUrl(f.url) === normalizedFeedUrl(feed.url))) choices.push(feed);
-    if (choices.length) feedChoices(choices);
+    feedChoices(choices);
     if (followed.length && !page.feeds.length) $('feed').value = followed[0].url;
     updateMembership();
   } catch (error) {
     $('membership').hidden = false;
     $('membership').textContent = `Could not check following: ${error.message}`;
   }
-  $('status').textContent = page.feeds.length ? `${page.feeds.length} feed(s) advertised by this page.` : 'No advertised feed. thicket can try discovering one when you add it.';
+  $('status').textContent = page.feeds.length ? `${page.feeds.length} feed(s) advertised by this page.` : followed.length ? 'Already following this site.' : '';
 } catch (error) { $('status').textContent = error.message; }

@@ -16,16 +16,18 @@ existing API; no server changes or dependencies are required.
    For local development use `http://localhost:5173` with the web/API proxy.
 5. Optionally click **Enable automatic feed badges** and approve access to
    HTTP/HTTPS pages. Reload existing tabs. The icon is grey on pages without
-   usable feeds and green when feeds or a known follow are available. Bookmarking remains available from the grey icon.
+   reported feeds, orange when feeds are available but the site is not
+   followed, and green when the site is already followed. Bookmarking remains available from the grey icon.
    A **✓** means you already follow this site. A number means the page
    advertises feeds and this browser has no cached follow for the site. Without
    this permission, discovery runs when you click the icon, using `activeTab`.
 6. Visit a site and click the toolbar icon. Existing follows show **In Tech News**
    or **In 2 collections**, matching the app. Feeds already in the selected
    collection cannot be added again; choose another collection to add there.
-   Choose a feed and collection, then **Follow** or **Add to this collection**. If no feed link is advertised, the popup can ask
-   thicket to discover a feed from the page address, including supported
-   YouTube and Reddit URLs. Multiple API candidates appear in the feed picker.
+   Choose a feed and collection, then **Follow** or **Add to this collection**.
+   If no feed is advertised or already known from your following list, the
+   popup shows **No feed is available for this page** instead of a follow form.
+   Multiple API candidates appear in the feed picker.
 7. Use **Save bookmark** to save the page title and URL, optionally with a
    note. A nonempty note replaces your existing note if this URL is already
    bookmarked; a blank note leaves any existing note alone.
@@ -48,7 +50,7 @@ while iterating, and reload page tabs after changes to discovery code.
   Publisher links are hints, validated by thicket when followed. Dynamic feed
   links update when the popup opens; there is no mutation observer.
 - Badges only; page banners and automatic account/key handoff are deferred.
-- Feed discovery still works from a page URL when no advertised link exists.
+- There is no generic page-address follow form on pages without feeds.
   Firefox's protected pages may prohibit inspection. HTTP/HTTPS page URLs can
   still be bookmarked when inspection is unavailable.
 - A bookmark and its note are separate API requests. Partial success is
