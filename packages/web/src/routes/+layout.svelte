@@ -8,6 +8,7 @@
   import AddFeedSheet from '$lib/components/AddFeedSheet.svelte';
   import Reader from '$lib/components/Reader.svelte';
   import Configurator from '$lib/components/display/Configurator.svelte';
+  import DisplayOffer from '$lib/components/display/DisplayOffer.svelte';
   import { addFeed } from '$lib/addfeed.svelte';
   import FeedbackSheet from '$lib/components/FeedbackSheet.svelte';
   import { feedback } from '$lib/feedback.svelte';
@@ -101,7 +102,7 @@
   {/if}
 
   <main class:anon={!inApp} class:paged={inApp && display.layout === 'paged'} inert={covered} id="content" tabindex="-1" bind:this={content}>
-    {#if show}{@render children()}
+    {#if show}{#if inApp}<DisplayOffer />{/if}{@render children()}
     {:else if session.unreachable}
       <div class="unreachable" role="status">
         <h1>Can’t reach thicket</h1>

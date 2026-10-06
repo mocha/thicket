@@ -6,7 +6,9 @@
   import ThemePicker from '$lib/components/display/ThemePicker.svelte';
   import FontTable from '$lib/components/display/FontTable.svelte';
   import { appearanceArt, READING_ART, LAYOUT_ART, FRESH_ART } from '$lib/components/display/art';
-    import { showToast } from '$lib/toast.svelte';
+  import { showToast } from '$lib/toast.svelte';
+  import { saveForNewDevices } from '$lib/saved-display.svelte';
+  import Button from '$lib/components/Button.svelte';
 
   /**
    * Your private preferences: reading, whose notes you see, feed defaults,
@@ -17,8 +19,15 @@
    *
    * Nearly everything here saves the moment it changes. Display is the odd one
    * out twice over: it is kept in this browser rather than on the account, and
-   * applies the moment you pick it. See lib/display.svelte.ts.
+   * applies the moment you pick it. See lib/display.svelte.ts. Use these on new
+   * devices saves a copy to the account for new devices to offer (issue #186).
    */
+  let savingDisplay = $state(false);
+  async function saveDisplay() {
+    savingDisplay = true;
+    await saveForNewDevices('settings');
+    savingDisplay = false;
+  }
   const me = $derived(session.user!);
 
   async function set(patch: Parameters<typeof authApi.update>[0], label: string) {
@@ -45,7 +54,8 @@
 
 <section class="card">
   <h2>Appearance</h2>
-  <p class="help">Display settings are per device, so each screen you read on can differ. Changes immediately apply.</p>
+  <p class="help">Display settings are per device. Save them to use on new devices</p>
+  <p class="save"><Button loading={savingDisplay} onclick={saveDisplay}>Use these on new devices</Button></p>
   <Tiles name="Appearance" options={APPEARANCES} value={display.appearance} art={appearanceArt(display.palette, display.accent)} onchange={(v) => choose({ appearance: v }, 'appearance')} />
 </section>
 
@@ -138,6 +148,7 @@
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   /* When a description follows the header, pull it up tight; the header's gap then sits under the description. */
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
+  .save { margin: 0 0 var(--space-4); }
   .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   .fine { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.45; max-width: 66ch; }
   fieldset { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; gap: var(--space-3); }
