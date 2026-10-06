@@ -181,6 +181,7 @@
       id: 'components',
       label: 'Components',
       items: [
+        { id: 'add-new-feed', label: 'Add new feed' },
         { id: 'avatar', label: 'Avatar' },
         { id: 'badge', label: 'Badge' },
         { id: 'banner', label: 'Banner' },
@@ -192,6 +193,7 @@
         { id: 'input', label: 'Input' },
         { id: 'monogram', label: 'Monogram' },
         { id: 'select', label: 'Select' },
+        { id: 'setup-tour', label: 'Setup tour' },
         { id: 'tabs', label: 'Tabs' },
         { id: 'textarea', label: 'Textarea' },
         { id: 'toast', label: 'Toast' }

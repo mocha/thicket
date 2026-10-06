@@ -75,7 +75,9 @@
   ];
   /** The tour shows once per account: decided when setup opens, so recording it partway can't reshuffle the steps. */
   let withTour = $state(false);
-  const STEPS: { key: string; title: string; lead: string; items?: { icon: string; label: string; accent?: boolean }[] }[] = $derived([...(withImport ? [IMPORT] : []), ...DISPLAY, ...(withTour ? INTRO : [])]);
+  /** A browser that's already set up opening for an account that hasn't seen the tour: only the tour (and import, for a new account), not the appearance questions again. */
+  let tourOnly = $state(false);
+  const STEPS: { key: string; title: string; lead: string; items?: { icon: string; label: string; accent?: boolean }[] }[] = $derived([...(withImport ? [IMPORT] : []), ...(tourOnly ? [] : DISPLAY), ...(withTour ? INTRO : [])]);
   const current = $derived(STEPS[step]);
   const touring = $derived(current.key.startsWith('intro-'));
   const tourStart = $derived(STEPS.length - INTRO.length);
@@ -86,7 +88,10 @@
   /** A file has been read, so the last step leads to its review. */
   const importing = $derived(withImport && imp.step === 'review');
 
-  onMount(() => { if (!display.configured) start(); });
+  // Setup opens on a browser that's never been set up, and also for an account
+  // that hasn't seen the tour: display settings belong to the browser, so a
+  // second account made on a set-up browser would otherwise never get it.
+  onMount(() => { if (!display.configured || (session.user && !session.user.tourSeenAt)) start(); });
 
   // In development, ?setup opens the walkthrough again on a screen that has
   // already seen it. Watched rather than read once: signing in lands on the
@@ -107,6 +112,7 @@
     starting = true;
     step = 0;
     withTour = again || !session.user?.tourSeenAt;
+    tourOnly = !again && display.configured && withTour;
     markConfigured();
     welcome.open = true;
     // Ask about importing on a new account, or when nothing is followed yet.
