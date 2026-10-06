@@ -11,7 +11,7 @@ import { Hono } from "hono";
 process.env.DATABASE_URL ??= "postgres://not-used-by-tests";
 const { auth } = await import("./auth.js");
 const { tokenMay } = await import("../lib/token-access.js");
-const { parseSavedDisplay, parseDeviceId } = await import("../lib/display.js");
+const { parseSavedDisplay, parseDeviceId, parseSaveMode } = await import("../lib/display.js");
 const { handleProblem } = await import("../lib/auth.js");
 
 const GOOD = {
@@ -73,4 +73,10 @@ test("no API token can save settings or stop a device keeping them", () => {
 
 test("the setup tour's sample handle is reserved, so no real account can have it", () => {
   assert.match(handleProblem("brambleandbooks") ?? "", /reserved/);
+});
+
+test("a save only limits who keeps the settings when it says so; anything else chooses this device", () => {
+  assert.equal(parseSaveMode("sync"), "sync");
+  assert.equal(parseSaveMode("first"), "first");
+  for (const other of [undefined, null, "choose", "SYNC", 1]) assert.equal(parseSaveMode(other), "choose", String(other));
 });

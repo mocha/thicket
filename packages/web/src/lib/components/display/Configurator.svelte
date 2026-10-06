@@ -222,7 +222,12 @@
       authApi.tourSeen();
     }
     // A new account's first setup becomes its saved settings, however it ends.
-    if (session.user?.saveFirstDisplay && !session.user.savedDisplay) void saveForNewDevices('setup', { quiet: true });
+    // So does an older account's first device since saved settings existed.
+    const u = session.user;
+    if (u && !u.savedDisplay) {
+      if (u.saveFirstDisplay) void saveForNewDevices('setup', { quiet: true });
+      else if (!u.displayOfferAnsweredAt) void saveForNewDevices('first-device', { quiet: true });
+    }
     open = false;
     welcome.open = false;
     welcome.copied = null;

@@ -17,7 +17,7 @@ import { currentDisplay, display, displayRecord, type Display } from './display.
 import { session } from './session.svelte';
 import { showToast } from './toast.svelte';
 
-/** Setup opened during this visit; it handles its own saving, so the older-account default waits for another visit. */
+/** Setup opened during this visit. It saves the first device's settings itself when it closes, so the default here stays out of its way. */
 export const setupVisit = $state({ opened: false });
 
 export type SaveVia = 'setup' | 'settings' | 'first-device' | 'sync';
@@ -33,9 +33,14 @@ export function deviceId(): string {
   if (device) return device;
   try {
     device = localStorage.getItem(DEVICE_KEY);
-    if (!device) { device = crypto.randomUUID(); localStorage.setItem(DEVICE_KEY, device); }
-  } catch { device ??= crypto.randomUUID(); }
+    if (!device) { device = newId(); localStorage.setItem(DEVICE_KEY, device); }
+  } catch { device ??= newId(); }
   return device;
+}
+
+/** 32 random hex digits. Not crypto.randomUUID: browsers only offer that on https, and a self-hosted site on a home network is often plain http. */
+function newId() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /** Whether this device keeps the saved settings up to date. */
@@ -61,7 +66,7 @@ const failed = (via: SaveVia, e: unknown) => {
  */
 export async function saveForNewDevices(via: SaveVia, { quiet = false } = {}): Promise<boolean> {
   try {
-    takeSaved(await authApi.saveDisplay(currentDisplay(), deviceId()));
+    takeSaved(await authApi.saveDisplay(currentDisplay(), deviceId(), via === 'sync' ? 'sync' : via === 'first-device' ? 'first' : undefined));
     if (via !== 'sync') api.event('display_saved', { via });
     if (!quiet) showToast('Saved. New devices will offer these settings');
     return true;

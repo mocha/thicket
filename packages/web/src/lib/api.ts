@@ -441,7 +441,8 @@ export const authApi = {
       .catch((e) => console.error("Couldn't record that the setup tour was seen:", e));
   },
   /** Save these display settings to offer new devices, replacing any saved before. Refusals carry the reason. */
-  saveDisplay: (settings: Display, device: string) => j<Me>('/api/auth/me/display', { method: 'PUT', body: JSON.stringify({ settings, device }) }),
+  /** `mode`: 'sync' saves only while this device keeps them, 'first' only if no device ever has; otherwise this device takes over. */
+  saveDisplay: (settings: Display, device: string, mode?: 'sync' | 'first') => j<Me>('/api/auth/me/display', { method: 'PUT', body: JSON.stringify({ settings, device, mode }) }),
   /** Stop this device keeping the saved settings up to date. The saved settings stay. */
   stopDisplaySource: (device: string) => j<Me>('/api/auth/me/display-source', { method: 'DELETE', body: JSON.stringify({ device }) }),
   changePassword: (current: string, next: string) => j<void>('/api/auth/me/password', { method: 'POST', body: JSON.stringify({ current, next }) }),

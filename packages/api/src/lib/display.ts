@@ -39,6 +39,17 @@ export function parseDeviceId(raw: unknown): string | null {
   return typeof raw === "string" && /^[0-9a-f-]{8,64}$/i.test(raw) ? raw.toLowerCase() : null;
 }
 
+/**
+ * How a save may change which device keeps the saved settings up to date.
+ * "choose" (the default): this device becomes it, as checking the box does.
+ * "sync": a background save, only taken while this device still is it, so a
+ * device that missed being unchecked elsewhere can't take it back. "first":
+ * an older account's first device, only taken while no device has ever been
+ * chosen, so two devices opening at once can't both claim it.
+ */
+export type SaveMode = "choose" | "sync" | "first";
+export const parseSaveMode = (raw: unknown): SaveMode => (raw === "sync" || raw === "first" ? raw : "choose");
+
 /** The settings exactly as sent, or the first thing wrong with them. Unknown fields are refused too, so nothing extra gets stored. */
 export function parseSavedDisplay(raw: unknown): { ok: true; value: SavedDisplay } | { ok: false; error: string } {
   const bad = (error: string) => ({ ok: false as const, error });
