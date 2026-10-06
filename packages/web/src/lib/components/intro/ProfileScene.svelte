@@ -20,16 +20,18 @@
       <svg class="pic" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true">
         <defs><clipPath id="intro-pic"><circle cx="32" cy="32" r="31" /></clipPath></defs>
         <circle cx="32" cy="32" r="31" fill="var(--surface)" />
-        <g clip-path="url(#intro-pic)" fill="none" stroke="var(--text)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-          <g transform="translate(0 -3)"><!-- the whole figure sits a little high, so the book clears the frame -->
-            <g transform="translate(0 -2)"><!-- shoulders and arms, and the book held against the chest -->
+        <g clip-path="url(#intro-pic)" fill="none" stroke="var(--text)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
+          <g transform="translate(32 16.4) scale(1.3) translate(-32 -19.4)"><!-- zoomed in: head and shoulders fill the frame, and the frame crops the book to its top edge -->
+            <g transform="translate(0 -3.5)"><!-- shoulders and arms, and the book held against the chest -->
               <path d="M14.5 66V53.6c0-5.4 3.2-9.2 8.4-10.6l5.4-1.4h7.4l5.4 1.4c5.2 1.4 8.4 5.2 8.4 10.6V66" fill="var(--surface)" />
               <path d="M27.4 41.8l4.6 4.4 4.6-4.4" />
-              <path d="M17 51.2l15 3.2 15-3.2v10.4l-15 3.2-15-3.2z" fill="var(--accent-tint)" stroke="var(--accent)" />
-              <path d="M32 54.4v10.4" stroke="var(--accent)" />
-              <path d="M20.4 55.2l8 1.7M20.4 58.2l8 1.7M35.6 56.9l8-1.7M35.6 59.9l8-1.7" stroke="var(--accent)" stroke-width="0.9" />
+              <g transform="translate(0 -3)"><!-- the book, raised so its top edge and first lines show -->
+                <path d="M17 51.2l15 3.2 15-3.2v10.4l-15 3.2-15-3.2z" fill="var(--accent-tint)" stroke="var(--accent)" />
+                <path d="M32 54.4v10.4" stroke="var(--accent)" />
+                <path d="M20.4 55.2l8 1.7M20.4 58.2l8 1.7M35.6 56.9l8-1.7M35.6 59.9l8-1.7" stroke="var(--accent)" stroke-width="0.9" />
+              </g>
             </g>
-            <path d="M29.2 34.4v5.2M34.8 34.4v5.2" />
+            <path d="M29.2 34.4v3.7M34.8 34.4v3.7" />
             <path d="M23.5 25.6c-1.7-.1-2.4 2.8-.4 3.6M40.5 25.6c1.7-.1 2.4 2.8.4 3.6" />
             <ellipse cx="32" cy="25.4" rx="8.6" ry="9.6" fill="var(--surface)" />
             <!-- Hair: one shape, a soft tone of the ink, parted on the right and swept across. -->
