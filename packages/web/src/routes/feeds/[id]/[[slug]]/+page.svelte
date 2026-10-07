@@ -59,7 +59,7 @@
 
 <svelte:head><title>{feed ? feedName(feed) : 'Feed'} · thicket</title></svelte:head>
 
-{#if session.user}<nav class="crumbs"><BackLink href={cameFrom?.href ?? '/explore'} label={cameFrom?.name ?? 'Explore'} stepBack={!!cameFrom} /></nav>{/if}
+{#if session.user}<nav class="crumbs"><BackLink href={cameFrom?.href ?? '/explore'} label={cameFrom?.name ?? 'Explore'} stepBack={!!cameFrom} /></nav><hr />{/if}
 
 {#if feed}
   <header class="profile">
@@ -115,7 +115,9 @@
 </div>
 
 <style>
-  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); margin-bottom: var(--space-2); }
+  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); }
+  /* The same hairline as under the Manage pages' header. */
+  hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-3) 0 var(--space-4); }
   .profile { display: flex; gap: var(--space-4); align-items: flex-start; }
   .who { flex: 1; min-width: 0; }
   /* The title takes what room it needs; the buttons sit to its right and drop underneath when the row runs out. */
@@ -139,7 +141,7 @@
   }
   .desc { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   /* 132px is the narrowest column that keeps the longest label, "Users following", on one line. */
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: var(--space-3) var(--space-2); margin: var(--space-4) 0 0; padding: var(--space-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: var(--space-3) var(--space-2); margin: var(--space-5) 0 0; padding: 0 0 var(--space-3); border-bottom: 1px solid var(--line); }
   /* 2px between a label and its number is optical, not a spacing step. */
   .stats div { display: flex; flex-direction: column; gap: 2px; }
   dt { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); }

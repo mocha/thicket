@@ -30,8 +30,8 @@
 <a class="back tap" {href} {onclick}><Icon name="back" size={16} stroke={2.5} class="arrow" /><span class="name">{label}</span></a>
 
 <style>
-  .back { display: inline-flex; align-items: center; gap: 0.15em; min-width: 0; max-width: 100%; font-weight: 600; color: var(--accent); text-decoration: none; }
-  .back:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+  .back { display: inline-flex; align-items: center; gap: 0.15em; min-width: 0; max-width: 100%; font-weight: 600; color: var(--text-2); text-decoration: none; }
+  .back:hover { color: var(--text); text-decoration: underline; text-underline-offset: 0.2em; }
   /* A long name is cut short with an ellipsis rather than pushing the page sideways. */
   .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* The arrow scales with the words beside it, and sits a hair left so the name lines up with the text below. */
