@@ -2,6 +2,8 @@
   import { MENU_ICONS } from '$lib/menu-icons';
   import { page } from '$app/state';
   import Wordmark from './Wordmark.svelte';
+  import BackLink from './BackLink.svelte';
+  import { appBack } from '$lib/wayback.svelte';
   import { goto } from '$app/navigation';
   import { api, collectionsApi, collectionHref, profileHref } from '$lib/api';
   import { collectionStore, loadCollections, namedCollections, topLevelCollections, childrenOf, navOpen, loadNavOpen, toggleNavOpen, collectionsOpen, loadCollectionsOpen, toggleCollectionsOpen } from '$lib/collections.svelte';
@@ -130,6 +132,8 @@
 <!-- Paged layout keeps the bottom bar at every width: a sidebar is a scrolling thing. -->
 <nav aria-label="Primary" class:paged={display.layout === 'paged'}>
   <a class="brand" href="/new-posts"><img src="/icon.svg" alt="" width="28" height="28" /><Wordmark height={23} /></a>
+  <!-- The installed app's own Back, in Safari and on iPhone, which give it no toolbar. Sidebar only; on bottom bar screens it heads the page instead. -->
+  {#if appBack.installed && appBack.behind}<div class="appback"><BackLink /></div>{/if}
   <!-- Sidebar only, above the scrolling list so it never scrolls away. On
        bottom bar screens the same action sits beside each page's title instead. -->
   {#if me}<button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg><span>Add new feed</span></button>{/if}
@@ -269,7 +273,7 @@
     backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
     border-top: 1px solid var(--line);
   }
-  .brand, .addfeed, .account, .long, li.admin, li.collections, li.notifs, .resize { display: none; }
+  .brand, .appback, .addfeed, .account, .long, li.admin, li.collections, li.notifs, .resize { display: none; }
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
   /* Each tab is as wide as its label plus an even share of the spare room, so
      "Collections" gets more than "You" and none of them touch. Never narrower
@@ -315,6 +319,9 @@
     }
     /* A hairline under the logo sets it apart from Add new feed and the rows below. */
     nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
+    /* Lined up with the rows below it, in their size. */
+    nav:not(.paged) .appback { display: block; flex: none; margin-top: var(--space-3); padding: var(--space-2) var(--space-3); font-size: calc(var(--text-base) * var(--size-app)); }
+    nav:not(.paged) .appback + .addfeed { margin-top: 0; }
     /* A row like the ones below it, in the accent color, its circle drawn a touch finer than their icons, so it reads as the one action in a list of places. */
     nav:not(.paged) .addfeed { display: flex; flex: none; align-items: center; gap: var(--space-3); margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     /* The same accent ring, drawn just inside, as the rows below it. */

@@ -18,7 +18,8 @@
   import { watchMarks } from '$lib/marks.svelte';
   import { watchNotifs, loadNotifs } from '$lib/notifications.svelte';
   import { watchBackForward } from '$lib/listmemory';
-  import { watchLeaving } from '$lib/wayback';
+  import { appBack, watchLeaving } from '$lib/wayback.svelte';
+  import BackLink from '$lib/components/BackLink.svelte';
   import Wordmark from '$lib/components/Wordmark.svelte';
   let { children } = $props();
   watchBackForward();
@@ -105,6 +106,8 @@
   {/if}
 
   <main class:anon={!inApp} class:paged={inApp && display.layout === 'paged'} inert={covered} id="content" tabindex="-1" bind:this={content}>
+    <!-- The installed app's own Back on bottom bar screens, unless the page has its own way back; with the sidebar it sits there instead. -->
+    {#if inApp && show && appBack.installed && appBack.behind && !appBack.owned}<div class="appback"><BackLink /></div>{/if}
     {#if show}{@render children()}
     {:else if session.unreachable}
       <div class="unreachable" role="status">
@@ -128,6 +131,11 @@
   main {
     max-width: 640px; margin: 0 auto;
     padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) max(var(--space-3), env(safe-area-inset-right, 0px)) calc(var(--nav-h) + var(--safe-b) + var(--space-5)) max(var(--space-3), env(safe-area-inset-left, 0px));
+  }
+  .appback { font-size: calc(var(--text-sm) * var(--size-app)); margin-bottom: var(--space-3); }
+  /* Same condition as the sidebar in Nav: search for "min-height: 501px". */
+  @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) {
+    main:not(.paged) .appback { display: none; }
   }
   main.anon { padding-bottom: calc(var(--space-6) + var(--space-2)); }
   /* The design system runs on its own, without the app's chrome. A wider column

@@ -8,16 +8,28 @@
    * following the link, for when the page named is the one just behind this
    * one: it comes back as it was left, and Back afterwards doesn't return here.
    * A click that opens a new tab or window still follows the link.
+   *
+   * With no `href` it is just "Back": a button that steps back, for the
+   * installed app's own Back, where the page behind has no name we know.
    */
+  import { untrack } from 'svelte';
   import Icon from './Icon.svelte';
+  import { appBack } from '$lib/wayback.svelte';
 
   interface Props {
-    href: string;
-    label: string;
+    href?: string;
+    label?: string;
     stepBack?: boolean;
   }
 
-  let { href, label, stepBack = false }: Props = $props();
+  let { href, label = 'Back', stepBack = false }: Props = $props();
+
+  /** A page's own way back: the installed app's Back at the top of the page makes way for it. */
+  $effect(() => {
+    if (!href) return;
+    untrack(() => appBack.owned++);
+    return () => untrack(() => appBack.owned--);
+  });
 
   function onclick(e: MouseEvent) {
     if (!stepBack || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -26,10 +38,12 @@
   }
 </script>
 
-<a class="back tap" {href} {onclick}><Icon name="back" size={16} stroke={2.5} class="arrow" /><span class="name">{label}</span></a>
+{#snippet inner()}<Icon name="back" size={16} stroke={2.5} class="arrow" /><span class="name">{label}</span>{/snippet}
+{#if href}<a class="back tap" {href} {onclick}>{@render inner()}</a>
+{:else}<button type="button" class="back tap" onclick={() => history.back()}>{@render inner()}</button>{/if}
 
 <style>
-  .back { display: inline-flex; align-items: center; gap: 0.15em; min-width: 0; max-width: 100%; font-weight: 600; color: var(--accent); text-decoration: none; }
+  .back { display: inline-flex; font: inherit; background: none; border: 0; padding: 0; cursor: pointer; align-items: center; gap: 0.15em; min-width: 0; max-width: 100%; font-weight: 600; color: var(--accent); text-decoration: none; }
   .back:hover { text-decoration: underline; text-underline-offset: 0.2em; }
   /* A long name is cut short with an ellipsis rather than pushing the page sideways. */
   .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
