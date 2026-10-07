@@ -13,7 +13,7 @@
   import Banner from '$lib/components/Banner.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import BackLink from '$lib/components/BackLink.svelte';
-  import { cameFrom as wayBack, keepCameFrom } from '$lib/wayback.svelte';
+  import { cameFrom as wayBack, keepCameFrom } from '$lib/wayback';
   import { session } from '$lib/session.svelte';
 
   /**
