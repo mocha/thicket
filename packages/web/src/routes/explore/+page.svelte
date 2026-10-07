@@ -19,6 +19,7 @@
   import Sheet from '$lib/components/Sheet.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
+  import FeedPopover from '$lib/components/FeedPopover.svelte';
   import FollowControl from '$lib/components/FollowControl.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
@@ -290,6 +291,13 @@
    * while you were away (you followed that feed or person), so it alone is
    * looked up again.
    */
+  /** A post result's feed, its card open from the row's icon or feed name. */
+  let source = $state<{ feedId: number; hasIcon: boolean; name: string } | null>(null);
+  function openSource(p: SearchPost) {
+    api.event('source_opened', { feedId: p.feedId, via: 'explore' });
+    source = { feedId: p.feedId, hasIcon: p.hasIcon, name: p.feedTitle ?? hostOf(p.siteUrl) };
+  }
+
   type Opened = { feed: number } | { person: string };
   let opened: Opened | null = null;
   const back = recall<{
@@ -590,19 +598,27 @@
   </li>
 {/snippet}
 
+<!--
+  A post's title is its link, stretched over the whole row, so the row still
+  opens the post. The feed's icon and name sit above it as buttons that open
+  the feed's card instead: a button can't go inside a link. The icon is for
+  the pointer; the name is the one keyboard stop for it.
+-->
 {#snippet postRow(p: SearchPost)}
-  <li>
-    <a class="row tap" href={webHref(p.url) ?? feedHref({ id: p.feedId })} target={webHref(p.url) ? '_blank' : undefined} rel={webHref(p.url) ? 'noreferrer' : undefined}>
-      <SourceIcon feedId={p.feedId} hasIcon={p.hasIcon} name={p.feedTitle ?? ''} size={40} />
+  <li class="post">
+    <div class="row">
+      <button class="feedicon" tabindex="-1" onclick={() => openSource(p)} aria-label="About {p.feedTitle ?? hostOf(p.siteUrl)}" title="About {p.feedTitle ?? hostOf(p.siteUrl)}">
+        <SourceIcon feedId={p.feedId} hasIcon={p.hasIcon} name={p.feedTitle ?? ''} size={40} />
+      </button>
       <div class="meta">
-        <span class="title">{p.title ?? p.url}</span>
+        <a class="title whole" href={webHref(p.url) ?? feedHref({ id: p.feedId })} target={webHref(p.url) ? '_blank' : undefined} rel={webHref(p.url) ? 'noreferrer' : undefined}>{p.title ?? p.url}</a>
         <!-- Plenty of feeds set the author to the feed's own name; saying it twice is noise. -->
-        <span class="sub2 byline">{p.feedTitle ?? hostOf(p.siteUrl)} · {relativeTime(p.publishedAt)}{#if p.author && p.author !== p.feedTitle}<span>{' · ' + p.author}</span>{/if}</span>
+        <span class="sub2 byline"><button class="feedname" onclick={() => openSource(p)} title="About {p.feedTitle ?? hostOf(p.siteUrl)}">{p.feedTitle ?? hostOf(p.siteUrl)}</button> · {relativeTime(p.publishedAt)}{#if p.author && p.author !== p.feedTitle}<span>{' · ' + p.author}</span>{/if}</span>
         {#if p.snippet}
           <span class="desc">{#each highlight(p.snippet) as part}{#if part.hit}<mark>{part.text}</mark>{:else}{part.text}{/if}{/each}</span>
         {/if}
       </div>
-    </a>
+    </div>
     {#if session.user}
       <button class="save tap" class:on={!!p.bookmarkId} onclick={() => toggleBookmark(p)} disabled={markBusy === p.id} aria-pressed={!!p.bookmarkId}>
         {p.bookmarkId ? 'Bookmarked' : 'Bookmark'}
@@ -710,6 +726,10 @@
   <Sheet title="Filters" bind:dialog={filtersDialog}>
     <div class="sheet-filters">{@render filterFields()}</div>
   </Sheet>
+{/if}
+
+{#if source}
+  <FeedPopover feedId={source.feedId} hasIcon={source.hasIcon} name={source.name} onclose={() => (source = null)} />
 {/if}
 
 <style>
@@ -843,6 +863,13 @@
   .follow, .save { flex: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .follow.on, .save.on { background: var(--accent-tint); border-color: transparent; }
   .follow:disabled, .save:disabled { opacity: 0.6; }
+  /* A post row: the title's link covers the row; the feed's buttons and Bookmark sit over it. */
+  li.post { position: relative; }
+  .whole::after { content: ''; position: absolute; inset: 0; }
+  .feedicon, .feedname, li.post .save { position: relative; z-index: 1; }
+  .feedicon { flex: none; display: inline-flex; border-radius: var(--radius-avatar); }
+  .feedname { font-weight: 600; }
+  @media (hover: hover) { .feedname:hover, li.post:has(.whole:hover) .title { text-decoration: underline; text-underline-offset: 3px; } }
   .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
   .status.error { color: var(--danger); }
   .empty { text-align: center; color: var(--text-2); padding: calc(var(--space-6) + var(--space-1)) var(--space-4); font-size: calc(var(--text-base) * var(--size-app)); }

@@ -9,6 +9,7 @@
    */
   import { api, authApi, profilesApi, publicCollectionHref, type ActivityEntry, type ShareLevel } from '$lib/api';
   import SourceIcon from './SourceIcon.svelte';
+  import FeedPopover from './FeedPopover.svelte';
   import SectionAudience from './SectionAudience.svelte';
   import { relativeTime, hostOf, savedHref, ugcRel } from '$lib/time';
   import { audienceTag } from '$lib/visibility';
@@ -19,6 +20,14 @@
 
   /** `onready` fires once the first page has arrived (or failed), so the profile can jump to a section below this list without it then growing underneath. */
   let { handle, isMe, onready }: { handle: string; isMe: boolean; onready?: () => void } = $props();
+
+  /** A bookmarked or noted post's feed, its card open from the line's icon or site name. */
+  type Source = { feedId: number | null; hasIcon: boolean; name: string };
+  let source = $state<Source | null>(null);
+  function openSource(s: Source) {
+    api.event('source_opened', { feedId: s.feedId, via: 'activity' });
+    source = s;
+  }
 
   /** The owner sets who sees this list; it saves the moment they pick. */
   const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
@@ -80,6 +89,16 @@
   const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 </script>
 
+<!-- A post's site, on a bookmark or note line: the icon (for the pointer) and the name (the keyboard stop) open the feed's card. -->
+{#snippet icon(p: { url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean })}
+  <button class="srcicon" tabindex="-1" onclick={() => openSource({ feedId: p.feedId, hasIcon: p.hasIcon, name: p.siteTitle ?? hostOf(p.url) })} aria-label="About {p.siteTitle ?? hostOf(p.url)}" title="About {p.siteTitle ?? hostOf(p.url)}">
+    <SourceIcon feedId={p.feedId} hasIcon={p.hasIcon} name={p.siteTitle ?? p.title} size={20} />
+  </button>
+{/snippet}
+{#snippet site(p: { url: string; siteTitle: string | null; feedId: number | null; hasIcon: boolean })}
+  <span class="src"><button onclick={() => openSource({ feedId: p.feedId, hasIcon: p.hasIcon, name: p.siteTitle ?? hostOf(p.url) })} title="About {p.siteTitle ?? hostOf(p.url)}">{p.siteTitle ?? hostOf(p.url)}</button></span>
+{/snippet}
+
 <section>
   <h2>Recent activity</h2>
   <div class="card">
@@ -131,19 +150,19 @@
             </div>
           {:else if e.kind === 'bookmark'}
             <div class="row">
-              <SourceIcon feedId={e.payload.feedId} hasIcon={e.payload.hasIcon} name={e.payload.siteTitle ?? e.payload.title} size={20} />
+              {@render icon(e.payload)}
               <p class="what">
                 Bookmarked <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(e.payload.url))}>{e.payload.title ?? e.payload.url}</a>
-                <span class="src">{e.payload.siteTitle ?? hostOf(e.payload.url)}</span>
+                {@render site(e.payload)}
               </p>
               <span class="when">{relativeTime(e.at)}</span>
             </div>
           {:else}
             <div class="row">
-              <SourceIcon feedId={e.payload.feedId} hasIcon={e.payload.hasIcon} name={e.payload.siteTitle ?? e.payload.title} size={20} />
+              {@render icon(e.payload)}
               <p class="what">
                 Noted on <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(e.payload.url))}>{e.payload.title ?? e.payload.url}</a>
-                <span class="src">{e.payload.siteTitle ?? hostOf(e.payload.url)}</span>
+                {@render site(e.payload)}
               </p>
               <span class="when">{relativeTime(e.at)}</span>
             </div>
@@ -160,6 +179,10 @@
     {/if}
   </div>
 </section>
+
+{#if source}
+  <FeedPopover feedId={source.feedId} hasIcon={source.hasIcon} name={source.name} onclose={() => (source = null)} />
+{/if}
 
 <style>
   section { margin-bottom: var(--space-5); }
@@ -187,6 +210,8 @@
   .what a { color: var(--text); font-weight: 600; }
   .src { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .src::before { content: ' · '; }
+  .srcicon { flex: none; display: inline-flex; }
+  @media (hover: hover) { .src button:hover { text-decoration: underline; text-underline-offset: 3px; } }
   .when { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   /* Indented to line up under the row's text: the glyph column plus the row's gap. */
   .names { display: flex; gap: var(--space-1); margin: var(--space-1) 0 0 var(--space-6); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }

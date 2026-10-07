@@ -9,10 +9,11 @@
   import { page } from '$app/state';
   import { api, itemsApi, type ItemContent, type SavedNote } from '$lib/api';
   import { noteToast } from '$lib/saves';
-  import { hostOf, relativeTime, webHref } from '$lib/time';
+  import { hostOf, webHref } from '$lib/time';
   import { closeReader, reader, readerClosed } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
-  import SourceIcon from './SourceIcon.svelte';
+  import CardMeta from './CardMeta.svelte';
+  import FeedPopover from './FeedPopover.svelte';
   import IconButton from './IconButton.svelte';
   import ItemActions from './ItemActions.svelte';
   import NoteEditor from './NoteEditor.svelte';
@@ -92,6 +93,7 @@
       // Paged: not modal, so the bottom bar stays live while reading and the reader sits above it.
       if (!dialog?.open) { if (paged) dialog?.show(); else dialog?.showModal(); }
     } else if (item) {
+      popover = false;
       dialog?.close();
       readerClosed();
     }
@@ -128,7 +130,18 @@
   }
   /** Escape closes the dialog natively when modal; keep history in step. Non-modal (paged) gets no cancel event, so listen for the key. */
   function canceled(e: Event) { e.preventDefault(); close(); }
-  function keys(e: KeyboardEvent) { if (paged && item && e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); close(); } }
+  function keys(e: KeyboardEvent) {
+    // Escape in the feed's card, opened over the post, closes only that card.
+    if (popover) return;
+    if (paged && item && e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); close(); }
+  }
+
+  /** The feed's card, over the post. Closing the reader by any route (Back, say) closes it too. */
+  let popover = $state(false);
+  function openSource() {
+    if (item) api.event('source_opened', { feedId: item.feedId, via: 'reader' });
+    popover = true;
+  }
 
   function noteButton() {
     editing = !editing;
@@ -145,8 +158,7 @@
   {#if item}
     <article class="reader">
       <header bind:this={head}>
-        <span class="source"><SourceIcon feedId={item.feedId} hasIcon={item.hasIcon} name={source} /><span class="name">{source}</span></span>
-        <time datetime={item.publishedAt}>{relativeTime(item.publishedAt)}</time>
+        <CardMeta feedId={item.feedId} hasIcon={item.hasIcon} name={source} when={item.publishedAt} onsource={openSource} />
         <span class="spacer"></span>
         <ItemActions {item} noteOpen={editing} onnote={noteButton} via="reader" />
         <IconButton icon="close" label="Close" iconSize={20} onclick={close} />
@@ -200,6 +212,10 @@
   {/if}
 </dialog>
 
+{#if popover && item && openFor === item.id}
+  <FeedPopover feedId={item.feedId} hasIcon={item.hasIcon} name={source} onclose={() => (popover = false)} />
+{/if}
+
 <style>
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
   dialog::backdrop { background: var(--scrim); }
@@ -214,9 +230,6 @@
     display: flex; align-items: center; gap: var(--space-2); flex: none;
     padding: var(--space-3) var(--space-2) var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); min-width: 0;
   }
-  .source { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
-  .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  header time { color: var(--text-2); white-space: nowrap; }
   .spacer { flex: 1; }
 
   .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
