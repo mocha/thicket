@@ -22,9 +22,15 @@ import { afterNavigate, beforeNavigate, replaceState } from '$app/navigation';
 import { page } from '$app/state';
 import { HISTORY_INDEX } from './listmemory';
 
-export type Place = { name: string; href: string };
+/** A page by name and address, and `at`, the router's number for its history entry. */
+export type Place = { name: string; href: string; at: number };
 
 let leaving: Place | null = null;
+
+const indexHere = (): number | undefined => {
+  const at = history.state?.[HISTORY_INDEX];
+  return typeof at === 'number' ? at : undefined;
+};
 
 /** The router's number for the first page of this visit; each step in adds one. */
 let first: number | null = null;
@@ -43,7 +49,8 @@ export const appBack = $state({ installed: false, behind: false, owned: 0 });
  * no title of its own.
  */
 export function placeName(title: string): string | null {
-  const parts = title.split(' · ').filter((p) => p && p !== 'thicket');
+  if (!title.endsWith(' · thicket')) return null;
+  const parts = title.slice(0, -' · thicket'.length).split(' · ').filter(Boolean);
   if (parts.includes('Explore')) return 'Explore';
   return parts[0] ?? null;
 }
@@ -58,12 +65,14 @@ export function watchLeaving() {
   appBack.installed = matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
   beforeNavigate(() => {
     const name = placeName(document.title);
-    leaving = name ? { name, href: location.pathname + location.search } : null;
+    const at = indexHere();
+    leaving = name && at !== undefined ? { name, href: location.pathname + location.search, at } : null;
   });
   afterNavigate(() => {
-    const at = history.state?.[HISTORY_INDEX];
-    if (typeof at !== 'number') return;
-    first ??= at;
+    const at = indexHere();
+    if (at === undefined) return;
+    // Back past where this visit began: those earlier steps are behind us now.
+    if (first === null || at < first) first = at;
     appBack.behind = at > first;
   });
 }
@@ -71,11 +80,24 @@ export function watchLeaving() {
 /**
  * From a page's afterNavigate: on arriving by a link, keep the page just left
  * in this history entry, unless `skip` says it isn't somewhere to go back to
- * (another view of this same page, say).
+ * (another view of this same page, say). Only when it is the step right
+ * behind: a navigation that replaced the page left (like signing in) has
+ * nothing of it behind to go back to.
  */
 export function keepCameFrom(nav: AfterNavigate, skip: (from: URL) => boolean) {
   if (nav.type !== 'link' && nav.type !== 'goto') return;
   const from = leaving;
-  if (!from || !nav.from || skip(nav.from.url)) return;
-  replaceState('', { ...page.state, cameFrom: from });
+  const at = indexHere();
+  if (!from || !nav.from || at !== from.at + 1 || skip(nav.from.url)) return;
+  replaceState('', { ...page.state, cameFrom: { name: from.name, href: from.href, at } });
+}
+
+/**
+ * The page this one was reached from, if going back one step returns to it.
+ * The reader opening over a page carries the note into its own entry; from
+ * there, one step back is this page, not the one named.
+ */
+export function cameFrom(): Place | undefined {
+  const c = page.state.cameFrom;
+  return c && indexHere() === c.at ? c : undefined;
 }

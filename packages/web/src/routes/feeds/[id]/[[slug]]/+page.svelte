@@ -13,7 +13,7 @@
   import Banner from '$lib/components/Banner.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import BackLink from '$lib/components/BackLink.svelte';
-  import { keepCameFrom } from '$lib/wayback.svelte';
+  import { cameFrom as wayBack, keepCameFrom } from '$lib/wayback.svelte';
   import { session } from '$lib/session.svelte';
 
   /**
@@ -47,7 +47,7 @@
 
   /** Another view of this same feed (its settings, one of its posts) isn't a way back. */
   afterNavigate((nav) => keepCameFrom(nav, (from) => from.pathname === `/feeds/${id}` || from.pathname.startsWith(`/feeds/${id}/`) || from.pathname === '/add'));
-  const cameFrom = $derived(page.state.cameFrom);
+  const cameFrom = $derived(wayBack());
 
   $effect(() => {
     if (loadedId === id) return;
