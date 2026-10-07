@@ -81,14 +81,16 @@
         <div class="who">
           <h2>{name ?? 'This feed'}</h2>
           {#if missing === 'gone'}
-            <p class="said">Its feed isn’t on {site.status?.name ?? 'thicket'}</p>
+            <p class="said">Not on {site.status?.name ?? 'thicket'}</p>
           {:else}
             <p class="said" role="alert">{typeof navigator !== 'undefined' && !navigator.onLine ? 'You’re offline. Reconnect and try again.' : `${site.status?.name ?? 'thicket'} isn’t answering right now. Try again in a minute.`}</p>
           {/if}
         </div>
         <IconButton class="close" icon="close" label="Close" onclick={() => dialog?.close()} />
       </header>
-      {#if missing === 'failed'}
+      {#if missing === 'gone'}
+        <p class="desc">To get new posts from this site, use Add new feed.</p>
+      {:else}
         <footer><Button onclick={load} loading={retrying} style="flex: 1">Try again</Button></footer>
       {/if}
     {:else}
