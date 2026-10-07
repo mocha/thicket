@@ -20,17 +20,20 @@
   import Badge from './Badge.svelte';
   import { session } from '$lib/session.svelte';
   import { site } from '$lib/site.svelte';
+  import { untrack } from 'svelte';
 
   let { feedId, name = null, hasIcon = false, onclose }: { feedId: number | null; name?: string | null; hasIcon?: boolean; onclose: () => void } = $props();
   let feed = $state<Feed | null>(null);
   let ids = $state<number[]>([]);
   /** `gone`: there's no feed for this post here. `failed`: we couldn't ask. */
   let missing = $state<'gone' | 'failed' | null>(null);
+  /** Asking again after a failure: the message and button stay put meanwhile. */
+  let retrying = $state(false);
   let dialog = $state<HTMLDialogElement | null>(null);
 
   function load() {
-    missing = null;
     if (feedId === null) { missing = 'gone'; return; }
+    retrying = missing === 'failed';
     api.feed(feedId).then(
       (f) => { feed = f; ids = f.myCollectionIds; },
       (e) => {
@@ -38,12 +41,12 @@
         console.error(`Couldn't load feed ${feedId} for its card:`, e);
         missing = 'failed';
       },
-    );
+    ).finally(() => (retrying = false));
   }
 
   $effect(() => {
     dialog?.showModal();
-    load();
+    untrack(load);
   });
 </script>
 
@@ -81,7 +84,7 @@
         <p class="said">Its feed isn’t on {site.status?.name ?? 'thicket'}</p>
       {:else}
         <p class="said" role="alert">{typeof navigator !== 'undefined' && !navigator.onLine ? 'You’re offline. Reconnect and try again.' : `${site.status?.name ?? 'thicket'} isn’t answering right now. Try again in a minute.`}</p>
-        <footer><Button onclick={load} style="flex: 1">Try again</Button></footer>
+        <footer><Button onclick={load} loading={retrying} style="flex: 1">Try again</Button></footer>
       {/if}
     {:else}
       <p class="loading">Loading…</p>

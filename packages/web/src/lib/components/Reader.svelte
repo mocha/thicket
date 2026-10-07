@@ -93,6 +93,7 @@
       // Paged: not modal, so the bottom bar stays live while reading and the reader sits above it.
       if (!dialog?.open) { if (paged) dialog?.show(); else dialog?.showModal(); }
     } else if (item) {
+      popover = false;
       dialog?.close();
       readerClosed();
     }
@@ -135,6 +136,7 @@
     if (paged && item && e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); close(); }
   }
 
+  /** The feed's card, over the post. Closing the reader by any route (Back, say) closes it too. */
   let popover = $state(false);
   function openSource() {
     if (item) api.event('source_opened', { feedId: item.feedId, via: 'reader' });
@@ -210,7 +212,7 @@
   {/if}
 </dialog>
 
-{#if popover && item}
+{#if popover && item && openFor === item.id}
   <FeedPopover feedId={item.feedId} hasIcon={item.hasIcon} name={source} onclose={() => (popover = false)} />
 {/if}
 
