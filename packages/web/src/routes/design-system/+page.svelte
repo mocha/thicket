@@ -15,6 +15,7 @@
   import Badge from '$lib/components/Badge.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
+  import BackLink from '$lib/components/BackLink.svelte';
   import Breadcrumb from '$lib/components/Breadcrumb.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import Field from '$lib/components/Field.svelte';
@@ -184,6 +185,7 @@
       items: [
         { id: 'add-new-feed', label: 'Add new feed' },
         { id: 'avatar', label: 'Avatar' },
+        { id: 'back-link', label: 'Back link' },
         { id: 'badge', label: 'Badge' },
         { id: 'banner', label: 'Banner' },
         { id: 'breadcrumb', label: 'Breadcrumb' },
@@ -424,6 +426,12 @@
       </div>
     </section>
 
+    <section class="entry" id="back-link" aria-labelledby="back-link-h">
+      <h3 class="entry-h" id="back-link-h">Back link</h3>
+      <p class="section-lede">The way out of a page, by name, with an arrow before it. It sits small above a page’s title, like a feed’s page naming the collection or Explore you came from, and it starts every Breadcrumb. It takes the size of the text around it. When the page it names is the one you just left, clicking it goes back one step rather than opening that page fresh, so the page comes back as you left it (same search, filters, and spot in the list), and Back afterwards doesn’t land here again. Use it for the one way back from a page; a link to anywhere else stays a plain link.</p>
+      <div class="row"><BackLink href="#back-link" label="Explore" /></div>
+    </section>
+
     <section class="entry" id="badge" aria-labelledby="badge-h">
       <h3 class="entry-h" id="badge-h">Badge</h3>
       <p class="section-lede">A short status word or a count that rides alongside something else. Never something you press.</p>
@@ -451,7 +459,7 @@
 
     <section class="entry" id="breadcrumb" aria-labelledby="breadcrumb-h">
       <h3 class="entry-h" id="breadcrumb-h">Breadcrumb</h3>
-      <p class="section-lede">The header of a page that sits one step inside another, like managing a feed or a collection. It is the whole header: there’s no big title under it. Each place you came through is a link, in order, and the last step is the page you’re on, in plain gray. Every step is the same size, which is what makes it read as one trail. The page’s one main action, like Unfollow, sits at the right on the same line. Use it instead of a “Back to …” link above a title.</p>
+      <p class="section-lede">The header of a page that sits one step inside another, like managing a feed or a collection. It is the whole header: there’s no big title under it. Each place you came through is a link, in order, and the last step is the page you’re on, in plain gray. Every step is the same size, which is what makes it read as one trail, and the first step is a Back link, with its arrow marking the way out. The page’s one main action, like Unfollow, sits at the right on the same line. Use it instead of a “Back to …” link above a title.</p>
       <Breadcrumb trail={[{ label: 'Core77', href: '#breadcrumb' }]} current="Manage feed" asTitle={false} />
     </section>
 
