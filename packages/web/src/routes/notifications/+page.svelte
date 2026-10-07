@@ -28,10 +28,10 @@
   let items = $state<Notification[] | null>(null);
   let failed = $state<string | null>(null);
   /** The feed whose card is open, from a post line's icon. */
-  let source = $state<{ feedId: number | null; name: string } | null>(null);
-  function openSource(feedId: number | null, name: string) {
+  let source = $state<{ feedId: number | null; hasIcon: boolean; name: string } | null>(null);
+  function openSource(feedId: number | null, hasIcon: boolean, name: string) {
     api.event('source_opened', { feedId, via: 'notifications' });
-    source = { feedId, name };
+    source = { feedId, hasIcon, name };
   }
 
   onMount(async () => {
@@ -86,7 +86,7 @@
           <p class="line">
             {@render who(n.person)}
             <span class="verb">{n.kind === 'note' ? 'noted' : 'bookmarked'}</span>
-            <button class="source tap" onclick={() => openSource(n.post.feedId, n.post.siteTitle ?? hostOf(n.post.url))} aria-label="About {n.post.siteTitle ?? hostOf(n.post.url)}" title="About {n.post.siteTitle ?? hostOf(n.post.url)}">
+            <button class="source tap" onclick={() => openSource(n.post.feedId, n.post.hasIcon, n.post.siteTitle ?? hostOf(n.post.url))} aria-label="About {n.post.siteTitle ?? hostOf(n.post.url)}" title="About {n.post.siteTitle ?? hostOf(n.post.url)}">
               <SourceIcon feedId={n.post.feedId} hasIcon={n.post.hasIcon} name={n.post.siteTitle ?? hostOf(n.post.url)} size={16} />
             </button>
             <a class="post" href={savedHref(n.post.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(n.post.url))} title={n.post.siteTitle ?? hostOf(n.post.url)}>{n.post.title ?? n.post.url}</a>
@@ -99,7 +99,7 @@
 {/if}
 
 {#if source}
-  <FeedPopover feedId={source.feedId} name={source.name} onclose={() => (source = null)} />
+  <FeedPopover feedId={source.feedId} hasIcon={source.hasIcon} name={source.name} onclose={() => (source = null)} />
 {/if}
 
 <style>

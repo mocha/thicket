@@ -21,7 +21,7 @@
   import { session } from '$lib/session.svelte';
   import { site } from '$lib/site.svelte';
 
-  let { feedId, name = null, onclose }: { feedId: number | null; name?: string | null; onclose: () => void } = $props();
+  let { feedId, name = null, hasIcon = false, onclose }: { feedId: number | null; name?: string | null; hasIcon?: boolean; onclose: () => void } = $props();
   let feed = $state<Feed | null>(null);
   let ids = $state<number[]>([]);
   /** `gone`: there's no feed for this post here. `failed`: we couldn't ask. */
@@ -73,7 +73,7 @@
       </footer>
     {:else if missing}
       <header>
-        <SourceIcon {feedId} {name} size={48} />
+        <SourceIcon {feedId} {hasIcon} {name} size={48} />
         <div class="who"><h2>{name ?? 'This feed'}</h2></div>
         <IconButton class="close" icon="close" label="Close" onclick={() => dialog?.close()} />
       </header>

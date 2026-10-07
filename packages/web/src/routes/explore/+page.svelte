@@ -292,10 +292,10 @@
    * looked up again.
    */
   /** A post result's feed, its card open from the row's icon or feed name. */
-  let source = $state<{ feedId: number; name: string } | null>(null);
+  let source = $state<{ feedId: number; hasIcon: boolean; name: string } | null>(null);
   function openSource(p: SearchPost) {
     api.event('source_opened', { feedId: p.feedId, via: 'explore' });
-    source = { feedId: p.feedId, name: p.feedTitle ?? hostOf(p.siteUrl) };
+    source = { feedId: p.feedId, hasIcon: p.hasIcon, name: p.feedTitle ?? hostOf(p.siteUrl) };
   }
 
   type Opened = { feed: number } | { person: string };
@@ -729,7 +729,7 @@
 {/if}
 
 {#if source}
-  <FeedPopover feedId={source.feedId} name={source.name} onclose={() => (source = null)} />
+  <FeedPopover feedId={source.feedId} hasIcon={source.hasIcon} name={source.name} onclose={() => (source = null)} />
 {/if}
 
 <style>

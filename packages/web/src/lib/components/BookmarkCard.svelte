@@ -161,7 +161,7 @@
   {/each}
   <!-- Inside the card: the list around it may only hold cards. -->
   {#if popover}
-    <FeedPopover feedId={b.feedId} name={site} onclose={() => (popover = false)} />
+    <FeedPopover feedId={b.feedId} hasIcon={b.hasIcon} name={site} onclose={() => (popover = false)} />
   {/if}
 </Card>
 

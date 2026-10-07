@@ -211,7 +211,7 @@
 </dialog>
 
 {#if popover && item}
-  <FeedPopover feedId={item.feedId} name={source} onclose={() => (popover = false)} />
+  <FeedPopover feedId={item.feedId} hasIcon={item.hasIcon} name={source} onclose={() => (popover = false)} />
 {/if}
 
 <style>
