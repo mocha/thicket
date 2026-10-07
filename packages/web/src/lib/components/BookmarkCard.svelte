@@ -14,6 +14,9 @@
    * On a searched list the bookmark says where the search matched (`marks`),
    * and those words are highlighted in the title, the site name, the summary
    * and my note.
+   *
+   * The source line sits above the body's link, as on the article card, and
+   * opens the feed's card rather than the post.
    */
   import type { Bookmark, Note, PublicBookmark, PublicUser, SavedNote } from '$lib/api';
   import { api, itemsApi } from '$lib/api';
@@ -23,6 +26,7 @@
   import { highlight, unmarked } from '$lib/words';
   import Card from './Card.svelte';
   import CardMeta from './CardMeta.svelte';
+  import FeedPopover from './FeedPopover.svelte';
   import IconButton from './IconButton.svelte';
   import NoteBlock from './NoteBlock.svelte';
   import NoteEditor from './NoteEditor.svelte';
@@ -42,6 +46,7 @@
   } = $props();
 
   let editing = $state(false);
+  let popover = $state(false);
   const site = $derived(b.siteTitle ?? hostOf(b.url));
   const others = $derived('notes' in b ? (b.notes ?? []) : []);
   const theirNote = $derived(!mine && b.note && author ? { ...b.note, author } : null);
@@ -76,6 +81,11 @@
     onopen?.();
   }
 
+  function openSource() {
+    api.event('source_opened', { feedId: b.feedId, via: 'bookmark' });
+    popover = true;
+  }
+
   function noteButton() {
     editing = !editing;
     if (editing) api.event('note_editor_opened', { bookmarkId: b.id, existing: !!b.note, via: 'bookmarks' });
@@ -103,15 +113,17 @@
 {#snippet marked(text: string)}{#each highlight(text) as part}{#if part.hit}<mark>{part.text}</mark>{:else}{part.text}{/if}{/each}{/snippet}
 
 <Card as="li" class="bm" pad={false}>
+  <header class:two={mine && action}>
+    {#if marks?.site}
+      <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} onsource={openSource}>
+        {#snippet label()}{@render marked(marks.site ?? '')}{/snippet}
+      </CardMeta>
+    {:else}
+      <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} onsource={openSource} />
+    {/if}
+  </header>
   <a class="body" href={savedHref(b.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(b.url))} onclick={opened} onauxclick={opened}>
     <div class="text" class:two={mine && action}>
-      {#if marks?.site}
-        <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt}>
-          {#snippet label()}{@render marked(marks.site ?? '')}{/snippet}
-        </CardMeta>
-      {:else}
-        <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} />
-      {/if}
       <svelte:element this={heading} class="card-title">{#if marks?.title}{@render marked(noOrphan(marks.title))}{:else}{noOrphan(b.title ?? b.url)}{/if}</svelte:element>
       {#if marks?.summary}<p class="card-summary found">{#if cut}… {/if}{@render marked(marks.summary)}</p>
       {:else if b.summary}<p class="card-summary">{b.summary}</p>{/if}
@@ -147,12 +159,18 @@
   {#each others as n (n.id)}
     <NoteBlock note={n} />
   {/each}
+  <!-- Inside the card: the list around it may only hold cards. -->
+  {#if popover}
+    <FeedPopover feedId={b.feedId} hasIcon={b.hasIcon} name={site} onclose={() => (popover = false)} />
+  {/if}
 </Card>
 
 <style>
-  .body { display: flex; gap: var(--space-3); align-items: center; padding: var(--card-pad); }
+  header { padding: var(--card-pad) calc(var(--card-pad) + var(--space-6)) 0 var(--card-pad); }
+  .body { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-1) var(--card-pad) var(--card-pad); }
   .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); padding-right: var(--space-6); }
   /* Room for two corner buttons: the note, then remove. */
+  header.two { padding-right: calc(var(--card-pad) + var(--space-6) * 2); }
   .text.two { padding-right: calc(var(--space-6) * 2); }
   @media (hover: hover) { .body:hover :global(.card-title) { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   p { --summary-lines: 2; }
