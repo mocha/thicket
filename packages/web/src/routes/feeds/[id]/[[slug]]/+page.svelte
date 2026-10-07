@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/state';
-  import { replaceState } from '$app/navigation';
+  import { afterNavigate, replaceState } from '$app/navigation';
   import { api, feedHref, type Feed } from '$lib/api';
   import { feedName } from '$lib/feedname';
   import { dismissNotice, hiddenContent, noticeDismissed } from '$lib/feedsettings';
@@ -12,6 +12,8 @@
   import IconButton from '$lib/components/IconButton.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import Badge from '$lib/components/Badge.svelte';
+  import BackLink from '$lib/components/BackLink.svelte';
+  import { keepCameFrom } from '$lib/wayback';
   import { session } from '$lib/session.svelte';
 
   /**
@@ -20,8 +22,10 @@
    * of any user, which is what makes it the unit of discovery.
    * URL is /feeds/:id/:slug; the id is canonical, the slug is corrected in place.
    * Refreshing by hand lives on the settings page now, as a diagnostic.
-   * Signed out it is the same page without Follow, Settings or the way to
-   * Explore; how far back a visitor can read is the instance's setting.
+   * Above the name is the way back to the page you came from, or to Explore
+   * when you arrived from outside. Signed out it is the same page without
+   * Follow, Settings or the way back; how far back a visitor can read is the
+   * instance's setting.
    */
   const id = $derived(Number(page.params.id));
   let feed = $state<Feed | null>(null);
@@ -36,10 +40,14 @@
     feed = await api.feed(id);
     ids = feed.myCollectionIds;
     dismissed = noticeDismissed(feed.id, hiddenContent(feed));
-    if (page.params.slug !== feed.slug) replaceState(feedHref(feed) + page.url.search, {});
+    if (page.params.slug !== feed.slug) replaceState(feedHref(feed) + page.url.search, page.state);
   }
 
   onMount(() => api.event('feed_view', { feedId: id }));
+
+  /** Another view of this same feed (its settings, one of its posts) isn't a way back. */
+  afterNavigate((nav) => keepCameFrom(nav, (from) => from.pathname === `/feeds/${id}` || from.pathname.startsWith(`/feeds/${id}/`) || from.pathname === '/add'));
+  const cameFrom = $derived(page.state.cameFrom);
 
   $effect(() => {
     if (loadedId === id) return;
@@ -51,7 +59,7 @@
 
 <svelte:head><title>{feed ? feedName(feed) : 'Feed'} · thicket</title></svelte:head>
 
-{#if session.user}<nav class="crumbs"><a class="tap" href="/explore">Explore</a> <span aria-hidden="true">›</span></nav>{/if}
+{#if session.user}<nav class="crumbs"><BackLink href={cameFrom?.href ?? '/explore'} label={cameFrom?.name ?? 'Explore'} stepBack={!!cameFrom} /></nav>{/if}
 
 {#if feed}
   <header class="profile">
@@ -107,8 +115,7 @@
 </div>
 
 <style>
-  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); margin-bottom: var(--space-2); }
-  .crumbs a { color: var(--accent); font-weight: 600; }
+  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); margin-bottom: var(--space-2); }
   .profile { display: flex; gap: var(--space-4); align-items: flex-start; }
   .who { flex: 1; min-width: 0; }
   /* The title takes what room it needs; the buttons sit to its right and drop underneath when the row runs out. */

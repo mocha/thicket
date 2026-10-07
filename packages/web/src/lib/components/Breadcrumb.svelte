@@ -8,11 +8,14 @@
    * so the page still has a title for screen readers and outlines.
    *
    * It replaces a "Back to …" link over a small "Managing …:" label over a
-   * title: three lines that each said part of where you were.
+   * title: three lines that each said part of where you were. The first step
+   * has an arrow before it, marking it as the way out.
    *
    * A long name in the trail is cut short with an ellipsis; on a narrow screen
    * the trail wraps rather than pushing the page sideways.
    */
+  import BackLink from './BackLink.svelte';
+
   interface Props {
     /** The places above this page, outermost first. */
     trail: { label: string; href: string }[];
@@ -27,9 +30,9 @@
 
 <nav class="crumbs" aria-label="Breadcrumb">
   <ol>
-    {#each trail as step (step.href)}
+    {#each trail as step, i (step.href)}
       <li>
-        <a class="tap" href={step.href}>{step.label}</a>
+        {#if i === 0}<BackLink href={step.href} label={step.label} />{:else}<a class="tap" href={step.href}>{step.label}</a>{/if}
         <span class="sep" aria-hidden="true">/</span>
       </li>
     {/each}
