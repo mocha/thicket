@@ -77,13 +77,18 @@
     {:else if missing}
       <header>
         <SourceIcon {feedId} {hasIcon} {name} size={48} />
-        <div class="who"><h2>{name ?? 'This feed'}</h2></div>
+        <!-- The line under the name says why there's no more, where a feed's address would be. -->
+        <div class="who">
+          <h2>{name ?? 'This feed'}</h2>
+          {#if missing === 'gone'}
+            <p class="said">Its feed isn’t on {site.status?.name ?? 'thicket'}</p>
+          {:else}
+            <p class="said" role="alert">{typeof navigator !== 'undefined' && !navigator.onLine ? 'You’re offline. Reconnect and try again.' : `${site.status?.name ?? 'thicket'} isn’t answering right now. Try again in a minute.`}</p>
+          {/if}
+        </div>
         <IconButton class="close" icon="close" label="Close" onclick={() => dialog?.close()} />
       </header>
-      {#if missing === 'gone'}
-        <p class="said">Its feed isn’t on {site.status?.name ?? 'thicket'}</p>
-      {:else}
-        <p class="said" role="alert">{typeof navigator !== 'undefined' && !navigator.onLine ? 'You’re offline. Reconnect and try again.' : `${site.status?.name ?? 'thicket'} isn’t answering right now. Try again in a minute.`}</p>
+      {#if missing === 'failed'}
         <footer><Button onclick={load} loading={retrying} style="flex: 1">Try again</Button></footer>
       {/if}
     {:else}
@@ -116,6 +121,6 @@
   dt { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); }
   dd { margin: 0; font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   footer { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); align-items: center; }
-  .said { margin: var(--space-4) 0 0; color: var(--text-2); }
+  .said { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .loading { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
 </style>
