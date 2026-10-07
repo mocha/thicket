@@ -185,11 +185,12 @@
     {#if showFeeds}
     <div id="collection-feeds">
       <ul class="list">
+        <!-- The name's link stretches over the row, so the icon and the rest of the row open the feed too, as on Explore. -->
         {#each col.feeds as f (f.id)}
-          <li>
+          <li class="feed">
             <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={36} />
             <div class="meta">
-              <a class="title tap" href={feedHref(f)}>{feedListName(f)}</a>
+              <a class="title whole" href={feedHref(f)}>{feedListName(f)}</a>
               <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · {relativeTime(f.lastItemAt)}{/if} · {f.followerCount} {f.followerCount === 1 ? 'follower' : 'followers'}{#if f.failing} · <span class="bad">failing</span>{/if}</div>
             </div>
             {#if session.user}
@@ -263,10 +264,10 @@
   .children .name { flex: 1; font-weight: 600; }
   .meta { flex: 1; min-width: 0; }
   .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* The name clips itself to trail off, which would clip its touch area (see
-     `.tap` in app.css) too. Padding inside the clip, cancelled by the margin,
-     makes it 44 tall to a finger without moving the row. */
-  @media (pointer: coarse) { .title { padding-block: 11px; margin-block: -11px; } }
+  .list li.feed { position: relative; }
+  .whole::after { content: ''; position: absolute; inset: 0; }
+  li.feed :global(.follow) { position: relative; z-index: 1; }
+  @media (hover: hover) { li.feed:hover .title { text-decoration: underline; text-underline-offset: 3px; } }
   .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .count { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
