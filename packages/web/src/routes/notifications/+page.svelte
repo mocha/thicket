@@ -23,9 +23,16 @@
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import Button from '$lib/components/Button.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
+  import FeedPopover from '$lib/components/FeedPopover.svelte';
 
   let items = $state<Notification[] | null>(null);
   let failed = $state<string | null>(null);
+  /** The feed whose card is open, from a post line's icon. */
+  let source = $state<{ feedId: number | null; name: string } | null>(null);
+  function openSource(feedId: number | null, name: string) {
+    api.event('source_opened', { feedId, via: 'notifications' });
+    source = { feedId, name };
+  }
 
   onMount(async () => {
     try {
@@ -79,7 +86,9 @@
           <p class="line">
             {@render who(n.person)}
             <span class="verb">{n.kind === 'note' ? 'noted' : 'bookmarked'}</span>
-            <SourceIcon feedId={n.post.feedId} hasIcon={n.post.hasIcon} name={n.post.siteTitle ?? hostOf(n.post.url)} size={16} />
+            <button class="source tap" onclick={() => openSource(n.post.feedId, n.post.siteTitle ?? hostOf(n.post.url))} aria-label="About {n.post.siteTitle ?? hostOf(n.post.url)}" title="About {n.post.siteTitle ?? hostOf(n.post.url)}">
+              <SourceIcon feedId={n.post.feedId} hasIcon={n.post.hasIcon} name={n.post.siteTitle ?? hostOf(n.post.url)} size={16} />
+            </button>
             <a class="post" href={savedHref(n.post.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(n.post.url))} title={n.post.siteTitle ?? hostOf(n.post.url)}>{n.post.title ?? n.post.url}</a>
             <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time>
           </p>
@@ -87,6 +96,10 @@
       </li>
     {/each}
   </ul>
+{/if}
+
+{#if source}
+  <FeedPopover feedId={source.feedId} name={source.name} onclose={() => (source = null)} />
 {/if}
 
 <style>
@@ -106,6 +119,7 @@
   .who { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text); font-weight: 600; }
   @media (hover: hover) { .who:hover span, .post:hover { text-decoration: underline; text-underline-offset: 3px; } }
   .verb { flex: none; }
+  .source { flex: none; display: inline-flex; }
   /* The title takes what room is left and trails off; the time stays whole at the end. */
   .post { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
   time { flex: none; margin-left: auto; padding-left: var(--space-2); color: var(--text-2); }
