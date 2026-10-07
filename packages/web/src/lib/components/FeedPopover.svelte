@@ -4,8 +4,14 @@
    * feed-level lives here so the post card can stay about the post: identity,
    * a little metadata, my relationship to it, and the way out to the feed page
    * or the site itself.
+   *
+   * A post can outlive its feed: a bookmark keeps its own copy after the feed
+   * is removed, and one saved by address never had a feed here. Then `feedId`
+   * is null, or the feed comes back not found, and the card says so under
+   * the post's own `name` for the site. Any other failure offers a retry
+   * rather than sitting on "Loading…".
    */
-  import { api, feedHref, type Feed } from '$lib/api';
+  import { api, ApiError, feedHref, type Feed } from '$lib/api';
   import { feedOrigin, hostOf, relativeTime, webHref } from '$lib/time';
   import SourceIcon from './SourceIcon.svelte';
   import FollowControl from './FollowControl.svelte';
@@ -13,19 +19,35 @@
   import Button from './Button.svelte';
   import Badge from './Badge.svelte';
   import { session } from '$lib/session.svelte';
+  import { site } from '$lib/site.svelte';
 
-  let { feedId, onclose }: { feedId: number; onclose: () => void } = $props();
+  let { feedId, name = null, onclose }: { feedId: number | null; name?: string | null; onclose: () => void } = $props();
   let feed = $state<Feed | null>(null);
   let ids = $state<number[]>([]);
+  /** `gone`: there's no feed for this post here. `failed`: we couldn't ask. */
+  let missing = $state<'gone' | 'failed' | null>(null);
   let dialog = $state<HTMLDialogElement | null>(null);
+
+  function load() {
+    missing = null;
+    if (feedId === null) { missing = 'gone'; return; }
+    api.feed(feedId).then(
+      (f) => { feed = f; ids = f.myCollectionIds; },
+      (e) => {
+        if (e instanceof ApiError && e.status === 404) { missing = 'gone'; return; }
+        console.error(`Couldn't load feed ${feedId} for its card:`, e);
+        missing = 'failed';
+      },
+    );
+  }
 
   $effect(() => {
     dialog?.showModal();
-    api.feed(feedId).then((f) => { feed = f; ids = f.myCollectionIds; });
+    load();
   });
 </script>
 
-<dialog bind:this={dialog} onclose={onclose} onclick={(e) => { if (e.target === dialog) dialog?.close(); }} aria-label={feed ? `About ${feed.title ?? hostOf(feed.url)}` : 'About this feed'}>
+<dialog bind:this={dialog} onclose={onclose} onclick={(e) => { if (e.target === dialog) dialog?.close(); }} aria-label={feed ? `About ${feed.title ?? hostOf(feed.url)}` : name ? `About ${name}` : 'About this feed'}>
   <div class="sheet">
     {#if feed}
       <header>
@@ -49,6 +71,18 @@
         {#if session.user}<FollowControl feedId={feed.id} bind:ids name={feed.title ?? hostOf(feed.url)} />{/if}
         <Button href={feedHref(feed)} onclick={() => dialog?.close()} style="flex: 1">Open feed</Button>
       </footer>
+    {:else if missing}
+      <header>
+        <SourceIcon {feedId} {name} size={48} />
+        <div class="who"><h2>{name ?? 'This feed'}</h2></div>
+        <IconButton class="close" icon="close" label="Close" onclick={() => dialog?.close()} />
+      </header>
+      {#if missing === 'gone'}
+        <p class="said">Its feed isn’t on {site.status?.name ?? 'thicket'}</p>
+      {:else}
+        <p class="said" role="alert">{typeof navigator !== 'undefined' && !navigator.onLine ? 'You’re offline. Reconnect and try again.' : `${site.status?.name ?? 'thicket'} isn’t answering right now. Try again in a minute.`}</p>
+        <footer><Button onclick={load} style="flex: 1">Try again</Button></footer>
+      {/if}
     {:else}
       <p class="loading">Loading…</p>
     {/if}
@@ -79,5 +113,6 @@
   dt { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); }
   dd { margin: 0; font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   footer { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); align-items: center; }
+  .said { margin: var(--space-4) 0 0; color: var(--text-2); }
   .loading { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
 </style>
