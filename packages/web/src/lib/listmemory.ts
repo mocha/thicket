@@ -15,7 +15,7 @@ import { beforeNavigate, onNavigate } from '$app/navigation';
 import { onMount } from 'svelte';
 
 /** The router's number for each history entry. Two visits to the same address are different entries. */
-const HISTORY_INDEX = 'sveltekit:history';
+export const HISTORY_INDEX = 'sveltekit:history';
 const LIMIT = 30;
 
 const kept = new Map<string, { value: unknown; scrollY: number }>();

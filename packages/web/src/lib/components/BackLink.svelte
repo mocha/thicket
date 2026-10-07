@@ -32,7 +32,8 @@
   });
 
   function onclick(e: MouseEvent) {
-    if (!stepBack || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (href && !stepBack) return;
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
     history.back();
   }
@@ -40,7 +41,7 @@
 
 {#snippet inner()}<Icon name="back" size={16} stroke={2.5} class="arrow" /><span class="name">{label}</span>{/snippet}
 {#if href}<a class="back tap" {href} {onclick}>{@render inner()}</a>
-{:else}<button type="button" class="back tap" onclick={() => history.back()}>{@render inner()}</button>{/if}
+{:else}<button type="button" class="back tap" {onclick}>{@render inner()}</button>{/if}
 
 <style>
   .back { display: inline-flex; font: inherit; background: none; border: 0; padding: 0; cursor: pointer; align-items: center; gap: 0.15em; min-width: 0; max-width: 100%; font-weight: 600; color: var(--accent); text-decoration: none; }

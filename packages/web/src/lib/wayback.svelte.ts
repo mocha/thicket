@@ -20,13 +20,13 @@
 import type { AfterNavigate } from '@sveltejs/kit';
 import { afterNavigate, beforeNavigate, replaceState } from '$app/navigation';
 import { page } from '$app/state';
+import { HISTORY_INDEX } from './listmemory';
 
 export type Place = { name: string; href: string };
 
 let leaving: Place | null = null;
 
-/** The router's number for each history entry; one more for each step in. */
-const HISTORY_INDEX = 'sveltekit:history';
+/** The router's number for the first page of this visit; each step in adds one. */
 let first: number | null = null;
 
 /**
