@@ -10,7 +10,7 @@
   import { api, itemsApi, type ItemContent, type SavedNote } from '$lib/api';
   import { noteToast } from '$lib/saves';
   import { hostOf, webHref } from '$lib/time';
-  import { closeReader, reader, readerClosed } from '$lib/reader.svelte';
+  import { closeReader, reader, readerClosed, reopenReader } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
   import CardMeta from './CardMeta.svelte';
   import FeedPopover from './FeedPopover.svelte';
@@ -96,6 +96,8 @@
       popover = false;
       dialog?.close();
       readerClosed();
+    } else if (openFor !== undefined) {
+      void reopenReader(openFor);
     }
   });
 
