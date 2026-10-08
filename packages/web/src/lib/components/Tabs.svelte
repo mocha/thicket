@@ -18,8 +18,10 @@
    * the start of the next one. The count is the same color as the words at
    * normal weight, not a fainter gray: a gray light enough to read as "quiet"
    * doesn't have the contrast to be readable. Big numbers are rounded
-   * ("1.8K", "2K") so a row of search results still fits. Numbers use
-   * tabular figures so a count ticking from 9 to 10 doesn't shuffle the row.
+   * ("1.8K", "2K") so a row of search results still fits. Every count keeps
+   * room for two digits, so one ticking from 9 to 10 — or anywhere up to 99 —
+   * doesn't widen its tab and shove the rest of the row along. Room for more
+   * would lengthen every row; a count passing 99 is rare enough to let move.
    *
    * `fill` shares the row out evenly between the tabs, for a fixed handful of
    * them. Leave it off when the number of tabs varies with the data — a row
@@ -380,6 +382,12 @@
   .n {
     font-weight: 400;
     color: var(--text-2);
+    /* Every digit the same width, and room kept for two of them plus the
+       parentheses — "(10)" — so 9 to 10 doesn't move the tabs after this one.
+       A single digit leaves the spare room after its closing parenthesis. */
     font-variant-numeric: tabular-nums;
+    display: inline-block;
+    min-width: 3.2ch;
+    text-align: left;
   }
 </style>
