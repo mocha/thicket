@@ -24,8 +24,8 @@
   import Button from '$lib/components/Button.svelte';
   import { recall, keepOnLeave } from '$lib/listmemory';
 
-  let { collection = null, feed = null, showSource = true, emptyTitle = 'Nothing here yet', emptyBody = 'thicket shows the posts of sites you follow, newest first, with nothing in between. Add a site by its address and its posts start arriving here, or look through Explore to see what other people here read.', emptyHref = null, emptyCta = 'Add a feed', emptyAction = () => openAddFeed({ via: 'empty_river' }), emptyPoll = false }: {
-    collection?: number | null; feed?: number | null; showSource?: boolean;
+  let { collection = null, feed = null, linkSource = true, emptyTitle = 'Nothing here yet', emptyBody = 'thicket shows the posts of sites you follow, newest first, with nothing in between. Add a site by its address and its posts start arriving here, or look through Explore to see what other people here read.', emptyHref = null, emptyCta = 'Add a feed', emptyAction = () => openAddFeed({ via: 'empty_river' }), emptyPoll = false }: {
+    collection?: number | null; feed?: number | null; linkSource?: boolean;
     emptyTitle?: string; emptyBody?: string; emptyHref?: string | null; emptyCta?: string;
     /** null = no call to action. Default opens the Add sheet. */
     emptyAction?: (() => void) | null;
@@ -305,7 +305,7 @@
       <div class="pagehead" style:height="{PAGEHEAD_H}px"><h2 class="when">{pageLabel}</h2>{#if newAtOpen}<span class="newn">{newAtOpen} new{#if !caught} · <button type="button" onclick={caughtUp}>I’m caught up</button>{/if}</span>{/if}<span class="n" role="status">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
       <div class="grid" style:grid-template-columns="repeat({cols}, minmax(0, 1fr))" style:grid-auto-rows="{cardH}px" style:gap="{GAP}px">
         {#each pageItems as item (item.id)}
-          <ItemCard {item} {showSource} compact fresh={isFresh(item)} />
+          <ItemCard {item} {linkSource} compact fresh={isFresh(item)} />
         {/each}
         {#if endOnPage}<div class="endcell"><ExploreMore {hidden} from={endFrom} /></div>{/if}
       </div>
@@ -338,7 +338,7 @@
           {#if item.id === boundaryId}
             <div class="divider" role="separator" aria-label="End of what is new since your last visit" bind:this={dividerEl}><span>That’s everything new since your last visit</span></div>
           {/if}
-          <ItemCard {item} {showSource} fresh={isFresh(item)} />
+          <ItemCard {item} {linkSource} fresh={isFresh(item)} />
         {/each}
       </section>
     {/each}
