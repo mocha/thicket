@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import { onMount, untrack } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
@@ -207,10 +208,9 @@
 
 <svelte:head><title>Bookmarks · thicket</title></svelte:head>
 
-<header class="top">
-  <h1>Bookmarks</h1>
-  <p class="sub">Posts you've bookmarked and your notes on them. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}</p>
-</header>
+<PageHeader name="Bookmarks">
+  {#snippet description()}Posts you've saved, with your notes. {#if !shared}Only you can see them.{:else}Shown on <a href={profileHref(shared.handle)}>your profile</a>{shared.text}.{/if}{/snippet}
+</PageHeader>
 
 {#if hasFilters}
   <div class="filters">
@@ -322,11 +322,6 @@
 </div>
 
 <style>
-  .top { margin-bottom: var(--space-3); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
-  /* 2px is an optical nudge under the title, not a spacing step. */
-  .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .sub a { color: var(--accent); font-weight: 600; }
   /* The collections get the whole width to slide along; the search and the
      With notes choice sit on their own line under them, so neither squeezes the tabs. */
   .filters { margin-bottom: var(--space-3); }

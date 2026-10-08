@@ -11,6 +11,7 @@
    */
   import { onMount } from 'svelte';
   import Button from '$lib/components/Button.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import Banner from '$lib/components/Banner.svelte';
@@ -18,7 +19,10 @@
   import BackLink from '$lib/components/BackLink.svelte';
   import Breadcrumb from '$lib/components/Breadcrumb.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
+  import Dot from '$lib/components/Dot.svelte';
   import Field from '$lib/components/Field.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
+  import FollowButton from '$lib/components/FollowButton.svelte';
   import Input from '$lib/components/Input.svelte';
   import Textarea from '$lib/components/Textarea.svelte';
   import Select from '$lib/components/Select.svelte';
@@ -191,10 +195,13 @@
         { id: 'breadcrumb', label: 'Breadcrumb' },
         { id: 'button', label: 'Button' },
         { id: 'choice-group', label: 'Choice group' },
+        { id: 'dot', label: 'Dot' },
         { id: 'field', label: 'Field' },
+        { id: 'follow-button', label: 'Follow button' },
         { id: 'icon-button', label: 'Icon button' },
         { id: 'input', label: 'Input' },
         { id: 'monogram', label: 'Monogram' },
+        { id: 'page-header', label: 'Page header' },
         { id: 'select', label: 'Select' },
         { id: 'setup-tour', label: 'Setup tour' },
         { id: 'tabs', label: 'Tabs' },
@@ -428,7 +435,7 @@
 
     <section class="entry" id="back-link" aria-labelledby="back-link-h">
       <h3 class="entry-h" id="back-link-h">Back link</h3>
-      <p class="section-lede">The way out of a page, by name, with an arrow before it. It sits small above a page’s title, like a feed’s page naming the collection or Explore you came from, and it starts every Breadcrumb. It takes the size of the text around it. When the page it names is the one you just left, clicking it goes back one step rather than opening that page fresh, so the page comes back as you left it (same search, filters, and spot in the list), and Back afterwards doesn’t land here again. Use it for the one way back from a page; a link to anywhere else stays a plain link.</p>
+      <p class="section-lede">The way out of a page: an arrow, then “Back to” and the page’s name, in regular weight, with a line under it at the top of the page. In a Breadcrumb it is just the name. It sits small above a page’s title, like a feed’s page naming the collection or Explore you came from, and it starts every Breadcrumb. It takes the size of the text around it. When the page it names is the one you just left, clicking it goes back one step rather than opening that page fresh, so the page comes back as you left it (same search, filters, and spot in the list), and Back afterwards doesn’t land here again. Use it for the one way back from a page; a link to anywhere else stays a plain link.</p>
       <div class="row"><BackLink href="#back-link" label="Explore" /></div>
     </section>
 
@@ -504,6 +511,12 @@
       />
     </section>
 
+    <section class="entry" id="dot" aria-labelledby="dot-h">
+      <h3 class="entry-h" id="dot-h">Dot</h3>
+      <p class="section-lede">The dot between items on one line, heavier and larger than the plain character so the items read as separate. Use it for every such dot in the app, with a space on each side in running text. Browser tab titles keep the plain character, since they can’t be styled.</p>
+      <div class="row"><span>3,368 posts in 30 days <Dot /> 2 following <Dot /> last post 21 minutes ago</span></div>
+    </section>
+
     <section class="entry" id="field" aria-labelledby="field-h">
       <h3 class="entry-h" id="field-h">Field</h3>
       <p class="section-lede">A field is the label, the note that explains it, the control, and any error beneath the control. The note sits above the box so it’s read before typing.</p>
@@ -522,6 +535,12 @@
           {/snippet}
         </Field>
       </div>
+    </section>
+
+    <section class="entry" id="follow-button" aria-labelledby="follow-button-h">
+      <h3 class="entry-h" id="follow-button-h">Follow button</h3>
+      <p class="section-lede">Follow for a person: one tap, a green outline, tinted green once you follow. It has the same look as a feed’s Follow, which also asks which collection the feed goes in. Signed out, it’s a link that goes to sign in first.</p>
+      <div class="row"><FollowButton onclick={() => {}} /><FollowButton following onclick={() => {}} /></div>
     </section>
 
     <section class="entry" id="icon-button" aria-labelledby="icon-button-h">
@@ -574,6 +593,18 @@
         <Monogram name="The Verge" size={48} />
         <Monogram name="Quanta" size={36} />
         <Monogram name="Longreads" size={28} />
+      </div>
+    </section>
+
+    <section class="entry" id="page-header" aria-labelledby="page-header-h">
+      <h3 class="entry-h" id="page-header-h">Page header</h3>
+      <p class="section-lede">The top of every page, in one order: a Back link with a line under it, only on pages that have one; the page’s name; a description in small gray text, ending with a period when it’s a sentence; then a line that closes the header. The page’s own actions sit at the right end of that line, with words, never an icon alone. With no actions, it’s just the line. A post’s own page leaves the line out, so its text follows straight on. Profiles and feeds put a picture beside the name, exactly as tall as the name and the line under it.</p>
+      <div class="demo-pagehead">
+        <PageHeader name="Deep engineering">
+          {#snippet above()}<BackLink href="#page-header" label="Explore" />{/snippet}
+          {#snippet description()}Systems, performance, and the hard parts, explained clearly.{/snippet}
+          {#snippet actions()}<Button size="sm" onclick={() => {}}><Icon name="gear" size={16} />Manage collection</Button>{/snippet}
+        </PageHeader>
       </div>
     </section>
 

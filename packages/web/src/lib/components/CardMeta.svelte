@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Dot from './Dot.svelte';
   import type { Snippet } from 'svelte';
   import { relativeTime } from '$lib/time';
   import SourceIcon from './SourceIcon.svelte';
@@ -50,7 +51,7 @@
     <span class="name">{#if label}{@render label()}{:else}{name}{/if}</span>
   {/if}
   {#if when}
-    <span class="dot">·</span>
+    <Dot />
     <time datetime={when} title={new Date(when).toLocaleString()}>{relativeTime(when)}</time>
   {/if}
   {@render children?.()}
@@ -82,6 +83,5 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .dot { color: var(--text-3); }
   time { color: var(--text-2); white-space: nowrap; }
 </style>

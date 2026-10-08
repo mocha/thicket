@@ -1,4 +1,8 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
+  import Icon from '$lib/components/Icon.svelte';
+  import Button from '$lib/components/Button.svelte';
+  import Dot from '$lib/components/Dot.svelte';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { afterNavigate, replaceState } from '$app/navigation';
@@ -48,6 +52,18 @@
   /** Another view of this same feed (its settings, one of its posts) isn't a way back. */
   afterNavigate((nav) => keepCameFrom(nav, (from) => from.pathname === `/feeds/${id}` || from.pathname.startsWith(`/feeds/${id}/`) || from.pathname === '/add'));
   const cameFrom = $derived(wayBack());
+  /** The feed's picture is exactly as tall as its name and address beside it, up to 72px for a name that wraps onto more lines. */
+  let whoHeight = $state(0);
+
+  /** "1,254 posts in 30 days · 12% were reposts · 3 following · last post 13 minutes ago". Reposts only when there are some. */
+  function statsLine(f: NonNullable<typeof feed>): string[] {
+    const n = (v: number) => v.toLocaleString();
+    const parts = [`${n(f.postsLast30d)} ${f.postsLast30d === 1 ? 'post' : 'posts'} in 30 days`];
+    if (f.repeatsLast30d > 0 && f.postsLast30d > 0) parts.push(`${Math.round((100 * f.repeatsLast30d) / f.postsLast30d)}% were reposts`);
+    parts.push(`${n(f.followerCount)} following`);
+    parts.push(f.lastItemAt ? `last post ${longAgo(f.lastItemAt)}` : 'no posts yet');
+    return parts;
+  }
 
   $effect(() => {
     if (loadedId === id) return;
@@ -59,40 +75,30 @@
 
 <svelte:head><title>{feed ? feedName(feed) : 'Feed'} · thicket</title></svelte:head>
 
-{#if session.user}<nav class="crumbs"><BackLink href={cameFrom?.href ?? '/explore'} label={cameFrom?.name ?? 'Explore'} stepBack={!!cameFrom} /></nav><hr />{/if}
-
 {#if feed}
-  <header class="profile">
-    <SourceIcon feedId={feed.id} hasIcon={feed.hasIcon} name={feedName(feed)} size={64} />
-    <div class="who">
-      <div class="titlerow">
-        <h1>{feedName(feed)}</h1>
-        {#if session.user}
-          <div class="actions">
-            <FollowControl feedId={feed.id} bind:ids name={feedName(feed)} onchange={() => void loadFeed()} />
-            <IconButton icon="gear" variant="bordered" size="lg" href="/feeds/{feed.id}/settings" label="Settings" title="Settings" />
+  <PageHeader above={session.user ? back : undefined} description={stats}>
+    {#snippet title()}
+      <div class="profile">
+        <SourceIcon feedId={feed!.id} hasIcon={feed!.hasIcon} name={feedName(feed!)} size={Math.min(whoHeight || 48, 72)} />
+        <div class="who" bind:offsetHeight={whoHeight}>
+          <h1>{feedName(feed!)}</h1>
+          <div class="addr">
+            <a class="host tap" href={webHref(feed!.siteUrl) ?? webHref(feed!.url) ?? '#'} target="_blank" rel="noopener"><span class="hosttext">{feedOrigin(feed!)} ↗</span></a>
+            {#if feed!.requiresSubscription}<Badge title="Posts from this site are behind a paywall: reading them takes a subscription">Requires subscription</Badge>{/if}
           </div>
-        {/if}
+        </div>
       </div>
-      <div class="addr">
-        <a class="host tap" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
-        {#if feed.requiresSubscription}<Badge title="Posts from this site are behind a paywall: reading them takes a subscription">Requires subscription</Badge>{/if}
-      </div>
-      {#if feed.description}<p class="desc">{feed.description}</p>{/if}
-    </div>
-  </header>
-
-  <dl class="stats">
-    <div><dt>Last post</dt><dd>{feed.lastItemAt ? longAgo(feed.lastItemAt) : '—'}</dd></div>
-    <div><dt>Last 30 days</dt><dd>{feed.postsLast30d}</dd></div>
-    <div><dt>Users following</dt><dd>{feed.followerCount}</dd></div>
-    {#if feed.repeatsLast30d > 0}
-      <div title="Posts in the last 30 days that appear to repeat an earlier post from this feed">
-        <dt>Repeats, 30 days</dt>
-        <dd>{feed.repeatsLast30d}{#if feed.postsLast30d > 0}<small> · {Math.round((100 * feed.repeatsLast30d) / feed.postsLast30d)}%</small>{/if}</dd>
-      </div>
-    {/if}
-  </dl>
+    {/snippet}
+    {#snippet actions()}
+      {#if session.user}
+        <FollowControl feedId={feed!.id} bind:ids name={feedName(feed!)} followLabel="Follow this feed" onchange={() => void loadFeed()} />
+        <Button size="sm" href="/feeds/{feed!.id}/settings"><Icon name="gear" size={16} />Manage feed</Button>
+      {/if}
+    {/snippet}
+  </PageHeader>
+  <!-- The feed's numbers, as one line where a description would go, like the counts under New posts. -->
+  {#snippet stats()}{#each statsLine(feed!) as part, i (part)}{#if i > 0}{' '}{/if}<span class="stat">{part}{#if i < statsLine(feed!).length - 1}{' '}<Dot />{/if}</span>{/each}{/snippet}
+  {#snippet back()}<BackLink href={cameFrom?.href ?? '/explore'} label={cameFrom?.name ?? 'Explore'} stepBack={!!cameFrom} />{/snippet}
 
   {#if feed.consecutiveFailures > 0 || (hidden.length > 0 && !dismissed)}
     <div class="banners">
@@ -115,37 +121,22 @@
 </div>
 
 <style>
-  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); }
-  /* The same hairline as under the Manage pages' header. */
-  hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-3) 0 var(--space-4); }
-  .profile { display: flex; gap: var(--space-4); align-items: flex-start; }
+  /* Room under the picture and name, before the numbers. */
+  /* A long line breaks between items, never inside one, and each dot stays at the end of the item before it. */
+  .stat { white-space: nowrap; }
+  .profile { display: flex; gap: var(--space-3); align-items: center; margin-bottom: var(--space-4); }
   .who { flex: 1; min-width: 0; }
-  /* The title takes what room it needs; the buttons sit to its right and drop underneath when the row runs out. */
-  .titlerow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-2) var(--space-3); }
-  h1 { flex: 1 1 auto; min-width: 0; font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
-  .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; flex: 0 1 auto; max-width: 100%; }
+  h1 { flex: 1 1 auto; min-width: 0; font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; line-height: 1.15; text-box: trim-both cap alphabetic; overflow-wrap: anywhere; }
   /* 2px is an optical nudge under the title, not a spacing step. */
-  .host { display: inline-block; max-width: 100%; overflow-wrap: anywhere; margin-top: 2px; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
+  /* One line, like the name above it; the words clip themselves, so the link's touch area can still reach past its edges. */
+  .host { display: inline-flex; max-width: 100%; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
   /* The site link sits right under the follow and settings buttons, so its
      touch area grows downward only and leaves theirs whole. */
   @media (pointer: coarse) { .host::after { top: 0; } }
   /* The address, and beside it "Requires subscription" when the site is paywalled; the pill drops under the address when the line runs out. */
-  .addr { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
-  /* On a phone the buttons fold under the address and description, so the
-     title keeps the full width. */
-  @media (max-width: 600px) {
-    .who { display: flex; flex-direction: column; align-items: flex-start; }
-    .titlerow { display: contents; }
-    h1 { flex: none; }
-    .actions { order: 1; margin-top: var(--space-3); }
-  }
-  .desc { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  /* 132px is the narrowest column that keeps the longest label, "Users following", on one line. */
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: var(--space-3) var(--space-2); margin: var(--space-5) 0 0; padding: 0 0 var(--space-3); border-bottom: 1px solid var(--line); }
-  /* 2px between a label and its number is optical, not a spacing step. */
-  .stats div { display: flex; flex-direction: column; gap: 2px; }
-  dt { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); }
-  dd { margin: 0; font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
+  /* The name and address are trimmed to their letters, from the top of the name's capitals to the bottom of the address's letters like y and p, so the picture beside them can match what you see. */
+  .hosttext { text-box: trim-both cap text; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .addr { min-width: 0; margin-top: var(--space-2); line-height: 1.3; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
   .banners { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }
   .river { margin-top: var(--space-4); }
   .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }

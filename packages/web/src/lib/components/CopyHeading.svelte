@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
   /**
    * The top of the sign-up and log-in pages. Arriving from Copy on someone's
    * collection, it names what you're about to get ("Sign up to copy",
@@ -26,7 +27,7 @@
 {:else if col}
   <p class="eyebrow">{action} to copy</p>
   <h1>{col.name}</h1>
-  <p class="by">by {col.owner.displayName ?? `@${col.owner.handle}`} · {col.feeds.length === 1 ? '1 feed' : `${col.feeds.length} feeds`}</p>
+  <p class="by">by {col.owner.displayName ?? `@${col.owner.handle}`} <Dot /> {col.feeds.length === 1 ? '1 feed' : `${col.feeds.length} feeds`}</p>
 {:else}
   <h1>{heading}</h1>
 {/if}

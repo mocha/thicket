@@ -32,7 +32,7 @@
   <ol>
     {#each trail as step, i (step.href)}
       <li>
-        {#if i === 0}<BackLink href={step.href} label={step.label} />{:else}<a class="tap" href={step.href}>{step.label}</a>{/if}
+        {#if i === 0}<BackLink href={step.href} label={step.label} bare />{:else}<a class="tap" href={step.href}>{step.label}</a>{/if}
         <span class="sep" aria-hidden="true">/</span>
       </li>
     {/each}

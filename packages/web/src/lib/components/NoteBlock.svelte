@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
   /**
    * One note under a post: mine ("My note:") or someone's ("@bob's note:").
    * Shows three lines, then "Show more" slides the rest out. Mine has Edit.
@@ -42,8 +43,8 @@
     <span class="who">
       {#if mine}My note{:else if author}<a href={profileHref(author.handle)}>{author.displayName ?? `@${author.handle}`}</a>’s note{/if}
     </span>
-    {#if mine || author}<span class="dot" aria-hidden="true">·</span>{/if}
-    <span class="when" title={new Date(note.createdAt).toLocaleString()}>{relativeTime(note.createdAt)}{#if edited} · edited {relativeTime(note.updatedAt)}{/if}</span>
+    {#if mine || author}<Dot />{/if}
+    <span class="when" title={new Date(note.createdAt).toLocaleString()}>{relativeTime(note.createdAt)}{#if edited} <Dot /> edited {relativeTime(note.updatedAt)}{/if}</span>
     {#if mine && onedit}<button class="edit tap" onclick={onedit}>Edit</button>{/if}
   </div>
   <div class="body" class:clamped={!expanded} bind:this={body}>{@html html}</div>
@@ -61,7 +62,6 @@
   .note { border-top: 1px solid var(--line); padding: var(--space-3) var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); }
   .head { display: flex; align-items: baseline; gap: var(--space-1); margin-bottom: var(--space-1); }
   .who { font-weight: 600; color: var(--text-2); }
-  .dot { color: var(--text-2); }
   .who a { color: inherit; }
   .who a:hover { text-decoration: underline; }
   .when { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); flex: 1; }

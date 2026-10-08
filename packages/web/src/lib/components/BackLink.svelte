@@ -1,6 +1,8 @@
 <script lang="ts">
   /**
-   * The way out of a page, by name, with an arrow before it: "‹ Explore".
+   * The way out of a page, by name, with an arrow before it: "‹ Back to Explore".
+   * In a Breadcrumb, where the trail already says where you are, it is just
+   * the name (`bare`).
    * It takes the size of the text around it, so it heads a Breadcrumb as
    * readily as it sits small above a title.
    *
@@ -15,9 +17,10 @@
     href: string;
     label: string;
     stepBack?: boolean;
+    bare?: boolean;
   }
 
-  let { href, label, stepBack = false }: Props = $props();
+  let { href, label, stepBack = false, bare = false }: Props = $props();
 
   function onclick(e: MouseEvent) {
     if (!stepBack) return;
@@ -27,10 +30,10 @@
   }
 </script>
 
-<a class="back tap" {href} {onclick}><Icon name="back" size={16} stroke={2.5} class="arrow" /><span class="name">{label}</span></a>
+<a class="back tap" {href} {onclick}><Icon name="back" size={16} stroke={2.5} class="arrow" /><span class="name">{bare ? label : `Back to ${label}`}</span></a>
 
 <style>
-  .back { display: inline-flex; align-items: center; gap: 0.15em; min-width: 0; max-width: 100%; font-weight: 600; color: var(--text-2); text-decoration: none; }
+  .back { display: inline-flex; align-items: center; gap: 0.15em; min-width: 0; max-width: 100%; color: var(--text-2); text-decoration: none; }
   .back:hover { color: var(--text); text-decoration: underline; text-underline-offset: 0.2em; }
   /* A long name is cut short with an ellipsis rather than pushing the page sideways. */
   .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

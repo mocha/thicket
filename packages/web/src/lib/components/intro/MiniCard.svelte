@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
   /**
    * An article card in miniature for the tour's pictures: the site's letter
    * and name, how long ago, and a one-line title. Fixed height, so a picture
@@ -14,7 +15,7 @@
   <div class="top">
     <p class="meta">
       <Monogram name={site} size={16} /><span class="site">{site}</span>
-      {#if time}<span aria-hidden="true">·</span><span class="time">{#if typeof time === 'string'}{time}{:else}{@render time()}{/if}</span>{/if}
+      {#if time}<Dot /><span class="time">{#if typeof time === 'string'}{time}{:else}{@render time()}{/if}</span>{/if}
       {#if end}<span class="end">{@render end()}</span>{/if}
     </p>
     <p class="title">{title}</p>

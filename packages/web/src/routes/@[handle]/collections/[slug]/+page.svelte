@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
@@ -114,15 +116,12 @@
 {:else if !col}
   <p class="status">Loading…</p>
 {:else}
-  <header class="top">
-    <div class="titlerow">
-      <h1>{col.name}</h1>
-      <!-- Signed out, the action moves under the byline (below): beside the
-           title it bunched up with the header's Log in and Sign up. -->
-      {#if session.user}<div class="actions">
-        {#if col.isMe}
-          <AddFeedButton collectionIds={[col!.id]} via="collection_page" />
-          <IconButton icon="gear" variant="bordered" size="lg" href={manageCollectionHref(handle, slug)} label="Manage" title="Manage" />
+  {@const c = col}
+  <PageHeader name={col.name} description={col.description ? colDesc : undefined}>
+    {#snippet actions()}{#if session.user}
+        {#if c.isMe}
+          <AddFeedButton collectionIds={[c.id]} via="collection_page" />
+          <Button size="sm" href={manageCollectionHref(handle, slug)}><Icon name="gear" size={16} />Manage collection</Button>
         {:else if session.user}
           {#if partialCopy}
             <Button variant="primary" onclick={() => confirmAgain?.showModal()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy this collection'}</Button>
@@ -133,9 +132,7 @@
             <Button variant="primary" onclick={() => copy()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy this collection'}</Button>
           {/if}
         {/if}
-      </div>{/if}
-    </div>
-    {#if col.description}<p class="desc">{col.description}</p>{/if}
+      {/if}{/snippet}
     {#if !col.isMe}
       <p class="sub">by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a></p>
     {:else if audienceTag(col.visibility)}
@@ -154,7 +151,8 @@
            leads there too, so Copy is just its words. -->
       <div class="visitoraction"><Button link href="/signup?next={encodeURIComponent(copyNext(handle, slug, 'copy_button'))}" onclick={() => api.event('copy_signup_started', { handle, slug, from: 'copy_button' })}><Icon name="copy" size={16} />Copy this collection</Button></div>
     {/if}
-  </header>
+  </PageHeader>
+  {#snippet colDesc()}{col?.description}{/snippet}
 
   <!-- You already have a copy: making another is fine (you might prune each
        differently), but say so first so it isn't an accident. -->
@@ -191,7 +189,7 @@
             <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={36} />
             <div class="meta">
               <a class="title whole" href={feedHref(f)}>{feedListName(f)}</a>
-              <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} · {relativeTime(f.lastItemAt)}{/if} · {f.followerCount} {f.followerCount === 1 ? 'follower' : 'followers'}{#if f.failing} · <span class="bad">failing</span>{/if}</div>
+              <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} <Dot /> {relativeTime(f.lastItemAt)}{/if} <Dot /> {f.followerCount} {f.followerCount === 1 ? 'follower' : 'followers'}{#if f.failing} <Dot /> <span class="bad">failing</span>{/if}</div>
             </div>
             {#if session.user}
               <FollowControl feedId={f.id} ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} compact />
@@ -219,10 +217,6 @@
 {/if}
 
 <style>
-  .top { margin-bottom: var(--space-4); }
-  .titlerow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-3); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; overflow-wrap: anywhere; min-width: 0; flex: 1 1 auto; }
-  .desc { margin: var(--space-2) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); overflow-wrap: anywhere; }
   .sub { margin: var(--space-1) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
   .mycopy { margin-top: var(--space-4); }
@@ -235,21 +229,11 @@
   /* Inside the card the lists are part of it, not cards of their own. */
   .feedscard .list { background: none; box-shadow: none; border-radius: 0; border-top: 1px solid var(--line); }
   /* 2px of top padding is an optical nudge: the buttons sit on the title's line. */
-  .actions { flex: 0 1 auto; max-width: 100%; display: flex; gap: var(--space-2); align-items: center; padding-top: 2px; flex-wrap: wrap; justify-content: flex-end; }
   /* The link keeps its own padding; pull it back so its words start at the title's left edge. */
   .visitoraction { margin: var(--space-2) 0 0 calc(-1 * var(--space-2)); }
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
   dialog::backdrop { background: var(--scrim); }
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-5) var(--space-4) calc(var(--space-4) + var(--safe-b)); box-shadow: var(--shadow-sheet); }
-  /* On a phone the buttons fold under the description and byline, so the title
-     keeps the full width and the actions sit just above what they act on. */
-  @media (max-width: 600px) {
-    .top { display: flex; flex-direction: column; }
-    .titlerow { display: contents; }
-    h1 { flex: none; }
-    .actions { order: 1; margin-top: var(--space-3); justify-content: flex-start; padding-top: 0; }
-    .mycopy { order: 2; }
-  }
   @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 560px; border-radius: var(--radius-lg); } }
   .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-4); }
   @media (min-width: 700px) { .sheet.confirm { width: 460px; } }
@@ -273,5 +257,5 @@
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   .status { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
-  .empty h1 { font-size: calc(var(--text-2xl) * var(--size-app)); margin-bottom: var(--space-2); }
+  .empty h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-app)); margin: 0 0 var(--space-2); }
 </style>

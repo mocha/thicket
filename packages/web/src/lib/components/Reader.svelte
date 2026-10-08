@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
   /**
    * Read a post here, over the list. Full screen on a phone, a tall sheet on a
    * desk; the list dims behind it and a tap on the dim closes it, as does the
@@ -174,7 +175,7 @@
 
           <h1>{item.title ?? item.summary ?? item.url}</h1>
           <p class="byline">
-            {#if item.author}<span>{item.author}</span><span class="dot">·</span>{/if}
+            {#if item.author}<span>{item.author}</span><Dot />{/if}
             <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{new Date(item.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</time>
           </p>
 

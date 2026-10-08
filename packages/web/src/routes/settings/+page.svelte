@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import { api, authApi } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { display, setDisplay, APPEARANCES, READING_MODES, LAYOUTS, FRESH_OPTIONS, type Display } from '$lib/display.svelte';
@@ -52,9 +53,9 @@
 
 <svelte:head><title>Settings · thicket</title></svelte:head>
 
-<header class="top">
-  <h1>Settings</h1>
-</header>
+<PageHeader name="Settings">
+  {#snippet description()}How thicket looks and how reading in it works.{/snippet}
+</PageHeader>
 
 <section class="card">
   <label class="switch">
@@ -153,8 +154,6 @@
 {/if}
 
 <style>
-  .top { margin-bottom: var(--space-4); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   /* When a description follows the header, pull it up tight; the header's gap then sits under the description. */

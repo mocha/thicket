@@ -19,8 +19,8 @@
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import FollowSheet from './FollowSheet.svelte';
 
-  let { feedId, ids = $bindable(), name = 'this feed', compact = false, onchange }: {
-    feedId: number; ids: number[]; name?: string; compact?: boolean; onchange?: (ids: number[]) => void;
+  let { feedId, ids = $bindable(), name = 'this feed', compact = false, followLabel = 'Follow', onchange }: {
+    feedId: number; ids: number[]; name?: string; compact?: boolean; /** What it says before you follow, where "Follow" alone would be unclear: "Follow this feed" on a feed's page. */ followLabel?: string; onchange?: (ids: number[]) => void;
   } = $props();
 
   let open = $state(false);
@@ -35,7 +35,7 @@
    */
   const only = $derived(ids.length === 1 ? collectionStore.list.find((c) => c.id === ids[0]) : null);
   const label = $derived(
-    !following ? 'Follow' : only ? `In ${only.name}` : ids.length === 1 ? 'In 1 collection' : `In ${ids.length} collections`
+    !following ? followLabel : only ? `In ${only.name}` : ids.length === 1 ? 'In 1 collection' : `In ${ids.length} collections`
   );
 
   function show() {

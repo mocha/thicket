@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { importApi } from '$lib/api';
@@ -88,9 +90,9 @@
 
 <svelte:head><title>Import · thicket</title></svelte:head>
 
-<header class="top">
-  <h1>Import your feeds</h1>
-</header>
+<PageHeader name="Import your feeds">
+  {#snippet description()}Bring the feeds you follow from another reader.{/snippet}
+</PageHeader>
 
 {#if imp.step === 'choose'}
   <section class="card">
@@ -151,7 +153,7 @@
           <input class="name" bind:value={g.name} disabled={!g.keep} aria-label="Collection name" />
           <small>
             {#if blocked}{g.feeds.some((f) => f.state === 'unsure') ? 'None of these could be checked' : 'Nothing here can be added'}{:else if renamed}Created as <strong>{finalNames.get(gi)}</strong>, beside the <strong>{g.name.trim()}</strong> you already have{:else}New collection{/if}
-            · {ok.length} to add{#if bad.length} · {bad.length} can’t be added{/if}
+            <Dot /> {ok.length} to add{#if bad.length} <Dot /> {bad.length} can’t be added{/if}
           </small>
         </div>
       </div>
@@ -217,8 +219,6 @@
 {/if}
 
 <style>
-  .top { margin-bottom: 14px; }
-    h1 { font-family: var(--font-headings); font-size: calc(28px * var(--size-headings)); margin: 2px 0 0; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
   h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
   h2 + .help { margin-top: -8px; }

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
+  import BackLink from '$lib/components/BackLink.svelte';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
@@ -106,13 +108,10 @@
 
 <svelte:head><title>Bookmarks · @{handle} · thicket</title></svelte:head>
 
-<nav class="crumbs"><a class="tap" href={profileHref(handle)}>@{handle}</a> <span aria-hidden="true">›</span></nav>
-<header class="top">
-  <h1>{isMe ? 'Your bookmarks' : `${owner?.displayName ?? `@${handle}`}’s bookmarks`}</h1>
-  {#if !isMe}
-    <p class="sub">{#if notedOnly}The posts {owner?.displayName ?? `@${handle}`} has written a note on. {/if}{#if session.user}Tap the bookmark on any post to save a copy to yours.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save any of these to your own.{/if}</p>
-  {/if}
-</header>
+<PageHeader name={isMe ? 'Your bookmarks' : `${owner?.displayName ?? `@${handle}`}’s bookmarks`} description={isMe ? undefined : theirs}>
+  {#snippet above()}<BackLink href={profileHref(handle)} label="@{handle}" />{/snippet}
+</PageHeader>
+{#snippet theirs()}{#if notedOnly}Posts {owner?.displayName ?? `@${handle}`} has written a note on. {/if}{#if session.user}Tap the bookmark on any post to save it.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save these.{/if}{/snippet}
 
 {#if hasNotesFilter}
   <div class="filters">
@@ -148,13 +147,6 @@
 </div>
 
 <style>
-  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); margin-bottom: var(--space-1); }
-  .crumbs a { color: var(--accent); font-weight: 600; }
-  .top { margin-bottom: var(--space-3); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; overflow-wrap: anywhere; }
-  /* 2px is an optical nudge under the title, not a spacing step. */
-  .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .sub a { color: var(--accent); font-weight: 600; }
   /* The With notes choice gets the same air under it as on Bookmarks. */
   .filters { margin-bottom: var(--space-3); }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }

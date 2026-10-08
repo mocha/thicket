@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   /**
    * Notifications (issue #184): the last 30 days of what concerns me, newest
    * first. Someone followed me; someone I follow bookmarked a post or wrote a
@@ -18,7 +19,7 @@
   import { api, notificationsApi, profileHref, type Notification } from '$lib/api';
   import { clearNotifs } from '$lib/notifications.svelte';
   import { session } from '$lib/session.svelte';
-  import { hostOf, relativeTime, savedHref, ugcRel } from '$lib/time';
+  import { dayKey, dayLabel, hostOf, relativeTime, savedHref, ugcRel } from '$lib/time';
   import Avatar from '$lib/components/Avatar.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import Button from '$lib/components/Button.svelte';
@@ -49,14 +50,26 @@
   });
 
   const name = (p: { handle: string }) => `@${p.handle}`;
+
+  /** Notifications by day, newest first, labeled like New posts' days: "Yesterday", "Monday, October 5". */
+  const todayKey = $derived(dayKey(new Date()));
+  const groups = $derived.by(() => {
+    const out: { key: string; label: string; items: Notification[] }[] = [];
+    for (const n of items ?? []) {
+      const key = dayKey(new Date(n.at));
+      const last = out[out.length - 1];
+      if (last && last.key === key) last.items.push(n);
+      else out.push({ key, label: dayLabel(key), items: [n] });
+    }
+    return out;
+  });
 </script>
 
 <svelte:head><title>Notifications · thicket</title></svelte:head>
 
-<header class="top">
-  <h1>Notifications</h1>
-  <p class="sub">New followers, what the people you follow bookmark and write, and notes that mention you. The last 30 days.</p>
-</header>
+<PageHeader name="Notifications">
+  {#snippet description()}Followers, mentions, and what the people you follow save.{/snippet}
+</PageHeader>
 
 {#snippet who(p: Notification['person'])}
   <a class="who" href={profileHref(p.handle)} title={p.displayName ?? undefined}><Avatar handle={p.handle} name={p.displayName ?? p.handle} size={24} v={p.avatarUpdatedAt} /><span>{name(p)}</span></a>
@@ -73,8 +86,12 @@
     <div class="ctas"><Button href="/explore">Find people to follow</Button></div>
   </div>
 {:else}
+  <!-- Grouped by day, under the same headings as New posts; today's needs none to look at, but keeps one to be read out. -->
+  {#each groups as g (g.key)}
+  <section class="day">
+  <h2 class={g.key === todayKey ? 'visually-hidden' : 'dayhead'}>{g.label}</h2>
   <ul class="list">
-    {#each items as n (n.key)}
+    {#each g.items as n (n.key)}
       <li class:new={n.isNew} class:rich={n.kind === 'mention'}>
         {#if n.isNew}<span class="visually-hidden">New: </span>{/if}
         {#if n.kind === 'mention'}
@@ -96,6 +113,8 @@
       </li>
     {/each}
   </ul>
+  </section>
+  {/each}
 {/if}
 
 {#if source}
@@ -103,13 +122,12 @@
 {/if}
 
 <style>
-  .top { margin-bottom: var(--space-4); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
-  /* 2px is an optical nudge under the title, not a spacing step. */
-  .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; }
 
   /* One card of rows, like Recent activity on a profile: skimmable, one line each. */
+  .day { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); }
+  /* The same day heading as New posts, without the sticking. */
+  .dayhead { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; border: var(--card-border, 0); }
   .list > li { position: relative; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .list > li:first-child { border-top: 0; }
