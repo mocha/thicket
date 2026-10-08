@@ -269,6 +269,8 @@
   footer { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
   .partial { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   footer + :global(.note) { margin-top: var(--space-4); }
+  /* No card here, so the notes line up with the post's words, as on a post's own page. */
+  footer ~ :global(.note) { margin-left: 0; margin-right: 0; }
 
   /* Paged: the sheet is as tall as the frame and flows into columns one frame wide; the transform picks the column. Nothing scrolls. */
   .scroll.paged { overflow: hidden; margin: 0 var(--pager-w); }
