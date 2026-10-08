@@ -29,8 +29,9 @@
   const edited = $derived(new Date(note.updatedAt).getTime() - new Date(note.createdAt).getTime() > 60_000);
   const author = $derived('author' in note ? note.author : null);
   /* Who wrote it. Mine comes from the signed-in account, which can be briefly
-     unknown while the page loads; then the head shows just the date. */
-  const who = $derived(mine ? session.user : author);
+     unknown while the page loads; then the head shows just the date. A note
+     that names its author (the design system's sample) falls back to that. */
+  const who = $derived(mine ? (session.user ?? author) : author);
 
   // Only offer "Show more" when the clamped box is actually hiding something.
   $effect(() => {
