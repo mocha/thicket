@@ -499,7 +499,7 @@
 
     <section class="entry" id="choice-group" aria-labelledby="choice-group-h">
       <h3 class="entry-h" id="choice-group-h">Choice group</h3>
-      <p class="section-lede">Pick one, and it takes effect at once — a setting, not a tab. Nothing else on the page moves. When the options can’t sit on one line in the space they have (a small phone, large text), the group becomes a dropdown with the same choices. It never wraps and never slides sideways.</p>
+      <p class="section-lede">Pick one, and it takes effect at once — a setting, not a tab. Nothing else on the page moves. When the options can’t sit on one line in the space they have (a small phone, large text), the group becomes a dropdown with the same choices. It never wraps and never slides sideways. Every option is outlined in the accent color so the row reads as something to press; the chosen one gets an accent wash, accent words, and an outline twice as thick.</p>
       <ChoiceGroup
         options={[
           { value: 'cozy', label: 'Cozy' },
