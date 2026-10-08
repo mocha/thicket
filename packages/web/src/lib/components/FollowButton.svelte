@@ -21,11 +21,13 @@
   let { following = false, label = 'Follow', busy = false, small = false, href, onclick }: Props = $props();
 </script>
 
-{#if href}<a class="follow tap" class:small {href}>{label}</a>
-{:else}<button type="button" class="follow tap" class:small class:on={following} disabled={busy} aria-pressed={following} {onclick}>{following ? 'Following' : label}</button>{/if}
+{#if href}<a class="follow tap" class:small {href}><span class="lbl">{label}</span></a>
+{:else}<button type="button" class="follow tap" class:small class:on={following} disabled={busy} aria-pressed={following} {onclick}><span class="lbl">{following ? 'Following' : label}</span></button>{/if}
 
 <style>
-  .follow { flex: none; display: inline-flex; align-items: center; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); background: var(--surface); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; white-space: nowrap; text-decoration: none; }
+  .follow { flex: none; display: inline-flex; align-items: center; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); background: var(--surface); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; white-space: nowrap; text-decoration: none; max-width: 100%; }
+  /* A long label is cut short rather than pushing the page wider; the words clip themselves so the touch area can still reach past the edges. */
+  .lbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .follow:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
   .follow.on { background: var(--accent-tint); border-color: transparent; }
   .follow.on:hover { background: var(--accent-tint); border-color: var(--accent); }

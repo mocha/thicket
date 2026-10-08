@@ -42,8 +42,9 @@
   .desc :global(p) { margin: 0; }
   .desc :global(a) { color: var(--accent); font-weight: 600; }
   /* The line runs from the left edge to the actions, or the whole width without them. */
-  .rule { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-4); min-height: 1px; }
-  .rule::before { content: ''; flex: 1; border-top: 1px solid var(--line); }
+  /* When the buttons need the row (a phone, large text), the line keeps at least 3rem; shorter than that, it takes its own row above them instead of shrinking to a stub. */
+  .rule { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-top: var(--space-4); min-height: 1px; }
+  .rule::before { content: ''; flex: 1 1 3rem; border-top: 1px solid var(--line); }
   /* The line runs through the middle of the buttons, so with buttons it starts closer: the buttons sit just under the description, rather than half a button pushing the line further down. */
   .rule:has(> .actions:not(:empty)) { margin-top: var(--space-1); }
   /* On phones the buttons sit a little lower, so they don't crowd the description, and what follows comes a little closer, since the buttons already hang below the line. */
@@ -54,7 +55,7 @@
   /* Actions that render nothing (signed out, say) leave the line its full width. */
   .actions:empty { display: none; }
   .noline::before { border-top: 0; }
-  .actions { display: flex; flex: none; align-items: center; gap: var(--space-2); }
+  .actions { display: flex; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-2); max-width: 100%; margin-left: auto; }
   /* Where the left menu holds Add new feed, a page whose only action is that button has no actions to show, so the line runs the full width. The same condition as in Nav.svelte. */
   @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) {
     :global(main:not(.paged)) .actions:has(> :global(.bottom-bar-only:only-child)) { display: none; }
