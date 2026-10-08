@@ -501,7 +501,8 @@ export type Profile =
   | { handle: string; private: true }
   | (PublicUser & {
       private: false; isMe: boolean; following: number;
-      people: { follows: number; followers: number; isFollowing: boolean };
+      /** `followers` goes to the owner alone; null for everyone else. */
+      people: { follows: number; followers: number | null; isFollowing: boolean };
       /** null = the owner hides collections from others. */
       collections: ProfileCollection[] | null;
       /**
@@ -512,7 +513,9 @@ export type Profile =
        * neither is shared with me.
        */
       bookmarks: { count: number; notes: number | null; notedOnly: boolean } | null;
-      visibility?: { profile: 'public' | 'private'; collections: ShareLevel; bookmarks: ShareLevel; notes: ShareLevel };
+      /** Whether I may see their recent activity. */
+      activity: boolean;
+      visibility?: { profile: 'public' | 'private'; collections: ShareLevel; bookmarks: ShareLevel; notes: ShareLevel; activity: ShareLevel };
     });
 export type PublicCollectionFeed = {
   id: number; url: string; siteUrl: string | null; title: string | null; description: string | null; slug: string;

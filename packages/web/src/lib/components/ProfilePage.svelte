@@ -62,7 +62,7 @@
     const was = profile.people.isFollowing;
     try {
       const r = was ? await profilesApi.unfollow(profile.handle) : await profilesApi.follow(profile.handle);
-      profile.people = { ...profile.people, isFollowing: r.isFollowing, followers: profile.people.followers + (r.isFollowing ? 1 : -1) };
+      profile.people = { ...profile.people, isFollowing: r.isFollowing };
       api.event(r.isFollowing ? 'user_followed' : 'user_unfollowed', { handle: profile.handle });
       showToast(r.isFollowing ? `Following ${profile.displayName ?? '@' + profile.handle}. Their notes will show on posts you both see.` : `Unfollowed ${profile.displayName ?? '@' + profile.handle}`);
     } catch (e) {
