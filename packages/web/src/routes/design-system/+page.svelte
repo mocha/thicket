@@ -28,9 +28,19 @@
   import Select from '$lib/components/Select.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import Monogram from '$lib/components/Monogram.svelte';
+  import Card from '$lib/components/Card.svelte';
+  import NoteBlock from '$lib/components/NoteBlock.svelte';
   import SettingRow from '$lib/components/SettingRow.svelte';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import { showToast } from '$lib/toast.svelte';
+
+  // Sample notes for the Note entry, after your own: one by someone with a display name, one by someone without.
+  const day = 86_400_000;
+  const ago = (d: number) => new Date(Date.now() - d * day).toISOString();
+  const sampleNotes = [
+    { id: -1, body: 'Short, and it earns every sentence. Rare.', createdAt: ago(3), updatedAt: ago(3), author: { handle: 'ada', displayName: 'Ada Lovelace', avatarUpdatedAt: null } },
+    { id: -2, body: 'The part about **street sessions** is the best thing I read this week.', createdAt: ago(9), updatedAt: ago(2), author: { handle: 'grace', displayName: null, avatarUpdatedAt: null } }
+  ];
 
   /* ---- Live theme preview: set <html> attributes, restore on the way out ---- */
   type Appearance = 'system' | 'light' | 'dark';
@@ -594,6 +604,15 @@
         <Monogram name="Quanta" size={36} />
         <Monogram name="Longreads" size={28} />
       </div>
+    </section>
+
+    <section class="entry" id="note" aria-labelledby="note-h">
+      <h3 class="entry-h" id="note-h">Note</h3>
+      <p class="section-lede">A note sits under its post, on whatever the post sits on, below a line held in from the card’s sides. It opens with the writer’s picture, name and handle, which go to their profile, and the date underneath. Someone with no display name shows their handle once. Your own note looks the same, with Edit at the right. Three lines show, then Show more.</p>
+      <Card as="div" pad={false}>
+        <NoteBlock note={{ id: -3, body: 'Worth a second read for the ending.', createdAt: ago(1), updatedAt: ago(1) }} mine onedit={() => showToast('Edit opens the note’s editor')} />
+        {#each sampleNotes as n (n.id)}<NoteBlock note={n} />{/each}
+      </Card>
     </section>
 
     <section class="entry" id="page-header" aria-labelledby="page-header-h">
