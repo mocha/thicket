@@ -9,13 +9,15 @@
   import PeopleList from './PeopleList.svelte';
   import { profilesApi, type PublicUser } from '$lib/api';
 
-  let { handle, which, isMe, onclose }: { handle: string; which: 'following' | 'followers'; isMe: boolean; onclose: () => void } = $props();
+  /** `people`: the list, when the caller already has it, so it isn't fetched again. */
+  let { handle, which, isMe, people, onclose }: { handle: string; which: 'following' | 'followers'; isMe: boolean; people?: PublicUser[]; onclose: () => void } = $props();
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let list = $state<PublicUser[] | null>(null);
   let failed = $state<string | null>(null);
   $effect(() => { dialog?.showModal(); });
   $effect(() => {
+    if (people) { list = people; return; }
     const ask = which === 'following' ? profilesApi.following(handle) : profilesApi.followers(handle);
     ask.then((r) => (list = r.users)).catch((e) => (failed = e instanceof Error ? e.message : String(e)));
   });

@@ -25,7 +25,7 @@
   import type { LoadedProfile } from '$lib/profile.svelte';
 
   /** `onvisibility`: open the owner's Visibility Sheet. */
-  let { profile, onvisibility }: { profile: LoadedProfile; onvisibility?: () => void } = $props();
+  let { profile, onvisibility }: { profile: LoadedProfile; onvisibility: () => void } = $props();
 
   /** The following or followers list, open in a Sheet. */
   let people = $state<'following' | 'followers' | null>(null);
@@ -61,8 +61,9 @@
   let namesHeight = $state(0);
   let handleEl = $state<HTMLElement | null>(null);
   let wrapped = $state(0);
+  // Measured again whenever the names block changes height, which is when the handle line wraps or unwraps.
   $effect(() => {
-    namesHeight;
+    void namesHeight;
     if (!handleEl) return;
     // Each line the handle wraps onto adds one line height below the first.
     const range = document.createRange();
@@ -92,11 +93,9 @@
     try {
       const updated = await authApi.update({ displayName: dname || null, bio: dbio || null, homepageUrl: dhome || null });
       setMe(updated);
-      {
-        profile.displayName = updated.displayName;
-        profile.bio = updated.bio;
-        profile.homepageUrl = updated.homepageUrl;
-      }
+      profile.displayName = updated.displayName;
+      profile.bio = updated.bio;
+      profile.homepageUrl = updated.homepageUrl;
       dhome = updated.homepageUrl ?? '';
       api.event('profile_updated');
       editing = false;
@@ -217,7 +216,7 @@
   {#snippet actions()}
     {#if profile.isMe}
       {#if !editing}
-          {#if onvisibility}<Button size="sm" onclick={onvisibility} aria-haspopup="dialog"><Icon name="eye" size={16} />Visibility</Button>{/if}
+          <Button size="sm" onclick={onvisibility} aria-haspopup="dialog"><Icon name="eye" size={16} />Visibility</Button>
           <Button size="sm" onclick={startEdit}><Icon name="pencil" size={16} />Edit profile</Button>
       {/if}
     {:else if session.user}

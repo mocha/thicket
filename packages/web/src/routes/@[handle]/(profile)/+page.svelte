@@ -94,8 +94,6 @@
   </div>
 {/snippet}
 
-{@render ctx.tabLine()}
-
 {#if shown.has('collections') && profile.collections}
   {@const n = profile.collections.length}
   <section>
@@ -148,7 +146,7 @@
     {/if}
   </section>
   {#if peopleOpen}
-    <PeopleSheet handle={profile.handle} which="following" isMe={false} onclose={() => (peopleOpen = false)} />
+    <PeopleSheet handle={profile.handle} which="following" isMe={false} people={following ?? undefined} onclose={() => (peopleOpen = false)} />
   {/if}
 {/if}
 

@@ -11,9 +11,10 @@
    * so making a collection lives on your Collections page (`creatable`),
    * where New collection leads the list so it's never below a long scroll.
    *
-   * `filter` binds the text of a filter box the caller draws (issue #178): it
-   * narrows the list to names containing it, ignoring capitals. A search wants
-   * a flat list of matches, so ones that sit inside another collection show too.
+   * `filterable` puts a filter box above the card (issue #178), once there's
+   * more than one collection: it narrows the list to names containing what
+   * you type, ignoring capitals. A search wants a flat list of matches, so
+   * ones that sit inside another collection show too.
    */
   import { api, collectionsApi, collectionHref, publicCollectionHref, type ProfileCollection } from '$lib/api';
   import { goto } from '$app/navigation';
@@ -28,9 +29,10 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
 
-  let { collections: cols, handle, isMe, limit, filter = '', creatable = false }: {
-    collections: ProfileCollection[]; handle: string; isMe: boolean; limit?: number; filter?: string; creatable?: boolean;
+  let { collections: cols, handle, isMe, limit, filterable = false, creatable = false }: {
+    collections: ProfileCollection[]; handle: string; isMe: boolean; limit?: number; filterable?: boolean; creatable?: boolean;
   } = $props();
+  let filter = $state('');
 
   $effect(() => { if (isMe) void loadCollections(); });
 
@@ -81,6 +83,17 @@
     {/each}
   {/if}
 {/snippet}
+
+{#if filterable && cols.length > 1}
+  <div class="filter">
+    <Field label="Filter collections" hideLabel>
+      {#snippet children({ id })}
+        <Input {id} variant="search" bind:value={filter} placeholder="Filter collections" maxlength="60" autocomplete="off"
+          onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') filter = ''; }} />
+      {/snippet}
+    </Field>
+  </div>
+{/if}
 
 <div class="card">
   {#if cols.length === 0 && !creatable}
@@ -139,6 +152,8 @@
 </div>
 
 <style>
+  /* The filter sits on its own, just above the list it narrows. */
+  .filter { margin: 0 0 var(--space-3); }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .pad { padding: var(--space-4); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }

@@ -7,8 +7,8 @@
    * one with nothing in it, has no tab, and its address falls back to
    * Overview.
    *
-   * The owner gets a line under each tab saying who can see it, with a
-   * Change link that opens the Visibility Sheet, where every setting lives
+   * The owner gets a line at the top of each tab saying who can see it, with
+   * a Change link that opens the Visibility Sheet, where every setting lives
    * (the header's Visibility button opens it too). It sits on
    * a card of its own at the top of each tab, apart from the tab's items.
    */
@@ -24,6 +24,7 @@
   import TabBlurb from '$lib/components/TabBlurb.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import VisibilitySheet from '$lib/components/VisibilitySheet.svelte';
+  import { SEES } from '$lib/visibility';
 
   let { children }: { children: Snippet } = $props();
 
@@ -43,7 +44,7 @@
   });
   const loaded = $derived(profile && !profile.private ? profile : null);
   // The tabs only draw once the profile is here, so they can always count on it.
-  setProfileContext({ get profile() { return loaded!; }, tabLine });
+  setProfileContext({ get profile() { return loaded!; } });
 
   /** The Visibility Sheet: the owner's settings for who sees what. */
   let visibilityOpen = $state(false);
@@ -80,31 +81,19 @@
     void goto(tabHref(handle, v as ProfileTab), { noScroll: true, keepFocus: true });
   }
 
-  /** For the owner: who can see the open tab, said in a sentence. */
-  const WHO: Record<ShareLevel, string> = { private: 'Only you', friends: 'People you follow', public: 'Anyone' };
+  /** For the owner: who can see the open tab, said in a sentence, with the eye crossed out when only they can. */
   const blurb = $derived.by(() => {
     const su = session.user;
     if (!loaded?.isMe || !su) return null;
-    if (tab === 'overview') return su.profileVisibility === 'private' ? { text: 'Only you can see your profile.', hidden: true } : { text: 'Anyone can see your profile.', hidden: false };
-    if (su.profileVisibility === 'private') return { text: 'Your profile is hidden, so only you can see this.', hidden: true };
-    if (tab === 'collections') return { text: `${WHO[su.collectionsVisibility]} can see your collections.`, hidden: su.collectionsVisibility === 'private' };
-    if (tab === 'activity') return { text: `${WHO[su.activityVisibility]} can see your recent activity.`, hidden: su.activityVisibility === 'private' };
+    const line = (text: string, level: ShareLevel) => ({ text, hidden: level === 'private' });
+    if (su.profileVisibility === 'private') return line(tab === 'overview' ? 'Only you can see your profile.' : 'Your profile is hidden, so only you can see this.', 'private');
+    if (tab === 'overview') return line('Anyone can see your profile.', 'public');
+    if (tab === 'collections') return line(`${SEES[su.collectionsVisibility]} your collections.`, su.collectionsVisibility);
+    if (tab === 'activity') return line(`${SEES[su.activityVisibility]} your recent activity.`, su.activityVisibility);
     const b = su.bookmarksVisibility, n = su.notesVisibility;
-    return {
-      text: b === n ? `${WHO[b]} can see your bookmarks and notes.` : `${WHO[b]} can see your bookmarks. ${WHO[n]} can see your notes.`,
-      hidden: b === 'private' && n === 'private'
-    };
+    return b === n ? line(`${SEES[b]} your bookmarks and notes.`, b) : { text: `${SEES[b]} your bookmarks. ${SEES[n]} your notes.`, hidden: false };
   });
 </script>
-
-{#snippet tabLine()}
-  {#if blurb}
-    <TabBlurb text={blurb.text} card>
-      {#snippet icon()}<Icon name={blurb.hidden ? 'eye-off' : 'eye'} size={16} />{/snippet}
-      <button type="button" aria-haspopup="dialog" onclick={openVisibility}>Change</button>
-    </TabBlurb>
-  {/if}
-{/snippet}
 
 <svelte:head><title>{tab === 'overview' ? '' : `${label} · `}@{handle} · thicket</title></svelte:head>
 
@@ -131,7 +120,16 @@
     </div>
   {/if}
   <div class="panel" id="profile-tab" role={tabs.length > 1 ? 'tabpanel' : undefined} aria-label={tabs.length > 1 ? label : undefined}>
-    {#if shown.has(tab)}{@render children()}{/if}
+    {#if shown.has(tab)}
+      {#if blurb}
+        <!-- Who can see this tab, on a card of its own above the tab's items. -->
+        <TabBlurb text={blurb.text} card>
+          {#snippet icon()}<Icon name={blurb.hidden ? 'eye-off' : 'eye'} size={16} />{/snippet}
+          <button type="button" aria-haspopup="dialog" onclick={openVisibility}>Change</button>
+        </TabBlurb>
+      {/if}
+      {@render children()}
+    {/if}
   </div>
 
   {#if !session.user}

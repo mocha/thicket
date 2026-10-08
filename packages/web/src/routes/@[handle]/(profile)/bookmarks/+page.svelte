@@ -107,8 +107,6 @@
   });
 </script>
 
-{@render ctx.tabLine()}
-
 <!-- What a visitor gets here, and how their notes reach the posts you come across. -->
 {#if !isMe && owner}
   <p class="lead">

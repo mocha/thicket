@@ -93,7 +93,7 @@ profiles.get("/:handle", async (c) => {
   const [{ bookmarkCount }] = (await db.execute<{ bookmarkCount: number }>(sql`select count(*)::int as "bookmarkCount" from bookmarks where user_id = ${u.id}`)).rows;
   const [people] = (await db.execute<{ follows: number; followers: number; isFollowing: boolean }>(sql`
     select (select count(*)::int from user_follows uf join users tu on tu.id = uf.followee_id where uf.follower_id = ${u.id} and tu.profile_visibility = 'public') as follows,
-           (select count(*)::int from user_follows uf join users fu on fu.id = uf.follower_id where uf.followee_id = ${u.id} and fu.profile_visibility = 'public') as followers,
+           ${isMe ? sql`(select count(*)::int from user_follows uf join users fu on fu.id = uf.follower_id where uf.followee_id = ${u.id} and fu.profile_visibility = 'public')` : sql`0`} as followers,
            exists(select 1 from user_follows where follower_id = ${viewer?.id ?? -1} and followee_id = ${u.id}) as "isFollowing"
   `)).rows;
   const [{ noteCount }] = (await db.execute<{ noteCount: number }>(sql`select count(*)::int as "noteCount" from bookmarks where user_id = ${u.id} and note is not null`)).rows;

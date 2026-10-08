@@ -25,11 +25,11 @@
     { value: 'private', label: 'Only me' }
   ];
   type Section = 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'activityVisibility';
-  const SECTIONS: { key: Section; label: string; what: string; toast: string }[] = [
-    { key: 'collectionsVisibility', label: 'Collections', what: 'your collections', toast: 'Collections' },
-    { key: 'bookmarksVisibility', label: 'Bookmarks', what: 'your bookmarks', toast: 'Bookmarks' },
-    { key: 'notesVisibility', label: 'Notes', what: 'your notes', toast: 'Notes' },
-    { key: 'activityVisibility', label: 'Recent activity', what: 'your recent activity', toast: 'Recent activity' }
+  const SECTIONS: { key: Section; label: string }[] = [
+    { key: 'collectionsVisibility', label: 'Collections' },
+    { key: 'bookmarksVisibility', label: 'Bookmarks' },
+    { key: 'notesVisibility', label: 'Notes' },
+    { key: 'activityVisibility', label: 'Recent activity' }
   ];
 
   async function save(patch: Parameters<typeof authApi.update>[0], label: string) {
@@ -63,7 +63,7 @@
         {#each SECTIONS as s (s.key)}
           <div class="row">
             <span class="name">{s.label}</span>
-            <SectionAudience level={su[s.key]} label={s.what} onchange={(l) => save({ [s.key]: l }, `${s.toast}: ${AUD[l]}`)} />
+            <SectionAudience level={su[s.key]} label="your {s.label.toLowerCase()}" onchange={(l) => save({ [s.key]: l }, `${s.label}: ${AUD[l]}`)} />
           </div>
         {/each}
       {/if}
@@ -79,5 +79,4 @@
   .lede { color: var(--text-2); margin: calc(-1 * var(--space-2)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .name { font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .hint { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
-  .row :global(.cg) { width: 100%; }
 </style>

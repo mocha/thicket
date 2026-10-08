@@ -150,9 +150,8 @@
         </li>
       {/each}
     </ul>
-      {#if limit !== undefined}
-        <!-- A preview: the caller links to the full list. -->
-      {:else if cursor || shown < entries.length}
+      <!-- A preview (limit) has no Show more: the caller links to the full list. -->
+      {#if limit === undefined && (cursor || shown < entries.length)}
         <div class="foot"><button class="more tap" onclick={more} disabled={busy}>{busy ? 'Loading…' : 'Show more'}</button></div>
       {:else if cappedAt}
         <div class="foot"><VisitorMore cap={cappedAt} /></div>
