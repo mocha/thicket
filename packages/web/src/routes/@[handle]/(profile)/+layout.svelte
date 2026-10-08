@@ -7,12 +7,12 @@
    * one with nothing in it, has no tab, and its address falls back to
    * Overview.
    *
-   * The owner gets a line under each tab saying who can see it, with a link
-   * to the Visibility card on Overview where every setting lives. It sits on
+   * The owner gets a line under each tab saying who can see it, with a
+   * Change link that opens the Visibility Sheet, where every setting lives
+   * (the header's Visibility button opens it too). It sits on
    * a card of its own at the top of each tab, apart from the tab's items.
    */
   import type { Snippet } from 'svelte';
-  import { tick } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { api, profilesApi, type Profile, type ShareLevel } from '$lib/api';
@@ -23,6 +23,7 @@
   import Tabs from '$lib/components/Tabs.svelte';
   import TabBlurb from '$lib/components/TabBlurb.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import VisibilitySheet from '$lib/components/VisibilitySheet.svelte';
 
   let { children }: { children: Snippet } = $props();
 
@@ -44,6 +45,13 @@
   // The tabs only draw once the profile is here, so they can always count on it.
   setProfileContext({ get profile() { return loaded!; }, tabLine });
 
+  /** The Visibility Sheet: the owner's settings for who sees what. */
+  let visibilityOpen = $state(false);
+  function openVisibility() {
+    api.event('profile_visibility_opened');
+    visibilityOpen = true;
+  }
+
   const tab = $derived(tabOf(page.url.pathname, handle));
   const shown = $derived(loaded ? shownTabs(loaded) : new Set<ProfileTab>());
   // Words only, like Explore's tabs: the counts are on Overview, in each section's "All …" link.
@@ -55,19 +63,16 @@
     if (loaded && !shown.has(tab)) void goto(tabHref(handle, 'overview'), { replaceState: true });
   });
 
-  // A link to a spot on the page (#visibility, from the note box) can only land once the profile is drawn. Older
-  // links went to #bookmarks: the owner was after the notes setting, which is now in the Visibility card; a
-  // visitor was after the bookmarks, which now have their own tab.
-  let jumpedFor: string | undefined;
+  // #visibility (the note box's Change link) opens the Visibility Sheet once the profile is drawn, whether you
+  // came from another page or from a tab of this one. Older links went to #bookmarks: the owner was after the
+  // notes setting, which is now in that Sheet; a visitor was after the bookmarks, which now have their own tab.
   $effect(() => {
-    if (!loaded || jumpedFor === loaded.handle) return;
-    jumpedFor = loaded.handle;
-    const hash = location.hash;
-    const land = (id: string) => tick().then(() => document.getElementById(id)?.scrollIntoView());
-    if (hash === '#bookmarks') {
-      if (loaded.isMe) void goto(`${tabHref(handle, 'overview')}#visibility`, { replaceState: true }).then(() => land('visibility'));
-      else void goto(tabHref(handle, 'bookmarks'), { replaceState: true });
-    } else if (hash) void land(hash.slice(1));
+    const hash = page.url.hash;
+    if (!loaded || (hash !== '#visibility' && hash !== '#bookmarks')) return;
+    if (loaded.isMe) {
+      visibilityOpen = true;
+      void goto(page.url.pathname, { replaceState: true, noScroll: true, keepFocus: true });
+    } else if (hash === '#bookmarks') void goto(tabHref(handle, 'bookmarks'), { replaceState: true });
   });
 
   function pick(v: string) {
@@ -96,8 +101,7 @@
   {#if blurb}
     <TabBlurb text={blurb.text} card>
       {#snippet icon()}<Icon name={blurb.hidden ? 'eye-off' : 'eye'} size={16} />{/snippet}
-      <!-- On Overview the settings are right below, so there's nowhere to send you. -->
-      {#if tab !== 'overview'}<a href="{tabHref(handle, 'overview')}#visibility">Change</a>{/if}
+      <button type="button" aria-haspopup="dialog" onclick={openVisibility}>Change</button>
     </TabBlurb>
   {/if}
 {/snippet}
@@ -115,7 +119,10 @@
     <p>This profile is private.</p>
   </div>
 {:else if loaded}
-  <ProfileHeader profile={loaded} />
+  <ProfileHeader profile={loaded} onvisibility={openVisibility} />
+  {#if visibilityOpen && loaded.isMe}
+    <VisibilitySheet onclose={() => (visibilityOpen = false)} />
+  {/if}
 
   {#if tabs.length > 1}
     <!-- The same row as Explore's: the tabs share it evenly, with the same air under it. -->

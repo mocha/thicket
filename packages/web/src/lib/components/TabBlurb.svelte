@@ -23,5 +23,5 @@
   .card { margin: 0 0 var(--space-3); padding: var(--space-4) var(--space-3); background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); }
   .t { font-weight: 600; }
   .i { display: inline-block; vertical-align: -3px; margin-right: var(--space-2); line-height: 0; }
-  .tabblurb :global(a) { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+  .tabblurb :global(a), .tabblurb :global(button) { padding: 0; font: inherit; color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 </style>

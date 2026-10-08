@@ -24,7 +24,8 @@
   import { showToast } from '$lib/toast.svelte';
   import type { LoadedProfile } from '$lib/profile.svelte';
 
-  let { profile }: { profile: LoadedProfile } = $props();
+  /** `onvisibility`: open the owner's Visibility Sheet. */
+  let { profile, onvisibility }: { profile: LoadedProfile; onvisibility?: () => void } = $props();
 
   /** The following or followers list, open in a Sheet. */
   let people = $state<'following' | 'followers' | null>(null);
@@ -216,6 +217,7 @@
   {#snippet actions()}
     {#if profile.isMe}
       {#if !editing}
+          {#if onvisibility}<Button size="sm" onclick={onvisibility} aria-haspopup="dialog"><Icon name="eye" size={16} />Visibility</Button>{/if}
           <Button size="sm" onclick={startEdit}><Icon name="pencil" size={16} />Edit profile</Button>
       {/if}
     {:else if session.user}

@@ -1,13 +1,11 @@
 <script lang="ts">
   /**
    * A profile's Overview, at /@handle: the first few of each section, each
-   * ending in a link to its own tab. The owner's Visibility card leads, with
-   * every "who sees this" setting in one place.
+   * ending in a link to its own tab.
    */
   import { api, profilesApi, type PublicBookmark } from '$lib/api';
   import { removeBookmark, withBookmarkBack } from '$lib/saves';
   import { getProfileContext, shownTabs, tabHref } from '$lib/profile.svelte';
-  import VisibilityCard from '$lib/components/VisibilityCard.svelte';
   import CollectionTree from '$lib/components/CollectionTree.svelte';
   import ActivityList from '$lib/components/ActivityList.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
@@ -76,10 +74,7 @@
   </div>
 {/snippet}
 
-{#if profile.isMe}
-  {@render ctx.tabLine()}
-  <VisibilityCard id="visibility" />
-{/if}
+{@render ctx.tabLine()}
 
 {#if shown.has('collections') && profile.collections}
   {@const n = profile.collections.length}
