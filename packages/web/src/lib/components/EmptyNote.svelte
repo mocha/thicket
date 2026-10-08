@@ -1,14 +1,17 @@
 <script lang="ts">
   /**
    * What an empty section says: a quiet icon above one centered line of plain
-   * text, on a card like the section's items would sit on. Collections and Bookmarks use the left
-   * menu's own icons, so the section reads as the same place; Activity, which
-   * has no menu row, gets a pulse line.
+   * text, on a card like the section's items would sit on. Bookmarks uses the left menu's
+   * own icon, so the section reads as the same place; Collections gets a
+   * circle pile, and Activity, which has no menu row, a pulse line.
    */
   import { MENU_ICONS } from '$lib/menu-icons';
 
+  /** Lucide's circle-pile: six small circles stacked like a pile of collected things. */
+  const CIRCLE_PILE = 'M14 19a2 2 0 1 1-4 0a2 2 0 1 1 4 0M14 5a2 2 0 1 1-4 0a2 2 0 1 1 4 0M18 12a2 2 0 1 1-4 0a2 2 0 1 1 4 0M22 19a2 2 0 1 1-4 0a2 2 0 1 1 4 0M6 19a2 2 0 1 1-4 0a2 2 0 1 1 4 0M10 12a2 2 0 1 1-4 0a2 2 0 1 1 4 0';
+
   let { icon, text }: { icon: 'collections' | 'bookmarks' | 'activity'; text: string } = $props();
-  const PATHS = { collections: MENU_ICONS.collections, bookmarks: MENU_ICONS.bookmarks, activity: 'M3 12h4l3-7 4 14 3-7h4' };
+  const PATHS = { collections: CIRCLE_PILE, bookmarks: MENU_ICONS.bookmarks, activity: 'M3 12h4l3-7 4 14 3-7h4' };
 </script>
 
 <div class="empty">
