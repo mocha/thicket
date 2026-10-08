@@ -8,19 +8,17 @@
    * or hide simply stops appearing. A burst of feed adds to one collection (an
    * import, a copy) arrives already collapsed, so one act reads as one line.
    */
-  import { api, authApi, profilesApi, publicCollectionHref, type ActivityEntry, type ShareLevel } from '$lib/api';
+  import { api, profilesApi, publicCollectionHref, type ActivityEntry } from '$lib/api';
   import SourceIcon from './SourceIcon.svelte';
   import FeedPopover from './FeedPopover.svelte';
-  import SectionAudience from './SectionAudience.svelte';
   import { relativeTime, hostOf, savedHref, ugcRel } from '$lib/time';
   import { audienceTag } from '$lib/visibility';
-  import { session, setMe } from '$lib/session.svelte';
-  import { showToast } from '$lib/toast.svelte';
+  import { session } from '$lib/session.svelte';
   import VisitorMore from './VisitorMore.svelte';
   import Badge from './Badge.svelte';
 
-  /** `onready` fires once the first page has arrived (or failed), so the profile can jump to a section below this list without it then growing underneath. */
-  let { handle, isMe, onready }: { handle: string; isMe: boolean; onready?: () => void } = $props();
+  /** `limit`: a preview of the newest few, on a profile's Overview, with no Show more. */
+  let { handle, isMe, limit }: { handle: string; isMe: boolean; limit?: number } = $props();
 
   /** A bookmarked or noted post's feed, its card open from the line's icon or site name. */
   type Source = { feedId: number | null; hasIcon: boolean; name: string };
@@ -28,18 +26,6 @@
   function openSource(s: Source) {
     api.event('source_opened', { feedId: s.feedId, via: 'activity' });
     source = s;
-  }
-
-  /** The owner sets who sees this list; it saves the moment they pick. */
-  const AUD: Record<ShareLevel, string> = { private: 'only you', friends: 'people you follow', public: 'anyone' };
-  async function saveActivityVis(level: ShareLevel) {
-    try {
-      setMe(await authApi.update({ activityVisibility: level }));
-      api.event('settings_changed', { keys: ['activityVisibility'] });
-      showToast(`Recent activity: ${AUD[level]}`);
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : String(e));
-    }
   }
 
   /**
@@ -56,12 +42,12 @@
   let busy = $state(false);
   let failed = $state<string | null>(null);
   let loadedFor = $state<string | undefined>(undefined);
-  const visible = $derived((entries ?? []).slice(0, shown));
+  const visible = $derived((entries ?? []).slice(0, limit ?? shown));
 
   async function load(before: string | null) {
     busy = true;
     try {
-      const r = await profilesApi.activity(handle, before, session.user ? PAGE : 100);
+      const r = await profilesApi.activity(handle, before, limit ?? (session.user ? PAGE : 100));
       entries = [...(before ? (entries ?? []) : []), ...r.entries];
       cursor = r.nextCursor;
       cappedAt = r.cappedAt ?? null;
@@ -76,7 +62,7 @@
     if (loadedFor === handle) return;
     loadedFor = handle;
     entries = null; cursor = null; failed = null; cappedAt = null; shown = PAGE;
-    void load(null).then(() => onready?.());
+    void load(null);
   });
 
   async function more() {
@@ -100,15 +86,7 @@
   <span class="src"><button onclick={() => openSource({ feedId: p.feedId, hasIcon: p.hasIcon, name: p.siteTitle ?? hostOf(p.url) })} title="About {p.siteTitle ?? hostOf(p.url)}">{p.siteTitle ?? hostOf(p.url)}</button></span>
 {/snippet}
 
-<section>
-  <h2>Recent activity</h2>
-  <div class="card">
-    {#if isMe && session.user && session.user.profileVisibility !== 'private'}
-      <div class="cardhead">
-        <span class="ctrl-label">Who sees this</span>
-        <SectionAudience level={session.user.activityVisibility} label="your recent activity" onchange={saveActivityVis} />
-      </div>
-    {/if}
+<div class="card">
     {#if failed}
       <div class="pad"><p class="status">{failed}</p></div>
     {:else if entries === null}
@@ -172,29 +150,22 @@
         </li>
       {/each}
     </ul>
-      {#if cursor || shown < entries.length}
+      {#if limit !== undefined}
+        <!-- A preview: the caller links to the full list. -->
+      {:else if cursor || shown < entries.length}
         <div class="foot"><button class="more tap" onclick={more} disabled={busy}>{busy ? 'Loading…' : 'Show more'}</button></div>
       {:else if cappedAt}
         <div class="foot"><VisitorMore cap={cappedAt} /></div>
       {/if}
     {/if}
-  </div>
-</section>
+</div>
 
 {#if source}
   <FeedPopover feedId={source.feedId} hasIcon={source.hasIcon} name={source.name} onclose={() => (source = null)} />
 {/if}
 
 <style>
-  section { margin-bottom: var(--space-5); }
-  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .cardhead { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--panel); }
-  .ctrl-label { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); line-height: 1.2; }
-  /* At least 320px so the options aren't cramped, wider when larger text needs
-     it, and never wider than the strip. A fixed 320px made the control fall
-     back to its dropdown at larger text sizes with empty room beside it. */
-  .cardhead :global(.cg) { flex: none; width: fit-content; min-width: min(320px, 100%); max-width: 100%; }
   .pad { padding: var(--space-4); }
   .foot { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin: 0; }

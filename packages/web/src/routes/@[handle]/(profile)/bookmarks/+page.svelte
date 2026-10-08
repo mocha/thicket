@@ -1,24 +1,25 @@
 <script lang="ts">
-  import PageHeader from '$lib/components/PageHeader.svelte';
-  import BackLink from '$lib/components/BackLink.svelte';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { api, bookmarksApi, profileHref, profilesApi, type PublicBookmark, type PublicUser } from '$lib/api';
+  import { api, bookmarksApi, profilesApi, type PublicBookmark, type PublicUser } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import VisitorMore from '$lib/components/VisitorMore.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { removeBookmark, withBookmarkBack } from '$lib/saves';
+  import { getProfileContext } from '$lib/profile.svelte';
 
   /**
-   * Someone's bookmarks, and their note on each, when they share notes with
+   * A profile's Bookmarks tab, at /@handle/bookmarks (issue #232): someone's bookmarks, and their note on each, when they share notes with
    * me (issue #84). Tap the bookmark icon on any of them to keep a copy in
    * your own set. When they share notes but not bookmarks, only the noted
    * posts are here.
    */
   const handle = $derived(page.params.handle ?? '');
+  const ctx = getProfileContext();
+  const profile = $derived(ctx.profile);
   const notes = $derived(page.url.searchParams.get('notes') === '1');
   let owner = $state<PublicUser | null>(null);
   let isMe = $state(false);
@@ -106,12 +107,17 @@
   });
 </script>
 
-<svelte:head><title>Bookmarks · @{handle} · thicket</title></svelte:head>
-
-<PageHeader name={isMe ? 'Your bookmarks' : `${owner?.displayName ?? `@${handle}`}’s bookmarks`} description={isMe ? undefined : theirs}>
-  {#snippet above()}<BackLink href={profileHref(handle)} label="@{handle}" />{/snippet}
-</PageHeader>
-{#snippet theirs()}{#if notedOnly}Posts {owner?.displayName ?? `@${handle}`} has written a note on. {/if}{#if session.user}Tap the bookmark on any post to save it.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save these.{/if}{/snippet}
+<!-- What a visitor gets here, and how their notes reach the posts you come across. -->
+{#if !isMe && owner}
+  <p class="status lead">
+    {#if notedOnly}Posts {owner.displayName ?? `@${handle}`} has written a note on. {/if}{#if session.user}Tap the bookmark on any post to save it.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save these.{/if}
+    {#if profile.bookmarks?.notes != null && session.user && profile.people.isFollowing}
+      You also see their notes on posts you come across{#if session.user.notesFrom === 'none'}, once you allow notes in <a href="/settings">Settings</a>{/if}.
+    {:else if profile.bookmarks?.notes != null && session.user?.notesFrom === 'following'}
+      Follow them to also see their notes on posts you come across.
+    {/if}
+  </p>
+{/if}
 
 {#if hasNotesFilter}
   <div class="filters">
@@ -153,4 +159,7 @@
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
   .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; }
+  /* After .status, so the visitor's line sits left and close above the list. */
+  .lead { text-align: left; margin: 0; padding: 0 0 var(--space-3); }
+  .lead a { color: var(--accent); font-weight: 600; }
 </style>
