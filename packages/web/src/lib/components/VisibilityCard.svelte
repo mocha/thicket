@@ -40,8 +40,8 @@
 </script>
 
 {#if su}
-  <section {id}>
-    <h2>Visibility</h2>
+  <!-- No heading: the card's rows name themselves, and it's named for screen readers. -->
+  <section {id} aria-label="Visibility">
     <div class="card">
       <div class="row">
         <div class="label">
@@ -70,7 +70,6 @@
 
 <style>
   section { margin-bottom: var(--space-5); scroll-margin-top: var(--space-4); }
-  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   /* The name on the left, its choice on the right; on a narrow screen the choice drops under the name. */
   .row { display: flex; align-items: center; gap: var(--space-2) var(--space-4); flex-wrap: wrap; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }

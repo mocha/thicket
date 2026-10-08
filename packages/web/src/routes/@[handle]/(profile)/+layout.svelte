@@ -114,9 +114,6 @@
     <p>This profile is private.</p>
   </div>
 {:else if loaded}
-  {#if loaded.isMe}
-    <p class="ownerbar">This is your <strong>public profile</strong>. Depending on your settings, it's what everyone else sees.</p>
-  {/if}
   <ProfileHeader profile={loaded} />
 
   {#if tabs.length > 1}
@@ -135,8 +132,6 @@
 {/if}
 
 <style>
-  /* Owner only: a muted one-line reminder in a soft box at the very top of the page. */
-  .ownerbar { margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--surface-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); text-align: center; }
   /* Explore's spacing under its tabs, exactly. */
   .pane { margin-bottom: var(--space-2); }
   .pane :global(.scopes) { margin-bottom: var(--space-1); }
