@@ -5,7 +5,7 @@
   import { api, bookmarksApi, profilesApi, type PublicBookmark, type PublicUser } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
-  import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
+  import Select from '$lib/components/Select.svelte';
   import VisitorMore from '$lib/components/VisitorMore.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { removeBookmark, withBookmarkBack } from '$lib/saves';
@@ -125,12 +125,14 @@
     {/if}
     {#if hasNotesFilter}
       <div class="filters">
-        <ChoiceGroup
+        <!-- The same "Show" dropdown as Explore's browse cards. -->
+        <Select
+          class="filter"
+          label="Show"
           size="sm"
-          label="Show all bookmarks, or only the ones with a note"
-          options={[{ value: 'all', label: 'all bookmarks' }, { value: 'notes', label: 'with notes' }]}
           value={notes ? 'notes' : 'all'}
-          onchange={(v) => { api.event('public_bookmarks_filter', { notes: v === 'notes' }); void goto(v === 'notes' ? `${page.url.pathname}?notes=1` : page.url.pathname, { replaceState: true }); }}
+          options={[{ value: 'all', label: 'All bookmarks' }, { value: 'notes', label: 'Only ones with a note' }]}
+          onchange={(e) => { const v = e.currentTarget.value; api.event('public_bookmarks_filter', { notes: v === 'notes' }); void goto(v === 'notes' ? `${page.url.pathname}?notes=1` : page.url.pathname, { replaceState: true }); }}
         />
       </div>
     {/if}
@@ -162,7 +164,14 @@
   /* A card of its own above the bookmarks, padded like the top of the Collections and Activity cards. */
   .headcard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding-bottom: var(--space-3); margin-bottom: var(--space-3); }
   .headcard:not(:has(.filters, .lead)) { padding-bottom: var(--space-2); }
-  .filters { padding: var(--space-3) var(--space-3) 0; }
+  /* Explore's filter bar: the name, then the dropdown beside it; stacked full-width on a narrow screen. */
+  .filters { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; padding: var(--space-3) var(--space-3) 0; }
+  .filters :global(.filter) { flex-direction: row; align-items: center; gap: var(--space-1); }
+  .filters :global(.filter) > :global(label) { white-space: nowrap; font-weight: 400; }
+  @media (max-width: 600px) {
+    .filters { flex-direction: column; align-items: stretch; }
+    .filters :global(.filter) { flex-direction: column; align-items: stretch; }
+  }
   .lead { margin: 0; padding: var(--space-3) var(--space-3) 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .lead a { color: var(--accent); font-weight: 600; }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
