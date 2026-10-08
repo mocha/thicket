@@ -49,7 +49,7 @@
 <div class="note">
   <div class="head">
     {#if who}
-      <!-- Picture and name are one link, so a keyboard stops on it once. -->
+      <!-- The picture is a second way to tap through for a pointer; it's hidden from keyboards and screen readers, so they meet the name's link once. -->
       <a class="pic" href={profileHref(who.handle)} tabindex="-1" aria-hidden="true"><Avatar handle={who.handle} name={who.displayName ?? who.handle} size={32} v={who.avatarUpdatedAt ?? null} /></a>
     {/if}
     <div class="id">
