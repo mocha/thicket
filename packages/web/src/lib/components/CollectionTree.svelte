@@ -6,9 +6,10 @@
    * reader may not see, which keeps that child reachable instead of hiding it
    * under something absent.
    *
-   * Drawn on a profile's Overview (`limit`: the first few, no New collection),
-   * its Collections tab, and your own Collections page. On your own, New
-   * collection leads the list, so it's never below a long scroll.
+   * Drawn on a profile's Overview (`limit`: the first few) and Collections
+   * tab, and on your own Collections page. A profile shows what others see,
+   * so making a collection lives on your Collections page (`creatable`),
+   * where New collection leads the list so it's never below a long scroll.
    *
    * `filter` binds the text of a filter box the caller draws (issue #178): it
    * narrows the list to names containing it, ignoring capitals. A search wants
@@ -31,8 +32,8 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
 
-  let { collections: cols, handle, isMe, limit, filter = '', via = 'profile', lead }: {
-    collections: ProfileCollection[]; handle: string; isMe: boolean; limit?: number; filter?: string; via?: string; lead?: Snippet;
+  let { collections: cols, handle, isMe, limit, filter = '', creatable = false, lead }: {
+    collections: ProfileCollection[]; handle: string; isMe: boolean; limit?: number; filter?: string; creatable?: boolean; lead?: Snippet;
   } = $props();
 
   $effect(() => { if (isMe) void loadCollections(); });
@@ -42,7 +43,6 @@
   const childCols = (id: number) => cols.filter((c) => c.parentId === id);
   const query = $derived(filter.trim().toLowerCase());
   const matches = $derived(query ? cols.filter((c) => c.name.toLowerCase().includes(query)) : []);
-  const creatable = $derived(isMe && limit === undefined);
 
   let creating = $state(false);
   let newName = $state('');
@@ -54,7 +54,7 @@
     newBusy = true;
     try {
       const c = await collectionsApi.create(name);
-      api.event('collection_created', { collectionId: c.id, via });
+      api.event('collection_created', { collectionId: c.id, via: 'collections' });
       await loadCollections(true);
       creating = false; newName = '';
       await goto(collectionHref(session.user.handle, c.slug));

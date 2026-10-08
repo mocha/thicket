@@ -50,7 +50,7 @@
         {/snippet}
       </Field>
     </div>
-    <CollectionTree collections={cols} handle={me.handle} isMe {filter} via="collections" />
+    <CollectionTree collections={cols} handle={me.handle} isMe {filter} creatable />
   {/if}
 {/if}
 
