@@ -10,6 +10,7 @@
   import ActivityList from '$lib/components/ActivityList.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import EmptyNote from '$lib/components/EmptyNote.svelte';
   import PeopleList from '$lib/components/PeopleList.svelte';
   import PeopleSheet from '$lib/components/PeopleSheet.svelte';
 
@@ -18,6 +19,7 @@
   const shown = $derived(shownTabs(profile));
   const COLLECTIONS_SHOWN = 5;
   const ACTIVITY_SHOWN = 5;
+  let activityEmpty = $state(false);
 
   /**
    * A few recent bookmarks, with the notes on them; the rest are on the
@@ -107,7 +109,7 @@
   <section>
     {@render head('Bookmarks', n > 0 ? tabHref(profile.handle, 'bookmarks') : undefined, `All ${plural(n, 'bookmark')}`)}
     {#if n === 0}
-      <p class="status">Press the bookmark on any post to save it, or the note button to write down what you thought of it.</p>
+      <EmptyNote icon="bookmarks" text="Press the bookmark on any post to save it, or the note button to write down what you thought of it." />
     {:else if shownBookmarks === null}
       <p class="status">Loading…</p>
     {:else if shownBookmarks.length === 0}
@@ -125,8 +127,8 @@
 
 {#if shown.has('activity')}
   <section>
-    {@render head('Recent activity', tabHref(profile.handle, 'activity'), 'All activity')}
-    <ActivityList handle={profile.handle} isMe={profile.isMe} limit={ACTIVITY_SHOWN} />
+    {@render head('Recent activity', activityEmpty ? undefined : tabHref(profile.handle, 'activity'), 'All activity')}
+    <ActivityList handle={profile.handle} isMe={profile.isMe} limit={ACTIVITY_SHOWN} bind:empty={activityEmpty} />
   </section>
 {/if}
 

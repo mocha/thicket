@@ -15,10 +15,13 @@
   import { audienceTag } from '$lib/visibility';
   import { session } from '$lib/session.svelte';
   import VisitorMore from './VisitorMore.svelte';
+  import EmptyNote from './EmptyNote.svelte';
   import Badge from './Badge.svelte';
 
   /** `limit`: a preview of the newest few, on a profile's Overview, with no Show more. */
-  let { handle, isMe, limit }: { handle: string; isMe: boolean; limit?: number } = $props();
+  /** `empty`: set once the list has loaded with nothing in it, so a caller can drop its link to the full list. */
+  let { handle, isMe, limit, empty = $bindable(false) }: { handle: string; isMe: boolean; limit?: number; empty?: boolean } = $props();
+  $effect(() => { empty = entries !== null && entries.length === 0; });
 
   /** A bookmarked or noted post's feed, its card open from the line's icon or site name. */
   type Source = { feedId: number | null; hasIcon: boolean; name: string };
@@ -86,13 +89,14 @@
   <span class="src"><button onclick={() => openSource({ feedId: p.feedId, hasIcon: p.hasIcon, name: p.siteTitle ?? hostOf(p.url) })} title="About {p.siteTitle ?? hostOf(p.url)}">{p.siteTitle ?? hostOf(p.url)}</button></span>
 {/snippet}
 
+{#if entries !== null && entries.length === 0 && !failed}
+  <EmptyNote icon="activity" text={isMe ? 'Follow a feed, bookmark a post, or write a note, and it shows up here.' : 'Nothing to show yet.'} />
+{:else}
 <div class="card">
     {#if failed}
       <div class="pad"><p class="status">{failed}</p></div>
     {:else if entries === null}
       <div class="pad"><p class="status">Loading…</p></div>
-    {:else if entries.length === 0}
-      <div class="pad"><p class="status">{isMe ? 'Follow a feed, bookmark a post or write a note and it shows up here.' : 'Nothing to show yet.'}</p></div>
     {:else}
       <ul class="acts">
       {#each visible as e (key(e))}
@@ -158,6 +162,7 @@
       {/if}
     {/if}
 </div>
+{/if}
 
 {#if source}
   <FeedPopover feedId={source.feedId} hasIcon={source.hasIcon} name={source.name} onclose={() => (source = null)} />

@@ -28,6 +28,7 @@
   import Button from './Button.svelte';
   import Field from './Field.svelte';
   import Input from './Input.svelte';
+  import EmptyNote from './EmptyNote.svelte';
 
   let { collections: cols, handle, isMe, limit, filterable = false, creatable = false }: {
     collections: ProfileCollection[]; handle: string; isMe: boolean; limit?: number; filterable?: boolean; creatable?: boolean;
@@ -95,10 +96,10 @@
   </div>
 {/if}
 
+{#if cols.length === 0 && !creatable}
+  <EmptyNote icon="collections" text={isMe ? 'A collection is a handful of feeds you read together.' : 'No collections to show.'} />
+{:else}
 <div class="card">
-  {#if cols.length === 0 && !creatable}
-    <div class="pad"><p class="status">{isMe ? 'A collection is a handful of feeds you read together.' : 'No collections to show.'}</p></div>
-  {:else}
     <ul class="list">
       {#if creatable}
         <li class="new">
@@ -148,8 +149,8 @@
     {#if cols.length === 0 && isMe}
       <div class="pad"><p class="status">A collection is a handful of feeds you read together. Make one above, then add feeds to it from any feed’s Follow menu.</p></div>
     {/if}
-  {/if}
 </div>
+{/if}
 
 <style>
   /* The filter sits on its own, just above the list it narrows. */
