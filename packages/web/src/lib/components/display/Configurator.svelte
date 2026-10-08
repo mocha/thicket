@@ -354,7 +354,7 @@
   .box {
     position: fixed; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column;
     background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 92vh;
-    box-shadow: var(--shadow-sheet); border: var(--card-border, 0);
+    box-shadow: var(--shadow-sheet);
   }
   @media (min-width: 700px) {
     .box { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(720px, calc(100vw - 48px)); border-radius: var(--radius-lg); max-height: calc(100vh - 48px); }

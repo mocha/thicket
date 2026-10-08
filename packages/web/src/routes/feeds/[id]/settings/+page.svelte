@@ -356,7 +356,7 @@
   .admin { align-items: flex-start; }
   .admin .hint { margin: 0; }
   .admin .radios { align-self: stretch; }
-  dialog.remove { max-width: 440px; padding: var(--space-5) var(--space-5) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: var(--shadow-dialog); }
+  dialog.remove { max-width: 440px; padding: var(--space-5) var(--space-5) var(--space-4); border: 0; border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: var(--shadow-dialog); }
   dialog.remove::backdrop { background: var(--scrim); }
   dialog.remove h2 { margin: 0 0 var(--space-3); font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }
   dialog.remove p { margin: 0 0 var(--space-4); line-height: 1.5; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
