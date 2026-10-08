@@ -70,13 +70,12 @@
 <style>
   /* No fill of its own: a note is part of the post, so it takes whatever the
      post sits on, white in a card and the page on a post's own page (issue
-     #170). The rule above sets it apart, held in from the card's sides so it
-     reads as a break inside the post, not a new card; the writer's picture and
-     name head it (issue #239). The inset is a margin, so the words line up with
-     the post's own. */
-  .note { border-top: 1px solid var(--line); margin: 0 var(--card-pad, var(--space-4)); padding: var(--space-3) 0; font-size: calc(var(--text-sm) * var(--size-app)); }
-  /* Experiment (#239): a band down the left of the notes, in the line color, that the rule above each note runs into. Notes stacked one after another join into one band. */
-  .note { --band: 12px; margin-left: 0; border-left: var(--band) solid var(--line); padding-left: calc(var(--card-pad, var(--space-4)) - var(--band) + var(--space-1)); }
+     #170). A band in the line color runs down the left, from the card's edge,
+     and the rule above each note runs from the band and stops short of the
+     card's right side, so it reads as a part of the post, not a new card.
+     Notes stacked one after another join into one band. The writer's picture
+     and name head each one (issue #239). */
+  .note { --band: 12px; border-top: 1px solid var(--line); border-left: var(--band) solid var(--line); margin: 0 var(--card-pad, var(--space-4)) 0 0; padding: var(--space-3) 0 var(--space-3) calc(var(--card-pad, var(--space-4)) - var(--band) + var(--space-1)); font-size: calc(var(--text-sm) * var(--size-app)); }
   .head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
   .pic { display: flex; flex: none; }
   .id { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.35; }
