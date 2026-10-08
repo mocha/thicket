@@ -107,9 +107,8 @@
   });
 </script>
 
-<!-- The same header card as the Collections and Activity tabs: the line saying who can see this, then what
-     narrows the list. Each bookmark below is a card of its own. -->
-{#if isMe || owner || hasNotesFilter}
+<!-- The same header card as the other tabs, holding the line saying who can see this. Each bookmark below is a card of its own. -->
+{#if isMe || owner}
   <div class="headcard">
     {@render ctx.tabLine(true)}
     <!-- What a visitor gets here, and how their notes reach the posts you come across. -->
@@ -123,19 +122,21 @@
         {/if}
       </p>
     {/if}
-    {#if hasNotesFilter}
-      <div class="filters">
-        <!-- The same "Show" dropdown as Explore's browse cards. -->
-        <Select
-          class="filter"
-          label="Show"
-          size="sm"
-          value={notes ? 'notes' : 'all'}
-          options={[{ value: 'all', label: 'All bookmarks' }, { value: 'notes', label: 'Only ones with a note' }]}
-          onchange={(e) => { const v = e.currentTarget.value; api.event('public_bookmarks_filter', { notes: v === 'notes' }); void goto(v === 'notes' ? `${page.url.pathname}?notes=1` : page.url.pathname, { replaceState: true }); }}
-        />
-      </div>
-    {/if}
+  </div>
+{/if}
+
+<!-- What narrows the list sits on its own, just above the first bookmark. -->
+{#if hasNotesFilter}
+  <div class="filters">
+    <!-- The same "Show" dropdown as Explore's browse cards. -->
+    <Select
+      class="filter"
+      label="Show"
+      size="sm"
+      value={notes ? 'notes' : 'all'}
+      options={[{ value: 'all', label: 'All bookmarks' }, { value: 'notes', label: 'Only ones with a note' }]}
+      onchange={(e) => { const v = e.currentTarget.value; api.event('public_bookmarks_filter', { notes: v === 'notes' }); void goto(v === 'notes' ? `${page.url.pathname}?notes=1` : page.url.pathname, { replaceState: true }); }}
+    />
   </div>
 {/if}
 
@@ -163,9 +164,9 @@
 <style>
   /* A card of its own above the bookmarks, padded like the top of the Collections and Activity cards. */
   .headcard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding-bottom: var(--space-3); margin-bottom: var(--space-3); }
-  .headcard:not(:has(.filters, .lead)) { padding-bottom: var(--space-2); }
+  .headcard:not(:has(.lead)) { padding-bottom: var(--space-2); }
   /* Explore's filter bar: the name, then the dropdown beside it; stacked full-width on a narrow screen. */
-  .filters { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; padding: var(--space-3) var(--space-3) 0; }
+  .filters { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; margin-bottom: var(--space-3); }
   .filters :global(.filter) { flex-direction: row; align-items: center; gap: var(--space-1); }
   .filters :global(.filter) > :global(label) { white-space: nowrap; font-weight: 400; }
   @media (max-width: 600px) {
