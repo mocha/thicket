@@ -3,12 +3,15 @@
    * A profile's Overview, at /@handle: the first few of each section, each
    * ending in a link to its own tab.
    */
-  import { api, profilesApi, type PublicBookmark } from '$lib/api';
+  import { api, profilesApi, type PublicBookmark, type PublicUser } from '$lib/api';
   import { removeBookmark, withBookmarkBack } from '$lib/saves';
   import { getProfileContext, shownTabs, tabHref } from '$lib/profile.svelte';
   import CollectionTree from '$lib/components/CollectionTree.svelte';
   import ActivityList from '$lib/components/ActivityList.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
+  import Icon from '$lib/components/Icon.svelte';
+  import PeopleList from '$lib/components/PeopleList.svelte';
+  import PeopleSheet from '$lib/components/PeopleSheet.svelte';
 
   const ctx = getProfileContext();
   const profile = $derived(ctx.profile);
@@ -64,6 +67,23 @@
     });
   }
 
+  /**
+   * A visitor to a profile that shares nothing gets the people it follows
+   * instead of a dead end: the one list every public profile shows.
+   */
+  const nothingShared = $derived(shown.size === 1 && !profile.isMe);
+  const name = $derived(profile.displayName ?? `@${profile.handle}`);
+  const FOLLOWING_SHOWN = 3;
+  let following = $state<PublicUser[] | null>(null);
+  let followingFor: string | undefined;
+  let peopleOpen = $state(false);
+  $effect(() => {
+    if (!nothingShared || followingFor === profile.handle) return;
+    const h = profile.handle;
+    followingFor = h; following = null;
+    profilesApi.following(h).then((r) => { if (followingFor === h) following = r.users; }).catch(() => (following = []));
+  });
+
   const plural = (n: number, one: string) => `${n.toLocaleString()} ${n === 1 ? one : one + 's'}`;
 </script>
 
@@ -112,8 +132,24 @@
   </section>
 {/if}
 
-{#if shown.size === 1 && !profile.isMe}
-  <p class="status">Nothing shared here yet.</p>
+{#if nothingShared}
+  <!-- Nothing here for a visitor: say so, then offer the one thing every public profile shows, who they follow. -->
+  <section class="emptycard">
+    <div class="emptyhead">
+      <span class="emptyicon"><Icon name="eye-off" size={28} /></span>
+      <h2 class="emptytitle">{name} hasn’t shared anything yet</h2>
+    </div>
+    {#if following && following.length > 0}
+      <h3 class="follows">{name} follows</h3>
+      <PeopleList people={following.slice(0, FOLLOWING_SHOWN)} />
+      {#if following.length > FOLLOWING_SHOWN}
+        <button type="button" class="seeall tap" aria-haspopup="dialog" onclick={() => (peopleOpen = true)}>See all {following.length}</button>
+      {/if}
+    {/if}
+  </section>
+  {#if peopleOpen}
+    <PeopleSheet handle={profile.handle} which="following" isMe={false} onclose={() => (peopleOpen = false)} />
+  {/if}
 {/if}
 
 <style>
@@ -123,5 +159,12 @@
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0; line-height: 1.25; }
   .all { flex: none; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
+  /* The empty profile: a card with the reason, then who they follow. */
+  .emptycard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .emptyhead { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-6) var(--space-4) var(--space-5); text-align: center; }
+  .emptyicon { color: var(--text-3); line-height: 0; }
+  .emptytitle { font-size: calc(var(--text-lg) * var(--size-app)); font-weight: 600; margin: 0; text-wrap: balance; }
+  .follows { margin: 0; padding: var(--space-3) var(--space-4) var(--space-2); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  .seeall { display: block; width: 100%; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); text-align: center; }
   .saves { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
 </style>

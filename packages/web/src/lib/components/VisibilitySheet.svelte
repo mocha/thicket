@@ -45,14 +45,15 @@
 
 {#if su}
   <Sheet title="Visibility" bind:dialog {onclose}>
+    <p class="lede">Choose who sees each part of your profile.</p>
     <div class="rows">
       <div class="row">
-        <span class="name">This page</span>
-        <p class="hint">{su.profileVisibility === 'private' ? 'Hidden so only you can see this page. You still count toward feed follower numbers, but no one can tell it’s you.' : 'Anyone can open it and see the parts you share below.'}</p>
+        <span class="name">Profile page</span>
+        <p class="hint">{su.profileVisibility === 'private' ? 'Only you can open your profile. You still count toward feed follower numbers, but no one can tell it’s you.' : 'Anyone can open your profile and see the parts you share below.'}</p>
         <ChoiceGroup
           options={PAGE}
           value={su.profileVisibility}
-          label="Who can see this page"
+          label="Who can see your profile page"
           size="sm"
           fill
           onchange={(v) => save({ profileVisibility: v as 'public' | 'private' }, v === 'public' ? 'Profile is public' : 'Profile is private')}
@@ -73,7 +74,9 @@
 <style>
   /* Each setting's name above its choice, one setting per row, the rows split by a hairline. */
   .row { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
-  .row:first-child { border-top: 0; padding-top: 0; }
+  .row:last-child { padding-bottom: 0; }
+  /* Under the title, as on Add a feed, so the title and the first setting don't run together. */
+  .lede { color: var(--text-2); margin: calc(-1 * var(--space-2)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .name { font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .hint { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   .row :global(.cg) { width: 100%; }
