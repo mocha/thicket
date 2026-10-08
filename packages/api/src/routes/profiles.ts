@@ -19,7 +19,7 @@ import { currentUser, normalizeHandle, FIRST_COLLECTION_SLUG } from "../lib/auth
 import { exportCollectionOpml } from "../lib/opml.js";
 import { PUBLIC_URL } from "../lib/config.js";
 import { slugify, uniqueCollectionSlug } from "../lib/slug.js";
-import { activityForViewer } from "../lib/activity.js";
+import { activityForViewer, hasActivityForViewer } from "../lib/activity.js";
 import { noteJson } from "../lib/notes.js";
 import { activeAtSql } from "./bookmarks.js";
 import { allowedLevels, allowedLevelsSql, allows, isFriendOf, type Audience, type ShareLevel } from "../lib/visibility.js";
@@ -92,8 +92,8 @@ profiles.get("/:handle", async (c) => {
   `)).rows;
   const [{ bookmarkCount }] = (await db.execute<{ bookmarkCount: number }>(sql`select count(*)::int as "bookmarkCount" from bookmarks where user_id = ${u.id}`)).rows;
   const [people] = (await db.execute<{ follows: number; followers: number; isFollowing: boolean }>(sql`
-    select (select count(*)::int from user_follows where follower_id = ${u.id}) as follows,
-           (select count(*)::int from user_follows where followee_id = ${u.id}) as followers,
+    select (select count(*)::int from user_follows uf join users tu on tu.id = uf.followee_id where uf.follower_id = ${u.id} and tu.profile_visibility = 'public') as follows,
+           ${isMe ? sql`(select count(*)::int from user_follows uf join users fu on fu.id = uf.follower_id where uf.followee_id = ${u.id} and fu.profile_visibility = 'public')` : sql`0`} as followers,
            exists(select 1 from user_follows where follower_id = ${viewer?.id ?? -1} and followee_id = ${u.id}) as "isFollowing"
   `)).rows;
   const [{ noteCount }] = (await db.execute<{ noteCount: number }>(sql`select count(*)::int as "noteCount" from bookmarks where user_id = ${u.id} and note is not null`)).rows;
@@ -101,8 +101,7 @@ profiles.get("/:handle", async (c) => {
 
   return c.json({
     ...publicUser(u, await avatarTime(u.id)), private: false, isMe, following,
-    /** People: how many this person follows, how many follow them, and whether the viewer does. */
-    people: { follows: people.follows, followers: people.followers, isFollowing: people.isFollowing },
+    people: peopleFor(people, isMe),
     /** null = the owner hides this section. */
     collections,
     /**
@@ -113,10 +112,25 @@ profiles.get("/:handle", async (c) => {
      * they see only the noted posts. null = neither is shared.
      */
     bookmarks: sharedSaves(u, who, bookmarkCount, noteCount),
+    /**
+     * Whether this viewer has any of their recent activity to see. Hidden or
+     * empty, the page shows no trace of it; the owner always gets it.
+     */
+    activity: isMe || (await hasActivityForViewer(u, who)),
     /** For the owner: who each section is shared with, so the page can say what others see. */
-    visibility: isMe ? { profile: u.profileVisibility, collections: u.collectionsVisibility, bookmarks: u.bookmarksVisibility, notes: u.notesVisibility } : undefined,
+    visibility: isMe ? { profile: u.profileVisibility, collections: u.collectionsVisibility, bookmarks: u.bookmarksVisibility, notes: u.notesVisibility, activity: u.activityVisibility } : undefined,
   });
 });
+
+/**
+ * People on a profile: how many this person follows, how many follow them, and
+ * whether the viewer does. Only public profiles are counted, the same people
+ * the lists name. Who follows you is yours alone (issue #191), so the follower
+ * count goes only to the owner.
+ */
+export function peopleFor(p: { follows: number; followers: number; isFollowing: boolean }, isMe: boolean) {
+  return { follows: p.follows, followers: isMe ? p.followers : null, isFollowing: p.isFollowing };
+}
 
 /**
  * The people this person follows. Visible whenever the profile itself is (a

@@ -223,7 +223,7 @@
       </div>
     {/snippet}
   </Field>
-  {#if me && audience}<p class="audience" id="{uid}-audience">{audience} <Dot /> <a href={profileHref(me.handle) + (me.profileVisibility === 'public' ? '#bookmarks' : '')}>Change</a></p>{/if}
+  {#if me && audience}<p class="audience" id="{uid}-audience">{audience} <Dot /> <a href={profileHref(me.handle) + '#visibility'}>Change</a></p>{/if}
   <div class="row">
     <Button type="submit" variant="primary" disabled={busy || !dirty || !body.trim() || over}>{busy ? 'Saving…' : 'Save'}</Button>
     <Button onclick={oncancel} disabled={busy}>Cancel</Button>

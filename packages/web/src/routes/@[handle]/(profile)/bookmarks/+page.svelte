@@ -1,24 +1,25 @@
 <script lang="ts">
-  import PageHeader from '$lib/components/PageHeader.svelte';
-  import BackLink from '$lib/components/BackLink.svelte';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { api, bookmarksApi, profileHref, profilesApi, type PublicBookmark, type PublicUser } from '$lib/api';
+  import { api, bookmarksApi, profilesApi, type PublicBookmark, type PublicUser } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import VisitorMore from '$lib/components/VisitorMore.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { removeBookmark, withBookmarkBack } from '$lib/saves';
+  import { getProfileContext } from '$lib/profile.svelte';
 
   /**
-   * Someone's bookmarks, and their note on each, when they share notes with
+   * A profile's Bookmarks tab, at /@handle/bookmarks (issue #232): someone's bookmarks, and their note on each, when they share notes with
    * me (issue #84). Tap the bookmark icon on any of them to keep a copy in
    * your own set. When they share notes but not bookmarks, only the noted
    * posts are here.
    */
   const handle = $derived(page.params.handle ?? '');
+  const ctx = getProfileContext();
+  const profile = $derived(ctx.profile);
   const notes = $derived(page.url.searchParams.get('notes') === '1');
   let owner = $state<PublicUser | null>(null);
   let isMe = $state(false);
@@ -54,13 +55,17 @@
     }
   }
 
-  /** My own list, seen from my profile: remove one of mine, as on My Bookmarks (issue #170). */
+  /**
+   * My own list, seen from my profile: remove one of mine, as on My Bookmarks
+   * (issue #170). The profile's bookmark count moves with it, so Overview's
+   * "All N bookmarks" is right without a reload.
+   */
   function remove(b: PublicBookmark) {
-    const snapshot = list, h = handle;
+    const snapshot = list, h = handle, counts = profile.bookmarks;
     void removeBookmark(b, 'public_bookmarks', {
-      drop: () => (list = list.filter((x) => x.id !== b.id)),
+      drop: () => { list = list.filter((x) => x.id !== b.id); if (counts) counts.count--; },
       // Undo still restores it; the list only changes if it's still this one on screen.
-      putBack: (id) => { if (handle === h) list = withBookmarkBack(list, snapshot, b.id, id); }
+      putBack: (id) => { if (counts) counts.count++; if (handle === h) list = withBookmarkBack(list, snapshot, b.id, id); }
     });
   }
 
@@ -106,19 +111,26 @@
   });
 </script>
 
-<svelte:head><title>Bookmarks · @{handle} · thicket</title></svelte:head>
+<!-- What a visitor gets here, and how their notes reach the posts you come across. -->
+{#if !isMe && owner}
+  <p class="lead">
+    {#if notedOnly}Posts {owner.displayName ?? `@${handle}`} has written a note on. {/if}{#if session.user}Tap the bookmark on any post to save it.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save these.{/if}
+    {#if profile.bookmarks?.notes != null && session.user && profile.people.isFollowing}
+      You also see their notes on posts you come across{#if session.user.notesFrom === 'none'}, once you allow notes in <a href="/settings">Settings</a>{/if}.
+    {:else if profile.bookmarks?.notes != null && session.user?.notesFrom === 'following'}
+      Follow them to also see their notes on posts you come across.
+    {/if}
+  </p>
+{/if}
 
-<PageHeader name={isMe ? 'Your bookmarks' : `${owner?.displayName ?? `@${handle}`}’s bookmarks`} description={isMe ? undefined : theirs}>
-  {#snippet above()}<BackLink href={profileHref(handle)} label="@{handle}" />{/snippet}
-</PageHeader>
-{#snippet theirs()}{#if notedOnly}Posts {owner?.displayName ?? `@${handle}`} has written a note on. {/if}{#if session.user}Tap the bookmark on any post to save it.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save these.{/if}{/snippet}
-
+<!-- What narrows the list sits on its own, just above the first bookmark. -->
 {#if hasNotesFilter}
   <div class="filters">
+    <!-- The same toggle as your own Bookmarks page. -->
     <ChoiceGroup
       size="sm"
       label="Show all bookmarks, or only the ones with a note"
-      options={[{ value: 'all', label: 'all bookmarks' }, { value: 'notes', label: 'with notes' }]}
+      options={[{ value: 'all', label: 'All bookmarks' }, { value: 'notes', label: 'With notes' }]}
       value={notes ? 'notes' : 'all'}
       onchange={(v) => { api.event('public_bookmarks_filter', { notes: v === 'notes' }); void goto(v === 'notes' ? `${page.url.pathname}?notes=1` : page.url.pathname, { replaceState: true }); }}
     />
@@ -147,8 +159,9 @@
 </div>
 
 <style>
-  /* The With notes choice gets the same air under it as on Bookmarks. */
   .filters { margin-bottom: var(--space-3); }
+  .lead { margin: 0 0 var(--space-3); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .lead a { color: var(--accent); font-weight: 600; }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
