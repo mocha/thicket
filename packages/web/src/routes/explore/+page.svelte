@@ -26,6 +26,7 @@
   import FollowControl from '$lib/components/FollowControl.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
+  import TabBlurb from '$lib/components/TabBlurb.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { recall, keepOnLeave } from '$lib/listmemory';
@@ -64,11 +65,6 @@
     posts: 'Individual posts from across every feed on thicket.',
     people: 'Public profiles you can browse and follow.'
   };
-  /**
-   * Bind the last two words with a non-breaking space so the caption can never
-   * wrap to a single orphaned word on its final line, at any width.
-   */
-  const noOrphan = (s: string) => s.replace(/ (\S+)$/, ' $1');
   const q = $derived((page.url.searchParams.get('q') ?? '').trim());
   const scope = $derived(((page.url.searchParams.get('scope') as SearchScope | null) ?? 'all') as SearchScope);
   const searching = $derived(q.length > 0);
@@ -471,7 +467,7 @@
      when browsing (attached to what they control), and as a plain bar above the
      stacked result cards when searching. -->
 {#snippet scopeIcon(s: SearchScope)}
-  <svg class="blurb-i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     {#if s === 'feeds'}<path d="M4 11a9 9 0 0 1 9 9" /><path d="M4 4a16 16 0 0 1 16 16" /><circle cx="5" cy="19" r="1" />
     {:else if s === 'collections'}<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.57 3.9a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" /><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" /><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
     {:else if s === 'posts'}<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" />
@@ -529,7 +525,7 @@
 {/snippet}
 
 {#snippet filterBar()}
-  <p class="blurb">{@render scopeIcon(scope)}<span>{noOrphan(SCOPE_BLURB[scope])}</span></p>
+  <TabBlurb class="blurb" text={SCOPE_BLURB[scope]}>{#snippet icon()}{@render scopeIcon(scope)}{/snippet}</TabBlurb>
   {#if threeFilters}
     <button type="button" class="filters-row" class:wide={fit === 'fold'} onclick={() => filtersDialog?.showModal()} aria-haspopup="dialog">
       <svg class="fr-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>
@@ -742,12 +738,9 @@
      the plain text below; the icon's left edge lines up with the filter labels. */
   /* Icon flows inline with the text so it always rides beside the first word —
      centered together, and never pinned to the edge when the text fills the line. */
-  .blurb { margin: var(--space-2) 0 var(--space-4); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); text-align: center; text-wrap: pretty; }
-  .blurb span { font-weight: 600; }
-  .blurb-i { display: inline-block; vertical-align: -3px; margin-right: var(--space-2); color: var(--accent); }
   /* Browsing, the filters and list are one card; the caption leads it, inset to
      match the card's side padding. */
-  .browse .blurb { margin: 0; padding: var(--space-5) var(--space-3) var(--space-2); }
+  .browse :global(.blurb) { margin: 0; padding: var(--space-5) var(--space-3) var(--space-2); }
   .group { margin-bottom: var(--space-5); }
   .group h2 { margin-bottom: var(--space-2); }
   /* Beats .link’s inherited size below: “See all” is a small action, not part of the heading. */

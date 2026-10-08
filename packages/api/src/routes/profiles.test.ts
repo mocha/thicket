@@ -37,3 +37,10 @@ test("signed in, someone else's followers are not found", async () => {
     assert.deepEqual(await r.json(), { error: "not found" });
   }
 });
+
+test("a profile's follower count goes to its owner alone", async () => {
+  const { peopleFor } = await import("./profiles.js");
+  const counts = { follows: 3, followers: 5, isFollowing: true };
+  assert.deepEqual(peopleFor(counts, true), { follows: 3, followers: 5, isFollowing: true });
+  assert.deepEqual(peopleFor(counts, false), { follows: 3, followers: null, isFollowing: true });
+});
