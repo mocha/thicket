@@ -107,6 +107,9 @@
   });
 </script>
 
+<!-- Each bookmark is its own card, so the line saying who can see them sits above them all, as on Explore's search results. -->
+{@render ctx.tabLine(false)}
+
 <!-- What a visitor gets here, and how their notes reach the posts you come across. -->
 {#if !isMe && owner}
   <p class="status lead">

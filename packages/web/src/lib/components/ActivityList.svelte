@@ -8,6 +8,7 @@
    * or hide simply stops appearing. A burst of feed adds to one collection (an
    * import, a copy) arrives already collapsed, so one act reads as one line.
    */
+  import type { Snippet } from 'svelte';
   import { api, profilesApi, publicCollectionHref, type ActivityEntry } from '$lib/api';
   import SourceIcon from './SourceIcon.svelte';
   import FeedPopover from './FeedPopover.svelte';
@@ -17,8 +18,11 @@
   import VisitorMore from './VisitorMore.svelte';
   import Badge from './Badge.svelte';
 
-  /** `limit`: a preview of the newest few, on a profile's Overview, with no Show more. */
-  let { handle, isMe, limit }: { handle: string; isMe: boolean; limit?: number } = $props();
+  /**
+   * `limit`: a preview of the newest few, on a profile's Overview, with no Show more.
+   * `lead`: the top of the card, above the list (the Activity tab's line saying who can see it).
+   */
+  let { handle, isMe, limit, lead }: { handle: string; isMe: boolean; limit?: number; lead?: Snippet } = $props();
 
   /** A bookmarked or noted post's feed, its card open from the line's icon or site name. */
   type Source = { feedId: number | null; hasIcon: boolean; name: string };
@@ -87,6 +91,7 @@
 {/snippet}
 
 <div class="card">
+  {@render lead?.()}
     {#if failed}
       <div class="pad"><p class="status">{failed}</p></div>
     {:else if entries === null}

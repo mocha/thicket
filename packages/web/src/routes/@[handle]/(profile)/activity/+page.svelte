@@ -7,4 +7,6 @@
   const profile = $derived(ctx.profile);
 </script>
 
-<ActivityList handle={profile.handle} isMe={profile.isMe} />
+<ActivityList handle={profile.handle} isMe={profile.isMe}>
+  {#snippet lead()}{@render ctx.tabLine(true)}{/snippet}
+</ActivityList>

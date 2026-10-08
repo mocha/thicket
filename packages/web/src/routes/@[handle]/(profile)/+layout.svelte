@@ -8,7 +8,9 @@
    * Overview.
    *
    * The owner gets a line under each tab saying who can see it, with a link
-   * to the Visibility card on Overview where every setting lives.
+   * to the Visibility card on Overview where every setting lives. Each tab
+   * places it, as Explore does: leading the tab's card when there is one card,
+   * above the cards when there are several.
    */
   import type { Snippet } from 'svelte';
   import { tick } from 'svelte';
@@ -41,18 +43,12 @@
   });
   const loaded = $derived(profile && !profile.private ? profile : null);
   // The tabs only draw once the profile is here, so they can always count on it.
-  setProfileContext({ get profile() { return loaded!; } });
+  setProfileContext({ get profile() { return loaded!; }, tabLine });
 
   const tab = $derived(tabOf(page.url.pathname, handle));
   const shown = $derived(loaded ? shownTabs(loaded) : new Set<ProfileTab>());
-  const tabs = $derived(
-    loaded
-      ? PROFILE_TABS.filter((t) => shown.has(t.value)).map((t) => ({
-          ...t,
-          count: t.value === 'collections' ? loaded.collections?.length : t.value === 'bookmarks' ? loaded.bookmarks?.count : undefined
-        }))
-      : []
-  );
+  // Words only, like Explore's tabs: the counts are on Overview, in each section's "All …" link.
+  const tabs = $derived(PROFILE_TABS.filter((t) => shown.has(t.value)));
   const label = $derived(PROFILE_TABS.find((t) => t.value === tab)?.label ?? '');
 
   // An address for a tab this visitor can't see lands on Overview instead, leaving no trace of the section.
@@ -96,6 +92,15 @@
   });
 </script>
 
+{#snippet tabLine(inset: boolean)}
+  {#if blurb}
+    <TabBlurb text={blurb.text} {inset}>
+      {#snippet icon()}<Icon name={blurb.hidden ? 'eye-off' : 'eye'} size={16} />{/snippet}
+      <a href="{tabHref(handle, 'overview')}#visibility">Change</a>
+    </TabBlurb>
+  {/if}
+{/snippet}
+
 <svelte:head><title>{tab === 'overview' ? '' : `${label} · `}@{handle} · thicket</title></svelte:head>
 
 {#if error}
@@ -115,16 +120,12 @@
   <ProfileHeader profile={loaded} />
 
   {#if tabs.length > 1}
-    <Tabs {tabs} value={tab} onchange={pick} label="Parts of this profile" panel="profile-tab" />
+    <!-- The same row as Explore's: the tabs share it evenly, with the same air under it. -->
+    <div class="pane">
+      <Tabs class="scopes" {tabs} value={tab} onchange={pick} label="Parts of this profile" panel="profile-tab" fill />
+    </div>
   {/if}
-  {#if blurb}
-    <TabBlurb text={blurb.text}>
-      {#snippet icon()}<Icon name={blurb.hidden ? 'eye-off' : 'eye'} size={16} />{/snippet}
-      <a href="{tabHref(handle, 'overview')}#visibility">Change</a>
-    </TabBlurb>
-  {/if}
-
-  <div class="panel" class:plain={!blurb} id="profile-tab" role={tabs.length > 1 ? 'tabpanel' : undefined} aria-label={tabs.length > 1 ? label : undefined}>
+  <div class="panel" id="profile-tab" role={tabs.length > 1 ? 'tabpanel' : undefined} aria-label={tabs.length > 1 ? label : undefined}>
     {#if shown.has(tab)}{@render children()}{/if}
   </div>
 
@@ -136,8 +137,9 @@
 <style>
   /* Owner only: a muted one-line reminder in a soft box at the very top of the page. */
   .ownerbar { margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--surface-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); text-align: center; }
-  /* With no line under the tabs, the tab's content keeps the same air the line would have had above it. */
-  .panel.plain { margin-top: var(--space-4); }
+  /* Explore's spacing under its tabs, exactly. */
+  .pane { margin-bottom: var(--space-2); }
+  .pane :global(.scopes) { margin-bottom: var(--space-1); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
   .empty p { margin: 0; }

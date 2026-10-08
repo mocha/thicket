@@ -1,4 +1,4 @@
-import { getContext, setContext } from 'svelte';
+import { getContext, setContext, type Snippet } from 'svelte';
 import { profileHref, type Profile } from './api';
 
 /**
@@ -38,6 +38,7 @@ export function shownTabs(p: LoadedProfile): Set<ProfileTab> {
 }
 
 const KEY = Symbol('profile');
-export type ProfileContext = { readonly profile: LoadedProfile };
+/** `tabLine`: for the owner, the line saying who can see the open tab; `inset` when it leads a card. Nothing for a visitor. */
+export type ProfileContext = { readonly profile: LoadedProfile; tabLine: Snippet<[boolean]> };
 export const setProfileContext = (c: ProfileContext) => setContext(KEY, c);
 export const getProfileContext = () => getContext<ProfileContext>(KEY);

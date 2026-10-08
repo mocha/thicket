@@ -7,18 +7,20 @@
    * its owner who can see the open tab.
    *
    * `icon` is drawn at 16px. Anything after the sentence (a "Change" link)
-   * goes in `children`.
+   * goes in `children`. `inset`: it leads a card, as on Explore's browse
+   * lists, so it takes the card's padding instead of the page's margins.
    */
   import type { Snippet } from 'svelte';
   import { noOrphan } from '$lib/orphans';
 
-  let { text, icon, children, class: klass = '' }: { text: string; icon: Snippet; children?: Snippet; class?: string } = $props();
+  let { text, icon, children, inset = false, class: klass = '' }: { text: string; icon: Snippet; children?: Snippet; inset?: boolean; class?: string } = $props();
 </script>
 
-<p class="tabblurb {klass}"><span class="i">{@render icon()}</span><span class="t">{noOrphan(text)}</span>{#if children}{' '}{@render children()}{/if}</p>
+<p class="tabblurb {klass}" class:inset><span class="i">{@render icon()}</span><span class="t">{noOrphan(text)}</span>{#if children}{' '}{@render children()}{/if}</p>
 
 <style>
   .tabblurb { margin: var(--space-2) 0 var(--space-4); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); text-align: center; text-wrap: pretty; }
+  .inset { margin: 0; padding: var(--space-5) var(--space-3) var(--space-2); }
   .t { font-weight: 600; }
   .i { display: inline-block; vertical-align: -3px; margin-right: var(--space-2); line-height: 0; }
   .tabblurb :global(a) { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
