@@ -72,6 +72,7 @@ To test email (confirmation and password reset), see [docs/testing.md](docs/test
 ```
 packages/api   Hono + Drizzle + Postgres. Feed fetching, parsing, scheduling, HTTP API.
 packages/web   SvelteKit PWA (Svelte 5 runes). Talks only to /api.
+packages/extension   Build-free Firefox prototype: discover feeds and save bookmarks.
 docs/DEPLOY.md Running an instance: Compose, reverse proxies, hosted platforms.
 docs/testing.md Testing in dev, including email.
 ```
@@ -88,6 +89,9 @@ one row per normalized URL, fetched once however many people follow it, so
 table — and every followed feed is in at least one collection, so there is no
 unfiled state to reason about. And **there is no read/unread state** — the river is chronological and
 you scroll. Both are load-bearing; most of the data model follows from them.
+
+The Firefox extension prototype can be loaded as a temporary add-on; see
+[packages/extension/README.md](packages/extension/README.md) for setup.
 
 ## API
 
