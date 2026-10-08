@@ -224,10 +224,11 @@
     {/snippet}
   </Field>
   {#if me && audience}<p class="audience" id="{uid}-audience">{audience} <Dot /> <a href={profileHref(me.handle) + (me.profileVisibility === 'public' ? '#bookmarks' : '')}>Change</a></p>{/if}
+  <!-- Save and Cancel sit at the right, under the Edit note button that opened this; Delete keeps clear of them at the left (issue #239). -->
   <div class="row">
+    {#if note}<Button variant="danger" onclick={remove} disabled={busy}>Delete</Button>{/if}
+    <Button onclick={oncancel} disabled={busy} style="margin-left: auto">Cancel</Button>
     <Button type="submit" variant="primary" disabled={busy || !dirty || !body.trim() || over}>{busy ? 'Saving…' : 'Save'}</Button>
-    <Button onclick={oncancel} disabled={busy}>Cancel</Button>
-    {#if note}<Button variant="danger" onclick={remove} disabled={busy} style="margin-left: auto">Delete</Button>{/if}
   </div>
 </form>
 
