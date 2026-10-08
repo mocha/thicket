@@ -38,7 +38,7 @@ export function shownTabs(p: LoadedProfile): Set<ProfileTab> {
 }
 
 const KEY = Symbol('profile');
-/** `tabLine`: for the owner, the line saying who can see the open tab; `inset` when it leads a card. Nothing for a visitor. */
-export type ProfileContext = { readonly profile: LoadedProfile; tabLine: Snippet<[boolean]> };
+/** `tabLine`: for the owner, the card saying who can see the open tab. Nothing for a visitor. */
+export type ProfileContext = { readonly profile: LoadedProfile; tabLine: Snippet };
 export const setProfileContext = (c: ProfileContext) => setContext(KEY, c);
 export const getProfileContext = () => getContext<ProfileContext>(KEY);

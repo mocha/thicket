@@ -10,25 +10,23 @@
   let filter = $state('');
 </script>
 
+{@render ctx.tabLine()}
+
 {#if profile.collections}
-  <CollectionTree collections={profile.collections} handle={profile.handle} isMe={profile.isMe} {filter}>
-    {#snippet lead()}
-      {@render ctx.tabLine(true)}
-      {#if profile.collections && profile.collections.length > 1}
-        <div class="filter">
-          <Field label="Filter collections" hideLabel>
-            {#snippet children({ id })}
-              <Input {id} variant="search" bind:value={filter} placeholder="Filter collections" maxlength="60" autocomplete="off"
-                onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') filter = ''; }} />
-            {/snippet}
-          </Field>
-        </div>
-      {/if}
-    {/snippet}
-  </CollectionTree>
+  {#if profile.collections.length > 1}
+    <!-- The filter sits on its own, just above the list it narrows, as on the Bookmarks tab. -->
+    <div class="filter">
+      <Field label="Filter collections" hideLabel>
+        {#snippet children({ id })}
+          <Input {id} variant="search" bind:value={filter} placeholder="Filter collections" maxlength="60" autocomplete="off"
+            onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') filter = ''; }} />
+        {/snippet}
+      </Field>
+    </div>
+  {/if}
+  <CollectionTree collections={profile.collections} handle={profile.handle} isMe={profile.isMe} {filter} />
 {/if}
 
 <style>
-  /* The filter is the card's header, above the list it narrows, as on Explore's browse lists. */
-  .filter { padding: var(--space-3) var(--space-3) var(--space-3); }
+  .filter { margin: 0 0 var(--space-3); }
 </style>

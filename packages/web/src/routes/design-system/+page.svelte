@@ -657,7 +657,7 @@
         onchange={(v) => (tab = v)}
         label="Example view"
       />
-      <p class="section-lede">Under the tabs, a tab line can say what the chosen tab shows: a small icon and a short sentence, in the same spot on every tab. Explore uses it for what each search covers; your profile uses it to say who can see the open tab.</p>
+      <p class="section-lede">Under the tabs, a tab line can say what the chosen tab shows: a small icon and a short sentence, in the same spot on every tab. Explore uses it for what each search covers. Your profile uses it to say who can see the open tab, on a card of its own above the tab's items.</p>
       <TabBlurb text="Anyone can see your collections.">
         {#snippet icon()}<Icon name="eye" size={16} />{/snippet}
         <a href="#tabs">Change</a>

@@ -14,11 +14,7 @@
    * `filter` binds the text of a filter box the caller draws (issue #178): it
    * narrows the list to names containing it, ignoring capitals. A search wants
    * a flat list of matches, so ones that sit inside another collection show too.
-   *
-   * `lead` goes at the top of the card, above the list: on a profile tab, the
-   * line saying who can see it and the filter box, as Explore leads its cards.
    */
-  import type { Snippet } from 'svelte';
   import { api, collectionsApi, collectionHref, publicCollectionHref, type ProfileCollection } from '$lib/api';
   import { goto } from '$app/navigation';
   import { session } from '$lib/session.svelte';
@@ -32,8 +28,8 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
 
-  let { collections: cols, handle, isMe, limit, filter = '', creatable = false, lead }: {
-    collections: ProfileCollection[]; handle: string; isMe: boolean; limit?: number; filter?: string; creatable?: boolean; lead?: Snippet;
+  let { collections: cols, handle, isMe, limit, filter = '', creatable = false }: {
+    collections: ProfileCollection[]; handle: string; isMe: boolean; limit?: number; filter?: string; creatable?: boolean;
   } = $props();
 
   $effect(() => { if (isMe) void loadCollections(); });
@@ -87,7 +83,6 @@
 {/snippet}
 
 <div class="card">
-  {@render lead?.()}
   {#if cols.length === 0 && !creatable}
     <div class="pad"><p class="status">{isMe ? 'A collection is a handful of feeds you read together.' : 'No collections to show.'}</p></div>
   {:else}

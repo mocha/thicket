@@ -8,9 +8,8 @@
    * Overview.
    *
    * The owner gets a line under each tab saying who can see it, with a link
-   * to the Visibility card on Overview where every setting lives. Each tab
-   * places it, as Explore does: leading the tab's card when there is one card,
-   * above the cards when there are several.
+   * to the Visibility card on Overview where every setting lives. It sits on
+   * a card of its own at the top of each tab, apart from the tab's items.
    */
   import type { Snippet } from 'svelte';
   import { tick } from 'svelte';
@@ -93,9 +92,9 @@
   });
 </script>
 
-{#snippet tabLine(inset: boolean)}
+{#snippet tabLine()}
   {#if blurb}
-    <TabBlurb text={blurb.text} {inset}>
+    <TabBlurb text={blurb.text} card>
       {#snippet icon()}<Icon name={blurb.hidden ? 'eye-off' : 'eye'} size={16} />{/snippet}
       <!-- On Overview the settings are right below, so there's nowhere to send you. -->
       {#if tab !== 'overview'}<a href="{tabHref(handle, 'overview')}#visibility">Change</a>{/if}
