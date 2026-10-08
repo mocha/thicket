@@ -9,7 +9,6 @@
   import CollectionTree from '$lib/components/CollectionTree.svelte';
   import ActivityList from '$lib/components/ActivityList.svelte';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
-  import Icon from '$lib/components/Icon.svelte';
   import EmptyNote from '$lib/components/EmptyNote.svelte';
   import PeopleList from '$lib/components/PeopleList.svelte';
   import PeopleSheet from '$lib/components/PeopleSheet.svelte';
@@ -134,19 +133,16 @@
 
 {#if nothingShared}
   <!-- Nothing here for a visitor: say so, then offer the one thing every public profile shows, who they follow. -->
-  <section class="emptycard">
-    <div class="emptyhead">
-      <span class="emptyicon"><Icon name="eye-off" size={28} /></span>
-      <h2 class="emptytitle">{name} hasn’t shared anything yet</h2>
-    </div>
-    {#if following && following.length > 0}
+  <div class="emptynote"><EmptyNote icon="hidden" title="{name} hasn’t shared anything yet" /></div>
+  {#if following && following.length > 0}
+    <section class="emptycard">
       <h3 class="follows">{name} follows</h3>
       <PeopleList people={following.slice(0, FOLLOWING_SHOWN)} />
       {#if following.length > FOLLOWING_SHOWN}
         <button type="button" class="seeall tap" aria-haspopup="dialog" onclick={() => (peopleOpen = true)}>See all {following.length}</button>
       {/if}
-    {/if}
-  </section>
+    </section>
+  {/if}
   {#if peopleOpen}
     <PeopleSheet handle={profile.handle} which="following" isMe={false} people={following ?? undefined} onclose={() => (peopleOpen = false)} />
   {/if}
@@ -159,12 +155,10 @@
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0; line-height: 1.25; }
   .all { flex: none; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
-  /* The empty profile: a card with the reason, then who they follow. */
-  .emptycard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .emptyhead { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-6) var(--space-4) var(--space-5); text-align: center; }
-  .emptyicon { color: var(--text-3); line-height: 0; }
-  .emptytitle { font-size: calc(var(--text-lg) * var(--size-app)); font-weight: 600; margin: 0; text-wrap: balance; }
-  .follows { margin: 0; padding: var(--space-3) var(--space-4) var(--space-2); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  /* The empty profile: a card with the reason, then a card of who they follow. */
+  .emptycard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: var(--space-3); }
+  .emptynote { margin-bottom: var(--space-3); }
+  .follows { margin: 0; padding: var(--space-3) var(--space-4) var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .seeall { display: block; width: 100%; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); text-align: center; }
   .saves { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
 </style>
