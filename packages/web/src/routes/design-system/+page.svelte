@@ -356,7 +356,7 @@
 
     <section class="entry" id="elevation" aria-labelledby="elevation-h">
       <h3 class="entry-h" id="elevation-h">Elevation</h3>
-      <p class="section-lede">One shadow per kind of thing that floats above the page, so a sheet, a menu, and a dialog are never each drawn a little differently. The two hard-edged themes drop shadows entirely and outline their cards instead.</p>
+      <p class="section-lede">One shadow per kind of thing that floats above the page, so a sheet, a menu, and a dialog are never each drawn a little differently. Each one also draws a hairline in the theme's line color, so it keeps an edge where a shadow can't show: on a dark page, and on the two hard-edged themes, which drop card shadows entirely and outline their cards instead.</p>
       <div class="elevations">
         {#each shadows as s}
           <div class="elevation">

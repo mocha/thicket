@@ -151,7 +151,7 @@
     position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
     width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto;
     background: var(--surface); color: var(--text); border-radius: var(--radius); padding: var(--space-4);
-    box-shadow: var(--shadow-dialog), 0 0 0 1px var(--line);
+    box-shadow: var(--shadow-dialog);
   }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-2); }
   .help { margin: 0 0 var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
