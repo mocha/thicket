@@ -76,7 +76,7 @@
      the post's own. */
   .note { border-top: 1px solid var(--line); margin: 0 var(--card-pad, var(--space-4)); padding: var(--space-3) 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   /* Experiment (#239): a band down the left of the notes, in the line color, that the rule above each note runs into. Notes stacked one after another join into one band. */
-  .note { --band: 8px; margin-left: 0; border-left: var(--band) solid var(--line); padding-left: calc(var(--card-pad, var(--space-4)) - var(--band)); }
+  .note { --band: 12px; margin-left: 0; border-left: var(--band) solid var(--line); padding-left: calc(var(--card-pad, var(--space-4)) - var(--band)); }
   .head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
   .pic { display: flex; flex: none; }
   .id { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.35; }
