@@ -109,7 +109,7 @@
   <section>
     {@render head('Bookmarks', n > 0 ? tabHref(profile.handle, 'bookmarks') : undefined, `All ${plural(n, 'bookmark')}`)}
     {#if n === 0}
-      <EmptyNote icon="bookmarks" text="Press the bookmark on any post to save it, or the note button to write down what you thought of it." />
+      <EmptyNote icon="bookmarks" title="No bookmarks yet" text="Press the bookmark on any post to save it, or the note button to write down what you thought of it." />
     {:else if shownBookmarks === null}
       <p class="status">Loading…</p>
     {:else if shownBookmarks.length === 0}

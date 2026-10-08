@@ -90,7 +90,7 @@
 {/snippet}
 
 {#if entries !== null && entries.length === 0 && !failed}
-  <EmptyNote icon="activity" text={isMe ? 'Follow a feed, bookmark a post, or write a note, and it shows up here.' : 'Nothing to show yet.'} />
+  <EmptyNote icon="activity" title="No activity yet" text={isMe ? 'Follow a feed, bookmark a post, or write a note, and it shows up here.' : 'Nothing to show yet.'} />
 {:else}
 <div class="card">
     {#if failed}

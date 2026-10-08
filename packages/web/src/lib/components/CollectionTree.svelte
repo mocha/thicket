@@ -97,7 +97,7 @@
 {/if}
 
 {#if cols.length === 0 && !creatable}
-  <EmptyNote icon="collections" text={isMe ? 'A collection is a handful of feeds you read together.' : 'No collections to show.'} />
+  <EmptyNote icon="collections" title="No collections yet" text={isMe ? 'A collection is a handful of feeds you read together.' : 'No collections to show.'} />
 {:else}
 <div class="card">
     <ul class="list">
