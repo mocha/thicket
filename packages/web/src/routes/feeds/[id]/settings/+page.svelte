@@ -226,7 +226,7 @@
   <PageHeader name="Manage feed">
     {#snippet above()}<BackLink href={feedHref(here)} label={feedName(here)} />{/snippet}
     {#snippet description()}Its name, collections, and how posts show for you.{/snippet}
-    {#snippet actions()}{#if ids.length > 0}<Button variant="danger" onclick={unfollow}>Unfollow</Button>{/if}{/snippet}
+    {#snippet actions()}{#if ids.length > 0}<Button variant="danger" size="sm" onclick={unfollow}>Unfollow</Button>{/if}{/snippet}
   </PageHeader>
   <section>
     <form class="opt" onsubmit={(e) => { e.preventDefault(); void saveName(displayName); }}>

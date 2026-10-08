@@ -91,7 +91,7 @@
     {/snippet}
     {#snippet actions()}
       {#if session.user}
-        <FollowControl feedId={feed!.id} bind:ids name={feedName(feed!)} followLabel="Follow this feed" onchange={() => void loadFeed()} />
+        <FollowControl feedId={feed!.id} bind:ids name={feedName(feed!)} followLabel="Follow this feed" small onchange={() => void loadFeed()} />
         <Button size="sm" href="/feeds/{feed!.id}/settings"><Icon name="gear" size={16} />Manage feed</Button>
       {/if}
     {/snippet}

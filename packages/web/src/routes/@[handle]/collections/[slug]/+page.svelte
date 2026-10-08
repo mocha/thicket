@@ -124,12 +124,12 @@
           <Button size="sm" href={manageCollectionHref(handle, slug)}><Icon name="gear" size={16} />Manage collection</Button>
         {:else if session.user}
           {#if partialCopy}
-            <Button variant="primary" onclick={() => confirmAgain?.showModal()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy this collection'}</Button>
+            <Button variant="primary" size="sm" onclick={() => confirmAgain?.showModal()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy this collection'}</Button>
           {:else if existingCopy}
-            <Button variant="primary" href={collectionHref(session.user.handle, existingCopy.slug)}>Open your copy</Button>
-            <Button onclick={() => confirmAgain?.showModal()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy again'}</Button>
+            <Button variant="primary" size="sm" href={collectionHref(session.user.handle, existingCopy.slug)}>Open your copy</Button>
+            <Button size="sm" onclick={() => confirmAgain?.showModal()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy again'}</Button>
           {:else}
-            <Button variant="primary" onclick={() => copy()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy this collection'}</Button>
+            <Button variant="primary" size="sm" onclick={() => copy()} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Copy this collection'}</Button>
           {/if}
         {/if}
       {/if}{/snippet}

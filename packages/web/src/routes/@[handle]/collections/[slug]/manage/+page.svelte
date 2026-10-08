@@ -215,7 +215,7 @@
   <PageHeader name="Manage collection">
     {#snippet above()}<BackLink href={collectionHref(handle, slug)} label={here.name} />{/snippet}
     {#snippet description()}Its name, description, and who can see it.{/snippet}
-    {#snippet actions()}<Button variant="danger" onclick={askDelete}>Delete collection</Button>{/snippet}
+    {#snippet actions()}<Button variant="danger" size="sm" onclick={askDelete}>Delete collection</Button>{/snippet}
   </PageHeader>
   <form class="opt" onsubmit={(e) => { e.preventDefault(); void rename(); }}>
     <Field label="Name">
