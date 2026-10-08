@@ -513,7 +513,7 @@ export type Profile =
        * neither is shared with me.
        */
       bookmarks: { count: number; notes: number | null; notedOnly: boolean } | null;
-      /** Whether I may see their recent activity. */
+      /** Whether I have any of their recent activity to see (always, for the owner). */
       activity: boolean;
       visibility?: { profile: 'public' | 'private'; collections: ShareLevel; bookmarks: ShareLevel; notes: ShareLevel; activity: ShareLevel };
     });

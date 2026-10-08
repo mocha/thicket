@@ -55,13 +55,17 @@
     }
   }
 
-  /** My own list, seen from my profile: remove one of mine, as on My Bookmarks (issue #170). */
+  /**
+   * My own list, seen from my profile: remove one of mine, as on My Bookmarks
+   * (issue #170). The profile's bookmark count moves with it, so Overview's
+   * "All N bookmarks" is right without a reload.
+   */
   function remove(b: PublicBookmark) {
-    const snapshot = list, h = handle;
+    const snapshot = list, h = handle, counts = profile.bookmarks;
     void removeBookmark(b, 'public_bookmarks', {
-      drop: () => (list = list.filter((x) => x.id !== b.id)),
+      drop: () => { list = list.filter((x) => x.id !== b.id); if (counts) counts.count--; },
       // Undo still restores it; the list only changes if it's still this one on screen.
-      putBack: (id) => { if (handle === h) list = withBookmarkBack(list, snapshot, b.id, id); }
+      putBack: (id) => { if (counts) counts.count++; if (handle === h) list = withBookmarkBack(list, snapshot, b.id, id); }
     });
   }
 

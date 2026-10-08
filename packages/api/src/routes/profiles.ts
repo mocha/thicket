@@ -112,8 +112,11 @@ profiles.get("/:handle", async (c) => {
      * they see only the noted posts. null = neither is shared.
      */
     bookmarks: sharedSaves(u, who, bookmarkCount, noteCount),
-    /** Whether this viewer may see their recent activity; when not, the page shows no trace of it. */
-    activity: allows(u.activityVisibility, who),
+    /**
+     * Whether this viewer has any of their recent activity to see. Hidden or
+     * empty, the page shows no trace of it; the owner always gets it.
+     */
+    activity: isMe || (allows(u.activityVisibility, who) && (await activityForViewer(u, who, { limit: 1 })).entries.length > 0),
     /** For the owner: who each section is shared with, so the page can say what others see. */
     visibility: isMe ? { profile: u.profileVisibility, collections: u.collectionsVisibility, bookmarks: u.bookmarksVisibility, notes: u.notesVisibility, activity: u.activityVisibility } : undefined,
   });
