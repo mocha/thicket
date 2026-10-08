@@ -19,7 +19,7 @@ import { currentUser, normalizeHandle, FIRST_COLLECTION_SLUG } from "../lib/auth
 import { exportCollectionOpml } from "../lib/opml.js";
 import { PUBLIC_URL } from "../lib/config.js";
 import { slugify, uniqueCollectionSlug } from "../lib/slug.js";
-import { activityForViewer } from "../lib/activity.js";
+import { activityForViewer, hasActivityForViewer } from "../lib/activity.js";
 import { noteJson } from "../lib/notes.js";
 import { activeAtSql } from "./bookmarks.js";
 import { allowedLevels, allowedLevelsSql, allows, isFriendOf, type Audience, type ShareLevel } from "../lib/visibility.js";
@@ -116,7 +116,7 @@ profiles.get("/:handle", async (c) => {
      * Whether this viewer has any of their recent activity to see. Hidden or
      * empty, the page shows no trace of it; the owner always gets it.
      */
-    activity: isMe || (allows(u.activityVisibility, who) && (await activityForViewer(u, who, { limit: 1 })).entries.length > 0),
+    activity: isMe || (await hasActivityForViewer(u, who)),
     /** For the owner: who each section is shared with, so the page can say what others see. */
     visibility: isMe ? { profile: u.profileVisibility, collections: u.collectionsVisibility, bookmarks: u.bookmarksVisibility, notes: u.notesVisibility, activity: u.activityVisibility } : undefined,
   });
