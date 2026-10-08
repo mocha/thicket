@@ -80,7 +80,8 @@
   const WHO: Record<ShareLevel, string> = { private: 'Only you', friends: 'People you follow', public: 'Anyone' };
   const blurb = $derived.by(() => {
     const su = session.user;
-    if (!loaded?.isMe || !su || tab === 'overview') return null;
+    if (!loaded?.isMe || !su) return null;
+    if (tab === 'overview') return su.profileVisibility === 'private' ? { text: 'Only you can see your profile.', hidden: true } : { text: 'Anyone can see your profile.', hidden: false };
     if (su.profileVisibility === 'private') return { text: 'Your profile is hidden, so only you can see this.', hidden: true };
     if (tab === 'collections') return { text: `${WHO[su.collectionsVisibility]} can see your collections.`, hidden: su.collectionsVisibility === 'private' };
     if (tab === 'activity') return { text: `${WHO[su.activityVisibility]} can see your recent activity.`, hidden: su.activityVisibility === 'private' };
@@ -96,7 +97,8 @@
   {#if blurb}
     <TabBlurb text={blurb.text} {inset}>
       {#snippet icon()}<Icon name={blurb.hidden ? 'eye-off' : 'eye'} size={16} />{/snippet}
-      <a href="{tabHref(handle, 'overview')}#visibility">Change</a>
+      <!-- On Overview the settings are right below, so there's nowhere to send you. -->
+      {#if tab !== 'overview'}<a href="{tabHref(handle, 'overview')}#visibility">Change</a>{/if}
     </TabBlurb>
   {/if}
 {/snippet}

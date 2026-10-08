@@ -77,6 +77,8 @@
 {/snippet}
 
 {#if profile.isMe}
+  <!-- The line saying who can see the profile, on a card of its own above the settings, as on the Bookmarks tab. -->
+  <div class="headcard">{@render ctx.tabLine(true)}</div>
   <VisibilityCard id="visibility" />
 {/if}
 
@@ -122,6 +124,8 @@
 
 <style>
   section { margin-bottom: var(--space-5); }
+  /* The same card the Bookmarks tab opens with, here holding only the line. */
+  .headcard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding-bottom: var(--space-2); margin-bottom: var(--space-3); }
   /* Each section's name, with the way to its full tab at the far end of the same line. */
   .head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); margin: 0 0 var(--space-3); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0; line-height: 1.25; }
