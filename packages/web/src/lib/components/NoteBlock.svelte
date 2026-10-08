@@ -56,7 +56,7 @@
       {#if who}
         <a class="who" href={profileHref(who.handle)}>{#if who.displayName}<span class="name">{who.displayName}</span> <span class="handle">(@{who.handle})</span>{:else}<span class="name">@{who.handle}</span>{/if}</a>
       {/if}
-      <span class="when" title={new Date(note.createdAt).toLocaleString()}>{relativeTime(note.createdAt)}{#if edited} <Dot /> edited {relativeTime(note.updatedAt)}{/if}</span>
+      <span class="when" title={new Date(note.createdAt).toLocaleString()}>{relativeTime(note.createdAt)}{#if edited}{' '}<Dot /> edited {relativeTime(note.updatedAt)}{/if}</span>
     </div>
     {#if mine && onedit}<button class="edit tap" onclick={onedit}><Icon name="pencil" size={16} />Edit</button>{/if}
   </div>

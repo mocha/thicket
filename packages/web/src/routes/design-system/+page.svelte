@@ -610,6 +610,7 @@
       <h3 class="entry-h" id="note-h">Note</h3>
       <p class="section-lede">A note sits under its post, on whatever the post sits on, below a line held in from the card’s sides. It opens with the writer’s picture, name and handle, which go to their profile, and the date underneath. Someone with no display name shows their handle once. Your own note looks the same, with Edit at the right. Three lines show, then Show more.</p>
       <Card as="div" pad={false}>
+        <p class="demo-post">The post’s title and summary sit up here.</p>
         <NoteBlock note={{ id: -3, body: 'Worth a second read for the ending.', createdAt: ago(1), updatedAt: ago(1) }} mine onedit={() => showToast('Edit opens the note’s editor')} />
         {#each sampleNotes as n (n.id)}<NoteBlock note={n} />{/each}
       </Card>
@@ -764,6 +765,7 @@
      short of the top when jumped to, so the jump menu doesn't cover the heading. */
   .group, .entry { scroll-margin-top: calc(var(--space-6) + var(--space-6)); }
   .group { margin: calc(var(--space-6) + var(--space-5)) 0 0; padding-top: var(--space-4); border-top: 2px solid var(--text); }
+  .demo-post { margin: 0; padding: var(--card-pad); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .entry { margin: var(--space-6) 0 0; padding-top: var(--space-5); border-top: 1px solid var(--line); }
   h2 {
     font-family: var(--font-headings); font-weight: 700; letter-spacing: -0.01em;
