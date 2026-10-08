@@ -232,7 +232,8 @@
 </form>
 
 <style>
-  .editor { border-top: 1px solid var(--line); padding: var(--space-3) var(--space-4); }
+  /* Held in from the card's sides like the note it replaces, so the rule doesn't jump on Edit. */
+  .editor { border-top: 1px solid var(--line); margin: 0 var(--card-pad, var(--space-4)); padding: var(--space-3) 0; }
   /* Read like the field's own note: same size and gray. */
   .audience { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   .audience a { color: var(--accent); font-weight: 600; }

@@ -36,7 +36,7 @@
     /** My own list: the note is mine to write, edit and delete. */
     mine?: boolean;
     /** Whose list this is, when it isn't mine, to name their note. */
-    author?: Pick<PublicUser, 'handle' | 'displayName'> | null;
+    author?: Pick<PublicUser, 'handle' | 'displayName' | 'avatarUpdatedAt'> | null;
     onopen?: () => void;
     /** The note was written, edited or deleted here. `had`: whether there was one before. */
     onnote?: (note: Note | null, had: boolean) => void;
