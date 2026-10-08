@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
@@ -12,6 +13,8 @@
   import { highlight, latestShort, mentionRate, plural } from '$lib/words';
   import { feedListName } from '$lib/feedname';
   import { session } from '$lib/session.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
+  import FollowButton from '$lib/components/FollowButton.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
@@ -380,7 +383,7 @@
     narrowToNetwork ? 'People I follow' : 'Everyone',
     ADDED[since ?? ''] ?? 'Any time',
     sorts.find((x) => x.id === sort)?.label ?? 'Popular'
-  ].join(' · '));
+  ]);
   let filtersDialog = $state<HTMLDialogElement | null>(null);
 
   /* Off the phone the three sit in one row, which has to actually fit: longer
@@ -428,13 +431,10 @@
 
 <svelte:head><title>{searching ? `${q} · Explore` : 'Explore'} · thicket</title></svelte:head>
 
-<header class="top">
-  <div class="titlerow">
-    <h1>Explore</h1>
-    <AddFeedButton via="explore" bottomBarOnly />
-  </div>
-  <p class="sub">Find feeds, collections, posts, and people<span class="tail">, all in one search.</span></p>
-</header>
+<PageHeader name="Explore">
+  {#snippet description()}Find feeds, collections, posts, and people.{/snippet}
+  {#snippet actions()}<AddFeedButton via="explore" bottomBarOnly />{/snippet}
+</PageHeader>
 
 <section class="pane">
   <div class="head">
@@ -533,7 +533,7 @@
   {#if threeFilters}
     <button type="button" class="filters-row" class:wide={fit === 'fold'} onclick={() => filtersDialog?.showModal()} aria-haspopup="dialog">
       <svg class="fr-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>
-      <span class="fr-text"><span class="fr-name">Filters</span><span class="fr-now">{filterSummary}</span></span>
+      <span class="fr-text"><span class="fr-name">Filters</span><span class="fr-now">{#each filterSummary as part, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{part}{/each}</span></span>
       <span class="fr-caret"><Icon name="caret" dir="down" size={20} /></span>
     </button>
   {/if}
@@ -554,11 +554,11 @@
         <span class="title">{feedListName(f)}</span>
         <span class="sub2 byline">
           {feedOrigin(f)}
-          {#if f.postsLast30d} · publishes about {postRate(f.postsLast30d)}{/if}
+          {#if f.postsLast30d} <Dot /> publishes about {postRate(f.postsLast30d)}{/if}
           <!-- Sorted by newest post, a search row shows the date it is sorted by. -->
-          {#if (!ev || (sortsFeeds && feedSort === 'posted')) && f.lastItemAt} · latest {longAgo(f.lastItemAt)}{/if}
-          {#if !ev && feedsNetwork && (f as Feed).networkFollowers} · <span class="net-n">{(f as Feed).networkFollowers} {(f as Feed).networkFollowers === 1 ? 'person' : 'people'} you follow</span>{/if}
-          {#if f.consecutiveFailures >= 3} · <span class="bad">failing</span>{/if}
+          {#if (!ev || (sortsFeeds && feedSort === 'posted')) && f.lastItemAt} <Dot /> latest {longAgo(f.lastItemAt)}{/if}
+          {#if !ev && feedsNetwork && (f as Feed).networkFollowers} <Dot /> <span class="net-n">{(f as Feed).networkFollowers} {(f as Feed).networkFollowers === 1 ? 'person' : 'people'} you follow</span>{/if}
+          {#if f.consecutiveFailures >= 3} <Dot /> <span class="bad">failing</span>{/if}
         </span>
         {#if f.description}<span class="desc">{f.description}</span>{/if}
         {#if ev && ev.matchesLast30d > 0}
@@ -586,12 +586,12 @@
         {#if ev && ev.matches > 0}
           <span class="why">
             <strong>{plural(ev.matchingFeeds, 'feed')}</strong> in it {ev.matchingFeeds === 1 ? 'has' : 'have'} posted about “{q}”
-            {#if ev.lastMatchAt} · most recent {longAgo(ev.lastMatchAt)}{/if}
+            {#if ev.lastMatchAt} <Dot /> most recent {longAgo(ev.lastMatchAt)}{/if}
           </span>
         {:else if ev}
           <span class="why">Matches the name</span>
         {/if}
-        <span class="sub2">by <span class="who">{c.displayName ?? `@${c.handle}`}</span> · {plural(c.feedCount, 'feed')}{#if c.description} · {c.description}{/if}</span>
+        <span class="sub2">by <span class="who">{c.displayName ?? `@${c.handle}`}</span> <Dot /> {plural(c.feedCount, 'feed')}{#if c.description} <Dot /> {c.description}{/if}</span>
       </div>
       <span class="chev" aria-hidden="true">›</span>
     </a>
@@ -613,7 +613,7 @@
       <div class="meta">
         <a class="title whole" href={webHref(p.url) ?? feedHref({ id: p.feedId })} target={webHref(p.url) ? '_blank' : undefined} rel={webHref(p.url) ? 'noreferrer' : undefined}>{p.title ?? p.url}</a>
         <!-- Plenty of feeds set the author to the feed's own name; saying it twice is noise. -->
-        <span class="sub2 byline"><button class="feedname" onclick={() => openSource(p)} title="About {p.feedTitle ?? hostOf(p.siteUrl)}">{p.feedTitle ?? hostOf(p.siteUrl)}</button> · {relativeTime(p.publishedAt)}{#if p.author && p.author !== p.feedTitle}<span>{' · ' + p.author}</span>{/if}</span>
+        <span class="sub2 byline"><button class="feedname" onclick={() => openSource(p)} title="About {p.feedTitle ?? hostOf(p.siteUrl)}">{p.feedTitle ?? hostOf(p.siteUrl)}</button> <Dot /> {relativeTime(p.publishedAt)}{#if p.author && p.author !== p.feedTitle}<span>{' '}<Dot />{' '}{p.author}</span>{/if}</span>
         {#if p.snippet}
           <span class="desc">{#each highlight(p.snippet) as part}{#if part.hit}<mark>{part.text}</mark>{:else}{part.text}{/if}{/each}</span>
         {/if}
@@ -636,16 +636,16 @@
         {#if ev && ev.notesMatch + ev.marksMatch > 0}
           <span class="why">
             {#if ev.notesMatch}<strong>{plural(ev.notesMatch, 'note')}</strong> about “{q}”{/if}
-            {#if ev.notesMatch && ev.marksMatch} · {/if}
+            {#if ev.notesMatch && ev.marksMatch} <Dot /> {/if}
             {#if ev.marksMatch}<strong>{plural(ev.marksMatch, 'bookmark')}</strong> about “{q}”{/if}
           </span>
         {/if}
         <span class="sub2">
-          {plural(u.feeds, 'feed')} · {u.collections} public {u.collections === 1 ? 'collection' : 'collections'}{#if u.bio} · {u.bio}{/if}
+          {plural(u.feeds, 'feed')} <Dot /> {u.collections} public {u.collections === 1 ? 'collection' : 'collections'}{#if u.bio} <Dot /> {u.bio}{/if}
         </span>
       </div>
     </a>
-    <button class="follow" class:on={u.isFollowing} onclick={() => toggleFollow(u)} disabled={followBusy === u.handle} aria-pressed={u.isFollowing}>{u.isFollowing ? 'Following' : 'Follow'}</button>
+    <FollowButton following={u.isFollowing} busy={followBusy === u.handle} onclick={() => toggleFollow(u)} />
   </li>
 {/snippet}
 
@@ -733,15 +733,6 @@
 {/if}
 
 <style>
-  .top { margin-bottom: var(--space-3); }
-  /* Wraps: at a big text size on a phone the button drops under the title instead of sliding beneath it. */
-  .titlerow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; min-width: 0; }
-  /* text-wrap: pretty keeps a lone last word from stranding on its own line. */
-  /* 2px is an optical nudge under the title, not a spacing step. */
-  .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 62ch; text-wrap: pretty; }
-  /* On a phone the subtitle drops its "all in one search" tail to stay one tidy line. */
-  @media (max-width: 560px) { .sub .tail { display: none; } }
   .pane { margin-bottom: var(--space-2); }
   .head { margin-bottom: var(--space-5); }
   .pane :global(.scopes) { margin-bottom: var(--space-1); }
@@ -860,9 +851,9 @@
   .stack :global(> :nth-child(2)) { left: 9px; z-index: 2; }
   .stack :global(> :nth-child(3)) { left: 18px; z-index: 1; }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
-  .follow, .save { flex: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
-  .follow.on, .save.on { background: var(--accent-tint); border-color: transparent; }
-  .follow:disabled, .save:disabled { opacity: 0.6; }
+  .save { flex: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); color: var(--accent); background: var(--surface); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
+  .save.on { background: var(--accent-tint); border-color: transparent; }
+  .save:disabled { opacity: 0.6; }
   /* A post row: the title's link covers the row; the feed's buttons and Bookmark sit over it. */
   li.post { position: relative; }
   .whole::after { content: ''; position: absolute; inset: 0; }

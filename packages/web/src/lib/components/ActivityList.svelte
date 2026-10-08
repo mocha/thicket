@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
   /**
    * What a person has been up to: feeds they added, collections they made or
    * copied, posts they saved, notes they wrote — one list, newest first.
@@ -132,7 +133,7 @@
               <span class="when">{relativeTime(e.at)}</span>
             </div>
             <p class="names">
-              <span class="trunc">{e.payload.feeds.map((f) => f.title).join(' · ')}</span>
+              <span class="trunc">{#each e.payload.feeds as f, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{f.title}{/each}</span>
               {#if e.payload.count > e.payload.feeds.length}<span class="rest">and {e.payload.count - e.payload.feeds.length} more</span>{/if}
             </p>
           {:else if e.kind === 'collection'}
@@ -209,7 +210,8 @@
   .what { flex: 1; min-width: 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .what a { color: var(--text); font-weight: 600; }
   .src { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .src::before { content: ' · '; }
+  /* The same heavier dot as everywhere else (Dot.svelte), drawn here so it can come and go with the source. */
+  .src::before { content: '·'; display: inline-block; margin: 0 0.3em; font-weight: 900; font-size: 1.35em; line-height: 0; vertical-align: -0.06em; color: var(--text-3); }
   .srcicon { flex: none; display: inline-flex; }
   @media (hover: hover) { .src button:hover { text-decoration: underline; text-underline-offset: 3px; } }
   .when { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
@@ -217,7 +219,7 @@
   .names { display: flex; gap: var(--space-1); margin: var(--space-1) 0 0 var(--space-6); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .trunc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rest { flex: none; }
-  .rest::before { content: '· '; }
+  .rest::before { content: '·'; display: inline-block; margin-right: 0.3em; font-weight: 900; font-size: 1.35em; line-height: 0; vertical-align: -0.06em; color: var(--text-3); }
   blockquote { margin: var(--space-2) 0 0 var(--space-6); padding-left: var(--space-3); border-left: 2px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   /* A pill riding after a link, mid-sentence, needs its own gap. */
   .what :global(.aftertext) { margin-left: var(--space-2); }

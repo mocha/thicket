@@ -11,13 +11,18 @@
    */
   import { onMount } from 'svelte';
   import Button from '$lib/components/Button.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
+  import BackLink from '$lib/components/BackLink.svelte';
   import Breadcrumb from '$lib/components/Breadcrumb.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
+  import Dot from '$lib/components/Dot.svelte';
   import Field from '$lib/components/Field.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
+  import FollowButton from '$lib/components/FollowButton.svelte';
   import Input from '$lib/components/Input.svelte';
   import Textarea from '$lib/components/Textarea.svelte';
   import Select from '$lib/components/Select.svelte';
@@ -184,15 +189,19 @@
       items: [
         { id: 'add-new-feed', label: 'Add new feed' },
         { id: 'avatar', label: 'Avatar' },
+        { id: 'back-link', label: 'Back link' },
         { id: 'badge', label: 'Badge' },
         { id: 'banner', label: 'Banner' },
         { id: 'breadcrumb', label: 'Breadcrumb' },
         { id: 'button', label: 'Button' },
         { id: 'choice-group', label: 'Choice group' },
+        { id: 'dot', label: 'Dot' },
         { id: 'field', label: 'Field' },
+        { id: 'follow-button', label: 'Follow button' },
         { id: 'icon-button', label: 'Icon button' },
         { id: 'input', label: 'Input' },
         { id: 'monogram', label: 'Monogram' },
+        { id: 'page-header', label: 'Page header' },
         { id: 'select', label: 'Select' },
         { id: 'setup-tour', label: 'Setup tour' },
         { id: 'tabs', label: 'Tabs' },
@@ -424,6 +433,12 @@
       </div>
     </section>
 
+    <section class="entry" id="back-link" aria-labelledby="back-link-h">
+      <h3 class="entry-h" id="back-link-h">Back link</h3>
+      <p class="section-lede">The way out of a page: an arrow, then “Back to” and the page’s name, in regular weight, with a line under it at the top of the page. In a Breadcrumb it is just the name. It sits small above a page’s title, like a feed’s page naming the collection or Explore you came from, and it starts every Breadcrumb. It takes the size of the text around it. When the page it names is the one you just left, clicking it goes back one step rather than opening that page fresh, so the page comes back as you left it (same search, filters, and spot in the list), and Back afterwards doesn’t land here again. Use it for the one way back from a page; a link to anywhere else stays a plain link.</p>
+      <div class="row"><BackLink href="#back-link" label="Explore" /></div>
+    </section>
+
     <section class="entry" id="badge" aria-labelledby="badge-h">
       <h3 class="entry-h" id="badge-h">Badge</h3>
       <p class="section-lede">A short status word or a count that rides alongside something else. Never something you press.</p>
@@ -451,7 +466,7 @@
 
     <section class="entry" id="breadcrumb" aria-labelledby="breadcrumb-h">
       <h3 class="entry-h" id="breadcrumb-h">Breadcrumb</h3>
-      <p class="section-lede">The header of a page that sits one step inside another, like managing a feed or a collection. It is the whole header: there’s no big title under it. Each place you came through is a link, in order, and the last step is the page you’re on, in plain gray. Every step is the same size, which is what makes it read as one trail. The page’s one main action, like Unfollow, sits at the right on the same line. Use it instead of a “Back to …” link above a title.</p>
+      <p class="section-lede">The header of a page that sits one step inside another, like managing a feed or a collection. It is the whole header: there’s no big title under it. Each place you came through is a link, in order, and the last step is the page you’re on, in plain gray. Every step is the same size, which is what makes it read as one trail, and the first step is a Back link, with its arrow marking the way out. The page’s one main action, like Unfollow, sits at the right on the same line. Use it instead of a “Back to …” link above a title.</p>
       <Breadcrumb trail={[{ label: 'Core77', href: '#breadcrumb' }]} current="Manage feed" asTitle={false} />
     </section>
 
@@ -496,6 +511,12 @@
       />
     </section>
 
+    <section class="entry" id="dot" aria-labelledby="dot-h">
+      <h3 class="entry-h" id="dot-h">Dot</h3>
+      <p class="section-lede">The dot between items on one line, heavier and larger than the plain character so the items read as separate. Use it for every such dot in the app, with a space on each side in running text. Browser tab titles keep the plain character, since they can’t be styled.</p>
+      <div class="row"><span>3,368 posts in 30 days <Dot /> 2 following <Dot /> last post 21 minutes ago</span></div>
+    </section>
+
     <section class="entry" id="field" aria-labelledby="field-h">
       <h3 class="entry-h" id="field-h">Field</h3>
       <p class="section-lede">A field is the label, the note that explains it, the control, and any error beneath the control. The note sits above the box so it’s read before typing.</p>
@@ -514,6 +535,12 @@
           {/snippet}
         </Field>
       </div>
+    </section>
+
+    <section class="entry" id="follow-button" aria-labelledby="follow-button-h">
+      <h3 class="entry-h" id="follow-button-h">Follow button</h3>
+      <p class="section-lede">Follow for a person: one tap, a green outline, tinted green once you follow. It has the same look as a feed’s Follow, which also asks which collection the feed goes in. Signed out, it’s a link that goes to sign in first.</p>
+      <div class="row"><FollowButton onclick={() => {}} /><FollowButton following onclick={() => {}} /></div>
     </section>
 
     <section class="entry" id="icon-button" aria-labelledby="icon-button-h">
@@ -566,6 +593,18 @@
         <Monogram name="The Verge" size={48} />
         <Monogram name="Quanta" size={36} />
         <Monogram name="Longreads" size={28} />
+      </div>
+    </section>
+
+    <section class="entry" id="page-header" aria-labelledby="page-header-h">
+      <h3 class="entry-h" id="page-header-h">Page header</h3>
+      <p class="section-lede">The top of every page, in one order: a Back link with a line under it, only on pages that have one; the page’s name; a description in small gray text, ending with a period when it’s a sentence; then a line that closes the header. The page’s own actions sit at the right end of that line, with words, never an icon alone. With no actions, it’s just the line. A post’s own page leaves the line out, so its text follows straight on. Profiles and feeds put a picture beside the name, exactly as tall as the name and the line under it.</p>
+      <div class="demo-pagehead">
+        <PageHeader name="Deep engineering">
+          {#snippet above()}<BackLink href="#page-header" label="Explore" />{/snippet}
+          {#snippet description()}Systems, performance, and the hard parts, explained clearly.{/snippet}
+          {#snippet actions()}<Button size="sm" onclick={() => {}}><Icon name="gear" size={16} />Manage collection</Button>{/snippet}
+        </PageHeader>
       </div>
     </section>
 

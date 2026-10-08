@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { api, adminApi, feedHref, type Feed } from '$lib/api';
@@ -9,7 +10,7 @@
   import CollectionCheckList from '$lib/components/CollectionCheckList.svelte';
   import SavedNote from '$lib/components/SavedNote.svelte';
   import Banner from '$lib/components/Banner.svelte';
-  import Breadcrumb from '$lib/components/Breadcrumb.svelte';
+  import BackLink from '$lib/components/BackLink.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Button from '$lib/components/Button.svelte';
   import Field from '$lib/components/Field.svelte';
@@ -221,12 +222,12 @@
 <svelte:head><title>{feed ? `Managing ${feedName(feed)}` : 'Feed settings'} · thicket</title></svelte:head>
 
 {#if feed}
-  <header class="top">
-    <Breadcrumb trail={[{ label: feedName(feed), href: feedHref(feed) }]} current="Manage feed" />
-    {#if ids.length > 0}<Button variant="danger" onclick={unfollow}>Unfollow</Button>{/if}
-  </header>
-
-  <hr />
+  {@const here = feed}
+  <PageHeader name="Manage feed">
+    {#snippet above()}<BackLink href={feedHref(here)} label={feedName(here)} />{/snippet}
+    {#snippet description()}Its name, collections, and how posts show for you.{/snippet}
+    {#snippet actions()}{#if ids.length > 0}<Button variant="danger" size="sm" onclick={unfollow}>Unfollow</Button>{/if}{/snippet}
+  </PageHeader>
   <section>
     <form class="opt" onsubmit={(e) => { e.preventDefault(); void saveName(displayName); }}>
       <Field label="Display name" hint="Only you see this name.">
@@ -332,9 +333,8 @@
 {/if}
 
 <style>
-  /* The breadcrumb is the header and takes the room; Unfollow keeps its size at the right. The min-height holds the row steady when Unfollow isn't shown. */
-  .top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 44px; }
   hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-4) 0; }
+  /* The breadcrumb is the header and takes the room; Unfollow keeps its size at the right. The min-height holds the row steady when Unfollow isn't shown. */
   /* Section headings match a field's label, so "Display name" and "Collections" read as the same kind of thing. */
   section h2 { font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; margin: 0 0 var(--space-3); }
   section h2.withnote { display: flex; align-items: center; gap: var(--space-3); }

@@ -1,8 +1,10 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
   /** New posts (once "Everything", issue #173): every post from every feed you follow. The front door lives at /, for everyone. */
   import { onMount } from 'svelte';
   import { api } from '$lib/api';
   import River from '$lib/components/River.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import Button from '$lib/components/Button.svelte';
   import { openAddFeed } from '$lib/addfeed.svelte';
@@ -52,25 +54,21 @@
   <hr class="split" />
   <div class="copy-start"><StarterPacks heading="… or get started by copying a collection" lede="" /></div>
 {:else}
-  <header class="top">
-    <div class="titlerow">
-      <h1>New posts</h1>
-      <AddFeedButton via="all_collections" bottomBarOnly />
-    </div>
-    {#if stats}
-      <p class="sub">{n(stats.feeds, 'feed', 'feeds')} · {n(stats.collections, 'collection', 'collections')} · {#if stats.posts24h}{n(stats.posts24h, 'new post', 'new posts')} in the last 24 hours{:else}No new posts in the last 24 hours{/if}</p>
-    {:else}
-      <p class="sub">Posts from every feed you follow, newest first.</p>
-    {/if}
-  </header>
+  <PageHeader name="New posts">
+    {#snippet description()}
+      {#if stats}
+        {n(stats.feeds, 'feed', 'feeds')} <Dot /> {n(stats.collections, 'collection', 'collections')} <Dot /> {#if stats.posts24h}{n(stats.posts24h, 'new post', 'new posts')} in 24 hours{:else}No new posts in 24 hours{/if}
+      {:else}
+        Posts from every feed you follow, newest first.
+      {/if}
+    {/snippet}
+    {#snippet actions()}<AddFeedButton via="all_collections" bottomBarOnly />{/snippet}
+  </PageHeader>
   <River />
 {/if}
 
 <style>
   .nudge { margin-bottom: var(--space-4); }
-  .top { margin-bottom: calc(var(--space-5) + var(--space-1)); }
-  /* Wraps: at a big text size on a phone the button drops under the title instead of sliding beneath it. */
-  .titlerow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; min-width: 0; }
   /* 2px is an optical nudge under the title, not a spacing step. */
   .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 62ch; }

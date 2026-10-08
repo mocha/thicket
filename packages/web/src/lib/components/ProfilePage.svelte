@@ -1,4 +1,9 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
+  import { menu } from '$lib/menu';
+  import Icon from '$lib/components/Icon.svelte';
+  import FollowButton from '$lib/components/FollowButton.svelte';
   import { onMount, tick } from 'svelte';
   import { page } from '$app/state';
   import { api, authApi, profilesApi, profileHref, publicCollectionHref, type Profile, type ProfileCollection, type PublicBookmark, type PublicUser, type ShareLevel } from '$lib/api';
@@ -26,7 +31,6 @@
   import { loadCollections } from '$lib/collections.svelte';
   import { marks, countText } from '$lib/marks.svelte';
   import { display } from '$lib/display.svelte';
-  import { menu } from '$lib/menu';
 
   /** On your own profile the Collections section is also where you make one. */
   let creating = $state(false);
@@ -214,6 +218,9 @@
   // The name/bio/homepage block: one "Edit profile" button turns it into a
   // small form that saves all three together, then settles back into text.
   let editing = $state(false);
+  /** The picture is exactly as tall as the name and handle beside it, whatever the fonts and text size. While editing, the form stands in for them, so the picture keeps a fixed size. */
+  let namesHeight = $state(0);
+  const picSize = $derived(!editing && namesHeight ? namesHeight : 48);
   let dname = $state('');
   let dbio = $state('');
   let dhome = $state('');
@@ -333,69 +340,70 @@
   {#if profile.isMe}
     <p class="ownerbar">This is your <strong>public profile</strong>. Depending on your settings, it's what everyone else sees.</p>
   {/if}
-  <header class="who">
-    {#if profile.isMe}
-      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" bind:this={fileInput} onchange={onFilePicked} hidden />
-      <div class="photomenu" bind:this={photoMenuAnchor}>
-        <button type="button" class="photobtn" onclick={onPhotoClick} aria-haspopup={profile.avatarUpdatedAt ? 'menu' : undefined} aria-expanded={profile.avatarUpdatedAt ? photoMenuOpen : undefined} aria-label={profile.avatarUpdatedAt ? 'Profile picture options' : 'Add a profile picture'} title={profile.avatarUpdatedAt ? 'Profile picture options' : 'Add a profile picture'}>
-          <Avatar handle={profile.handle} name={profile.displayName ?? profile.handle} size={56} v={profile.avatarUpdatedAt} />
-          <span class="camera" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
-          </span>
-        </button>
-        {#if photoMenuOpen}
-          <div class="menupanel" role="menu" aria-label="Profile picture" bind:this={photoMenuPanel} use:menu={{ anchor: photoMenuAnchor, onclose: () => (photoMenuOpen = false) }}>
-            <button type="button" class="mi" role="menuitem" onclick={() => { photoMenuOpen = false; pickPhoto(); }}>Change photo</button>
-            {#if profile.avatarUpdatedAt}
+  {@const pr = profile}
+  <PageHeader description={pr.bio && !editing ? bio : undefined}>
+    {#snippet title()}
+    <div class="who">
+      {#if pr.isMe}
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" bind:this={fileInput} onchange={onFilePicked} hidden />
+        <div class="photomenu" bind:this={photoMenuAnchor}>
+          <button type="button" class="photobtn" onclick={onPhotoClick} aria-haspopup={pr.avatarUpdatedAt ? 'menu' : undefined} aria-expanded={pr.avatarUpdatedAt ? photoMenuOpen : undefined} aria-label={pr.avatarUpdatedAt ? 'Profile picture options' : 'Add a profile picture'} title={pr.avatarUpdatedAt ? 'Profile picture options' : 'Add a profile picture'}>
+            <Avatar handle={pr.handle} name={pr.displayName ?? pr.handle} size={picSize} v={pr.avatarUpdatedAt} />
+            <span class="badge" aria-hidden="true"><Icon name="pencil" size={9} /></span>
+          </button>
+          {#if photoMenuOpen}
+            <div class="menupanel" role="menu" aria-label="Profile picture" bind:this={photoMenuPanel} use:menu={{ anchor: photoMenuAnchor, onclose: () => (photoMenuOpen = false) }}>
+              <button type="button" class="mi" role="menuitem" onclick={() => { photoMenuOpen = false; pickPhoto(); }}>Change photo</button>
               <button type="button" class="mi danger" role="menuitem" onclick={() => { photoMenuOpen = false; void removePhoto(); }}>Remove photo</button>
-            {/if}
-          </div>
-        {/if}
-      </div>
-    {:else}
-      <Avatar handle={profile.handle} name={profile.displayName ?? profile.handle} size={56} v={profile.avatarUpdatedAt} />
-    {/if}
-    <div class="names">
-      {#if editing}
-        <div class="edit">
-          <Field label="Display name">
-            {#snippet children({ id, describedBy, invalid })}
-              <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={dname} maxlength={60} placeholder={profile!.handle} />
-            {/snippet}
-          </Field>
-          <Field label="About you">
-            {#snippet children({ id, describedBy, invalid })}
-              <Textarea {id} aria-describedby={describedBy} {invalid} inset bind:value={dbio} rows={3} maxlength={500} placeholder="A line or two. What you read, what you make." />
-            {/snippet}
-          </Field>
-          <Field label="Homepage">
-            {#snippet children({ id, describedBy, invalid })}
-              <Input {id} aria-describedby={describedBy} {invalid} inset type="url" inputmode="url" autocomplete="url" bind:value={dhome} placeholder="https://" />
-            {/snippet}
-          </Field>
-          <div class="editrow">
-            <Button onclick={() => (editing = false)} disabled={savingProfile}>Cancel</Button>
-            <Button variant="primary" onclick={saveEdit} disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save'}</Button>
-          </div>
+            </div>
+          {/if}
         </div>
       {:else}
-        <h1 title={profile.displayName ?? profile.handle}>{profile.displayName ?? profile.handle}</h1>
-        <p class="handle">@{profile.handle}{#if profile.homepageUrl}{' · '}<a class="site" href={profile.homepageUrl} target="_blank" rel={ugcRel(profile.homepageUrl, 'me')}>{hostOf(profile.homepageUrl)} ↗</a>{/if}</p>
-        {#if profile.bio}<p class="bio">{profile.bio}</p>{/if}
+        <Avatar handle={pr.handle} name={pr.displayName ?? pr.handle} size={picSize} v={pr.avatarUpdatedAt} />
       {/if}
+      <div class="names" bind:offsetHeight={namesHeight}>
+        {#if editing}
+          <div class="edit">
+            <Field label="Display name">
+              {#snippet children({ id, describedBy, invalid })}
+                <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={dname} maxlength={60} placeholder={pr!.handle} />
+              {/snippet}
+            </Field>
+            <Field label="About you">
+              {#snippet children({ id, describedBy, invalid })}
+                <Textarea {id} aria-describedby={describedBy} {invalid} inset bind:value={dbio} rows={3} maxlength={500} placeholder="A line or two. What you read, what you make." />
+              {/snippet}
+            </Field>
+            <Field label="Homepage">
+              {#snippet children({ id, describedBy, invalid })}
+                <Input {id} aria-describedby={describedBy} {invalid} inset type="url" inputmode="url" autocomplete="url" bind:value={dhome} placeholder="https://" />
+              {/snippet}
+            </Field>
+            <div class="editrow">
+              <Button onclick={() => (editing = false)} disabled={savingProfile}>Cancel</Button>
+              <Button variant="primary" onclick={saveEdit} disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save'}</Button>
+            </div>
+          </div>
+        {:else}
+          <h1 title={pr.displayName ?? pr.handle}>{pr.displayName ?? pr.handle}</h1>
+          <p class="handle">@{pr.handle}{#if pr.homepageUrl}{' '}<Dot />{' '}<a class="site" href={pr.homepageUrl} target="_blank" rel={ugcRel(pr.homepageUrl, 'me')}>{hostOf(pr.homepageUrl)} ↗</a>{/if}</p>
+        {/if}
+      </div>
     </div>
-    {#if profile.isMe}
-      {#if !editing}
-        <div class="ownerctrls">
-          <IconButton icon="pencil" variant="bordered" size="lg" onclick={startEdit} label="Edit profile" title="Edit profile" />
-        </div>
+    {/snippet}
+    {#snippet actions()}
+      {#if pr.isMe}
+        {#if !editing}
+            <Button size="sm" onclick={startEdit}><Icon name="pencil" size={16} />Edit profile</Button>
+        {/if}
+      {:else if session.user}
+        <FollowButton small following={pr.people.isFollowing} label="Follow @{pr.handle}" busy={followBusy} onclick={toggleFollow} />
+      {:else}
+        <FollowButton small label="Follow @{pr.handle}" href="/login?next={encodeURIComponent(page.url.pathname)}" />
       {/if}
-    {:else if session.user}
-      <Button onclick={toggleFollow} disabled={followBusy} aria-pressed={profile.people.isFollowing} style="flex: none">{profile.people.isFollowing ? 'Following' : 'Follow'}</Button>
-    {:else}
-      <Button href="/login?next={encodeURIComponent(page.url.pathname)}" style="flex: none">Follow</Button>
-    {/if}
-  </header>
+    {/snippet}
+  </PageHeader>
+  {#snippet bio()}<span class="bio">{pr.bio}</span>{/snippet}
 
   {#if profile.isMe && pendingFile}
     <AvatarCropDialog file={pendingFile} onclose={() => (pendingFile = null)} onsaved={onAvatarSaved} />
@@ -426,11 +434,12 @@
   {#if profile.collections}
     <section>
       {#if only}
-        <div class="titlerow">
-          <h1 class="pagetitle">Collections <Badge>{profile.collections.length}</Badge></h1>
-          {#if isMe}<AddFeedButton via="collections" bottomBarOnly />{/if}
-        </div>
-        <p class="sub">Your feeds grouped and named however you choose. {#if !collectionsShared}Only you can see them.{:else}Shown on <a href={profileHref(handle)}>your profile</a>{collectionsShared === 'friends' ? ' to the people you follow' : ''}, with each collection’s own sharing setting.{/if}</p>
+        {@const count = profile.collections.length}
+        <PageHeader>
+          {#snippet title()}<h1 class="pagetitle">Collections <Badge>{count}</Badge></h1>{/snippet}
+          {#snippet description()}Your feeds, grouped your way. {#if !collectionsShared}Only you can see them.{:else}Shown on <a href={profileHref(handle)}>your profile</a>{collectionsShared === 'friends' ? ' to the people you follow' : ''}.{/if}{/snippet}
+          {#snippet actions()}{#if isMe}<AddFeedButton via="collections" bottomBarOnly />{/if}{/snippet}
+        </PageHeader>
         <Field class="colfilter" label="Filter collections" hideLabel>
           {#snippet children({ id })}
             <Input
@@ -627,32 +636,28 @@
 
 <style>
   /* The Collections screen's own title, in the place a page title sits everywhere else. */
-  /* Its title row, with Add new feed beside it where there's no left menu to hold it. */
-  .titlerow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); margin: 0; }
   .pagetitle { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.15; margin: 0; }
-  .sub { margin: 2px 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .sub a { color: var(--accent); }
-  .who { display: flex; gap: var(--space-4); align-items: flex-start; margin: var(--space-2) 0 var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); }
-  .names { flex: 1; min-width: 0; }
-  /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 -0.2em; padding-bottom: 0.2em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* 2px is an optical nudge under the name, not a spacing step. */
-  .handle { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); }
-  .site { color: var(--accent); font-weight: 600; }
-  .bio { margin: var(--space-3) 0 0; color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); white-space: pre-line; }
-  /* The avatar as a button: a camera badge in the corner says it's changeable. */
-  .photobtn { flex: none; position: relative; padding: 0; border-radius: var(--radius-avatar); line-height: 0; }
-  /* The camera badge hangs 3px off the avatar's corner: an optical overlap, not a spacing step. */
-  .photobtn .camera { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 2px var(--surface); }
+  /* More room under the picture and name, before the description. */
+  /* A bio keeps the line breaks its person typed. */
+  .bio { white-space: pre-line; }
+  /* Your own picture is a button: a small pencil badge at its corner says it can be changed. Tapping opens Change / Remove photo. */
+  .photomenu { position: relative; flex: none; }
+  .photobtn { position: relative; display: block; padding: 0; border-radius: var(--radius-avatar); line-height: 0; }
   .photobtn:hover { opacity: 0.92; }
   .photobtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .ownerctrls { flex: none; display: flex; align-items: center; gap: var(--space-2); }
-  /* The avatar's tap menu: hangs off the avatar, opening down and to the left. */
-  .photomenu { position: relative; flex: none; }
+  /* The badge hangs 3px off the picture's corner: an optical overlap, not a spacing step. */
+  .badge { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 14px; height: 14px; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 2px var(--bg); }
   .menupanel { position: absolute; top: calc(100% + var(--space-2)); left: 0; z-index: 60; min-width: 200px; max-width: calc(100vw - 16px); background: var(--surface); border-radius: var(--radius-md); padding: var(--space-2); box-shadow: var(--shadow-menu); display: flex; flex-direction: column; }
   .mi { display: block; width: 100%; text-align: left; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
   .mi:hover { background: var(--surface-2); }
   .mi.danger { color: var(--danger); }
+  .who { display: flex; gap: var(--space-3); align-items: center; margin-bottom: var(--space-4); }
+  .names { flex: 1; min-width: 0; }
+  /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
+  /* The name and handle are trimmed to their letters, top of the capitals to the baseline, so the picture beside them can match what you see: the name from the top of its capitals, the handle down to the bottom of letters like y and p. */
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 -0.2em; padding-bottom: 0.2em; line-height: 1.15; text-box: trim-both cap alphabetic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .handle { margin: var(--space-2) 0 0; line-height: 1.3; text-box: trim-both cap text; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); }
+  .site { color: var(--accent); font-weight: 600; }
   /* Edit: a quiet pencil, the same at every width. */
 
   /* Owner only: a muted one-line reminder in a soft box at the very top of the page. */

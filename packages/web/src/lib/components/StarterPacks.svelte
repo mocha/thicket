@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
   /**
    * Starter packs: the instance's answer to an empty screen.
    *
@@ -72,7 +73,7 @@
             <span class="icons" aria-hidden="true">
               {#each c.sample as f (f.id)}<SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title} size={20} />{/each}
             </span>
-            <span class="count">{c.feedCount} {c.feedCount === 1 ? 'site' : 'sites'}{#if !from}{' · '}{c.displayName ?? `@${c.handle}`}{/if}</span>
+            <span class="count">{c.feedCount} {c.feedCount === 1 ? 'site' : 'sites'}{#if !from}{' '}<Dot />{' '}{c.displayName ?? `@${c.handle}`}{/if}</span>
           </div>
           <!-- The name is the link, stretched over the whole card, so the card
                still opens the collection while the button below stays its own control. -->

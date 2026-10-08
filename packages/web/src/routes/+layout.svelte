@@ -18,9 +18,11 @@
   import { watchMarks } from '$lib/marks.svelte';
   import { watchNotifs, loadNotifs } from '$lib/notifications.svelte';
   import { watchBackForward } from '$lib/listmemory';
+  import { watchLeaving } from '$lib/wayback';
   import Wordmark from '$lib/components/Wordmark.svelte';
   let { children } = $props();
   watchBackForward();
+  watchLeaving();
 
   /**
    * The auth gate. We learn who is signed in before rendering any page, so no

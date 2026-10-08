@@ -19,8 +19,8 @@
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
   import FollowSheet from './FollowSheet.svelte';
 
-  let { feedId, ids = $bindable(), name = 'this feed', compact = false, onchange }: {
-    feedId: number; ids: number[]; name?: string; compact?: boolean; onchange?: (ids: number[]) => void;
+  let { feedId, ids = $bindable(), name = 'this feed', compact = false, small = false, followLabel = 'Follow', onchange }: {
+    feedId: number; ids: number[]; name?: string; compact?: boolean; /** The small size every page header's buttons use. */ small?: boolean; /** What it says before you follow, where "Follow" alone would be unclear: "Follow this feed" on a feed's page. */ followLabel?: string; onchange?: (ids: number[]) => void;
   } = $props();
 
   let open = $state(false);
@@ -35,7 +35,7 @@
    */
   const only = $derived(ids.length === 1 ? collectionStore.list.find((c) => c.id === ids[0]) : null);
   const label = $derived(
-    !following ? 'Follow' : only ? `In ${only.name}` : ids.length === 1 ? 'In 1 collection' : `In ${ids.length} collections`
+    !following ? followLabel : only ? `In ${only.name}` : ids.length === 1 ? 'In 1 collection' : `In ${ids.length} collections`
   );
 
   function show() {
@@ -47,7 +47,7 @@
   $effect(() => { if (following) void loadCollections(); });
 </script>
 
-<button class="follow tap" class:on={following} class:compact onclick={show} aria-haspopup="dialog" aria-expanded={open}><span class="lbl">{label}</span></button>
+<button class="follow tap" class:on={following} class:compact class:small onclick={show} aria-haspopup="dialog" aria-expanded={open}><span class="lbl">{label}</span></button>
 
 {#if open}
   <FollowSheet {feedId} bind:ids {name} {onchange} onclose={() => (open = false)} />
@@ -64,4 +64,5 @@
   /* Hover draws the outline back in rather than deepening the wash, which would dim the lettering on it. */
   .follow.on:hover { background: var(--accent-tint); border-color: var(--accent); }
   .compact { padding: var(--space-1) var(--space-4); }
+  .small { padding: var(--space-1) var(--space-3); }
 </style>

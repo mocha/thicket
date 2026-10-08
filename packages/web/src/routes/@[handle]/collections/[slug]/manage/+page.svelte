@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import { onMount, onDestroy } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
@@ -11,7 +12,7 @@
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
   import Textarea from '$lib/components/Textarea.svelte';
-  import Breadcrumb from '$lib/components/Breadcrumb.svelte';
+  import BackLink from '$lib/components/BackLink.svelte';
   import Select from '$lib/components/Select.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
@@ -210,12 +211,12 @@
 <svelte:head><title>{col ? `Managing ${col.name}` : 'Manage'} · thicket</title></svelte:head>
 
 {#if col}
-  <header class="top">
-    <Breadcrumb trail={[{ label: col.name, href: collectionHref(handle, slug) }]} current="Manage collection" />
-    <Button variant="danger" onclick={askDelete}>Delete collection</Button>
-  </header>
-
-  <hr />
+  {@const here = col}
+  <PageHeader name="Manage collection">
+    {#snippet above()}<BackLink href={collectionHref(handle, slug)} label={here.name} />{/snippet}
+    {#snippet description()}Its name, description, and who can see it.{/snippet}
+    {#snippet actions()}<Button variant="danger" size="sm" onclick={askDelete}>Delete collection</Button>{/snippet}
+  </PageHeader>
   <form class="opt" onsubmit={(e) => { e.preventDefault(); void rename(); }}>
     <Field label="Name">
       {#snippet children({ id, describedBy, invalid })}
@@ -357,8 +358,6 @@
   .hint { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .sheet .row { margin-top: var(--space-4); }
   /* The breadcrumb is the header and takes the room; Delete keeps its size at the right. */
-  .top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 44px; }
-  hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-4) 0; }
   /* Between one setting and the next: more than the gap inside a setting, so each reads as its own group. */
   .opt { margin-bottom: var(--space-6); }
   /* Section headings match a field's label, as on a feed's settings page, so "Name" and "Collection visibility" read as the same kind of thing. */

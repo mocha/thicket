@@ -7,12 +7,15 @@
  * a list pushes that address over the list, so back and the close button do the
  * same thing and the list is still there underneath. Arriving at the address
  * cold there is no list behind, so closing goes to the feed the post came from.
+ * Stepping back (or forward) onto a post's address after leaving it, say from
+ * its feed's page, opens it again over the list it was read from.
  */
 import { goto, pushState, replaceState } from '$app/navigation';
 import { page } from '$app/state';
-import { feedHref, itemHref, type RiverItem } from './api';
+import { feedHref, itemHref, itemsApi, type RiverItem } from './api';
 import { display } from './display.svelte';
 import { session } from './session.svelte';
+import { showToast } from './toast.svelte';
 
 export const reader = $state<{ item: RiverItem | null; note: boolean }>({ item: null, note: false });
 
@@ -54,6 +57,33 @@ export function closeReader() {
     history.back();
   } else {
     readerClosed();
+  }
+}
+
+/** The post being fetched again to reopen, so the reader asks only once. */
+let reopening: number | null = null;
+
+/**
+ * Called by the reader when history says a post is open but it no longer has
+ * the post in hand: back onto it from its feed's page, or Forward onto it after
+ * closing. Fetches it and opens it again, if we are still on that step.
+ */
+export async function reopenReader(id: number) {
+  if (reopening === id) return;
+  reopening = id;
+  try {
+    const got = await itemsApi.get(id);
+    if (page.state.reader === id && !reader.item) {
+      reader.item = got;
+      reader.note = false;
+      landing = null;
+    }
+  } catch (e) {
+    const why = e instanceof Error ? e.message : String(e);
+    console.error(`Couldn't reopen post ${id}:`, e);
+    showToast(`Couldn’t open that post again: ${why}`);
+  } finally {
+    reopening = null;
   }
 }
 

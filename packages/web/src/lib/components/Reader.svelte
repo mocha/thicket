@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
   /**
    * Read a post here, over the list. Full screen on a phone, a tall sheet on a
    * desk; the list dims behind it and a tap on the dim closes it, as does the
@@ -10,7 +11,7 @@
   import { api, itemsApi, type ItemContent, type SavedNote } from '$lib/api';
   import { noteToast } from '$lib/saves';
   import { hostOf, webHref } from '$lib/time';
-  import { closeReader, reader, readerClosed } from '$lib/reader.svelte';
+  import { closeReader, reader, readerClosed, reopenReader } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
   import CardMeta from './CardMeta.svelte';
   import FeedPopover from './FeedPopover.svelte';
@@ -96,6 +97,8 @@
       popover = false;
       dialog?.close();
       readerClosed();
+    } else if (openFor !== undefined) {
+      void reopenReader(openFor);
     }
   });
 
@@ -172,7 +175,7 @@
 
           <h1>{item.title ?? item.summary ?? item.url}</h1>
           <p class="byline">
-            {#if item.author}<span>{item.author}</span><span class="dot">·</span>{/if}
+            {#if item.author}<span>{item.author}</span><Dot />{/if}
             <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{new Date(item.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</time>
           </p>
 

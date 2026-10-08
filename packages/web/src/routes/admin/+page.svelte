@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
   /**
    * The instance, for its admins: who can sign up, invite links, the accounts.
    * Everything a small instance's owner does by hand today. Personal settings
@@ -158,7 +159,7 @@
 
 <header class="top">
   <h1>Admin</h1>
-  {#if instance}<p class="sub">{instance.name} · <code>{instance.url}</code></p>{/if}
+  {#if instance}<p class="sub">{instance.name} <Dot /> <code>{instance.url}</code></p>{/if}
 </header>
 
 {#if instance}
@@ -222,7 +223,7 @@
               <input type="radio" name="starter" checked={starter === u.handle} disabled={savingStarter} onchange={() => void setStarter(u.handle)} />
               <span class="pk">
                 <strong>{u.displayName ?? `@${u.handle}`}</strong>
-                <small>@{u.handle} · {u.collectionCount} public {u.collectionCount === 1 ? 'collection' : 'collections'} · {u.feedCount} {u.feedCount === 1 ? 'site' : 'sites'}</small>
+                <small>@{u.handle} <Dot /> {u.collectionCount} public {u.collectionCount === 1 ? 'collection' : 'collections'} <Dot /> {u.feedCount} {u.feedCount === 1 ? 'site' : 'sites'}</small>
               </span>
             </label>
           </li>
@@ -257,9 +258,9 @@
           <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={36} v={u.avatarUpdatedAt} />
           <div class="who">
             <div class="line">
-              <a class="name tap" href={profileHref(u.handle)}>{u.displayName ?? u.handle}</a><span class="handle">{' · '}@{u.handle}{#if u.isAdmin}{' · '}<Badge>Admin</Badge>{/if}{#if u.profileVisibility === 'private'}{' · '}<Badge>Private</Badge>{/if}{#if u.id === me?.id}{' · '}<Badge>You</Badge>{/if}</span>
+              <a class="name tap" href={profileHref(u.handle)}>{u.displayName ?? u.handle}</a><span class="handle">{' '}<Dot />{' '}@{u.handle}{#if u.isAdmin}{' '}<Dot />{' '}<Badge>Admin</Badge>{/if}{#if u.profileVisibility === 'private'}{' '}<Dot />{' '}<Badge>Private</Badge>{/if}{#if u.id === me?.id}{' '}<Dot />{' '}<Badge>You</Badge>{/if}</span>
             </div>
-            <div class="facts">{u.following} {u.following === 1 ? 'feed' : 'feeds'} · {u.collections} {u.collections === 1 ? 'collection' : 'collections'} · {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'} · joined {relativeTime(u.createdAt)}{#if u.invitedBy}{' via @'}{u.invitedBy}{/if}{#if u.lastSeenAt}{' · '}{lastActive(u.lastSeenAt)}{/if}</div>
+            <div class="facts">{u.following} {u.following === 1 ? 'feed' : 'feeds'} <Dot /> {u.collections} {u.collections === 1 ? 'collection' : 'collections'} <Dot /> {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'} <Dot /> joined {relativeTime(u.createdAt)}{#if u.invitedBy}{' via @'}{u.invitedBy}{/if}{#if u.lastSeenAt}{' '}<Dot />{' '}{lastActive(u.lastSeenAt)}{/if}</div>
             {#if u.id !== me?.id}
               <div class="acts">
                 <Button size="sm" onclick={() => setAdmin(u, !u.isAdmin)} disabled={busyId === u.id}>{u.isAdmin ? 'Remove admin' : 'Make admin'}</Button>

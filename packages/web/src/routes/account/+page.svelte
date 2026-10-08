@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import { api, authApi, bookmarksApi, ApiError } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { site, loadSite } from '$lib/site.svelte';
@@ -142,9 +143,9 @@
 
 <svelte:head><title>Account · thicket</title></svelte:head>
 
-<header class="top">
-  <h1>Account</h1>
-</header>
+<PageHeader name="Account">
+  {#snippet description()}Your email, your password, and your data.{/snippet}
+</PageHeader>
 
 {#if hosted}
   <section class="card">
@@ -246,8 +247,6 @@
 <ApiTokens available={tokensAvailable} />
 
 <style>
-  .top { margin-bottom: var(--space-4); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
   .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }

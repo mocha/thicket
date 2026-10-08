@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
+  import BackLink from '$lib/components/BackLink.svelte';
   /**
    * A post at its own address: /feeds/:id/:slug/:item/:itemslug.
    *
@@ -17,12 +20,11 @@
   import { replaceState } from '$app/navigation';
   import { api, feedHref, itemHref, itemsApi, type Note, type RiverItem } from '$lib/api';
   import { noteToast } from '$lib/saves';
-  import { hostOf, relativeTime, webHref } from '$lib/time';
+  import { hostOf, webHref } from '$lib/time';
   import { openReaderHere, readsInline } from '$lib/reader.svelte';
   import { session } from '$lib/session.svelte';
   import { site, loadSite } from '$lib/site.svelte';
   import { showToast } from '$lib/toast.svelte';
-  import SourceIcon from '$lib/components/SourceIcon.svelte';
   import ItemActions from '$lib/components/ItemActions.svelte';
   import NoteEditor from '$lib/components/NoteEditor.svelte';
   import NoteBlock from '$lib/components/NoteBlock.svelte';
@@ -92,25 +94,17 @@
 </script>
 
 {#if item}
-  <nav class="crumbs"><a class="tap" href={backHref}>{source}</a> <span aria-hidden="true">›</span></nav>
-
   <article class="post">
-    <header>
-      <a class="who tap" href={backHref}>
-        <SourceIcon feedId={item.feedId} hasIcon={item.hasIcon} name={source} />
-        <span class="name">{source}</span>
-      </a>
-      <span class="dot">·</span>
-      <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{relativeTime(item.publishedAt)}</time>
-      <span class="spacer"></span>
-      {#if session.user}<ItemActions {item} noteOpen={editing} onnote={noteButton} via="post" />{/if}
-    </header>
-
-    <h1>{item.title ?? item.summary ?? item.url}</h1>
-    <p class="byline">
-      {#if item.author}<span>{item.author}</span><span class="dot">·</span>{/if}
-      <time datetime={item.publishedAt}>{new Date(item.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</time>
-    </p>
+    <PageHeader name={item.title ?? item.summary ?? item.url ?? undefined} line={false} actions={session.user ? postActions : undefined}>
+      {#snippet above()}<BackLink href={backHref} label={source} />{/snippet}
+      {#snippet description()}
+        <span class="byline">
+          {#if item!.author}<span>{item!.author}</span><Dot />{/if}
+          <time datetime={item!.publishedAt}>{new Date(item!.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</time>
+        </span>
+      {/snippet}
+    </PageHeader>
+    {#snippet postActions()}<ItemActions item={item!} noteOpen={editing} onnote={noteButton} via="post" />{/snippet}
 
     {#if item.imageUrl && !imgFailed}
       <img class="hero" src={item.imageUrl} alt="" referrerpolicy="no-referrer" onerror={() => (imgFailed = true)} />
@@ -147,24 +141,13 @@
 {/if}
 
 <style>
-  .crumbs { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); margin: 0 0 var(--space-3); }
-  .crumbs a { color: var(--text-2); }
-  .crumbs a:hover { color: var(--text); }
-
   .post { max-width: 680px; }
   .notes { margin-top: var(--space-4); }
   .notes :global(.note), .notes :global(.editor) { padding-left: 0; padding-right: 0; }
-  header { display: flex; align-items: center; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); min-width: 0; }
-  .who { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: inherit; }
-  .name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dot { color: var(--text-3); }
-  header time { color: var(--text-2); white-space: nowrap; }
-  .spacer { flex: 1; }
 
-  h1 { margin: var(--space-4) 0 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
-  .byline { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: flex; gap: var(--space-2); flex-wrap: wrap; }
-  .hero { width: 100%; border-radius: var(--radius-sm); margin-top: var(--space-4); background: var(--surface-2); }
-  .summary { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: var(--space-4) 0 0; overflow-wrap: anywhere; }
+  .byline { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .hero { width: 100%; border-radius: var(--radius-sm); margin-top: 0; background: var(--surface-2); }
+  .summary { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: 0; overflow-wrap: anywhere; }
 
   footer { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); }
   .note { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.5; }

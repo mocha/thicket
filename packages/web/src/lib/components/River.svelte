@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Dot from '$lib/components/Dot.svelte';
   /**
    * The stream. Newest first, keyset paginated. Scoped by nothing (Everything),
    * a collection subtree, or a single feed. The page around it owns the title;
@@ -302,7 +303,7 @@
 {#if paged}
   <section class="river paged" bind:this={frame} style:height="{frameH}px">
     {#if pageItems.length || endOnPage}
-      <div class="pagehead" style:height="{PAGEHEAD_H}px"><h2 class="when">{pageLabel}</h2>{#if newAtOpen}<span class="newn">{newAtOpen} new{#if !caught} · <button type="button" onclick={caughtUp}>I’m caught up</button>{/if}</span>{/if}<span class="n" role="status">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
+      <div class="pagehead" style:height="{PAGEHEAD_H}px"><h2 class="when">{pageLabel}</h2>{#if newAtOpen}<span class="newn">{newAtOpen} new{#if !caught} <Dot /> <button type="button" onclick={caughtUp}>I’m caught up</button>{/if}</span>{/if}<span class="n" role="status">Page {pageIndex + 1}{#if done} of {pageCount}{/if}</span></div>
       <div class="grid" style:grid-template-columns="repeat({cols}, minmax(0, 1fr))" style:grid-auto-rows="{cardH}px" style:gap="{GAP}px">
         {#each pageItems as item (item.id)}
           <ItemCard {item} {showSource} compact fresh={isFresh(item)} />

@@ -4,6 +4,7 @@
   "description": "A feed reader for the rewilded web",
   "start_url": "/new-posts",
   "display": "standalone",
+  "display_override": ["minimal-ui"],
   "background_color": "#f6f1e8",
   "theme_color": "#f6f1e8",
   "icons": [{ "src": "/icon-large.svg?v=2", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }, { "src": "/apple-touch-icon.png?v=2", "sizes": "180x180", "type": "image/png" }],
