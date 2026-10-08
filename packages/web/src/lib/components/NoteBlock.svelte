@@ -5,7 +5,7 @@
   /**
    * One note under a post, mine or someone's, headed by who wrote it: their
    * picture, name and handle, with the date underneath (issue #239). Mine is
-   * headed the same way, from the signed-in account, and has Edit.
+   * headed the same way, from the signed-in account, and has Edit note.
    * Shows three lines, then "Show more" slides the rest out.
    * Rendering is our own safe Markdown subset (lib/markdown.ts), where an
    * @mention of someone with an account links to their profile.
@@ -59,7 +59,7 @@
       {/if}
       <span class="when" title={new Date(note.createdAt).toLocaleString()}>{relativeTime(note.createdAt)}{#if edited}{' '}<Dot /> edited {relativeTime(note.updatedAt)}{/if}</span>
     </div>
-    {#if mine && onedit}<button class="edit tap" onclick={onedit}><Icon name="pencil" size={16} />Edit</button>{/if}
+    {#if mine && onedit}<button class="edit tap" onclick={onedit}><Icon name="pencil" size={16} />Edit note</button>{/if}
   </div>
   <div class="body" class:clamped={!expanded} bind:this={body}>{@html html}</div>
   {#if overflows || expanded}
