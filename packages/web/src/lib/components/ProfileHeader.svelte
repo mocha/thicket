@@ -188,7 +188,7 @@
         </div>
       {:else}
         <h1 title={profile.displayName ?? profile.handle}>{profile.displayName ?? profile.handle}</h1>
-        <p class="handle">@{profile.handle}{' '}<Dot />{' '}<button type="button" class="people" aria-haspopup="dialog" onclick={() => (people = 'following')}><strong>{profile.people.follows}</strong> following</button>{#if profile.people.followers !== null}{' '}<Dot />{' '}<button type="button" class="people" aria-haspopup="dialog" onclick={() => (people = 'followers')}><strong>{profile.people.followers}</strong> {profile.people.followers === 1 ? 'follower' : 'followers'}</button>{/if}{#if profile.homepageUrl}{' '}<Dot />{' '}<a class="site" href={profile.homepageUrl} target="_blank" rel={ugcRel(profile.homepageUrl, 'me')}>{hostOf(profile.homepageUrl)} ↗</a>{/if}</p>
+        <p class="handle">@{profile.handle}{' '}<Dot />{' '}<button type="button" class="people" aria-haspopup="dialog" onclick={() => (people = 'following')}>{profile.people.follows} following</button>{#if profile.people.followers !== null}{' '}<Dot />{' '}<button type="button" class="people" aria-haspopup="dialog" onclick={() => (people = 'followers')}>{profile.people.followers} {profile.people.followers === 1 ? 'follower' : 'followers'}</button>{/if}{#if profile.homepageUrl}{' '}<Dot />{' '}<a class="site" href={profile.homepageUrl} target="_blank" rel={ugcRel(profile.homepageUrl, 'me')}>{hostOf(profile.homepageUrl)} ↗</a>{/if}</p>
       {/if}
     </div>
   </div>
@@ -238,9 +238,7 @@
   /* Editing name, bio and homepage right in the header. */
   .edit { display: flex; flex-direction: column; gap: var(--space-5); }
   .editrow { display: flex; justify-content: flex-end; gap: var(--space-2); }
-  /* The counts are buttons that read as part of the handle line: the number in the text color, the word quieter. */
-  .people { padding: 0; font: inherit; color: var(--text-2); }
-  .people strong { color: var(--text); font-weight: 600; }
-  @media (hover: hover) { .people:hover { text-decoration: underline; text-underline-offset: 3px; } }
+  /* The counts are buttons that read as part of the handle line: its own color and weight, with a dashed underline that says they open something. */
+  .people { padding: 0; font: inherit; color: inherit; text-decoration: underline dashed; text-decoration-thickness: 1px; text-underline-offset: 3px; }
   .people:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
 </style>
