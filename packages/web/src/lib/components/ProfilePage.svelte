@@ -1,6 +1,7 @@
 <script lang="ts">
   import Dot from '$lib/components/Dot.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
+  import { menu } from '$lib/menu';
   import Icon from '$lib/components/Icon.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import { onMount, tick } from 'svelte';
@@ -262,6 +263,24 @@
   let removingAvatar = $state(false);
   function pickPhoto() { fileInput?.click(); }
 
+  // Tapping your avatar. With a photo, both actions (change, remove) live in a
+  // small menu hung off the avatar; with no photo there's only one thing to do,
+  // so we skip the menu and open the file picker straight away.
+  let photoMenuOpen = $state(false);
+  let photoMenuAnchor = $state<HTMLElement | null>(null);
+  let photoMenuPanel = $state<HTMLElement | null>(null);
+  function onPhotoClick() {
+    if (profile && !profile.private && profile.avatarUpdatedAt) photoMenuOpen = !photoMenuOpen;
+    else pickPhoto();
+  }
+  $effect(() => {
+    if (!photoMenuOpen) return;
+    const onDoc = (e: MouseEvent) => { if (!photoMenuPanel?.contains(e.target as Node) && !photoMenuAnchor?.contains(e.target as Node)) photoMenuOpen = false; };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') photoMenuOpen = false; };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  });
   function onFilePicked(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
     const f = input.files?.[0] ?? null;
@@ -325,20 +344,26 @@
   <PageHeader description={pr.bio && !editing ? bio : undefined}>
     {#snippet title()}
     <div class="who">
-      {#if !editing}<Avatar handle={pr.handle} name={pr.displayName ?? pr.handle} size={picSize} v={pr.avatarUpdatedAt} />{/if}
+      {#if pr.isMe}
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" bind:this={fileInput} onchange={onFilePicked} hidden />
+        <div class="photomenu" bind:this={photoMenuAnchor}>
+          <button type="button" class="photobtn" onclick={onPhotoClick} aria-haspopup={pr.avatarUpdatedAt ? 'menu' : undefined} aria-expanded={pr.avatarUpdatedAt ? photoMenuOpen : undefined} aria-label={pr.avatarUpdatedAt ? 'Profile picture options' : 'Add a profile picture'} title={pr.avatarUpdatedAt ? 'Profile picture options' : 'Add a profile picture'}>
+            <Avatar handle={pr.handle} name={pr.displayName ?? pr.handle} size={picSize} v={pr.avatarUpdatedAt} />
+            <span class="badge" aria-hidden="true"><Icon name="pencil" size={9} /></span>
+          </button>
+          {#if photoMenuOpen}
+            <div class="menupanel" role="menu" aria-label="Profile picture" bind:this={photoMenuPanel} use:menu={{ anchor: photoMenuAnchor, onclose: () => (photoMenuOpen = false) }}>
+              <button type="button" class="mi" role="menuitem" onclick={() => { photoMenuOpen = false; pickPhoto(); }}>Change photo</button>
+              <button type="button" class="mi danger" role="menuitem" onclick={() => { photoMenuOpen = false; void removePhoto(); }}>Remove photo</button>
+            </div>
+          {/if}
+        </div>
+      {:else}
+        <Avatar handle={pr.handle} name={pr.displayName ?? pr.handle} size={picSize} v={pr.avatarUpdatedAt} />
+      {/if}
       <div class="names" bind:offsetHeight={namesHeight}>
         {#if editing}
           <div class="edit">
-            <!-- The picture is changed here, with the rest of what you edit, rather than from a badge on the picture itself. -->
-            <div class="photorow">
-              <span class="photolabel">Profile picture</span>
-              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" bind:this={fileInput} onchange={onFilePicked} hidden />
-              <div class="photobtns">
-                <Avatar handle={pr.handle} name={pr.displayName ?? pr.handle} size={48} v={pr.avatarUpdatedAt} />
-                <Button size="sm" onclick={pickPhoto}>{pr.avatarUpdatedAt ? 'Change photo' : 'Add a photo'}</Button>
-                {#if pr.avatarUpdatedAt}<Button variant="danger" link size="sm" onclick={() => void removePhoto()} disabled={removingAvatar}>Remove photo</Button>{/if}
-              </div>
-            </div>
             <Field label="Display name">
               {#snippet children({ id, describedBy, invalid })}
                 <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={dname} maxlength={60} placeholder={pr!.handle} />
@@ -615,6 +640,17 @@
   /* More room under the picture and name, before the description. */
   /* A bio keeps the line breaks its person typed. */
   .bio { white-space: pre-line; }
+  /* Your own picture is a button: a small pencil badge at its corner says it can be changed. Tapping opens Change / Remove photo. */
+  .photomenu { position: relative; flex: none; }
+  .photobtn { position: relative; display: block; padding: 0; border-radius: var(--radius-avatar); line-height: 0; }
+  .photobtn:hover { opacity: 0.92; }
+  .photobtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* The badge hangs 3px off the picture's corner: an optical overlap, not a spacing step. */
+  .badge { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 14px; height: 14px; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 2px var(--bg); }
+  .menupanel { position: absolute; top: calc(100% + var(--space-2)); left: 0; z-index: 60; min-width: 200px; max-width: calc(100vw - 16px); background: var(--surface); border-radius: var(--radius-md); padding: var(--space-2); box-shadow: var(--shadow-menu); display: flex; flex-direction: column; }
+  .mi { display: block; width: 100%; text-align: left; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
+  .mi:hover { background: var(--surface-2); }
+  .mi.danger { color: var(--danger); }
   .who { display: flex; gap: var(--space-3); align-items: center; margin-bottom: var(--space-4); }
   .names { flex: 1; min-width: 0; }
   /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
@@ -654,9 +690,6 @@
 
   /* Editing name, bio and homepage right in the header. */
   .edit { display: flex; flex-direction: column; gap: var(--space-5); }
-  .photorow { display: flex; flex-direction: column; gap: var(--space-2); }
-  .photolabel { font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); }
-  .photobtns { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
   .editrow { display: flex; justify-content: flex-end; gap: var(--space-2); }
 
   section { margin-bottom: var(--space-5); }
