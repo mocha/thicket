@@ -133,3 +133,24 @@ export async function activityForViewer(
   const last = all.length > limit ? page[page.length - 1] : null;
   return { entries: page, nextCursor: last ? `${last.at}|${last.kind}|${last.id}` : null };
 }
+
+/**
+ * Whether this viewer would find anything in the list, without building it:
+ * the profile asks on every visit to decide whether to show the Activity tab.
+ * The same rules as above, as three yes/no lookups. Feeds added to a
+ * collection need no check of their own, since the collection itself is
+ * already an entry ("made a collection").
+ */
+export async function hasActivityForViewer(u: Owner, who: Audience): Promise<boolean> {
+  if (!allows(u.activityVisibility, who)) return false;
+  const on = (level: typeof u.notesVisibility) => (allows(level, who) ? sql`true` : sql`false`);
+  const showCollections = on(u.collectionsVisibility);
+  const showBookmarks = on(u.bookmarksVisibility);
+  const showNotes = on(u.notesVisibility);
+  const [{ any }] = (await db.execute<{ any: boolean }>(sql`
+    select exists(select 1 from collections col where col.user_id = ${u.id} and col.parent_id is not null and ${showCollections} and ${allowedLevelsSql("col.visibility", who)})
+        or exists(select 1 from bookmarks b where b.user_id = ${u.id} and ${showBookmarks} and not (b.note is not null and ${showNotes}))
+        or exists(select 1 from bookmarks n where n.user_id = ${u.id} and n.note is not null and ${showNotes}) as any
+  `)).rows;
+  return any;
+}

@@ -52,7 +52,7 @@
   });
   const onCollection = (slug: string) => here === colHref(slug) || here.startsWith(colHref(slug) + '/');
   /** The phone's Collections tab opens your profile, which lists them, so it is current there too. */
-  const onAnyCollection = $derived(!!me && (here === '/collections' || here.startsWith(meHref + '/collections/')));
+  const onAnyCollection = $derived(!!me && (here === '/collections' || here === meHref + '/collections' || here.startsWith(meHref + '/collections/')));
   /** In the sidebar, on one of your collections whose own row is folded away: the Collections heading stands in for it. */
   const collectionsHeadingCurrent = $derived(here === '/collections' || (onAnyCollection && !collectionsOpen.open));
   const current = (href: string) => here === href || (href !== '/' && here.startsWith(href + '/'));

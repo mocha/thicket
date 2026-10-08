@@ -12,9 +12,10 @@
    * 16px each side), sm is the tighter one for a crowded settings row (8px by
    * 12px). `fill` makes every option the same width so they share the row.
    *
-   * The chosen option is drawn three ways at once — a wash of the accent
-   * color, accent-colored words, and its own outline repainted in the accent
-   * color — so it still reads as chosen without relying on color.
+   * Every option is outlined in the accent color, so the row reads as
+   * something to press. The chosen option is drawn three ways at once — a
+   * wash of the accent color, accent-colored words, and an outline twice as
+   * thick — so it still reads as chosen without relying on color.
    *
    * When the options can't sit on one line in the space they have, the control
    * turns into the dropdown (Select) with the same choices. It never wraps an
@@ -178,9 +179,9 @@
 
 <style>
   /* The outline belongs to the options, not to the row around them: each
-     option draws its own box and overlaps its neighbor by a hairline, so
-     they share one line between them. The chosen one then repaints that line
-     in the accent color on all four of its sides. */
+     option draws its own box in the accent color and overlaps its neighbor
+     by a hairline, so they share one line between them. The chosen one's
+     line is drawn twice as thick on all four of its sides. */
   .cg {
     display: inline-flex;
     flex-direction: column;
@@ -225,7 +226,8 @@
     margin-left: -1px;
     padding: var(--space-2) var(--space-4);
     background: var(--surface);
-    border: 1px solid var(--line);
+    /* The accent, not the faint divider color: the outline has to be seen to say "press one of these". */
+    border: 1px solid var(--accent);
     font-size: calc(var(--text-sm) * var(--size-app));
     font-weight: 600;
     color: var(--text-2);
@@ -251,13 +253,14 @@
     color: var(--text);
   }
 
-  /* Chosen: a wash of the accent, accent words, and its own outline drawn in
-     the accent color over its neighbors' — so it is not color alone that
-     says which one is on. */
+  /* Chosen: a wash of the accent, accent words, and a doubled outline drawn
+     over its neighbors' — so it is not color alone that says which one is
+     on. The second line is a shadow inside the border, so it takes no room. */
   .cg button.on {
     background: var(--accent-tint);
     color: var(--accent);
     border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
     position: relative;
     z-index: 1;
   }

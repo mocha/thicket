@@ -16,6 +16,8 @@
   import Badge from '$lib/components/Badge.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
+  import TabBlurb from '$lib/components/TabBlurb.svelte';
+  import EmptyNote from '$lib/components/EmptyNote.svelte';
   import BackLink from '$lib/components/BackLink.svelte';
   import Breadcrumb from '$lib/components/Breadcrumb.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
@@ -206,6 +208,7 @@
         { id: 'button', label: 'Button' },
         { id: 'choice-group', label: 'Choice group' },
         { id: 'dot', label: 'Dot' },
+        { id: 'empty-note', label: 'Empty note' },
         { id: 'field', label: 'Field' },
         { id: 'follow-button', label: 'Follow button' },
         { id: 'icon-button', label: 'Icon button' },
@@ -508,7 +511,7 @@
 
     <section class="entry" id="choice-group" aria-labelledby="choice-group-h">
       <h3 class="entry-h" id="choice-group-h">Choice group</h3>
-      <p class="section-lede">Pick one, and it takes effect at once — a setting, not a tab. Nothing else on the page moves. When the options can’t sit on one line in the space they have (a small phone, large text), the group becomes a dropdown with the same choices. It never wraps and never slides sideways.</p>
+      <p class="section-lede">Pick one, and it takes effect at once — a setting, not a tab. Nothing else on the page moves. When the options can’t sit on one line in the space they have (a small phone, large text), the group becomes a dropdown with the same choices. It never wraps and never slides sideways. Every option is outlined in the accent color so the row reads as something to press; the chosen one gets an accent wash, accent words, and an outline twice as thick.</p>
       <ChoiceGroup
         options={[
           { value: 'cozy', label: 'Cozy' },
@@ -525,6 +528,12 @@
       <h3 class="entry-h" id="dot-h">Dot</h3>
       <p class="section-lede">The dot between items on one line, heavier and larger than the plain character so the items read as separate. Use it for every such dot in the app, with a space on each side in running text. Browser tab titles keep the plain character, since they can’t be styled.</p>
       <div class="row"><span>3,368 posts in 30 days <Dot /> 2 following <Dot /> last post 21 minutes ago</span></div>
+    </section>
+
+    <section class="entry" id="empty-note" aria-labelledby="empty-note-h">
+      <h3 class="entry-h" id="empty-note-h">Empty note</h3>
+      <p class="section-lede">What an empty section says, on a card: a quiet icon, a short bold serif title at the same size as the line under it, then one line saying what goes here. Collections and Bookmarks use the left menu’s own icons; Activity uses a zap. The line can be left out when the title says it all.</p>
+      <EmptyNote icon="collections" title="No collections yet" text="A collection is a handful of feeds you read together." />
     </section>
 
     <section class="entry" id="field" aria-labelledby="field-h">
@@ -676,6 +685,11 @@
         onchange={(v) => (tab = v)}
         label="Example view"
       />
+      <p class="section-lede">Under the tabs, a tab line can say what the chosen tab shows: a small icon and a short sentence, in the same spot on every tab. Explore uses it for what each search covers. Your profile uses it to say who can see the open tab, on a card of its own above the tab's items.</p>
+      <TabBlurb text="Anyone can see your collections.">
+        {#snippet icon()}<Icon name="eye" size={16} />{/snippet}
+        <a href="#tabs">Change</a>
+      </TabBlurb>
     </section>
 
     <section class="entry" id="textarea" aria-labelledby="textarea-h">

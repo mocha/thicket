@@ -223,7 +223,7 @@
       </div>
     {/snippet}
   </Field>
-  {#if me && audience}<p class="audience" id="{uid}-audience">{audience} <Dot /> <a href={profileHref(me.handle) + (me.profileVisibility === 'public' ? '#bookmarks' : '')}>Change</a></p>{/if}
+  {#if me && audience}<p class="audience" id="{uid}-audience">{audience} <Dot /> <a href={profileHref(me.handle) + '#visibility'}>Change</a></p>{/if}
   <!-- Save and Cancel sit at the right, under the Edit note button that opened this; Delete keeps clear of them at the left (issue #239). -->
   <div class="row">
     {#if note}<Button variant="danger" onclick={remove} disabled={busy}>Delete</Button>{/if}
