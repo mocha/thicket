@@ -163,8 +163,9 @@
 
 <style>
   /* A card of its own above the bookmarks, padded like the top of the Collections and Activity cards. */
-  .headcard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding-bottom: var(--space-3); margin-bottom: var(--space-3); }
-  .headcard:not(:has(.lead)) { padding-bottom: var(--space-2); }
+  /* The same room above and below what's inside. */
+  .headcard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4) var(--space-3); margin-bottom: var(--space-3); }
+  .headcard :global(.tabblurb) { padding: 0; }
   /* Explore's filter bar: the name, then the dropdown beside it; stacked full-width on a narrow screen. */
   .filters { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; margin-bottom: var(--space-3); }
   .filters :global(.filter) { flex-direction: row; align-items: center; gap: var(--space-1); }
@@ -173,7 +174,7 @@
     .filters { flex-direction: column; align-items: stretch; }
     .filters :global(.filter) { flex-direction: column; align-items: stretch; }
   }
-  .lead { margin: 0; padding: var(--space-3) var(--space-3) 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .lead { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .lead a { color: var(--accent); font-weight: 600; }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
