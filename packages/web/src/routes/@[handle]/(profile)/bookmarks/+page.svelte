@@ -107,30 +107,33 @@
   });
 </script>
 
-<!-- Each bookmark is its own card, so the line saying who can see them sits above them all, as on Explore's search results. -->
-{@render ctx.tabLine(false)}
-
-<!-- What a visitor gets here, and how their notes reach the posts you come across. -->
-{#if !isMe && owner}
-  <p class="status lead">
-    {#if notedOnly}Posts {owner.displayName ?? `@${handle}`} has written a note on. {/if}{#if session.user}Tap the bookmark on any post to save it.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save these.{/if}
-    {#if profile.bookmarks?.notes != null && session.user && profile.people.isFollowing}
-      You also see their notes on posts you come across{#if session.user.notesFrom === 'none'}, once you allow notes in <a href="/settings">Settings</a>{/if}.
-    {:else if profile.bookmarks?.notes != null && session.user?.notesFrom === 'following'}
-      Follow them to also see their notes on posts you come across.
+<!-- The same header card as the Collections and Activity tabs: the line saying who can see this, then what
+     narrows the list. Each bookmark below is a card of its own. -->
+{#if isMe || owner || hasNotesFilter}
+  <div class="headcard">
+    {@render ctx.tabLine(true)}
+    <!-- What a visitor gets here, and how their notes reach the posts you come across. -->
+    {#if !isMe && owner}
+      <p class="lead">
+        {#if notedOnly}Posts {owner.displayName ?? `@${handle}`} has written a note on. {/if}{#if session.user}Tap the bookmark on any post to save it.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save these.{/if}
+        {#if profile.bookmarks?.notes != null && session.user && profile.people.isFollowing}
+          You also see their notes on posts you come across{#if session.user.notesFrom === 'none'}, once you allow notes in <a href="/settings">Settings</a>{/if}.
+        {:else if profile.bookmarks?.notes != null && session.user?.notesFrom === 'following'}
+          Follow them to also see their notes on posts you come across.
+        {/if}
+      </p>
     {/if}
-  </p>
-{/if}
-
-{#if hasNotesFilter}
-  <div class="filters">
-    <ChoiceGroup
-      size="sm"
-      label="Show all bookmarks, or only the ones with a note"
-      options={[{ value: 'all', label: 'all bookmarks' }, { value: 'notes', label: 'with notes' }]}
-      value={notes ? 'notes' : 'all'}
-      onchange={(v) => { api.event('public_bookmarks_filter', { notes: v === 'notes' }); void goto(v === 'notes' ? `${page.url.pathname}?notes=1` : page.url.pathname, { replaceState: true }); }}
-    />
+    {#if hasNotesFilter}
+      <div class="filters">
+        <ChoiceGroup
+          size="sm"
+          label="Show all bookmarks, or only the ones with a note"
+          options={[{ value: 'all', label: 'all bookmarks' }, { value: 'notes', label: 'with notes' }]}
+          value={notes ? 'notes' : 'all'}
+          onchange={(v) => { api.event('public_bookmarks_filter', { notes: v === 'notes' }); void goto(v === 'notes' ? `${page.url.pathname}?notes=1` : page.url.pathname, { replaceState: true }); }}
+        />
+      </div>
+    {/if}
   </div>
 {/if}
 
@@ -156,13 +159,14 @@
 </div>
 
 <style>
-  /* The With notes choice gets the same air under it as on Bookmarks. */
-  .filters { margin-bottom: var(--space-3); }
+  /* A card of its own above the bookmarks, padded like the top of the Collections and Activity cards. */
+  .headcard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding-bottom: var(--space-3); margin-bottom: var(--space-3); }
+  .headcard:not(:has(.filters, .lead)) { padding-bottom: var(--space-2); }
+  .filters { padding: var(--space-3) var(--space-3) 0; }
+  .lead { margin: 0; padding: var(--space-3) var(--space-3) 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .lead a { color: var(--accent); font-weight: 600; }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
   .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; }
-  /* After .status, so the visitor's line sits left and close above the list. */
-  .lead { text-align: left; margin: 0; padding: 0 0 var(--space-3); }
-  .lead a { color: var(--accent); font-weight: 600; }
 </style>

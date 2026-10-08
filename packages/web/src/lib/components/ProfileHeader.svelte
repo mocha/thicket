@@ -50,9 +50,29 @@
   // The name/bio/homepage block: one "Edit profile" button turns it into a
   // small form that saves all three together, then settles back into text.
   let editing = $state(false);
-  /** The picture is exactly as tall as the name and handle beside it, whatever the fonts and text size. While editing, the form stands in for them, so the picture keeps a fixed size. */
+  /**
+   * The picture is exactly as tall as the name and the first line under it,
+   * whatever the fonts and text size. On a narrow phone that line (handle,
+   * counts, homepage) wraps; the lines after the first run on below without
+   * making the picture grow. While editing, the form stands in for them, so
+   * the picture keeps a fixed size.
+   */
   let namesHeight = $state(0);
-  const picSize = $derived(!editing && namesHeight ? namesHeight : 48);
+  let handleEl = $state<HTMLElement | null>(null);
+  let wrapped = $state(0);
+  $effect(() => {
+    namesHeight;
+    if (!handleEl) return;
+    // Each line the handle wraps onto adds one line height below the first.
+    const range = document.createRange();
+    range.selectNodeContents(handleEl);
+    const line = parseFloat(getComputedStyle(handleEl).lineHeight);
+    const tops = [...range.getClientRects()].filter((r) => r.width > 0).map((r) => r.top).sort((x, y) => x - y);
+    // Pieces on one line (the dots, the buttons) sit a few pixels apart; a new line starts most of a line lower.
+    const lines = tops.filter((t, i) => i === 0 || t - tops[i - 1] > line / 2).length;
+    wrapped = Math.max(0, lines - 1) * line;
+  });
+  const picSize = $derived(!editing && namesHeight ? Math.round(namesHeight - wrapped) : 48);
   let dname = $state('');
   let dbio = $state('');
   let dhome = $state('');
@@ -188,7 +208,7 @@
         </div>
       {:else}
         <h1 title={profile.displayName ?? profile.handle}>{profile.displayName ?? profile.handle}</h1>
-        <p class="handle">@{profile.handle}{' '}<Dot />{' '}<button type="button" class="people" aria-haspopup="dialog" onclick={() => (people = 'following')}>{profile.people.follows} following</button>{#if profile.people.followers !== null}{' '}<Dot />{' '}<button type="button" class="people" aria-haspopup="dialog" onclick={() => (people = 'followers')}>{profile.people.followers} {profile.people.followers === 1 ? 'follower' : 'followers'}</button>{/if}{#if profile.homepageUrl}{' '}<Dot />{' '}<a class="site" href={profile.homepageUrl} target="_blank" rel={ugcRel(profile.homepageUrl, 'me')}>{hostOf(profile.homepageUrl)} ↗</a>{/if}</p>
+        <p class="handle" bind:this={handleEl}>@{profile.handle}{' '}<Dot />{' '}<button type="button" class="people" aria-haspopup="dialog" onclick={() => (people = 'following')}>{profile.people.follows} following</button>{#if profile.people.followers !== null}{' '}<Dot />{' '}<button type="button" class="people" aria-haspopup="dialog" onclick={() => (people = 'followers')}>{profile.people.followers} {profile.people.followers === 1 ? 'follower' : 'followers'}</button>{/if}{#if profile.homepageUrl}{' '}<Dot />{' '}<a class="site" href={profile.homepageUrl} target="_blank" rel={ugcRel(profile.homepageUrl, 'me')}>{hostOf(profile.homepageUrl)} ↗</a>{/if}</p>
       {/if}
     </div>
   </div>
@@ -228,7 +248,8 @@
   .mi { display: block; width: 100%; text-align: left; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); }
   .mi:hover { background: var(--surface-2); }
   .mi.danger { color: var(--danger); }
-  .who { display: flex; gap: var(--space-3); align-items: center; margin-bottom: var(--space-4); }
+  /* Top-aligned: the picture lines up with the name and first line, and any wrapped lines run on below it. */
+  .who { display: flex; gap: var(--space-3); align-items: flex-start; margin-bottom: var(--space-4); }
   .names { flex: 1; min-width: 0; }
   /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
   /* The name and handle are trimmed to their letters, top of the capitals to the baseline, so the picture beside them can match what you see: the name from the top of its capitals, the handle down to the bottom of letters like y and p. */
