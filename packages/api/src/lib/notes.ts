@@ -68,7 +68,8 @@ export function othersNotesSql(viewerId: number, url: SQL, id: SQL, pageOwnerId:
   const owner = pageOwnerId ?? -1;
   return sql`coalesce((
     select json_agg(x.note order by x.is_owner desc, x.created_at desc) from (
-      select ${noteJson()} || jsonb_build_object('author', jsonb_build_object('handle', u.handle, 'displayName', u.display_name)) as note,
+      select ${noteJson()} || jsonb_build_object('author', jsonb_build_object('handle', u.handle, 'displayName', u.display_name,
+               'avatarUpdatedAt', (select a.updated_at from user_avatars a where a.user_id = u.id))) as note,
              n.note_created_at as created_at, n.user_id = ${owner} as is_owner
       from bookmarks n
       join users u on u.id = n.user_id

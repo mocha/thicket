@@ -24,7 +24,7 @@ export type RiverItem = {
   url: string | null; title: string | null; author: string | null; summary: string | null;
   imageUrl: string | null; publishedAt: string; hasIcon: boolean; bookmarkId: number | null;
   myNote: { id: number; body: string; createdAt: string; updatedAt: string } | null;
-  notes: { id: number; body: string; createdAt: string; updatedAt: string; author: { handle: string; displayName: string | null } }[];
+  notes: { id: number; body: string; createdAt: string; updatedAt: string; author: { handle: string; displayName: string | null; avatarUpdatedAt: string | null } }[];
   /** Earlier posts on the same feed that this one appears to repeat, newest first, at most five (feeds/repeats.ts). */
   repeatOf: { id: number; publishedAt: string; url: string | null; title: string | null }[];
 };

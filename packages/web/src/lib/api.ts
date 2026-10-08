@@ -9,7 +9,7 @@ export type Note = { id: number; body: string; createdAt: string; updatedAt: str
   mentions?: string[] };
 /** A note just written: writing one saves the post, so this says which bookmark holds it. */
 export type SavedNote = Note & { bookmarkId: number };
-export type PublicNote = Note & { author: { handle: string; displayName: string | null } };
+export type PublicNote = Note & { author: { handle: string; displayName: string | null; avatarUpdatedAt?: string | null } };
 export type RiverItem = {
   id: number; feedId: number; feedTitle: string | null; siteUrl: string | null;
   /** The feed's slug, so a card can write the post's address without another fetch. */
