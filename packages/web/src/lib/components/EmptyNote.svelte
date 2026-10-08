@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * What an empty section says: a quiet icon above one centered line of plain
-   * text, with no card around it. Collections and Bookmarks use the left
+   * text, on a card like the section's items would sit on. Collections and Bookmarks use the left
    * menu's own icons, so the section reads as the same place; Activity, which
    * has no menu row, gets a pulse line.
    */
@@ -17,6 +17,6 @@
 </div>
 
 <style>
-  .empty { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-4) var(--space-4) var(--space-2); text-align: center; color: var(--text-3); }
+  .empty { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-5) var(--space-4); text-align: center; color: var(--text-3); background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); }
   p { margin: 0; max-width: 40ch; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); text-wrap: balance; }
 </style>
