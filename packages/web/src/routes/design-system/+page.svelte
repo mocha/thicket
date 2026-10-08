@@ -17,6 +17,7 @@
   import Banner from '$lib/components/Banner.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
   import TabBlurb from '$lib/components/TabBlurb.svelte';
+  import EmptyNote from '$lib/components/EmptyNote.svelte';
   import BackLink from '$lib/components/BackLink.svelte';
   import Breadcrumb from '$lib/components/Breadcrumb.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
@@ -197,6 +198,7 @@
         { id: 'button', label: 'Button' },
         { id: 'choice-group', label: 'Choice group' },
         { id: 'dot', label: 'Dot' },
+        { id: 'empty-note', label: 'Empty note' },
         { id: 'field', label: 'Field' },
         { id: 'follow-button', label: 'Follow button' },
         { id: 'icon-button', label: 'Icon button' },
@@ -516,6 +518,12 @@
       <h3 class="entry-h" id="dot-h">Dot</h3>
       <p class="section-lede">The dot between items on one line, heavier and larger than the plain character so the items read as separate. Use it for every such dot in the app, with a space on each side in running text. Browser tab titles keep the plain character, since they can’t be styled.</p>
       <div class="row"><span>3,368 posts in 30 days <Dot /> 2 following <Dot /> last post 21 minutes ago</span></div>
+    </section>
+
+    <section class="entry" id="empty-note" aria-labelledby="empty-note-h">
+      <h3 class="entry-h" id="empty-note-h">Empty note</h3>
+      <p class="section-lede">What an empty section says, on a card: a quiet icon, a short bold serif title at the same size as the line under it, then one line saying what goes here. Collections and Bookmarks use the left menu’s own icons; Activity uses a zap. The line can be left out when the title says it all.</p>
+      <EmptyNote icon="collections" title="No collections yet" text="A collection is a handful of feeds you read together." />
     </section>
 
     <section class="entry" id="field" aria-labelledby="field-h">
