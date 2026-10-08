@@ -1,20 +1,17 @@
 <script lang="ts">
   /**
    * What an empty section says: a quiet icon above one centered line of plain
-   * text, on a card like the section's items would sit on. Bookmarks uses the left menu's
-   * own icon, so the section reads as the same place; Collections gets a
-   * circle pile, and Activity, which has no menu row, a zap. A short serif
+   * text, on a card like the section's items would sit on. Collections and
+   * Bookmarks use the left menu's own icons, so the section reads as the same
+   * place; Activity, which has no menu row, gets Lucide's zap. A short serif
    * title over the line says it's empty, at the same size as the line.
    */
   import { MENU_ICONS } from '$lib/menu-icons';
 
-  /** Lucide's circle-pile: six small circles stacked like a pile of collected things. */
-  /** Lucide's zap. */
   const ZAP = 'M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z';
-  const CIRCLE_PILE = 'M14 19a2 2 0 1 1-4 0a2 2 0 1 1 4 0M14 5a2 2 0 1 1-4 0a2 2 0 1 1 4 0M18 12a2 2 0 1 1-4 0a2 2 0 1 1 4 0M22 19a2 2 0 1 1-4 0a2 2 0 1 1 4 0M6 19a2 2 0 1 1-4 0a2 2 0 1 1 4 0M10 12a2 2 0 1 1-4 0a2 2 0 1 1 4 0';
 
   let { icon, title, text }: { icon: 'collections' | 'bookmarks' | 'activity'; title: string; text: string } = $props();
-  const PATHS = { collections: CIRCLE_PILE, bookmarks: MENU_ICONS.bookmarks, activity: ZAP };
+  const PATHS = { collections: MENU_ICONS.collections, bookmarks: MENU_ICONS.bookmarks, activity: ZAP };
 </script>
 
 <div class="empty">
