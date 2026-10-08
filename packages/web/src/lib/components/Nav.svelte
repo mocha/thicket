@@ -1,6 +1,7 @@
 <script lang="ts">
   import { MENU_ICONS } from '$lib/menu-icons';
   import { page } from '$app/state';
+  import { cameFrom as wayBack } from '$lib/wayback';
   import Wordmark from './Wordmark.svelte';
   import { goto } from '$app/navigation';
   import { api, collectionsApi, collectionHref, profileHref } from '$lib/api';
@@ -36,18 +37,25 @@
   const me = $derived(session.user);
   const meHref = $derived(me ? profileHref(me.handle) : '/login');
   const colHref = (slug: string) => (me ? collectionHref(me.handle, slug) : '/');
-  const onCollection = (slug: string) => path === colHref(slug) || path.startsWith(colHref(slug) + '/');
-  /** The phone's Collections tab opens your profile, which lists them, so it is current there too. */
-  const onAnyCollection = $derived(!!me && (path === '/collections' || path.startsWith(meHref + '/collections/')));
-  const current = (href: string) => path === href || (href !== '/' && path.startsWith(href + '/'));
   /**
-   * An open post's address is under /feeds/, but reading one is not the same as
-   * browsing feeds: the reader sits over whatever list you opened it from, and
-   * that list is where closing returns you. So nothing claims to be the current
-   * tab while a post is open — least of all Explore, which you may never have
-   * been in.
+   * Where the menu says you are. Usually the page's own address. A feed's page
+   * belongs to wherever you came to it from, the place its "Back to …" link
+   * names (Explore when you arrived with nothing before it), so the menu lights
+   * that up. A post open in the reader, a post's own page, and a feed's Manage
+   * page light up nothing: none of them is a place in the menu.
    */
-  const inFeeds = $derived(path.startsWith('/feeds/') && page.state.reader === undefined);
+  const FEED_PAGE = /^\/feeds\/\d+(\/(?!settings$)[^/]+)?$/;
+  const here = $derived.by(() => {
+    if (!FEED_PAGE.test(path) || page.state.reader !== undefined) return path;
+    const back = wayBack();
+    return back ? new URL(back.href, page.url).pathname : '/explore';
+  });
+  const onCollection = (slug: string) => here === colHref(slug) || here.startsWith(colHref(slug) + '/');
+  /** The phone's Collections tab opens your profile, which lists them, so it is current there too. */
+  const onAnyCollection = $derived(!!me && (here === '/collections' || here.startsWith(meHref + '/collections/')));
+  /** In the sidebar, on one of your collections whose own row is folded away: the Collections heading stands in for it. */
+  const collectionsHeadingCurrent = $derived(here === '/collections' || (onAnyCollection && !collectionsOpen.open));
+  const current = (href: string) => here === href || (href !== '/' && here.startsWith(href + '/'));
 
   $effect(() => { void loadCollections(); });
   $effect(() => { loadNavOpen(); });
@@ -136,19 +144,19 @@
   <ul>
     <!-- Mobile-only tabs. On desktop, New posts and Collections live in the li.collections block below. -->
     <li class="mobile-only">
-      <a href="/new-posts" aria-current={path === '/new-posts' ? 'page' : undefined}><span class="ic">{@render icon(icons.everything)}{#if fresh && rootMark?.count}<Badge variant="dot" class="pin" aria-label="New since your last visit" />{/if}</span><span class="shortl">New posts</span></a>
+      <a href="/new-posts" aria-current={here === '/new-posts' ? 'page' : undefined}><span class="ic">{@render icon(icons.everything)}{#if fresh && rootMark?.count}<Badge variant="dot" class="pin" aria-label="New since your last visit" />{/if}</span><span class="shortl">New posts</span></a>
     </li>
     <li class="mobile-only">
       <a href="/collections" aria-current={onAnyCollection ? 'page' : undefined}><span class="ic">{@render icon(icons.collections)}{#if anyColNew}<Badge variant="dot" class="pin" aria-label="New posts" />{/if}</span><span class="shortl">Collections</span></a>
     </li>
     <li class="collections">
       <!-- New posts: every post you follow, its own item now — the job the old italic "All collections" row did. -->
-      <a class="readall" href="/new-posts" aria-current={path === '/new-posts' ? 'page' : undefined}>{@render icon(icons.everything)}<span>New posts</span>{#if fresh && rootMark?.count}<Badge tone="accent" class="tail">{countText(rootMark)}</Badge>{/if}</a>
+      <a class="readall" href="/new-posts" aria-current={here === '/new-posts' ? 'page' : undefined}>{@render icon(icons.everything)}<span>New posts</span>{#if fresh && rootMark?.count}<Badge tone="accent" class="tail">{countText(rootMark)}</Badge>{/if}</a>
       <!-- My collections: a group you can fold away. Your collections sit under it.
            The word opens the Collections screen (the same one the bottom bar's
            tab opens on a phone); the caret beside it folds the list. -->
-      <div class="heading" class:current={path === '/collections'}>
-        <a class="headlink" href="/collections" aria-current={path === '/collections' ? 'page' : undefined}>{@render icon(icons.collections)}<span>Collections</span></a>
+      <div class="heading" class:current={collectionsHeadingCurrent}>
+        <a class="headlink" href="/collections" aria-current={collectionsHeadingCurrent ? 'page' : undefined}>{@render icon(icons.collections)}<span>Collections</span></a>
         <button type="button" class="groupcaret" aria-expanded={collectionsOpen.open} aria-controls="my-collections" aria-label={collectionsOpen.open ? 'Hide your collections' : 'Show your collections'} onclick={toggleCollectionsOpen}>
           <Icon name="caret" size={14} stroke={2.5} dir={collectionsOpen.open ? 'down' : 'right'} />
         </button>
@@ -207,7 +215,7 @@
       <a href="/notifications" aria-current={current('/notifications') ? 'page' : undefined}>{@render icon(icons.notifications)}<span class="long">Notifications</span>{#if notifText()}<Badge tone="accent" class="tail" aria-label="{notifText()} new">{notifText()}</Badge>{/if}</a>
     </li>
     <li>
-      <a href="/explore" aria-current={current('/explore') || inFeeds ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
+      <a href="/explore" aria-current={current('/explore') ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
     </li>
     <!-- Mobile: you. Opens the account menu — your profile, settings, and log out. -->
     {#if me}
