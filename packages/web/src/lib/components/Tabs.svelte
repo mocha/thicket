@@ -13,9 +13,12 @@
    * second surface color, the lifted tab is outlined instead so it still reads
    * as chosen.
    *
-   * A tab can carry a count after its words. The count is the same color as
-   * the words at normal weight, not a fainter gray: a gray light enough to
-   * read as "quiet" doesn't have the contrast to be readable. Numbers use
+   * A tab can carry a count after its words, in parentheses and tucked in
+   * close — "Feeds (130)" — so the number reads as part of its tab and not as
+   * the start of the next one. The count is the same color as the words at
+   * normal weight, not a fainter gray: a gray light enough to read as "quiet"
+   * doesn't have the contrast to be readable. Big numbers are rounded
+   * ("1.8K", "2K") so a row of search results still fits. Numbers use
    * tabular figures so a count ticking from 9 to 10 doesn't shuffle the row.
    *
    * `fill` shares the row out evenly between the tabs, for a fixed handful of
@@ -48,7 +51,8 @@
   interface Tab {
     value: string;
     label: string;
-    /** A number after the words, e.g. how many results this tab holds. */
+    /** A number after the words, e.g. how many results this tab holds. A
+        number is rounded once it passes a thousand; a string shows as is. */
     count?: number | string;
     disabled?: boolean;
   }
@@ -88,6 +92,10 @@
      "more this way" instead of cutting a word in half. */
   let moreLeft = $state(false);
   let moreRight = $state(false);
+
+  /* Under a thousand stays exact; above it, "1.8K", "2K", "12K", "1.2M". */
+  const short = new Intl.NumberFormat('en-US', { notation: 'compact' });
+  const shown = (n: number | string) => (typeof n === 'number' ? short.format(n) : n);
 
   const off = (i: number) => !!tabs[i]?.disabled;
 
@@ -219,7 +227,7 @@
           onclick={() => t.value !== value && onchange(t.value)}
           {onkeydown}
         >
-          {t.label}{#if t.count !== undefined}<span class="n">{t.count}</span>{/if}
+          {t.label}{#if t.count !== undefined}<span class="n">({shown(t.count)})</span>{/if}
         </button>
       {/each}
     </div>
@@ -327,7 +335,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-2);
+    /* Tight, so a count reads as part of its own tab. */
+    gap: var(--space-1);
     padding: var(--space-2) var(--space-3);
     /* Transparent by default so the outline the hard-edged themes draw on the
        chosen tab costs no width. */
