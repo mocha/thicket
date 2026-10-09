@@ -131,6 +131,39 @@ The original lab database was built with `drizzle-kit push`. Run
 `pnpm db:baseline` once against it to record the initial migration as applied;
 after that, boot-time migrations take over. New databases need nothing.
 
+## Auditing migrations before an upgrade
+
+Migrations are checked against every SQL hash in
+`drizzle.__drizzle_migrations`, in journal order. An older migration merged
+later is applied if its hash is missing, regardless of its timestamp.
+Existing Drizzle history and baselines work without conversion. Never edit
+SQL that has already been applied: its hash is its identity.
+
+Before deploying the hash-based runner for the first time, compare the live
+ledger with the full migration list in the new checkout:
+
+```sh
+pnpm --filter @thicket/api db:audit
+# Or, from a built image with DATABASE_URL set, without starting the server:
+node dist/scripts/audit-migrations.js
+```
+
+The audit uses a read-only transaction and creates nothing. Save its output
+with the deployment record. It lists every migration by name and hash, marks
+missing migrations at or below the old timestamp cutoff as `SKIPPED by old
+cutoff`, and reports recorded hashes absent from the checkout. It exits with
+status 1 if anything is pending or unmatched. Review those differences before
+restarting: the new runner will apply all missing migrations, including any
+previously skipped ones. An unmatched hash may mean an applied SQL file was
+edited, or this checkout is older than the database; resolve that history
+before using it to upgrade.
+
+Each boot logs the names it applies and a final committed list (or `none`).
+Migration SQL and ledger entries commit together; if any statement fails,
+the batch rolls back, the error identifies the migration and database reason,
+and the server exits before listening. Overlapping boots serialize migration
+checks with a transaction-scoped advisory lock.
+
 ## Rate limiting at the proxy
 
 Don't. A page of the feed index fetches around fifty small icons at once and

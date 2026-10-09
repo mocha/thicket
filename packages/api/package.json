@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.build.json",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file=../../.env src/db/migrate.ts",
+    "db:audit": "tsx --env-file=../../.env src/scripts/audit-migrations.ts",
     "db:baseline": "tsx --env-file=../../.env src/scripts/baseline.ts",
     "db:push": "drizzle-kit push",
     "seed": "tsx --env-file=../../.env src/scripts/seed.ts",
