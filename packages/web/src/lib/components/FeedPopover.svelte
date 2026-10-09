@@ -74,7 +74,12 @@
   </div>
 {/snippet}
 
-<Sheet title={feed || name ? `About ${shown}` : 'About this feed'} {header} bind:dialog {onclose}>
+{#snippet footer()}
+  {#if feed}<a class="sheet-action" href={feedHref(feed)} onclick={() => dialog?.close()}>Open feed</a>
+  {:else if missing === 'failed'}<button type="button" class="sheet-action" onclick={load} disabled={retrying}>{retrying ? 'Trying again…' : 'Try again'}</button>{/if}
+{/snippet}
+
+<Sheet title={feed || name ? `About ${shown}` : 'About this feed'} {header} footer={feed || missing === 'failed' ? footer : undefined} bind:dialog {onclose}>
   {#if feed}
     {#if feed.description}<p class="desc">{feed.description}</p>{/if}
     <dl class="stats">
@@ -87,10 +92,6 @@
   {:else if !missing}
     <p class="loading">Loading…</p>
   {/if}
-  {#snippet footer()}
-    {#if feed}<a class="sheet-action" href={feedHref(feed)} onclick={() => dialog?.close()}>Open feed</a>
-    {:else if missing === 'failed'}<button type="button" class="sheet-action" onclick={load} disabled={retrying}>{retrying ? 'Trying again…' : 'Try again'}</button>{/if}
-  {/snippet}
 </Sheet>
 
 <style>

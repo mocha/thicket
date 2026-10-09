@@ -25,7 +25,7 @@
    * the phone is on its side) the whole Sheet scrolls, so the footer's action
    * can always be reached. `locked` holds it open while something can't be
    * interrupted, such as a photo saving. `alert` marks a confirm that can't be
-   * undone, so screen readers announce it as a warning. The parent opens it
+   * undone, so screen readers announce it as a warning, reading the lede with it. The parent opens it
    * with `dialog.showModal()`.
    */
   import type { Snippet } from 'svelte';
@@ -37,6 +37,7 @@
     locked?: boolean; alert?: boolean;
   } = $props();
   const titleId = $props.id();
+  const ledeId = `${titleId}-lede`;
 </script>
 
 <dialog
@@ -47,14 +48,15 @@
   role={alert ? 'alertdialog' : undefined}
   aria-labelledby={header ? undefined : titleId}
   aria-label={header ? title : undefined}
+  aria-describedby={alert && lede ? ledeId : undefined}
 >
   <div class="sheet">
     <header>
       {#if header}<div class="custom">{@render header()}</div>{:else}<h2 id={titleId}>{title}</h2>{/if}
       <span class="x"><IconButton icon="close" label="Close" disabled={locked} onclick={() => dialog?.close()} /></span>
     </header>
-    {#if typeof lede === 'string'}<p class="lede">{lede}</p>
-    {:else if lede}<div class="lede">{@render lede()}</div>{/if}
+    {#if typeof lede === 'string'}<p class="lede" id={ledeId}>{lede}</p>
+    {:else if lede}<div class="lede" id={ledeId}>{@render lede()}</div>{/if}
     {@render children?.()}
     {#if footer}<div class="foot">{@render footer()}</div>{/if}
   </div>
