@@ -130,7 +130,7 @@ export const api = {
   /** What you follow and what arrived today, for the top of New posts. */
   riverStats: () => j<{ feeds: number; collections: number; posts24h: number; feeds24h: number }>('/api/river/stats'),
   /** What's new: how many posts are newer than each point this device remembers. The server keeps nothing. */
-  marksCounts: (anchors: Record<string, string>) => j<{ marks: Mark[] }>('/api/marks/counts', { method: 'POST', body: JSON.stringify({ anchors }) }),
+  marksCounts: (anchors: Record<string, string>) => j<{ marks: Mark[]; seen: Record<number, string> }>('/api/marks/counts', { method: 'POST', body: JSON.stringify({ anchors }) }),
   feeds: (opts: { q?: string; following?: '1' | '0' | null; network?: '1' | '2' | null; since?: string | null; sort?: string; limit?: number; offset?: number } = {}) => {
     const q = new URLSearchParams();
     if (opts.q) q.set('q', opts.q);

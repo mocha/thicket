@@ -37,7 +37,7 @@
   /** Back or Forward to this list: pick up exactly where it was left, rather than reloading from the top. */
   type Kept = {
     items: RiverItem[]; cursor: string | null; done: boolean; hidden: number; cappedAt: number | null; loadedKey: string | undefined;
-    anchorAtOpen: string | null; newAtOpen: string; caught: boolean; pageIndex: number;
+    anchorAtOpen: string | null; seenAtOpen: Record<number, string>; newAtOpen: string; caught: boolean; pageIndex: number;
   };
   const listName = () => `river|${collection}|${feed}`;
   const back = recall<Kept>(listName());
@@ -66,6 +66,8 @@
    * someone else's collection, or the first time here).
    */
   let anchorAtOpen = $state<string | null>(back?.anchorAtOpen ?? null);
+  /** Per feed, the furthest it had been read in any collection as this list opened: a post read elsewhere is not new here. */
+  let seenAtOpen = $state<Record<number, string>>(back?.seenAtOpen ?? {});
   let newAtOpen = $state(back?.newAtOpen ?? '');
   /** The collection whose point this list moves: the one shown, or the root for Everything. */
   const markId = $derived(feed !== null ? null : (collection ?? collectionStore.rootId));
@@ -135,7 +137,7 @@
   });
 
   export function reload() {
-    items = []; cursor = null; done = false; hidden = 0; cappedAt = null; pageIndex = 0; anchorAtOpen = null; newAtOpen = ''; caught = false;
+    items = []; cursor = null; done = false; hidden = 0; cappedAt = null; pageIndex = 0; anchorAtOpen = null; seenAtOpen = {}; newAtOpen = ''; caught = false;
     return loadMore(true).then(noteOpened);
   }
 
@@ -154,11 +156,17 @@
     const a = anchorFor(id);
     if (!a) { if (items[0]) begin(id, clampNow(items[0].publishedAt)); return; }
     anchorAtOpen = a;
+    seenAtOpen = marks.seen;
     newAtOpen = countText(marks.byId[id]);
   }
   /** A post dated in the future would put the point ahead of posts still to arrive. */
   const clampNow = (iso: string) => (new Date(iso).getTime() > Date.now() ? new Date().toISOString() : iso);
-  const isFresh = (item: RiverItem) => anchorAtOpen !== null && new Date(item.publishedAt) > new Date(anchorAtOpen);
+  const isFresh = (item: RiverItem) => {
+    if (anchorAtOpen === null) return false;
+    const t = new Date(item.publishedAt);
+    const seen = seenAtOpen[item.feedId];
+    return t > new Date(anchorAtOpen) && !(seen && t <= new Date(seen));
+  };
   /**
    * Caught up: the reader has read down to the line, or said so. The point
    * moves to the newest post this visit started with, so the count drops and
@@ -173,6 +181,7 @@
     caught = true;
     advance(markId, clampNow(items[0].publishedAt));
     recount(markId, 0);
+    void loadMarks(true); // reading here lowers every other list holding these feeds
   }
   // Scrolling: the line coming into view is reaching it.
   let dividerEl = $state<HTMLElement | null>(null);
@@ -187,12 +196,19 @@
     if (!paged || anchorAtOpen === null || caught) return;
     if (pageItems.some((i) => i.id === boundaryId) || (boundaryAtEnd && (pageIndex + 1) * perPage >= items.length)) caughtUp();
   });
-  /** Where the line goes: before the first post that is not new, if anything new sits above it. At the end if everything loaded is new and that is all there is. */
+  /**
+   * Where the line goes: just under the last new post. Posts already read in
+   * another collection can sit among the new ones, so the line waits until the
+   * list has loaded past this collection's point, where nothing newer is left
+   * to come. At the end if the last post loaded is new and that is all there is.
+   */
+  const lastFresh = $derived(anchorAtOpen === null ? -1 : items.findLastIndex(isFresh));
   const boundaryId = $derived.by(() => {
-    if (anchorAtOpen === null || !items.length || !isFresh(items[0])) return null;
-    return items.find((i) => !isFresh(i))?.id ?? null;
+    if (lastFresh < 0 || lastFresh === items.length - 1) return null;
+    const past = items.some((i) => new Date(i.publishedAt) <= new Date(anchorAtOpen!));
+    return past || done ? items[lastFresh + 1].id : null;
   });
-  const boundaryAtEnd = $derived(anchorAtOpen !== null && done && items.length > 0 && isFresh(items[0]) && boundaryId === null);
+  const boundaryAtEnd = $derived(done && lastFresh >= 0 && lastFresh === items.length - 1);
 
   $effect(() => {
     const key = `${collection}|${feed}`;
@@ -232,7 +248,7 @@
   let perPage = $state(3);
   let pageIndex = $state(back?.pageIndex ?? 0);
 
-  keepOnLeave(listName, () => ({ items, cursor, done, hidden, cappedAt, loadedKey, anchorAtOpen, newAtOpen, caught, pageIndex }));
+  keepOnLeave(listName, () => ({ items, cursor, done, hidden, cappedAt, loadedKey, anchorAtOpen, seenAtOpen, newAtOpen, caught, pageIndex }));
 
   /** The frame runs from wherever the page's own header ends to the top of the bottom bar. */
   function measure() {

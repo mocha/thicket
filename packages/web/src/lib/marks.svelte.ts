@@ -11,13 +11,17 @@
  * "how many posts are newer" and "how busy is this collection" and keeps
  * nothing (api/src/routes/marks.ts).
  *
+ * A post read anywhere is read everywhere: the server counts each feed from
+ * the latest point among the collections holding it, and sends those points
+ * back as `seen`, so a list marks exactly the posts its count counts.
+ *
  * The count is a glance, not a debt: exact up to 98, then "99+".
  * The list itself shows where the new part ends (River.svelte).
  */
 import { api, type Mark } from './api';
 import { loadCollections } from './collections.svelte';
 
-export const marks = $state<{ byId: Record<number, Mark>; loaded: boolean; at: number }>({ byId: {}, loaded: false, at: 0 });
+export const marks = $state<{ byId: Record<number, Mark>; seen: Record<number, string>; loaded: boolean; at: number }>({ byId: {}, seen: {}, loaded: false, at: 0 });
 
 let userId: number | null = null;
 let anchors: Record<number, string> = {};
@@ -45,6 +49,7 @@ function saveAnchors() {
 export function resetMarks(nextUser: number | null) {
   userId = nextUser;
   marks.byId = {};
+  marks.seen = {};
   marks.loaded = false;
   marks.at = 0;
   loadAnchors();
@@ -97,10 +102,18 @@ export function recount(collectionId: number, remaining: number) {
 }
 
 let inflight: Promise<void> | null = null;
+/** A fresh count was asked for while one was under way: run once more when it ends, with the points as they are by then. */
+let again = false;
 
+/**
+ * Callers wait for any refresh under way rather than take the counts from
+ * before it: a catch-up in one list refreshes every count, and the next list
+ * opened must see that. A forced refresh asked for mid-flight runs after the
+ * current one, since that one may have left before the point moved.
+ */
 export function loadMarks(force = false): Promise<void> {
+  if (inflight) { if (force) again = true; return inflight; }
   if (marks.loaded && !force) return Promise.resolve();
-  if (inflight) return inflight;
   inflight = loadCollections()
     .then((cs) => seedMissing(cs.list.map((c) => c.id)))
     .catch(() => { /* no list this time; the points already here still count */ })
@@ -113,11 +126,15 @@ export function loadMarks(force = false): Promise<void> {
       const byId: Record<number, Mark> = {};
       for (const m of r.marks) byId[m.collectionId] = m;
       marks.byId = byId;
+      marks.seen = r.seen;
       marks.loaded = true;
       marks.at = Date.now();
     })
     .catch(() => { /* the sidebar just shows no counts until the next try */ })
-    .finally(() => { inflight = null; });
+    .finally(() => {
+      inflight = null;
+      if (again) { again = false; return loadMarks(true); }
+    });
   return inflight;
 }
 

@@ -8,6 +8,12 @@
  * learns "this browser has seen up to Tuesday 14:02 in News" for the length of
  * one request, and never which posts anyone read. That is the whole record.
  *
+ * A post read anywhere is read everywhere. Each feed is counted from the
+ * latest point among every collection that holds it, its parents included,
+ * so catching up on News also lowers New posts (the root, which holds every
+ * feed), and catching up on New posts clears News. Those per-feed points go
+ * back as `seen`, so a list can mark exactly the posts these counts count.
+ *
  * Counts stop at 101 so a point nobody has moved for a month costs a bounded
  * scan, and use the per-feed index the river uses, so the cost follows the
  * feeds I follow rather than the size of the instance (measured 2026-09-15:
@@ -24,6 +30,8 @@ import { isShort, shortsDefault } from "./river.js";
 export const marks = new Hono();
 
 export type Mark = { collectionId: number; count: number; more: boolean; weekly: number };
+/** Per feed id: the latest point it has been read to, in any collection. */
+export type Seen = Record<number, string>;
 
 /** Past this the sidebar says "100+" and the scan stops. */
 const CAP = 100;
@@ -40,7 +48,8 @@ marks.post("/counts", async (c) => {
   }
   // One JSON parameter rather than two arrays: the sql tag would spell an array out as a row.
   const anchorsJson = JSON.stringify(pairs);
-  const rows = await db.execute<{ collectionId: number; count: number; more: boolean; weekly: number }>(sql`
+  // My collections, each with everything beneath it; the points this device sent; and each feed's latest point among the collections holding it.
+  const mine = sql`
     with recursive cols as (
       select id, parent_id from collections where user_id = ${user.id}
     ), tree as (
@@ -49,7 +58,15 @@ marks.post("/counts", async (c) => {
       select t.root, c.id from tree t join cols c on c.parent_id = t.node
     ), anchors as (
       select (e->>'id')::bigint as id, (e->>'at')::timestamptz as at from jsonb_array_elements(${anchorsJson}::jsonb) e
-    ), followed as (
+    ), seen as (
+      select cf.feed_id, max(a.at) as at
+      from tree t
+      join anchors a on a.id = t.root
+      join collection_feeds cf on cf.collection_id = t.node
+      group by cf.feed_id
+    )`;
+  const rows = await db.execute<{ collectionId: number; count: number; more: boolean; weekly: number }>(sql`
+    ${mine}, followed as (
       select t.root, cf.feed_id, bool_or(coalesce(fs.hide_shorts, ${shortsDefault(user.id)})) as hide_shorts
       from tree t
       join collection_feeds cf on cf.collection_id = t.node
@@ -66,13 +83,20 @@ marks.post("/counts", async (c) => {
     ) w
     left join lateral (
       select count(*)::int as count from (
-        select 1 from followed f join items i on i.feed_id = f.feed_id
-        where f.root = c.id and i.published_at > a.at and not (f.hide_shorts and ${isShort})
+        select 1 from followed f join seen s on s.feed_id = f.feed_id join items i on i.feed_id = f.feed_id
+        where f.root = c.id and i.published_at > s.at and not (f.hide_shorts and ${isShort})
         limit ${CAP + 1}
       ) x
     ) n on a.id is not null
   `);
+  const seenRows = await db.execute<{ feedId: number; at: string }>(sql`
+    ${mine}
+    select feed_id as "feedId", at from seen
+  `);
+  const seen: Seen = {};
+  for (const r of seenRows.rows) seen[Number(r.feedId)] = new Date(r.at).toISOString();
   return c.json({
     marks: rows.rows.map((r) => ({ collectionId: Number(r.collectionId), count: Math.min(r.count, CAP), more: r.more, weekly: r.weekly })),
+    seen,
   });
 });
