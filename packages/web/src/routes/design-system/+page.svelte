@@ -30,9 +30,19 @@
   import Select from '$lib/components/Select.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import Monogram from '$lib/components/Monogram.svelte';
+  import Card from '$lib/components/Card.svelte';
+  import NoteBlock from '$lib/components/NoteBlock.svelte';
   import SettingRow from '$lib/components/SettingRow.svelte';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import { showToast } from '$lib/toast.svelte';
+
+  // Sample notes for the Note entry, after your own: one by someone with a display name, one by someone without.
+  const day = 86_400_000;
+  const ago = (d: number) => new Date(Date.now() - d * day).toISOString();
+  const sampleNotes = [
+    { id: -1, body: 'Short, and it earns every sentence. Rare.', createdAt: ago(3), updatedAt: ago(3), author: { handle: 'ada', displayName: 'Ada Lovelace', avatarUpdatedAt: null } },
+    { id: -2, body: 'The part about **street sessions** is the best thing I read this week.', createdAt: ago(9), updatedAt: ago(2), author: { handle: 'grace', displayName: null, avatarUpdatedAt: null } }
+  ];
 
   /* ---- Live theme preview: set <html> attributes, restore on the way out ---- */
   type Appearance = 'system' | 'light' | 'dark';
@@ -204,6 +214,7 @@
         { id: 'icon-button', label: 'Icon button' },
         { id: 'input', label: 'Input' },
         { id: 'monogram', label: 'Monogram' },
+        { id: 'note', label: 'Note' },
         { id: 'page-header', label: 'Page header' },
         { id: 'select', label: 'Select' },
         { id: 'setup-tour', label: 'Setup tour' },
@@ -605,6 +616,16 @@
       </div>
     </section>
 
+    <section class="entry" id="note" aria-labelledby="note-h">
+      <h3 class="entry-h" id="note-h">Note</h3>
+      <p class="section-lede">A note sits under its post, on whatever the post sits on. A band in the line color runs down the left of the notes, and the line above each note runs from the band and stops short of the card’s right side. It opens with the writer’s picture, name and handle, which go to their profile, and the date underneath. Someone with no display name shows their handle once. Your own note looks the same, with Edit note at the right. Three lines show, then Show more.</p>
+      <Card as="div" pad={false}>
+        <p class="demo-post">The post’s title and summary sit up here.</p>
+        <NoteBlock note={{ id: -3, body: 'Worth a second read for the ending.', createdAt: ago(1), updatedAt: ago(1), author: { handle: 'alan', displayName: 'Alan Turing', avatarUpdatedAt: null } }} mine onedit={() => showToast('Edit opens the note’s editor')} />
+        {#each sampleNotes as n (n.id)}<NoteBlock note={n} />{/each}
+      </Card>
+    </section>
+
     <section class="entry" id="page-header" aria-labelledby="page-header-h">
       <h3 class="entry-h" id="page-header-h">Page header</h3>
       <p class="section-lede">The top of every page, in one order: a Back link with a line under it, only on pages that have one; the page’s name; a description in small gray text, ending with a period when it’s a sentence; then a line that closes the header. The page’s own actions sit at the right end of that line, with words, never an icon alone. With no actions, it’s just the line. A post’s own page leaves the line out, so its text follows straight on. Profiles and feeds put a picture beside the name, exactly as tall as the name and the line under it.</p>
@@ -759,6 +780,7 @@
      short of the top when jumped to, so the jump menu doesn't cover the heading. */
   .group, .entry { scroll-margin-top: calc(var(--space-6) + var(--space-6)); }
   .group { margin: calc(var(--space-6) + var(--space-5)) 0 0; padding-top: var(--space-4); border-top: 2px solid var(--text); }
+  .demo-post { margin: 0; padding: var(--card-pad); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .entry { margin: var(--space-6) 0 0; padding-top: var(--space-5); border-top: 1px solid var(--line); }
   h2 {
     font-family: var(--font-headings); font-weight: 700; letter-spacing: -0.01em;

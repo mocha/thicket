@@ -143,7 +143,8 @@
 <style>
   .post { max-width: 680px; }
   .notes { margin-top: var(--space-4); }
-  .notes :global(.note), .notes :global(.editor) { padding-left: 0; padding-right: 0; }
+  /* No card here, so the note and its editor run the page's width. */
+  .notes :global(.note), .notes :global(.editor) { margin-left: 0; margin-right: 0; }
 
   .byline { display: flex; gap: var(--space-2); flex-wrap: wrap; }
   .hero { width: 100%; border-radius: var(--radius-sm); margin-top: 0; background: var(--surface-2); }

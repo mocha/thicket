@@ -273,8 +273,8 @@
     height: calc(var(--nav-h) + var(--safe-b)); padding-bottom: var(--safe-b);
     /* On its side, a phone's notch and rounded corners eat into the ends of the bar. */
     padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
-    background: color-mix(in srgb, var(--surface) 88%, transparent);
-    backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    /* Solid, with no blur behind it: a blur makes the bar the frame its account menu is placed in, which pushed the menu off the screen. */
+    background: var(--surface);
     border-top: 1px solid var(--line);
   }
   .brand, .addfeed, .account, .long, li.admin, li.collections, li.notifs, .resize { display: none; }
@@ -319,7 +319,7 @@
     nav:not(.paged) {
       top: 0; bottom: auto; right: auto; width: var(--nav-w); height: 100vh; height: 100dvh; padding: var(--space-4) var(--space-3) 0; overflow: hidden;
       display: flex; flex-direction: column;
-      border-top: 0; border-right: 1px solid var(--line); background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none;
+      border-top: 0; border-right: 1px solid var(--line); background: var(--bg);
     }
     /* A hairline under the logo sets it apart from Add new feed and the rows below. */
     nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
