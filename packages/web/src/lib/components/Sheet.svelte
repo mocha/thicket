@@ -75,16 +75,17 @@
   @media (min-width: 700px) {
     .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 460px; border-radius: var(--radius-lg); max-height: 86vh; max-height: 86dvh; }
   }
-  header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-  /* A custom header takes the room; the close button keeps to the top corner beside it. */
+  /* The close button sits level with the title's first line, so a title that
+     wraps grows downward and the button stays in the corner. */
+  header { --title-lh: calc(var(--text-xl) * var(--size-headings) * 1.25); display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+  /* A custom header takes the room beside the close button. */
   .custom { flex: 1; min-width: 0; }
   /* On a touch screen the close button answers taps across 44px, the size a
      finger needs, while the circle and the header's layout stay as drawn. */
-  .x { display: flex; flex: none; position: relative; }
-  @media (pointer: coarse) { .x { width: 44px; height: 44px; margin: -6px; align-items: center; justify-content: center; } }
-  .custom + .x { align-self: flex-start; }
+  .x { display: flex; flex: none; position: relative; margin-top: calc((var(--title-lh) - 32px) / 2); }
+  @media (pointer: coarse) { .x { width: 44px; height: 44px; margin: calc((var(--title-lh) - 44px) / 2) -6px -6px; align-items: center; justify-content: center; } }
   /* A custom header's name is the panel's title, so it looks like one. */
-  h2, .custom :global(h2) { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); overflow-wrap: anywhere; }
+  h2, .custom :global(h2) { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); line-height: var(--title-lh); overflow-wrap: anywhere; }
   /* Pulled up against the title so the two read as one block. */
   .lede { margin: calc(-1 * var(--space-2)) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
   div.lede { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
