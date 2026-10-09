@@ -3,7 +3,8 @@
   /**
    * Notifications (issue #184): the last 30 days of what concerns me, newest
    * first. Someone followed me; someone I follow bookmarked a post or wrote a
-   * note on one; someone mentioned me in a note.
+   * note on one; someone mentioned me in a note; a collection I copied has
+   * feeds my copy doesn't (issue #52), which opens my copy's review.
    *
    * Most of it is one terse line to skim: who, what, and the post's title
    * linking to the post. A mention is the exception: it was written to me, so
@@ -16,7 +17,7 @@
    * read, never later, so nothing arriving in between is marked seen unshown.
    */
   import { onMount } from 'svelte';
-  import { api, notificationsApi, profileHref, type Notification } from '$lib/api';
+  import { api, collectionHref, notificationsApi, profileHref, type Notification } from '$lib/api';
   import { clearNotifs } from '$lib/notifications.svelte';
   import { session } from '$lib/session.svelte';
   import { dayKey, dayLabel, hostOf, relativeTime, savedHref, ugcRel } from '$lib/time';
@@ -97,6 +98,13 @@
         {#if n.kind === 'mention'}
           <p class="line">{@render who(n.person)} <span class="verb">mentioned you in a note</span> <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time></p>
           <ul class="card"><BookmarkCard b={n.bookmark} author={n.person} onopen={() => api.event('bookmark_opened', { via: 'notifications' })} /></ul>
+        {:else if n.kind === 'original'}
+          <p class="line">
+            {@render who(n.person)}
+            <span class="verb">has {n.count} new {n.count === 1 ? 'feed' : 'feeds'} in</span>
+            <a class="post" href="{collectionHref(session.user?.handle ?? '', n.copy.slug)}?updates" title="Review them in your copy, {n.copy.name}">{n.original.name}</a>
+            <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time>
+          </p>
         {:else if n.kind === 'follow'}
           <p class="line">{@render who(n.person)} <span class="verb">started following you</span> <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time></p>
         {:else}

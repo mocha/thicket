@@ -5,6 +5,7 @@ import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
 import { slugify, slugTaken, uniqueCollectionSlug } from "../lib/slug.js";
 import { isShareLevel } from "../lib/visibility.js";
+import { applyReview, missingFeeds, originalOf, rememberRemoved } from "../lib/original.js";
 
 export const collections = new Hono();
 /** Flat list with parent pointers and feed counts; the client builds the tree. */
@@ -41,7 +42,7 @@ collections.post("/", async (c) => {
 collections.patch("/:id", async (c) => {
   const user = currentUser(c);
   const id = Number(c.req.param("id"));
-  const body = await c.req.json<{ name?: string; description?: string; parentId?: number; visibility?: string }>();
+  const body = await c.req.json<{ name?: string; description?: string; parentId?: number; visibility?: string; followsOriginal?: boolean }>();
   if (body.parentId !== undefined) {
     if (body.parentId === id) return c.json({ error: "a collection cannot contain itself" }, 400);
     // The new parent must be one of the caller's own collections. Without this,
@@ -62,9 +63,21 @@ collections.patch("/:id", async (c) => {
   if (body.parentId !== undefined) patch.parentId = body.parentId;
   // The audience is the account's scale (share_level); a collection can only narrow it, never widen it (lib/visibility.ts).
   if (isShareLevel(body.visibility)) patch.visibility = body.visibility;
+  // Updates from the original (issue #52): only a copy has one to follow.
+  if (typeof body.followsOriginal === "boolean") {
+    const [cur] = await db.select({ copiedFromId: schema.collections.copiedFromId }).from(schema.collections).where(and(eq(schema.collections.id, id), eq(schema.collections.userId, user.id)));
+    if (!cur) return c.json({ error: "not found" }, 404);
+    if (cur.copiedFromId === null) return c.json({ error: "Only a copy of someone’s collection has an original to follow." }, 400);
+    patch.followsOriginal = body.followsOriginal;
+  }
   // Nothing recognized in the body: say so, rather than asking the database to set no columns.
   if (Object.keys(patch).length === 0) return c.json({ error: "nothing to update" }, 400);
-  const [row] = await db.update(schema.collections).set(patch).where(and(eq(schema.collections.id, id), eq(schema.collections.userId, user.id))).returning();
+  const row = await db.transaction(async (tx) => {
+    const [r] = await tx.update(schema.collections).set(patch).where(and(eq(schema.collections.id, id), eq(schema.collections.userId, user.id))).returning();
+    // Turning updates off forgets what I passed on: with nothing to compare against, it means nothing.
+    if (r && patch.followsOriginal === false) await tx.delete(schema.copyIgnoredFeeds).where(eq(schema.copyIgnoredFeeds.collectionId, id));
+    return r;
+  });
   return row ? c.json(row) : c.json({ error: "not found" }, 404);
 });
 
@@ -79,10 +92,14 @@ collections.delete("/:id", async (c) => {
   // so a crash between the two can't leave children pointing at a collection that's
   // gone. (The parent_id FK cascades on delete; reparenting first is what keeps the
   // sub-tree rather than deleting it.)
-  await db.transaction(async (tx) => {
+  const dropped = await db.transaction(async (tx) => {
+    const held = await tx.select({ feedId: schema.collectionFeeds.feedId }).from(schema.collectionFeeds).where(eq(schema.collectionFeeds.collectionId, id));
     await tx.update(schema.collections).set({ parentId: row.parentId }).where(eq(schema.collections.parentId, id));
     await tx.delete(schema.collections).where(eq(schema.collections.id, id));
+    return held.map((h) => h.feedId);
   });
+  // A sub-collection of a copy I follow updates for took its feeds with it.
+  if (row.parentId !== null) await rememberRemoved(user.id, dropped, [row.parentId]);
   return c.json({ deleted: id });
 });
 
@@ -163,7 +180,37 @@ collections.delete("/:id/feeds/:feedId", async (c) => {
   const [col] = await db.select().from(schema.collections).where(and(eq(schema.collections.id, collectionId), eq(schema.collections.userId, user.id)));
   if (!col) return c.json({ error: "not found" }, 404);
   await db.delete(schema.collectionFeeds).where(and(eq(schema.collectionFeeds.collectionId, collectionId), eq(schema.collectionFeeds.feedId, feedId)));
+  await rememberRemoved(user.id, [feedId], [collectionId]);
   return c.json({ collectionId, feedId, removed: true });
+});
+
+/**
+ * What this copy's original has that it doesn't (issue #52), for review: new
+ * feeds first, then the ones I passed on before. `original` is null when the
+ * collection isn't a copy, or its original is gone or no longer shared with me.
+ */
+collections.get("/:id/original", async (c) => {
+  const user = currentUser(c);
+  const id = Number(c.req.param("id"));
+  const [col] = await db.select().from(schema.collections).where(and(eq(schema.collections.id, id), eq(schema.collections.userId, user.id)));
+  if (!col) return c.json({ error: "not found" }, 404);
+  const orig = await originalOf(id, user.id);
+  if (!orig) return c.json({ followsOriginal: col.followsOriginal, original: null, feeds: [] });
+  const feeds = await missingFeeds(id, user.id, orig);
+  return c.json({ followsOriginal: col.followsOriginal, original: { name: orig.name, slug: orig.slug, owner: orig.owner }, feeds });
+});
+
+/** Finish a review: body { add: feed ids to put in this copy, ignore: feed ids to pass on }. */
+collections.post("/:id/original", async (c) => {
+  const user = currentUser(c);
+  const id = Number(c.req.param("id"));
+  const body = await c.req.json<{ add?: unknown; ignore?: unknown }>().catch(() => ({} as { add?: unknown; ignore?: unknown }));
+  const ids = (v: unknown) => (Array.isArray(v) ? v.map(Number).filter((n) => Number.isSafeInteger(n) && n > 0) : []);
+  const [col] = await db.select().from(schema.collections).where(and(eq(schema.collections.id, id), eq(schema.collections.userId, user.id)));
+  if (!col) return c.json({ error: "not found" }, 404);
+  const orig = await originalOf(id, user.id);
+  if (!orig) return c.json({ error: "The original isn’t available any more." }, 404);
+  return c.json(await applyReview(id, orig, ids(body.add), ids(body.ignore)));
 });
 
 import { exportCollectionOpml, importOpml } from "../lib/opml.js";

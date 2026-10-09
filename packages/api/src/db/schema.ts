@@ -416,8 +416,19 @@ export const collections = pgTable("collections", {
    * collection inside a friends-only account is still friends-only.
    */
   visibility: shareLevel("visibility").notNull().default("public"),
-  /** Provenance when copied from another user's collection. Informational; the copy is independent. */
+  /**
+   * Provenance when copied from another user's collection. The copy is
+   * independent either way; this is also what tells lists that a copy and its
+   * original are one collection (lib/visibility.ts, notARepeatOf), so it stays
+   * when updates are turned off.
+   */
   copiedFromId: bigint("copied_from_id", { mode: "number" }),
+  /**
+   * Tell me when the original has feeds this copy doesn't (issue #52). Nothing
+   * is tracked while it's on: the original and the copy are compared when
+   * someone looks (lib/original.ts). Only meaningful with copied_from_id.
+   */
+  followsOriginal: boolean("follows_original").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   /** One address per collection: /@handle/collections/:slug resolves to exactly one row. */
@@ -441,6 +452,19 @@ export const collectionFeeds = pgTable("collection_feeds", {
   primaryKey({ columns: [t.collectionId, t.feedId] }),
   index("collection_feeds_feed_idx").on(t.feedId),
 ]);
+
+/**
+ * Feeds in a copy's original that the copy's owner has seen and chosen not to
+ * take (issue #52): unticked when reviewing what's new, or removed from the
+ * copy while the original still has them. This is the only thing remembered
+ * about following an original, and it is about the copy, never about what the
+ * original's owner did. Turning updates off deletes it.
+ */
+export const copyIgnoredFeeds = pgTable("copy_ignored_feeds", {
+  collectionId: bigint("collection_id", { mode: "number" }).notNull().references(() => collections.id, { onDelete: "cascade" }),
+  feedId: bigint("feed_id", { mode: "number" }).notNull().references(() => feeds.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.collectionId, t.feedId] })]);
 
 /**
  * A person's settings on one feed. Feeds are shared; this is the layer that is

@@ -41,7 +41,7 @@ function save(over: Partial<SaveRow> = {}): SaveRow {
 function mention(over: Partial<MentionRow> = {}): MentionRow {
   return { id: nextId++, author: author(), at: ago(1), bookmark: { id: 1 }, ...over };
 }
-const none: Candidates = { follows: [], saves: [], mentions: [] };
+const none: Candidates = { follows: [], saves: [], mentions: [], originals: [] };
 const kinds = (r: ReturnType<typeof assemble>) => r.items.map((n) => n.kind);
 
 test("a new follower is a notification, named by handle", () => {
@@ -112,6 +112,7 @@ test("nothing I did myself", () => {
     follows: [{ at: ago(1), person: { id: ME, handle: "me", displayName: null, avatarUpdatedAt: null, profileVisibility: "public" } }],
     saves: [save({ author: mine }), save({ author: mine, noteCreatedAt: ago(1) })],
     mentions: [mention({ author: mine })],
+    originals: [],
   }, opts);
   assert.deepEqual(r.items, []);
 });
@@ -226,4 +227,16 @@ test("a mention from before I followed them still arrives", () => {
   const n = save({ author: ana, followedAt: ago(1), noteCreatedAt: ago(5) });
   const r = assemble(ME, { ...none, saves: [n], mentions: [mention({ id: n.id, author: ana, at: ago(5) })] }, opts);
   assert.deepEqual(kinds(r), ["mention"]);
+});
+
+test("an original with feeds my copy doesn't have, dated by the newest of them", () => {
+  const owner = { id: 3, handle: "ana", displayName: "Ana", avatarUpdatedAt: null };
+  const row = { copy: { name: "Research", slug: "research" }, original: { name: "Research", slug: "research" }, owner, count: 3, latest: ago(1) };
+  const r = assemble(ME, { ...none, originals: [row] }, opts);
+  assert.deepEqual(kinds(r), ["original"]);
+  assert.equal(r.items[0].at, row.latest);
+  assert.equal(r.items[0].kind === "original" && r.items[0].count, 3);
+  // Nothing new, or nothing new in the window: nothing to say.
+  assert.deepEqual(kinds(assemble(ME, { ...none, originals: [{ ...row, count: 0 }] }, opts)), []);
+  assert.deepEqual(kinds(assemble(ME, { ...none, originals: [{ ...row, latest: null }] }, opts)), []);
 });
