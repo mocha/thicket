@@ -214,6 +214,7 @@
         { id: 'icon-button', label: 'Icon button' },
         { id: 'input', label: 'Input' },
         { id: 'monogram', label: 'Monogram' },
+        { id: 'note', label: 'Note' },
         { id: 'page-header', label: 'Page header' },
         { id: 'select', label: 'Select' },
         { id: 'setup-tour', label: 'Setup tour' },
