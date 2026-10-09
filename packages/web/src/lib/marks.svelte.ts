@@ -11,13 +11,17 @@
  * "how many posts are newer" and "how busy is this collection" and keeps
  * nothing (api/src/routes/marks.ts).
  *
+ * A post read anywhere is read everywhere: the server counts each feed from
+ * the latest point among the collections holding it, and sends those points
+ * back as `seen`, so a list marks exactly the posts its count counts.
+ *
  * The count is a glance, not a debt: exact up to 98, then "99+".
  * The list itself shows where the new part ends (River.svelte).
  */
 import { api, type Mark } from './api';
 import { loadCollections } from './collections.svelte';
 
-export const marks = $state<{ byId: Record<number, Mark>; loaded: boolean; at: number }>({ byId: {}, loaded: false, at: 0 });
+export const marks = $state<{ byId: Record<number, Mark>; seen: Record<number, string>; loaded: boolean; at: number }>({ byId: {}, seen: {}, loaded: false, at: 0 });
 
 let userId: number | null = null;
 let anchors: Record<number, string> = {};
@@ -45,6 +49,7 @@ function saveAnchors() {
 export function resetMarks(nextUser: number | null) {
   userId = nextUser;
   marks.byId = {};
+  marks.seen = {};
   marks.loaded = false;
   marks.at = 0;
   loadAnchors();
@@ -113,6 +118,7 @@ export function loadMarks(force = false): Promise<void> {
       const byId: Record<number, Mark> = {};
       for (const m of r.marks) byId[m.collectionId] = m;
       marks.byId = byId;
+      marks.seen = r.seen;
       marks.loaded = true;
       marks.at = Date.now();
     })
