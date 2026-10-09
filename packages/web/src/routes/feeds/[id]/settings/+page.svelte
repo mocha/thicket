@@ -319,7 +319,7 @@
     {#snippet removeLede()}
       {#if impact}
         <div class="said">
-          <p>This deletes “{feed ? feedName(feed) : 'this feed'}” for everyone. That includes {plural(impact.posts, 'post')} and {plural(impact.collections, 'collection')} belonging to {plural(impact.followers, 'person', 'people')}.{#if impact.bookmarks} {impact.bookmarks === 1 ? '1 bookmark keeps its' : `${impact.bookmarks.toLocaleString()} bookmarks keep their`} saved copy and any note, but {impact.bookmarks === 1 ? 'loses' : 'lose'} the link to the post.{/if}</p>
+          <p>This deletes “{feed ? feedName(feed) : 'this feed'}” for everyone. That includes <strong>{plural(impact.posts, 'post')}</strong> and <strong>{plural(impact.collections, 'collection')}</strong> belonging to <strong>{plural(impact.followers, 'person', 'people')}</strong>.{#if impact.bookmarks}{' '}<strong>{plural(impact.bookmarks, 'bookmark')}</strong> {impact.bookmarks === 1 ? 'keeps its' : 'keep their'} saved copy and any note, but {impact.bookmarks === 1 ? 'loses' : 'lose'} the link to the post.{/if}</p>
           <p>This action can’t be undone. Anyone can add the feed back later, but older posts may not come back with it.</p>
         </div>
       {:else}
