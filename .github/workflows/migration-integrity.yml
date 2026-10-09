@@ -1,0 +1,21 @@
+name: Migration integrity
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  immutable-sql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check that existing migrations are unchanged
+        env:
+          MIGRATION_BASE_COMMIT: ${{ github.event.pull_request.base.sha }}
+          MIGRATION_HEAD_COMMIT: ${{ github.event.pull_request.head.sha }}
+        run: bash .github/scripts/check-migration-history.sh

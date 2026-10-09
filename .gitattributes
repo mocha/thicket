@@ -1,0 +1,2 @@
+# Migration hashes must be identical on Linux and Windows checkouts.
+packages/api/drizzle/*.sql text eol=lf

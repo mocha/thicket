@@ -1,5 +1,19 @@
 # Testing
 
+## Database migrations
+
+The API suite includes migration checklist tests. To also exercise real SQL,
+provide a local Postgres admin connection with permission to create databases:
+
+```sh
+MIGRATION_TEST_DATABASE_URL=postgresql://localhost/postgres pnpm --filter @thicket/api test
+```
+
+The regression suite creates and drops its own disposable database. It checks
+out-of-order merges, repeat starts, legacy baseline records, read-only audits,
+transaction rollback, concurrent starts, and the full migration history on a
+fresh database. Without this variable, the database tests are skipped.
+
 ## Email
 
 thicket never prints messages to the log, because they carry live reset links.

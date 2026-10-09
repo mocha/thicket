@@ -20,6 +20,7 @@ import { startRetention } from "./lib/retention.js";
 import { startFeedbackRetry } from "./lib/feedback.js";
 import { ensureAdmin, publicStatus } from "./lib/instance.js";
 import { runMigrations } from "./db/migrate.js";
+import { pool } from "./db/client.js";
 import { headForPath } from "./lib/meta.js";
 import { openApiDocument } from "./lib/openapi.js";
 import { EMAIL_REQUIRED, FETCH_CONCURRENCY, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, SITE_URL, SMTP_URL, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
@@ -30,7 +31,13 @@ if (EMAIL_REQUIRED && !SMTP_URL) {
   process.exit(1);
 }
 
-await runMigrations();
+try {
+  await runMigrations();
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error);
+  await pool.end();
+  process.exit(1);
+}
 await ensureAdmin();
 
 const app = new Hono();
