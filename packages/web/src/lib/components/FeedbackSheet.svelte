@@ -49,9 +49,8 @@
   }
 </script>
 
-<Sheet title="Send feedback" bind:dialog onclose={closeFeedback}>
+<Sheet title="Send feedback" lede="Something broken, confusing, or missing? Tell us. Only the people who make thicket will see what you write." bind:dialog onclose={closeFeedback}>
   <form id="send-feedback" class="form" onsubmit={(e) => { e.preventDefault(); void send(); }}>
-    <p class="lede">Something broken, confusing, or missing? Tell us. Only the people who make thicket will see what you write.</p>
     <Field label="Your feedback" hideLabel {error}>
       {#snippet children({ id, describedBy, invalid })}
         <Textarea {id} aria-describedby={describedBy} {invalid} bind:element={box} bind:value={text} inset rows={6} limit={LIMIT} counter disabled={busy} placeholder="What happened, or what would you like?" />
@@ -73,8 +72,6 @@
 <style>
   /* The form is only here to make the button submit; its children lay out as the Sheet's own. */
   .form { display: contents; }
-  /* Pulled up against the title so the two read as one block. */
-  .lede { color: var(--text-2); margin: calc(-1 * var(--space-2)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   /* Tucked up under the box: a step closer than the Sheet spaces its parts. */
   .under { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: calc(-1 * var(--space-1)); }
   /* The same tick box as "Create this collection" on the import page. */

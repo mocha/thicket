@@ -23,10 +23,12 @@
   });
 </script>
 
-<Sheet title={which === 'following' ? 'Following' : 'Followers'} bind:dialog {onclose}>
-  {#if which === 'followers'}
-    <p class="status">Only you can see who follows you. Following you doesn’t show them anything you haven’t shared with everyone.</p>
-  {/if}
+<Sheet
+  title={which === 'following' ? 'Following' : 'Followers'}
+  lede={which === 'followers' ? 'Only you can see who follows you. Following you doesn’t show them anything you haven’t shared with everyone.' : isMe ? 'People you follow' : `People @${handle} follows`}
+  bind:dialog
+  {onclose}
+>
   {#if failed}
     <p class="status">{failed}</p>
   {:else if list === null}

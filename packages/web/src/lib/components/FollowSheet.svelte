@@ -87,10 +87,13 @@
   }
 </script>
 
-<Sheet title={adding || !following ? `Follow ${name}` : `Following ${name}`} bind:dialog {onclose}>
-  <!-- What the list is for, above it: where a new follow will go (updating as you tick), or the rule for one you already follow. -->
-  {#if adding}{#if collectionStore.loaded}<div class="lede"><p>{whereItGoes(picked)}</p></div>{/if}
-  {:else}<div class="lede"><p>Every feed you follow lives in at least one collection.</p><SavedNote show={saved} /></div>{/if}
+<!-- The line under the title says what the list is for: where a new follow will go (updating as you tick), or the rule for one you already follow. -->
+{#snippet lede()}
+  {#if adding}<p>{collectionStore.loaded ? whereItGoes(picked) : ''}</p>
+  {:else}<p>Every feed you follow lives in at least one collection.</p><SavedNote show={saved} />{/if}
+{/snippet}
+
+<Sheet title={adding || !following ? `Follow ${name}` : `Following ${name}`} {lede} bind:dialog {onclose}>
   {#if adding}
     <CollectionList ids={picked} via="follow_sheet" disabled={busy} ontoggle={pick} oncreated={(id) => (picked = [...picked, id])} />
   {:else}
@@ -101,13 +104,7 @@
       <button type="button" class="sheet-action" onclick={follow} disabled={busy}>{busy ? 'Following…' : 'Follow'}</button>
     {:else}
       <button type="button" class="sheet-action" onclick={() => dialog?.close()}>Done</button>
-      {#if following}<span class="unfollow"><Button variant="danger" link onclick={unfollow}>Unfollow</Button></span>{/if}
+      {#if following}<Button variant="danger" link onclick={unfollow}>Unfollow</Button>{/if}
     {/if}
   {/snippet}
 </Sheet>
-
-<style>
-  .lede { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-1); }
-  .lede p { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .unfollow { align-self: center; }
-</style>

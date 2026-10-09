@@ -172,13 +172,12 @@
   }
 </script>
 
-<Sheet title="Add a feed" bind:dialog {onclose}>
+<Sheet title="Add a feed" lede="Enter the address of a site, blog, subreddit, or YouTube channel or video, and thicket finds the feed for you. You can also enter the feed itself." bind:dialog {onclose}>
   <!-- novalidate: the browser's own URL check rejects "example.com" (it wants
        https:// in front), yet that is how people type an address and what the
        box suggests. The server adds https:// itself, and says so under the box
        if there's really nothing there. -->
   <form id="add-feed" class="form" novalidate onsubmit={(e) => { e.preventDefault(); void submit(); }}>
-    <p class="lede">Enter the address of a site, blog, subreddit, or YouTube channel or video, and thicket finds the feed for you. You can also enter the feed itself.</p>
     <Field label="Address" hideLabel error={urlError}>
       {#snippet children({ id, describedBy, invalid })}
         <Input
@@ -235,8 +234,6 @@
 <style>
   /* The form is only here to make Enter submit; its children lay out as the Sheet's own. */
   .form { display: contents; }
-  /* Pulled up against the title so the two read as one block. */
-  .lede { color: var(--text-2); margin: calc(-1 * var(--space-2)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
   .result { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .result p { margin: 0 0 var(--space-2); }
   .candidates { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
