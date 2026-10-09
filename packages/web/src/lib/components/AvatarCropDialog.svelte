@@ -22,6 +22,7 @@
   import { showToast } from '$lib/toast.svelte';
   import IconButton from './IconButton.svelte';
   import Sheet from './Sheet.svelte';
+  import Button from './Button.svelte';
 
   let { file, onclose, onsaved }: { file: File; onclose: () => void; onsaved: (avatarUpdatedAt: string) => void } = $props();
 
@@ -135,7 +136,7 @@
   </label>
 
   {#snippet footer()}
-    <button type="button" class="sheet-action" onclick={save} disabled={saving || !area}>{saving ? 'Saving…' : 'Save photo'}</button>
+    <Button variant="primary" size="lg" onclick={save} disabled={saving || !area}>{saving ? 'Saving…' : 'Save photo'}</Button>
   {/snippet}
 </Sheet>
 

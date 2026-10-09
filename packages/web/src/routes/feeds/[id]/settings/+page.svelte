@@ -334,7 +334,7 @@
     {/snippet}
     <Sheet title="Remove this feed for everyone?" lede={removeLede} alert locked={removing} bind:dialog={removeDialog}>
       {#snippet footer()}
-        <button type="button" class="sheet-action danger" onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</button>
+        <Button variant="danger" solid size="lg" onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</Button>
       {/snippet}
     </Sheet>
   {/if}

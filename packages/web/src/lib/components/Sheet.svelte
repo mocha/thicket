@@ -16,18 +16,19 @@
    * - The task's content. Settings stacked one per row sit in a `sheet-rows`
    *   box, which splits them with a hairline.
    * - An optional `footer` pinned at the bottom for the one action that
-   *   finishes the task: a button with the `sheet-action` class, full width,
-   *   in the accent color, or `sheet-action danger` in red when finishing means
-   *   deleting. Any other destructive choice is a red text link under it
-   *   (`Button variant="danger" link`), never a button beside it.
-   * - The way out, always last and in words (issue #246): a full-width Cancel
-   *   under the footer's button, outlined in the theme's line color so it
-   *   never reads as the main action, and as big a target as the button above
-   *   it so a tap meant for one doesn't land on the other. In a panel with no
-   *   footer because each choice saves as it's made, it's a full-width Done. `dismiss` renames it, or `false`
-   *   leaves it off when the footer already closes the panel. Tapping outside
-   *   and Escape close it too. In an `alert`, focus starts on Cancel, so the
-   *   safe choice is the one a keyboard or screen reader lands on.
+   *   finishes the task: the shared Button, `variant="primary" size="lg"`, or
+   *   `variant="danger" solid size="lg"` when finishing means deleting. The
+   *   Sheet stretches it to full width. Any other destructive choice is a red
+   *   text link under it (`Button variant="danger" link`), never a button
+   *   beside it.
+   * - The way out, always last and in words (issue #246): a full-width ghost
+   *   Button, Cancel, under the footer's button, so it never reads as the main
+   *   action and is as big a target as the button above it. In a panel with no
+   *   footer because each choice saves as it's made, it's a primary Done.
+   *   `dismiss` renames it, or `false` leaves it off when the footer already
+   *   closes the panel. Tapping outside and Escape close it too. In an
+   *   `alert`, focus starts on Cancel, so the safe choice is the one a keyboard
+   *   or screen reader lands on.
    *
    * The content column never grows past the screen: any part of it that can
    * scroll (a long list) should say so with its own overflow, and everything
@@ -39,6 +40,7 @@
    * with `dialog.showModal()`.
    */
   import type { Snippet } from 'svelte';
+  import Button from './Button.svelte';
 
   let { title, dialog = $bindable(null), onclose, lede, header, aside, children, footer, dismiss, locked = false, alert = false }: {
     title: string; dialog?: HTMLDialogElement | null; onclose?: () => void;
@@ -73,7 +75,7 @@
         {@render footer?.()}
         {#if way}
           <!-- svelte-ignore a11y_autofocus -->
-          <button type="button" class="sheet-action" class:quiet={!!footer} onclick={() => dialog?.close()} disabled={locked} autofocus={alert}>{way}</button>
+          <Button variant={footer ? 'ghost' : 'primary'} size="lg" onclick={() => dialog?.close()} disabled={locked} autofocus={alert}>{way}</Button>
         {/if}
       </div>
     {/if}
@@ -104,10 +106,7 @@
   /* Settings one per row: each row's name above its choice, the rows split by a hairline. */
   .sheet :global(.sheet-rows > *) { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
   .sheet :global(.sheet-rows > :last-child) { padding-bottom: 0; }
-  /* The finishing button spans the width; a red text link under it sits centered; Cancel spans the width last. */
-  .foot { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
-  .foot :global(.sheet-action) { align-self: stretch; display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-4); border: 1px solid transparent; border-radius: var(--radius-md); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
-  .foot :global(.sheet-action.danger) { background: var(--danger); color: var(--danger-ink); }
-  .foot :global(.sheet-action:disabled) { opacity: 0.5; }
-  .foot .sheet-action.quiet { background: none; color: var(--text); border-color: var(--line); }
+  /* Every button down here is the shared Button, stretched to the panel's width: the
+     finishing one, any red text link under it, then Cancel. */
+  .foot { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); margin-top: var(--space-2); }
 </style>

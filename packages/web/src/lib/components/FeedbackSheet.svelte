@@ -13,6 +13,7 @@
   import { session } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
   import Sheet from './Sheet.svelte';
+  import Button from './Button.svelte';
   import Field from './Field.svelte';
   import Textarea from './Textarea.svelte';
 
@@ -65,7 +66,7 @@
     </div>
   </form>
   {#snippet footer()}
-    <button type="submit" form="send-feedback" class="sheet-action" disabled={busy || !text.trim() || text.length > LIMIT}>{busy ? 'Sending…' : 'Send'}</button>
+    <Button variant="primary" size="lg" type="submit" form="send-feedback" disabled={busy || !text.trim() || text.length > LIMIT}>{busy ? 'Sending…' : 'Send'}</Button>
   {/snippet}
 </Sheet>
 

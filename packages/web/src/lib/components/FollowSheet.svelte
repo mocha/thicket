@@ -101,9 +101,9 @@
   {/if}
   {#snippet footer()}
     {#if adding}
-      <button type="button" class="sheet-action" onclick={follow} disabled={busy}>{busy ? 'Following…' : 'Follow'}</button>
+      <Button variant="primary" size="lg" onclick={follow} disabled={busy}>{busy ? 'Following…' : 'Follow'}</Button>
     {:else}
-      <button type="button" class="sheet-action" onclick={() => dialog?.close()}>Done</button>
+      <Button variant="primary" size="lg" onclick={() => dialog?.close()}>Done</Button>
       {#if following}<Button variant="danger" link onclick={unfollow}>Unfollow</Button>{/if}
     {/if}
   {/snippet}

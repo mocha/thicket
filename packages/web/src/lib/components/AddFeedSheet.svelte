@@ -16,6 +16,7 @@
   import { hostOf } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
   import Sheet from './Sheet.svelte';
+  import Button from './Button.svelte';
   import CollectionList from './CollectionList.svelte';
   import Field from './Field.svelte';
   import Input from './Input.svelte';
@@ -227,7 +228,7 @@
     {/key}
   </form>
   {#snippet footer()}
-    <button type="submit" form="add-feed" class="sheet-action" disabled={busy || !url.trim() || (!!candidates && !picked.length)}>{busy ? (candidates ? 'Following…' : 'Looking…') : candidates && picked.length > 1 ? `Follow ${picked.length} feeds` : 'Follow'}</button>
+    <Button variant="primary" size="lg" type="submit" form="add-feed" disabled={busy || !url.trim() || (!!candidates && !picked.length)}>{busy ? (candidates ? 'Following…' : 'Looking…') : candidates && picked.length > 1 ? `Follow ${picked.length} feeds` : 'Follow'}</Button>
   {/snippet}
 </Sheet>
 

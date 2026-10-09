@@ -16,6 +16,7 @@
   import SourceIcon from './SourceIcon.svelte';
   import FollowControl from './FollowControl.svelte';
   import Sheet from './Sheet.svelte';
+  import Button from './Button.svelte';
   import Badge from './Badge.svelte';
   import { session } from '$lib/session.svelte';
   import { site } from '$lib/site.svelte';
@@ -78,8 +79,8 @@
 {/snippet}
 
 {#snippet footer()}
-  {#if feed}<a class="sheet-action" href={feedHref(feed)} onclick={() => dialog?.close()}>Open feed</a>
-  {:else if missing === 'failed'}<button type="button" class="sheet-action" onclick={load} disabled={retrying}>{retrying ? 'Trying again…' : 'Try again'}</button>{/if}
+  {#if feed}<Button variant="primary" size="lg" href={feedHref(feed)} onclick={() => dialog?.close()}>Open feed</Button>
+  {:else if missing === 'failed'}<Button variant="primary" size="lg" onclick={load} disabled={retrying}>{retrying ? 'Trying again…' : 'Try again'}</Button>{/if}
 {/snippet}
 
 <Sheet title={feed || name ? `About ${shown}` : 'About this feed'} {header} aside={feed && session.user ? aside : undefined} footer={feed || missing === 'failed' ? footer : undefined} dismiss={feed || missing === 'failed' ? 'Close' : undefined} bind:dialog {onclose}>

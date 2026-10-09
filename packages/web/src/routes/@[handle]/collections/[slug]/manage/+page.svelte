@@ -337,7 +337,7 @@
       {/if}
     {/if}
     {#snippet footer()}
-      <button type="button" class="sheet-action danger" onclick={deleteCollection} disabled={deleting || orphans === null}>{deleting ? 'Deleting…' : 'Delete collection'}</button>
+      <Button variant="danger" solid size="lg" onclick={deleteCollection} disabled={deleting || orphans === null}>{deleting ? 'Deleting…' : 'Delete collection'}</Button>
     {/snippet}
   </Sheet>
 {/if}

@@ -165,7 +165,7 @@
     bind:dialog={confirmAgain}
   >
     {#snippet footer()}
-      <button type="button" class="sheet-action" disabled={copying} onclick={() => { confirmAgain?.close(); void copy(); }}><Icon name="copy" size={16} />Copy again</button>
+      <Button variant="primary" size="lg" disabled={copying} onclick={() => { confirmAgain?.close(); void copy(); }}><Icon name="copy" size={16} />Copy again</Button>
     {/snippet}
   </Sheet>
 
