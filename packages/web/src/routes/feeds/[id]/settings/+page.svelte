@@ -5,6 +5,7 @@
   import { api, adminApi, feedHref, type Feed } from '$lib/api';
   import { hostOf, relativeTime } from '$lib/time';
   import { feedName } from '$lib/feedname';
+  import { plural } from '$lib/words';
   import { resetNotice } from '$lib/feedsettings';
   import { loadCollections, namedCollections } from '$lib/collections.svelte';
   import CollectionCheckList from '$lib/components/CollectionCheckList.svelte';
@@ -89,7 +90,6 @@
       savingSubscription = false;
     }
   }
-  const n = (v: number, one: string, many: string) => `${v} ${v === 1 ? one : many}`;
 
   async function load() {
     try {
@@ -318,12 +318,15 @@
 
     {#snippet removeLede()}
       {#if impact}
-        <p>This deletes, for everyone: <strong>{n(impact.posts, 'post', 'posts')}</strong>, and its place in <strong>{n(impact.collections, 'collection', 'collections')}</strong> belonging to <strong>{n(impact.followers, 'person', 'people')}</strong>. {impact.bookmarks ? `${n(impact.bookmarks, 'bookmark keeps', 'bookmarks keep')} ${impact.bookmarks === 1 ? 'its' : 'their'} saved copy and any note, but ${impact.bookmarks === 1 ? 'loses' : 'lose'} the link to the post.` : ''} It cannot be undone; the feed can be added again later, but its older posts may not come back with it.</p>
+        <div class="said">
+          <p>This deletes “{feed ? feedName(feed) : 'this feed'}” for everyone. That includes {plural(impact.posts, 'post')} and {plural(impact.collections, 'collection')} belonging to {plural(impact.followers, 'person', 'people')}.{#if impact.bookmarks} {impact.bookmarks === 1 ? '1 bookmark keeps its' : `${impact.bookmarks.toLocaleString()} bookmarks keep their`} saved copy and any note, but {impact.bookmarks === 1 ? 'loses' : 'lose'} the link to the post.{/if}</p>
+          <p>This action can’t be undone. Anyone can add the feed back later, but older posts may not come back with it.</p>
+        </div>
       {:else}
         <p>Counting what this would take with it…</p>
       {/if}
     {/snippet}
-    <Sheet title="Remove {feedName(feed)} from thicket?" lede={removeLede} alert locked={removing} bind:dialog={removeDialog}>
+    <Sheet title="Remove this feed for everyone?" lede={removeLede} alert locked={removing} bind:dialog={removeDialog}>
       {#snippet footer()}
         <button type="button" class="sheet-action danger" onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</button>
       {/snippet}
@@ -346,6 +349,9 @@
   .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
   .hint.inline { margin: 0; }
   /* The line under a section heading: tucked up against it, then the usual gap before what it describes. */
+  /* The remove warning's two paragraphs: what goes, then that it's for good. */
+  .said { display: flex; flex-direction: column; gap: var(--space-2); }
+  .said p { margin: 0; }
   .hint.lede { margin: calc(var(--space-2) * -1) 0 var(--space-3); }
   .radios { display: flex; flex-direction: column; gap: var(--space-2); }
   .radios label { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
