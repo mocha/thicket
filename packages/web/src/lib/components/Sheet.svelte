@@ -93,21 +93,23 @@
   @media (min-width: 700px) {
     .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 460px; border-radius: var(--radius-lg); max-height: 86vh; max-height: 86dvh; }
   }
-  header { --title-lh: calc(var(--text-xl) * var(--size-headings) * 1.25); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
   /* A custom header takes the room beside the aside. It asks for at least 12rem; when
      that and the aside don't both fit, the aside moves to its own line, so a
      name is never squeezed until it breaks mid-word. */
   .custom { flex: 1 1 12rem; min-width: 0; }
   .aside { flex: none; }
   /* A custom header's name is the panel's title, so it looks like one. */
-  h2, .custom :global(h2) { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); line-height: var(--title-lh); overflow-wrap: break-word; }
-  /* The description sits a step closer to the title than the Sheet's other parts (8px, not 12),
-     so the two read as one block; any closer and it crowds a title that wraps. */
-  .lede { margin: calc(-1 * var(--space-1)) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
+  h2, .custom :global(h2) { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); line-height: 1.2; overflow-wrap: break-word; }
+  /* Pulled up against the title (4px, where the Sheet's other parts sit 12px apart) so the
+     two read as one block. */
+  .lede { margin: calc(-1 * var(--space-2)) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
   div.lede { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
   div.lede :global(p) { margin: 0; }
-  /* Settings one per row: each row's name above its choice, the rows split by a hairline. */
+  /* Settings one per row: each row's name above its choice, a hairline between rows but
+     none above the first, so no panel has a line under its header. */
   .sheet :global(.sheet-rows > *) { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
+  .sheet :global(.sheet-rows > :first-child) { border-top-color: transparent; }
   .sheet :global(.sheet-rows > :last-child) { padding-bottom: 0; }
   /* Every button down here is the shared Button, stretched to the panel's width: the
      finishing one, any red text link under it, then Cancel. */
