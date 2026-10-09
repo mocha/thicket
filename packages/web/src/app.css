@@ -135,7 +135,6 @@
      are the same black, the hairline is the only edge there is (issue #240). */
   --shadow-sheet: 0 -10px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--line);
   --shadow-menu: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--line);
-  --shadow-dialog: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--line);
   /* One darkness for everything dimmed behind a sheet, dialog or menu. */
   --scrim: rgba(0, 0, 0, 0.45);
   /* Hairline around a color swatch: the page's own ink, thinned, so it shows

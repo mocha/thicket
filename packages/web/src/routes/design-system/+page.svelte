@@ -33,6 +33,7 @@
   import Card from '$lib/components/Card.svelte';
   import NoteBlock from '$lib/components/NoteBlock.svelte';
   import SettingRow from '$lib/components/SettingRow.svelte';
+  import Sheet from '$lib/components/Sheet.svelte';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import { showToast } from '$lib/toast.svelte';
 
@@ -43,6 +44,11 @@
     { id: -1, body: 'Short, and it earns every sentence. Rare.', createdAt: ago(3), updatedAt: ago(3), author: { handle: 'ada', displayName: 'Ada Lovelace', avatarUpdatedAt: null } },
     { id: -2, body: 'The part about **street sessions** is the best thing I read this week.', createdAt: ago(9), updatedAt: ago(2), author: { handle: 'grace', displayName: null, avatarUpdatedAt: null } }
   ];
+
+  /* The two sample Sheets in the Sheet entry. */
+  let demoSheet = $state<HTMLDialogElement | null>(null);
+  let demoConfirm = $state<HTMLDialogElement | null>(null);
+  let demoShow = $state('everyone');
 
   /* ---- Live theme preview: set <html> attributes, restore on the way out ---- */
   type Appearance = 'system' | 'light' | 'dark';
@@ -166,8 +172,7 @@
   const shadows = [
     { name: 'shadow', use: 'A card resting on the page' },
     { name: 'shadow-menu', use: 'A menu or popover' },
-    { name: 'shadow-sheet', use: 'A bottom sheet' },
-    { name: 'shadow-dialog', use: 'A centered dialog' }
+    { name: 'shadow-sheet', use: 'A Sheet, at the bottom of a phone or centered on a bigger screen' }
   ];
 
   /* ---- Component demo state ---- */
@@ -218,6 +223,7 @@
         { id: 'page-header', label: 'Page header' },
         { id: 'select', label: 'Select' },
         { id: 'setup-tour', label: 'Setup tour' },
+        { id: 'sheet', label: 'Sheet' },
         { id: 'tabs', label: 'Tabs' },
         { id: 'textarea', label: 'Textarea' },
         { id: 'toast', label: 'Toast' }
@@ -565,7 +571,7 @@
 
     <section class="entry" id="icon-button" aria-labelledby="icon-button-h">
       <h3 class="entry-h" id="icon-button-h">Icon button</h3>
-      <p class="section-lede">A round tap target with one glyph and no words. Plain, or bordered for the one that sits beside a page title. Its focus ring shows only for someone arriving by keyboard, so a Sheet that opens with focus on its close button doesn't ring it after a tap.</p>
+      <p class="section-lede">A round tap target with one glyph and no words. Plain, or bordered for the one that sits beside a page title. Its focus ring shows only for someone arriving by keyboard, so a reading view that opens with focus on its close button doesn't ring it after a tap.</p>
       <div class="row">
         <IconButton icon="gear" label="Settings" />
         <IconButton icon="pencil" label="Edit" />
@@ -670,6 +676,30 @@
       <div class="row">
         <div class="tour-demo" aria-hidden="true"><NewPostsScene /></div>
       </div>
+    </section>
+
+    <section class="entry" id="sheet" aria-labelledby="sheet-h">
+      <h3 class="entry-h" id="sheet-h">Sheet</h3>
+      <p class="section-lede">Every panel for one task is a Sheet: Add a feed, Visibility, Filters, a delete confirm, all of them. On a phone it rises from the bottom; from 700px up it sits centered, 460px wide. Top to bottom: the title; a short description saying what the panel is for, left off when the title already says it all; the content; and, when the task has an end, one full-width primary Button that finishes it, or a solid danger Button when finishing means deleting something. Any other destructive choice is a red text link under it, never a button beside it. The way out is always last and always in words: a full-width ghost Button, Cancel, under the main one, as easy to hit as the button above it and never mistaken for it. A panel whose choices save as they’re made ends with a full-width primary Done instead. In a delete confirm, focus starts on Cancel. Tapping outside and Escape close it too. Settings stacked one per row get a thin line between rows, each name above its choice. A panel about one thing, like a feed, can swap the title for that thing’s icon and name, with an action about it, like Follow, at the right. A Sheet that’s saving something stays open until it’s done.</p>
+      <div class="row">
+        <Button onclick={() => demoSheet?.showModal()}>Open a Sheet</Button>
+        <Button variant="danger" onclick={() => demoConfirm?.showModal()}>Open a delete confirm</Button>
+      </div>
+      <Sheet title="Example" lede="A short description saying what this panel is for." bind:dialog={demoSheet}>
+        <div class="sheet-rows">
+          <Select label="Show" value={demoShow} options={[{ value: 'everyone', label: 'Everyone' }, { value: 'following', label: 'People I follow' }]} onchange={(e) => (demoShow = e.currentTarget.value)} />
+          <Select label="Sort" value="popular" options={[{ value: 'popular', label: 'Most followed' }, { value: 'new', label: 'Newest' }]} />
+        </div>
+        {#snippet footer()}
+          <Button variant="primary" size="lg" onclick={() => demoSheet?.close()}>Save</Button>
+          <Button variant="danger" link onclick={() => demoSheet?.close()}>Remove</Button>
+        {/snippet}
+      </Sheet>
+      <Sheet title="Delete “Example”?" lede="Say what goes with it. This can’t be undone." alert bind:dialog={demoConfirm}>
+        {#snippet footer()}
+          <Button variant="danger" solid size="lg" onclick={() => demoConfirm?.close()}>Delete collection</Button>
+        {/snippet}
+      </Sheet>
     </section>
 
     <section class="entry" id="tabs" aria-labelledby="tabs-h">

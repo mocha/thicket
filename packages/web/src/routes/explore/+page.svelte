@@ -719,8 +719,8 @@
 <div bind:this={sentinel} aria-hidden="true"></div>
 
 {#if threeFilters}
-  <Sheet title="Filters" bind:dialog={filtersDialog}>
-    <div class="sheet-filters">{@render filterFields()}</div>
+  <Sheet title="Filters" lede="Choose what this list shows and in what order." bind:dialog={filtersDialog}>
+    <div class="sheet-rows">{@render filterFields()}</div>
   </Sheet>
 {/if}
 
@@ -789,8 +789,6 @@
   .fr-name { font-weight: 600; color: var(--text); line-height: 1.25; }
   .fr-now { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
   .fr-caret { flex: none; display: grid; color: var(--text-2); }
-  /* In the Sheet the three dropdowns stack, each under its name, full width. */
-  .sheet-filters { display: flex; flex-direction: column; gap: var(--space-3); padding-bottom: var(--space-2); }
   .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   /* Browse: the filters are the list card's header, so the two read as one unit. */
   .browse { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
