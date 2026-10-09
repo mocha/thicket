@@ -93,7 +93,7 @@
   {:else}<p>Every feed you follow lives in at least one collection.</p><SavedNote show={saved} />{/if}
 {/snippet}
 
-<Sheet title={adding || !following ? `Follow ${name}` : `Following ${name}`} lede={adding && !collectionStore.loaded ? undefined : lede} bind:dialog {onclose}>
+<Sheet title={adding || !following ? `Follow ${name}` : `Following ${name}`} lede={adding && !collectionStore.loaded ? undefined : lede} dismiss={adding ? undefined : false} bind:dialog {onclose}>
   {#if adding}
     <CollectionList ids={picked} via="follow_sheet" disabled={busy} ontoggle={pick} oncreated={(id) => (picked = [...picked, id])} />
   {:else}

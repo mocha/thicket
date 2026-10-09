@@ -5,9 +5,10 @@
    * rises from the bottom of the screen; from 700px up it sits centered.
    *
    * Top to bottom:
-   * - The title and a close button. A panel about one thing (a feed) can swap
-   *   the title for its own `header`, an icon and name, say; the close button
-   *   stays, and `title` still names the panel for screen readers.
+   * - The title. A panel about one thing (a feed) can swap it for its own
+   *   `header`, an icon and name, say; `title` still names the panel for
+   *   screen readers. An `aside` sits at the header's right, for an action
+   *   about that one thing (Follow, on a feed).
    * - The `lede`, the panel's description: a short sentence under the title
    *   saying what the panel is for. Leave it off when the title already says
    *   it all (Following needs nothing more).
@@ -18,8 +19,15 @@
    *   finishes the task: a button with the `sheet-action` class, full width,
    *   in the accent color, or `sheet-action danger` in red when finishing means
    *   deleting. Any other destructive choice is a red text link under it
-   *   (`Button variant="danger" link`), never a button beside it. There is no
-   *   Cancel: the close button, tapping outside, and Escape all do that.
+   *   (`Button variant="danger" link`), never a button beside it.
+   * - The way out, always last and in words (issue #246): a full-width Cancel
+   *   under the footer's button, outlined in the theme's line color so it
+   *   never reads as the main action, and as big a target as the button above
+   *   it so a tap meant for one doesn't land on the other. In a panel with no
+   *   footer because each choice saves as it's made, it's a full-width Done. `dismiss` renames it, or `false`
+   *   leaves it off when the footer already closes the panel. Tapping outside
+   *   and Escape close it too. In an `alert`, focus starts on Cancel, so the
+   *   safe choice is the one a keyboard or screen reader lands on.
    *
    * The content column never grows past the screen: any part of it that can
    * scroll (a long list) should say so with its own overflow, and everything
@@ -31,13 +39,13 @@
    * with `dialog.showModal()`.
    */
   import type { Snippet } from 'svelte';
-  import IconButton from './IconButton.svelte';
 
-  let { title, dialog = $bindable(null), onclose, lede, header, children, footer, locked = false, alert = false }: {
+  let { title, dialog = $bindable(null), onclose, lede, header, aside, children, footer, dismiss, locked = false, alert = false }: {
     title: string; dialog?: HTMLDialogElement | null; onclose?: () => void;
-    lede?: string | Snippet; header?: Snippet; children?: Snippet; footer?: Snippet;
-    locked?: boolean; alert?: boolean;
+    lede?: string | Snippet; header?: Snippet; aside?: Snippet; children?: Snippet; footer?: Snippet;
+    dismiss?: string | false; locked?: boolean; alert?: boolean;
   } = $props();
+  const way = $derived(dismiss ?? (footer ? 'Cancel' : 'Done'));
   const titleId = $props.id();
   const ledeId = `${titleId}-lede`;
 </script>
@@ -55,12 +63,20 @@
   <div class="sheet">
     <header>
       {#if header}<div class="custom">{@render header()}</div>{:else}<h2 id={titleId}>{title}</h2>{/if}
-      <span class="x"><IconButton icon="close" label="Close" stretch disabled={locked} onclick={() => dialog?.close()} /></span>
+      {#if aside}<div class="aside">{@render aside()}</div>{/if}
     </header>
     {#if typeof lede === 'string'}<p class="lede" id={ledeId}>{lede}</p>
     {:else if lede}<div class="lede" id={ledeId}>{@render lede()}</div>{/if}
     {@render children?.()}
-    {#if footer}<div class="foot">{@render footer()}</div>{/if}
+    {#if footer || way}
+      <div class="foot">
+        {@render footer?.()}
+        {#if way}
+          <!-- svelte-ignore a11y_autofocus -->
+          <button type="button" class="sheet-action" class:quiet={!!footer} onclick={() => dialog?.close()} disabled={locked} autofocus={alert}>{way}</button>
+        {/if}
+      </div>
+    {/if}
   </div>
 </dialog>
 
@@ -75,15 +91,10 @@
   @media (min-width: 700px) {
     .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 460px; border-radius: var(--radius-lg); max-height: 86vh; max-height: 86dvh; }
   }
-  /* The close button sits level with the title's first line, so a title that
-     wraps grows downward and the button stays in the corner. */
-  header { --title-lh: calc(var(--text-xl) * var(--size-headings) * 1.25); display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
-  /* A custom header takes the room beside the close button. */
+  header { --title-lh: calc(var(--text-xl) * var(--size-headings) * 1.25); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  /* A custom header takes the room beside the aside. */
   .custom { flex: 1; min-width: 0; }
-  /* On a touch screen the close button answers taps across 44px, the size a
-     finger needs, while the circle and the header's layout stay as drawn. */
-  .x { display: flex; flex: none; position: relative; margin-top: calc((var(--title-lh) - 32px) / 2); }
-  @media (pointer: coarse) { .x { width: 44px; height: 44px; margin: calc((var(--title-lh) - 44px) / 2) -6px -6px; align-items: center; justify-content: center; } }
+  .aside { flex: none; }
   /* A custom header's name is the panel's title, so it looks like one. */
   h2, .custom :global(h2) { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); line-height: var(--title-lh); overflow-wrap: anywhere; }
   /* The description keeps the Sheet's usual space under the title: pulled any closer, it crowds a title that wraps. */
@@ -93,9 +104,10 @@
   /* Settings one per row: each row's name above its choice, the rows split by a hairline. */
   .sheet :global(.sheet-rows > *) { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
   .sheet :global(.sheet-rows > :last-child) { padding-bottom: 0; }
-  /* The finishing button spans the width; anything under it, like a red text link, sits centered. */
+  /* The finishing button spans the width; a red text link under it sits centered; Cancel spans the width last. */
   .foot { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
-  .foot :global(.sheet-action) { align-self: stretch; display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-4); border-radius: var(--radius-md); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
+  .foot :global(.sheet-action) { align-self: stretch; display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-4); border: 1px solid transparent; border-radius: var(--radius-md); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .foot :global(.sheet-action.danger) { background: var(--danger); color: var(--danger-ink); }
   .foot :global(.sheet-action:disabled) { opacity: 0.5; }
+  .foot .sheet-action.quiet { background: none; color: var(--text); border-color: var(--line); }
 </style>

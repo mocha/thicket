@@ -52,7 +52,7 @@
 </script>
 
 <!-- The header is the feed itself: its icon and name, then its address (or why
-     there's nothing more), and your Follow. While it loads, the name the post
+     there's nothing more), with your Follow at its right. While it loads, the name the post
      already knows stands in, so the panel doesn't jump when the feed arrives. -->
 {#snippet header()}
   <div class="id">
@@ -64,7 +64,6 @@
           <a class="host tap" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
           {#if feed.requiresSubscription}<Badge title="Posts from this site are behind a paywall: reading them takes a subscription">Requires subscription</Badge>{/if}
         </div>
-        {#if session.user}<div class="follow"><FollowControl feedId={feed.id} bind:ids name={shown} /></div>{/if}
       {:else if missing === 'gone'}
         <p class="said">Not on {site.status?.name ?? 'thicket'}</p>
       {:else if missing === 'failed'}
@@ -74,12 +73,16 @@
   </div>
 {/snippet}
 
+{#snippet aside()}
+  {#if feed && session.user}<FollowControl feedId={feed.id} bind:ids name={shown} />{/if}
+{/snippet}
+
 {#snippet footer()}
   {#if feed}<a class="sheet-action" href={feedHref(feed)} onclick={() => dialog?.close()}>Open feed</a>
   {:else if missing === 'failed'}<button type="button" class="sheet-action" onclick={load} disabled={retrying}>{retrying ? 'Trying again…' : 'Try again'}</button>{/if}
 {/snippet}
 
-<Sheet title={feed || name ? `About ${shown}` : 'About this feed'} {header} footer={feed || missing === 'failed' ? footer : undefined} bind:dialog {onclose}>
+<Sheet title={feed || name ? `About ${shown}` : 'About this feed'} {header} aside={feed && session.user ? aside : undefined} footer={feed || missing === 'failed' ? footer : undefined} dismiss={feed || missing === 'failed' ? 'Close' : undefined} bind:dialog {onclose}>
   {#if feed}
     {#if feed.description}<p class="desc">{feed.description}</p>{/if}
     <dl class="stats">
@@ -101,7 +104,6 @@
   .host { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
   /* "Requires subscription" sits beside the address, and drops under it when the line runs out. */
   .addr { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
-  .follow { margin-top: var(--space-2); }
   .desc { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: 0; padding: var(--space-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .stats div { display: flex; flex-direction: column; /* 2px is an optical gap between a number and its label. */ gap: 2px; }
