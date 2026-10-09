@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Card from '$lib/components/Card.svelte';
   import Dot from '$lib/components/Dot.svelte';
   /**
    * The instance, for its admins: who can sign up, invite links, the accounts.
@@ -163,7 +164,7 @@
 </header>
 
 {#if instance}
-  <section class="card">
+  <Card kind="section" as="section" class="admin-section">
     <h2>This instance</h2>
     <form class="inline" onsubmit={(e) => { e.preventDefault(); void saveName(); }}>
       <Field label="Name" class="grow">
@@ -184,9 +185,9 @@
       <label class="radio"><input type="radio" name="visitors" checked={instance.visitorLimit} onchange={() => setVisitorLimit(true)} /><span><strong>The newest 100</strong><small>Feed pages, collections, and people’s notes, bookmarks and activity show their 100 most recent items, then ask visitors to log in or sign up.</small></span></label>
       <label class="radio"><input type="radio" name="visitors" checked={!instance.visitorLimit} onchange={() => setVisitorLimit(false)} /><span><strong>Everything</strong><small>Visitors can scroll back as far as anyone signed in.</small></span></label>
     </fieldset>
-  </section>
+  </Card>
 
-  <section class="card">
+  <Card kind="section" as="section" class="admin-section">
     <h2>Invite links</h2>
     <form class="mint" onsubmit={(e) => { e.preventDefault(); void mint(); }}>
       <Field label="Who is this invite for?" hideLabel class="grow">
@@ -210,9 +211,9 @@
     {:else}
       <p class="help">No open invites. Each link works once and lasts two weeks.</p>
     {/if}
-  </section>
+  </Card>
 
-  <section class="card">
+  <Card kind="section" as="section" class="admin-section">
     <h2>Starter packs</h2>
     <p class="help">Someone who has just signed up follows nothing, so the first screen offers them collections to copy. Point it at an account and its public collections become those packs — curate them by signing in as that account and making collections the normal way. An account made for the purpose works well, and its profile doubles as a worked example: what it reads, bookmarks and notes.</p>
     {#if starterCandidates.length}
@@ -241,9 +242,9 @@
     {:else}
       <p class="help">No account has a public collection yet. Once one does, it can be the starter account.</p>
     {/if}
-  </section>
+  </Card>
 
-  <section class="card">
+  <Card kind="section" as="section" class="admin-section">
     <h2>Accounts <Badge>{users.length}</Badge></h2>
     {#if issued}
       <div class="issued" role="status">
@@ -272,7 +273,7 @@
         </li>
       {/each}
     </ul>
-  </section>
+  </Card>
 {:else}
   <p class="status">Loading…</p>
 {/if}
@@ -283,7 +284,8 @@
   /* 2px is an optical nudge under the title, not a spacing step. */
   .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   code { font-size: calc(var(--text-sm) * var(--size-app)); /* 1px vertical is optical: an inline code chip stays on the text's line. */ background: var(--surface-2); padding: 1px var(--space-2); border-radius: var(--radius-xs); }
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
+  /* The room between sections is set on the cards' own class, since the cards are drawn by the shared Card. */
+  :global(.admin-section) { margin-bottom: var(--space-4); }
   h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 var(--space-3); display: flex; align-items: baseline; gap: var(--space-2); }
   .help { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .inline { display: flex; gap: var(--space-2); align-items: flex-end; margin-bottom: var(--space-4); }

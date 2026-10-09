@@ -2,15 +2,29 @@
   import type { Snippet } from 'svelte';
 
   /**
-   * The one card. Every post that shows up in a list — in the river, in
-   * Bookmarks, on a profile — sits on this: the surface color, the rounded
-   * corner, the soft shadow, and on the two hard-edged color themes the
-   * outline that stands in for the shadow.
+   * The one card: the one box lifted off the page. It sets the surface color,
+   * the rounded corner, the soft shadow, and on the two hard-edged color
+   * themes the outline that stands in for the shadow. Nothing else in the app
+   * draws that box for itself.
    *
-   * It also sets the card's edge inset once, as `--card-pad`, so every card in
-   * the app breathes the same distance from its own edge. Cards whose content
-   * runs to the edge (a full-width picture, the note blocks under a post) pass
-   * `pad={false}` and put `var(--card-pad)` on their own rows instead.
+   * Every card is one of three kinds, and cards of a kind look the same on
+   * every screen:
+   *
+   * - `content` (the default): one post, bookmark, or starter pack. It holds
+   *   the edge inset, clips what runs to its edge, and gives a little when
+   *   pressed, since the whole card is something to tap.
+   * - `list`: a card holding rows (Activity, a collection's feeds, Explore's
+   *   results). No inset of its own; each row insets itself by `--card-pad`,
+   *   and the card clips its corners so the first and last rows follow them.
+   * - `section`: a group of settings, or a single message standing on its own
+   *   (an empty section, who can see a profile tab). It holds the edge inset
+   *   and nothing more: it doesn't clip, so a menu or a focus ring inside it
+   *   can spill past its edge, and it doesn't move when pressed.
+   *
+   * The card sets its edge inset once, as `--card-pad`, so every card in the
+   * app breathes the same distance from its own edge. A content card whose
+   * content runs to the edge (a full-width picture, the note blocks under a
+   * post) passes `pad={false}` and puts `var(--card-pad)` on its own rows.
    *
    * Two pieces of a card's text are shared too, because they should look the
    * same wherever a post turns up. Give the title the class `card-title` and
@@ -21,22 +35,28 @@
    *
    * `compact` is the paged layout's density mode: a card that fills a fixed
    * frame, with a tighter edge and no press animation.
+   *
+   * The space around a card (its margins) belongs to the screen. A screen
+   * reaches the card's own element by giving it a class and styling that
+   * class as `:global(...)` under one of its own elements.
    */
   interface Props {
-    /** The element this card really is. A card in a list is an `li`. */
-    as?: 'article' | 'li' | 'div';
+    /** Which of the three kinds this card is. */
+    kind?: 'content' | 'list' | 'section';
+    /** The element this card really is. A card in a list is an `li`; a list card is the `ul` or `ol` itself. */
+    as?: 'article' | 'li' | 'div' | 'section' | 'ul' | 'ol' | 'p';
     compact?: boolean;
-    /** Whether the shell itself holds the edge inset. Off for cards that bleed. */
+    /** Whether the shell itself holds the edge inset. On for content and section cards, off for list cards. */
     pad?: boolean;
     children: Snippet;
     class?: string;
     [key: string]: unknown;
   }
 
-  let { as = 'article', compact = false, pad = true, children, class: klass = '', ...rest }: Props = $props();
+  let { kind = 'content', as = 'article', compact = false, pad = kind !== 'list', children, class: klass = '', ...rest }: Props = $props();
 </script>
 
-<svelte:element this={as} class="card {klass}" class:compact class:pad {...rest}>
+<svelte:element this={as} class="card {kind} {klass}" class:compact class:pad {...rest}>
   {@render children()}
 </svelte:element>
 
@@ -48,12 +68,19 @@
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     border: var(--card-border, 0);
-    overflow: hidden;
     list-style: none;
-    transition: transform 120ms ease;
   }
-  .card:active { transform: scale(0.99); }
   .pad { padding: var(--card-pad); }
+
+  /* A content card is pressable as a whole, so it gives a little under a finger. */
+  .content { overflow: hidden; transition: transform 120ms ease; }
+  .content:active { transform: scale(0.99); }
+
+  /* A list card clips its corners so the first and last rows follow them. As
+     a ul or ol it drops the browser's own list spacing too, at no weight, so
+     the margins a screen sets around the card always win. */
+  .list { overflow: hidden; }
+  :where(.list) { margin: 0; padding: 0; }
 
   /* Compact: a fixed height so a page of cards lines up, and a tighter edge. */
   .compact {
