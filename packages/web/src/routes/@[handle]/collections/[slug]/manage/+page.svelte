@@ -14,6 +14,7 @@
   import Textarea from '$lib/components/Textarea.svelte';
   import BackLink from '$lib/components/BackLink.svelte';
   import Select from '$lib/components/Select.svelte';
+  import Sheet from '$lib/components/Sheet.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -307,56 +308,47 @@
   <p class="status">Loading…</p>
 {/if}
 
-<dialog bind:this={confirmEl} onclick={(e) => { if (e.target === confirmEl) confirmEl?.close(); }} role="alertdialog" aria-labelledby="del-title">
-  {#if col}
-    <div class="sheet">
-      <h2 id="del-title">Delete “{col.name}”?</h2>
-      {#if orphans === null}
-        <p>Checking its feeds…</p>
-      {:else}
-        <p>{#if orphans.length === 0}Its feeds are all in your other collections, so you’ll keep following them.
-          {:else}You’ll stop following the {orphans.length === 1 ? '1 feed that’s' : `${orphans.length} feeds that are`} only in this collection.{/if} This can’t be undone.</p>
-        {#if orphans.length > 0}
-          <button class="reveal tap" onclick={() => (showOrphans = !showOrphans)} aria-expanded={showOrphans}>
-            {showOrphans ? 'Hide' : 'Show'} {orphans.length === 1 ? 'the feed' : `the ${orphans.length} feeds`}
-            <Icon name="caret" size={14} stroke={2.4} dir={showOrphans ? 'up' : 'down'} />
-          </button>
-          {#if showOrphans}
-            <ul class="orphans">
-              {#each orphans as f (f.id)}
-                <li>
-                  <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={28} />
-                  <span class="oname">{f.title ?? hostOf(f.url)}</span>
-                  <a class="chip" href="/feeds/{f.id}/{f.slug}" onclick={() => confirmEl?.close()}>View feed</a>
-                </li>
-              {/each}
-            </ul>
-            <p class="hint">To keep following one, add it to another collection first.</p>
-          {/if}
-        {/if}
+{#if col}
+  <Sheet
+    title="Delete “{col.name}”?"
+    lede={orphans === null
+      ? 'Checking its feeds…'
+      : `${orphans.length === 0 ? 'Its feeds are all in your other collections, so you’ll keep following them.' : `You’ll stop following the ${orphans.length === 1 ? '1 feed that’s' : `${orphans.length} feeds that are`} only in this collection.`} This can’t be undone.`}
+    alert
+    locked={deleting}
+    bind:dialog={confirmEl}
+  >
+    {#if orphans?.length}
+      <button class="reveal tap" onclick={() => (showOrphans = !showOrphans)} aria-expanded={showOrphans}>
+        {showOrphans ? 'Hide' : 'Show'} {orphans.length === 1 ? 'the feed' : `the ${orphans.length} feeds`}
+        <Icon name="caret" size={14} stroke={2.4} dir={showOrphans ? 'up' : 'down'} />
+      </button>
+      {#if showOrphans}
+        <ul class="orphans">
+          {#each orphans as f (f.id)}
+            <li>
+              <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={28} />
+              <span class="oname">{f.title ?? hostOf(f.url)}</span>
+              <a class="chip" href="/feeds/{f.id}/{f.slug}" onclick={() => confirmEl?.close()}>View feed</a>
+            </li>
+          {/each}
+        </ul>
+        <p class="hint">To keep following one, add it to another collection first.</p>
       {/if}
-      <div class="row">
-        <Button variant="danger" onclick={deleteCollection} disabled={deleting || orphans === null}>{deleting ? 'Deleting…' : 'Delete collection'}</Button>
-        <Button onclick={() => confirmEl?.close()} disabled={deleting}>Cancel</Button>
-      </div>
-    </div>
-  {/if}
-</dialog>
+    {/if}
+    {#snippet footer()}
+      <button type="button" class="sheet-action danger" onclick={deleteCollection} disabled={deleting || orphans === null}>{deleting ? 'Deleting…' : 'Delete collection'}</button>
+    {/snippet}
+  </Sheet>
+{/if}
 
 <style>
-  dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: var(--scrim); }
-  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-5) var(--space-4) calc(var(--space-4) + var(--safe-b)); box-shadow: var(--shadow-sheet); max-height: 88vh; overflow: auto; }
-  @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 520px; border-radius: var(--radius-lg); } }
-  .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-3); overflow-wrap: anywhere; }
-  .sheet p { margin: 0 0 var(--space-3); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
-  .reveal { display: inline-flex; align-items: center; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); margin-bottom: var(--space-2); }
-  .orphans { list-style: none; margin: 0 0 var(--space-2); padding: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); max-height: 40vh; overflow-y: auto; }
+  .reveal { align-self: flex-start; display: inline-flex; align-items: center; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
+  .orphans { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); max-height: 40vh; overflow-y: auto; }
   .orphans li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
   .orphans li:first-child { border-top: 0; }
   .oname { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .hint { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .sheet .row { margin-top: var(--space-4); }
+  .hint { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   /* The breadcrumb is the header and takes the room; Delete keeps its size at the right. */
   /* Between one setting and the next: more than the gap inside a setting, so each reads as its own group. */
   .opt { margin-bottom: var(--space-6); }
@@ -375,7 +367,6 @@
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
   /* The picker takes the room; Merge keeps its size beside it. */
   .mergerow { display: flex; align-items: center; gap: var(--space-2); }
   .mergerow :global(.pick) { flex: 1; min-width: 0; }

@@ -15,8 +15,7 @@
   import { feedOrigin, hostOf, relativeTime, webHref } from '$lib/time';
   import SourceIcon from './SourceIcon.svelte';
   import FollowControl from './FollowControl.svelte';
-  import IconButton from './IconButton.svelte';
-  import Button from './Button.svelte';
+  import Sheet from './Sheet.svelte';
   import Badge from './Badge.svelte';
   import { session } from '$lib/session.svelte';
   import { site } from '$lib/site.svelte';
@@ -30,6 +29,8 @@
   /** Asking again after a failure: the message and button stay put meanwhile. */
   let retrying = $state(false);
   let dialog = $state<HTMLDialogElement | null>(null);
+  /** The feed's name: its own once loaded, the post's until then. */
+  const shown = $derived(feed ? feed.title ?? hostOf(feed.url) : name ?? 'This feed');
 
   function load() {
     if (feedId === null) { missing = 'gone'; return; }
@@ -50,79 +51,61 @@
   });
 </script>
 
-<dialog bind:this={dialog} onclose={onclose} onclick={(e) => { if (e.target === dialog) dialog?.close(); }} aria-label={feed ? `About ${feed.title ?? hostOf(feed.url)}` : name ? `About ${name}` : 'About this feed'}>
-  <div class="sheet">
-    {#if feed}
-      <header>
-        <SourceIcon feedId={feed.id} hasIcon={feed.hasIcon} name={feed.title ?? hostOf(feed.url)} size={48} />
-        <div class="who">
-          <h2>{feed.title ?? hostOf(feed.url)}</h2>
-          <div class="addr">
-            <a class="host tap" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
-            {#if feed.requiresSubscription}<Badge title="Posts from this site are behind a paywall: reading them takes a subscription">Requires subscription</Badge>{/if}
-          </div>
+<!-- The header is the feed itself: its icon and name, then its address (or why
+     there's nothing more), and your Follow. While it loads, the name the post
+     already knows stands in, so the panel doesn't jump when the feed arrives. -->
+{#snippet header()}
+  <div class="id">
+    <SourceIcon feedId={feed?.id ?? feedId} hasIcon={feed?.hasIcon ?? hasIcon} name={shown} size={48} />
+    <div class="who">
+      <h2>{shown}</h2>
+      {#if feed}
+        <div class="addr">
+          <a class="host tap" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)} ↗</a>
+          {#if feed.requiresSubscription}<Badge title="Posts from this site are behind a paywall: reading them takes a subscription">Requires subscription</Badge>{/if}
         </div>
-        <IconButton class="close" icon="close" label="Close" onclick={() => dialog?.close()} />
-      </header>
-      {#if feed.description}<p class="desc">{feed.description}</p>{/if}
-      <dl class="stats">
-        <div><dt>Last post</dt><dd>{feed.lastItemAt ? relativeTime(feed.lastItemAt) : '—'}</dd></div>
-        <div><dt>Last 30 days</dt><dd>{feed.postsLast30d} {feed.postsLast30d === 1 ? 'post' : 'posts'}</dd></div>
-        <div><dt>Followers</dt><dd>{feed.followerCount}</dd></div>
-      </dl>
-      <footer>
-        {#if session.user}<FollowControl feedId={feed.id} bind:ids name={feed.title ?? hostOf(feed.url)} />{/if}
-        <Button href={feedHref(feed)} onclick={() => dialog?.close()} style="flex: 1">Open feed</Button>
-      </footer>
-    {:else if missing}
-      <header>
-        <SourceIcon {feedId} {hasIcon} {name} size={48} />
-        <!-- The line under the name says why there's no more, where a feed's address would be. -->
-        <div class="who">
-          <h2>{name ?? 'This feed'}</h2>
-          {#if missing === 'gone'}
-            <p class="said">Not on {site.status?.name ?? 'thicket'}</p>
-          {:else}
-            <p class="said" role="alert">{typeof navigator !== 'undefined' && !navigator.onLine ? 'You’re offline. Reconnect and try again.' : `${site.status?.name ?? 'thicket'} isn’t answering right now. Try again in a minute.`}</p>
-          {/if}
-        </div>
-        <IconButton class="close" icon="close" label="Close" onclick={() => dialog?.close()} />
-      </header>
-      {#if missing === 'gone'}
-        <p class="desc">To get new posts from this site, use Add new feed.</p>
-      {:else}
-        <footer><Button onclick={load} loading={retrying} style="flex: 1">Try again</Button></footer>
+        {#if session.user}<div class="follow"><FollowControl feedId={feed.id} bind:ids name={shown} /></div>{/if}
+      {:else if missing === 'gone'}
+        <p class="said">Not on {site.status?.name ?? 'thicket'}</p>
+      {:else if missing === 'failed'}
+        <p class="said" role="alert">{typeof navigator !== 'undefined' && !navigator.onLine ? 'You’re offline. Reconnect and try again.' : `${site.status?.name ?? 'thicket'} isn’t answering right now. Try again in a minute.`}</p>
       {/if}
-    {:else}
-      <p class="loading">Loading…</p>
-    {/if}
+    </div>
   </div>
-</dialog>
+{/snippet}
+
+<Sheet title={feed || name ? `About ${shown}` : 'About this feed'} {header} bind:dialog {onclose}>
+  {#if feed}
+    {#if feed.description}<p class="desc">{feed.description}</p>{/if}
+    <dl class="stats">
+      <div><dt>Last post</dt><dd>{feed.lastItemAt ? relativeTime(feed.lastItemAt) : '—'}</dd></div>
+      <div><dt>Last 30 days</dt><dd>{feed.postsLast30d} {feed.postsLast30d === 1 ? 'post' : 'posts'}</dd></div>
+      <div><dt>Followers</dt><dd>{feed.followerCount}</dd></div>
+    </dl>
+  {:else if missing === 'gone'}
+    <p class="desc">To get new posts from this site, use Add new feed.</p>
+  {:else if !missing}
+    <p class="loading">Loading…</p>
+  {/if}
+  {#snippet footer()}
+    {#if feed}<a class="sheet-action" href={feedHref(feed)} onclick={() => dialog?.close()}>Open feed</a>
+    {:else if missing === 'failed'}<button type="button" class="sheet-action" onclick={load} disabled={retrying}>{retrying ? 'Trying again…' : 'Try again'}</button>{/if}
+  {/snippet}
+</Sheet>
 
 <style>
-  dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: var(--scrim); }
-  .sheet {
-    position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-b)); max-height: 88vh; overflow: auto;
-    box-shadow: var(--shadow-sheet);
-  }
-  @media (min-width: 700px) {
-    .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 420px; border-radius: var(--radius-lg); }
-  }
-  header { display: flex; align-items: center; gap: var(--space-3); }
+  .id { display: flex; align-items: center; gap: var(--space-3); }
   .who { flex: 1; min-width: 0; }
   h2 { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); line-height: 1.2; overflow-wrap: anywhere; }
   .host { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
   /* "Requires subscription" sits beside the address, and drops under it when the line runs out. */
   .addr { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
-  header :global(.close) { align-self: flex-start; }
-  .desc { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: var(--space-4) 0 0; padding: var(--space-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .follow { margin-top: var(--space-2); }
+  .desc { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: 0; padding: var(--space-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .stats div { display: flex; flex-direction: column; /* 2px is an optical gap between a number and its label. */ gap: 2px; }
   dt { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); }
   dd { margin: 0; font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
-  footer { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); align-items: center; }
   .said { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .loading { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
+  .loading { margin: 0; text-align: center; color: var(--text-2); padding: var(--space-4) 0; }
 </style>

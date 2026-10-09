@@ -15,6 +15,7 @@
   import Button from '$lib/components/Button.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
+  import Sheet from '$lib/components/Sheet.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -315,18 +316,18 @@
       </div>
     </details>
 
-    <dialog bind:this={removeDialog} class="remove" onclick={(e) => { if (e.target === removeDialog) removeDialog?.close(); }} aria-labelledby="remove-title">
-      <h2 id="remove-title">Remove {feedName(feed)} from thicket?</h2>
+    {#snippet removeLede()}
       {#if impact}
         <p>This deletes, for everyone: <strong>{n(impact.posts, 'post', 'posts')}</strong>, and its place in <strong>{n(impact.collections, 'collection', 'collections')}</strong> belonging to <strong>{n(impact.followers, 'person', 'people')}</strong>. {impact.bookmarks ? `${n(impact.bookmarks, 'bookmark keeps', 'bookmarks keep')} ${impact.bookmarks === 1 ? 'its' : 'their'} saved copy and any note, but ${impact.bookmarks === 1 ? 'loses' : 'lose'} the link to the post.` : ''} It cannot be undone; the feed can be added again later, but its older posts may not come back with it.</p>
       {:else}
-        <p class="hint">Counting what this would take with it…</p>
+        <p>Counting what this would take with it…</p>
       {/if}
-      <div class="actions">
-        <Button onclick={() => removeDialog?.close()}>Keep it</Button>
-        <Button variant="danger" solid onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</Button>
-      </div>
-    </dialog>
+    {/snippet}
+    <Sheet title="Remove {feedName(feed)} from thicket?" lede={removeLede} alert locked={removing} bind:dialog={removeDialog}>
+      {#snippet footer()}
+        <button type="button" class="sheet-action danger" onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</button>
+      {/snippet}
+    </Sheet>
   {/if}
 {:else}
   <p class="status">Loading…</p>
@@ -356,11 +357,6 @@
   .admin { align-items: flex-start; }
   .admin .hint { margin: 0; }
   .admin .radios { align-self: stretch; }
-  dialog.remove { max-width: 440px; padding: var(--space-5) var(--space-5) var(--space-4); border: 0; border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: var(--shadow-dialog); }
-  dialog.remove::backdrop { background: var(--scrim); }
-  dialog.remove h2 { margin: 0 0 var(--space-3); font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }
-  dialog.remove p { margin: 0 0 var(--space-4); line-height: 1.5; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  dialog.remove .actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
   .fold summary { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; list-style: none; color: var(--text-2); }
   .fold summary::-webkit-details-marker { display: none; }
   .fold summary h2 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); }

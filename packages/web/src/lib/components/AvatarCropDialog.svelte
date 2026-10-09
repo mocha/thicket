@@ -6,8 +6,9 @@
    *
    * Dragging is never the only way: four arrow buttons move the photo a step
    * at a time, for anyone using a keyboard or who can't hold and drag, and the
-   * slider does the zooming. It is a real dialog, so focus moves into it, stays
-   * in it, and goes back to where it was when it closes; Escape cancels.
+   * slider does the zooming. It is a Sheet, so focus moves into it, stays in
+   * it, and goes back to where it was when it closes; Escape cancels, except
+   * while the photo is saving.
    *
    * The cropping library is loaded only once this dialog opens (a dynamic
    * import), so it never weighs down the rest of the app — most people never
@@ -20,7 +21,7 @@
   import { authApi, ApiError } from '$lib/api';
   import { showToast } from '$lib/toast.svelte';
   import IconButton from './IconButton.svelte';
-  import Button from './Button.svelte';
+  import Sheet from './Sheet.svelte';
 
   let { file, onclose, onsaved }: { file: File; onclose: () => void; onsaved: (avatarUpdatedAt: string) => void } = $props();
 
@@ -107,11 +108,7 @@
   }
 </script>
 
-<dialog bind:this={dialog} {onclose} oncancel={(e) => { if (saving) e.preventDefault(); }} onclick={(e) => { if (e.target === dialog && !saving) dialog?.close(); }} aria-labelledby="crop-title">
-<div class="panel">
-  <h2 id="crop-title">Position your photo</h2>
-  <p class="help">Drag or use the arrows to move, and pinch or use the slider to zoom. What’s in the circle is your picture.</p>
-
+<Sheet title="Position your photo" lede="Drag or use the arrows to move, and pinch or use the slider to zoom. What’s in the circle is your picture." bind:dialog {onclose} locked={saving}>
   <div class="stage" bind:this={stage}>
     {#if Cropper}
       <Cropper image={url} bind:crop bind:zoom aspect={1} cropShape="round" showGrid={false} oncropcomplete={(e: { pixels: typeof area }) => (area = e.pixels)} />
@@ -137,31 +134,18 @@
     <input type="range" min="1" max="3" step="0.01" bind:value={zoom} disabled={!Cropper} />
   </label>
 
-  <div class="row">
-    <Button onclick={() => dialog?.close()} disabled={saving}>Cancel</Button>
-    <Button variant="primary" onclick={save} disabled={saving || !area}>{saving ? 'Saving…' : 'Save photo'}</Button>
-  </div>
-</div>
-</dialog>
+  {#snippet footer()}
+    <button type="button" class="sheet-action" onclick={save} disabled={saving || !area}>{saving ? 'Saving…' : 'Save photo'}</button>
+  {/snippet}
+</Sheet>
 
 <style>
-  dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: var(--scrim); }
-  .panel {
-    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto;
-    background: var(--surface); color: var(--text); border-radius: var(--radius); padding: var(--space-4);
-    box-shadow: var(--shadow-dialog);
-  }
-  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-2); }
-  .help { margin: 0 0 var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
-  /* The cropper fills this box; it needs an explicit height to lay itself out. */
-  .stage { position: relative; width: 100%; height: 300px; border-radius: var(--radius-md); overflow: hidden; background: var(--bg); }
+  /* The cropper fills this box; it needs an explicit height to lay itself out, and keeps it when the Sheet is short. */
+  .stage { position: relative; flex: none; width: 100%; height: 300px; border-radius: var(--radius-md); overflow: hidden; background: var(--bg); }
   .status { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: 0 var(--space-4); text-align: center; }
   /* Move and Zoom: a name on the left, its control after it, the two names the same width so the controls line up. */
-  .ctrl { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
+  .ctrl { display: flex; align-items: center; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .ctrl > span { flex: none; width: 3.2em; }
   .ctrl input { flex: 1; accent-color: var(--accent); }
   .arrows { display: flex; gap: var(--space-2); }
-  .row { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4); }
 </style>
