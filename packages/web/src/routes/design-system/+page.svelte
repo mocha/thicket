@@ -674,10 +674,10 @@
 
     <section class="entry" id="tabs" aria-labelledby="tabs-h">
       <h3 class="entry-h" id="tabs-h">Tabs</h3>
-      <p class="section-lede">Switch what you're looking at. Pressing a tab swaps the content below it.</p>
+      <p class="section-lede">Switch what you're looking at. Pressing a tab swaps the content below it. A tab can carry a count in parentheses, tucked close to its name so it reads as part of that tab. Counts over a thousand are rounded, like 1.8K, so a long row still fits.</p>
       <Tabs
         tabs={[
-          { value: 'all', label: 'Everything' },
+          { value: 'all', label: 'Everything', count: 1786 },
           { value: 'unread', label: 'Feeds', count: 24 },
           { value: 'notes', label: 'Notes', count: 3 },
           { value: 'saved', label: 'Bookmarks' }

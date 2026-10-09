@@ -164,7 +164,7 @@
       return {
         value: s.id,
         label: s.label,
-        count: n === null ? undefined : n.toLocaleString(),
+        count: n ?? undefined,
         disabled: n === 0
       };
     })
