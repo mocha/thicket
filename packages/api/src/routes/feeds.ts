@@ -16,6 +16,7 @@ import { isHttpUrl, normalizeFeedUrl } from "../feeds/normalize.js";
 import { refreshIcon } from "../feeds/icons.js";
 import { isYouTubeUrl, YOUTUBE_FEED_PATTERN } from "../feeds/youtube.js";
 import { feedSlugSql } from "../lib/slug.js";
+import { rememberRemoved } from "../lib/original.js";
 import { PUBLIC_URL } from "../lib/config.js";
 
 export const feeds = new Hono();
@@ -251,6 +252,7 @@ feeds.delete("/:id", async (c) => {
   const mine = await db.select({ id: schema.collections.id }).from(schema.collections).where(eq(schema.collections.userId, user.id));
   const ids = mine.map((m) => m.id);
   const removed = await db.delete(schema.collectionFeeds).where(and(eq(schema.collectionFeeds.feedId, feedId), inArray(schema.collectionFeeds.collectionId, ids))).returning({ collectionId: schema.collectionFeeds.collectionId });
+  await rememberRemoved(user.id, [feedId], removed.map((r) => r.collectionId));
   return c.json({ feedId, collectionIds: removed.map((r) => r.collectionId) });
 });
 
@@ -279,10 +281,13 @@ feeds.put("/:id/collections", async (c) => {
   const named = new Set(mine.filter((m) => m.parentId !== null).map((m) => m.id));
   // The root is never a destination; asking for it alone is the same as unfollowing.
   const wanted = [...new Set(body.collectionIds ?? [])].filter((id) => named.has(id));
-  await db.transaction(async (tx) => {
-    await tx.delete(schema.collectionFeeds).where(and(eq(schema.collectionFeeds.feedId, feedId), inArray(schema.collectionFeeds.collectionId, [...allowed])));
+  const before = await db.transaction(async (tx) => {
+    const was = await tx.delete(schema.collectionFeeds).where(and(eq(schema.collectionFeeds.feedId, feedId), inArray(schema.collectionFeeds.collectionId, [...allowed]))).returning({ collectionId: schema.collectionFeeds.collectionId });
     if (wanted.length) await tx.insert(schema.collectionFeeds).values(wanted.map((collectionId) => ({ collectionId, feedId }))).onConflictDoNothing();
+    return was.map((w) => w.collectionId);
   });
+  // Taking it out of a copy I follow updates for is passing on it (lib/original.ts).
+  await rememberRemoved(user.id, [feedId], before.filter((id) => !wanted.includes(id)));
   return c.json({ feedId, collectionIds: wanted });
 });
 

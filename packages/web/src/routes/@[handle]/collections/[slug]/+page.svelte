@@ -4,7 +4,7 @@
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { api, collectionHref, feedHref, manageCollectionHref, profileHref, profilesApi, type PublicCollection } from '$lib/api';
+  import { api, collectionHref, collectionsApi, feedHref, manageCollectionHref, profileHref, profilesApi, type PublicCollection } from '$lib/api';
   import { openAddFeed } from '$lib/addfeed.svelte';
   import { session } from '$lib/session.svelte';
   import { loadCollections } from '$lib/collections.svelte';
@@ -20,6 +20,7 @@
   import Badge from '$lib/components/Badge.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import River from '$lib/components/River.svelte';
+  import OriginalReviewSheet from '$lib/components/OriginalReviewSheet.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { COPY_PARAM, copyNext, welcome } from '$lib/copyintent.svelte';
 
@@ -34,6 +35,12 @@
    * logging in brings you back here with ?copy on the address, and the copy
    * is made the moment the page loads, no second press. The portable form
    * underneath is OPML, advertised in <head>; nobody has to know that.
+   *
+   * Updates from the original (issue #52): a box under the visitor's Copy
+   * button, ticked to begin with, says whether the copy should hear about
+   * feeds the original gains. On my copy, the same choice sits under "Copied
+   * from", with Review beside it, and a banner when there are new feeds.
+   * ?updates on the address (from a notification) opens the review.
    */
   const handle = $derived(page.params.handle ?? '');
   const slug = $derived(page.params.slug ?? '');
@@ -52,6 +59,46 @@
   // "your copy" of what's on screen: Copy stays the main button, and a banner
   // says which collection you made from this one and how much of it it has.
   const partialCopy = $derived(!justCopied && col?.myCopy && col.myCopy.sharedFeeds < col.feeds.length ? col.myCopy : null);
+  /** Visitor: whether the copy they make should hear about the original's new feeds. */
+  let followOnCopy = $state(true);
+  /** Owner of a copy: the review of what its original has that it doesn't is open. */
+  let reviewing = $state(false);
+  let togglingUpdates = $state(false);
+
+  /** Fetch the collection again after a change to it, leaving the page as it is. */
+  async function reload() {
+    const c = await profilesApi.collection(handle, slug);
+    if (`${handle}/${slug}` === loadedKey) col = c;
+  }
+
+  async function setUpdates(on: boolean) {
+    if (!col || togglingUpdates) return;
+    togglingUpdates = true;
+    try {
+      await collectionsApi.update(col.id, { followsOriginal: on });
+      api.event('original_updates_set', { collectionId: col.id, on });
+      await reload();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    } finally {
+      togglingUpdates = false;
+    }
+  }
+
+  function reviewed(r: { added: number; ignored: number }) {
+    if (r.added) showToast(`Added ${r.added === 1 ? '1 feed' : `${r.added} feeds`} to ${col?.name}`);
+    void reload();
+    if (r.added) void loadCollections(true);
+  }
+
+  // From a notification: open the review once my copy has loaded, then take ?updates off the address.
+  $effect(() => {
+    if (!page.url.searchParams.has('updates') || !col) return;
+    const url = new URL(page.url);
+    url.searchParams.delete('updates');
+    void goto(url.pathname + url.search + url.hash, { replaceState: true, noScroll: true, keepFocus: true });
+    if (col.isMe && col.updates?.available) reviewing = true;
+  });
 
   $effect(() => {
     const key = `${handle}/${slug}`;
@@ -81,10 +128,11 @@
     copying = true;
     try {
       // Copied on arrival: a brand-new account's empty starter collection goes (the server checks it's untouched).
-      const mine = await profilesApi.copyCollection(handle, slug, { replaceStarter: !!after });
+      // Copied on arrival there was no box to untick, so it follows the original, as the box would have.
+      const mine = await profilesApi.copyCollection(handle, slug, { replaceStarter: !!after, follow: after ? true : followOnCopy });
       justCopied = { slug: mine.slug, name: mine.name };
       // `after` is set when this copy finished a sign-up or log-in, so we can count the accounts shared collections bring in.
-      api.event('collection_copied', { from: `${handle}/${slug}`, collectionId: mine.id, feeds: mine.feedCount, ...(after ? { after } : {}) });
+      api.event('collection_copied', { from: `${handle}/${slug}`, collectionId: mine.id, feeds: mine.feedCount, follow: after ? true : followOnCopy, ...(after ? { after } : {}) });
       void loadCollections(true);
       if (after) {
         // Copied on arrival: go to the copy itself, so it's what's behind the
@@ -135,11 +183,32 @@
       {/if}{/snippet}
     {#if !col.isMe}
       <p class="sub">by <a href={profileHref(col.owner.handle)}>{col.owner.displayName ?? `@${col.owner.handle}`}</a></p>
+      {#if session.user && (!existingCopy || partialCopy)}
+        <label class="followbox"><input type="checkbox" bind:checked={followOnCopy} disabled={copying} /><span>Tell me when it gets new feeds</span></label>
+      {/if}
     {:else if audienceTag(col.visibility)}
       <p class="sub"><Badge>{audienceTag(col.visibility)}</Badge></p>
     {/if}
     {#if col.isMe && col.copiedFrom}
       <p class="sub">Copied from <a href={collectionHref(col.copiedFrom.owner.handle, col.copiedFrom.slug)}>{col.copiedFrom.name}</a> by <a href={profileHref(col.copiedFrom.owner.handle)}>{col.copiedFrom.owner.displayName ?? `@${col.copiedFrom.owner.handle}`}</a></p>
+    {/if}
+    {#if col.isMe && col.updates}
+      {@const u = col.updates}
+      {#if u.available}
+        <div class="updates">
+          <label class="followbox"><input type="checkbox" checked={u.on} disabled={togglingUpdates} onchange={(e) => setUpdates(e.currentTarget.checked)} /><span>Tell me when {col.copiedFrom?.name ?? 'the original'} gets new feeds</span></label>
+          {#if u.on && u.newFeeds === 0}<Button size="sm" link onclick={() => (reviewing = true)}>Review</Button>{/if}
+        </div>
+        {#if u.on && u.newFeeds > 0}
+          {#snippet fresh()}{u.newFeeds === 1 ? '1 new feed' : `${u.newFeeds} new feeds`} in {col?.copiedFrom?.name ?? 'the original'}{/snippet}
+          <div class="mycopy"><Banner title={fresh}><span class="bannerrow">Feeds it has that this copy doesn’t. <Button size="sm" variant="primary" onclick={() => (reviewing = true)}>Review</Button></span></Banner></div>
+        {/if}
+      {:else if u.on}
+        <div class="updates">
+          <p class="sub">The collection this was copied from isn’t shared with you any more, so there’s nothing to compare it to.</p>
+          <Button size="sm" link onclick={() => setUpdates(false)} disabled={togglingUpdates}>Stop checking</Button>
+        </div>
+      {/if}
     {/if}
     {#if partialCopy && session.user}
       {@const href = collectionHref(session.user.handle, partialCopy.slug)}
@@ -153,6 +222,10 @@
     {/if}
   </PageHeader>
   {#snippet colDesc()}{col?.description}{/snippet}
+
+  {#if reviewing}
+    <OriginalReviewSheet collectionId={col.id} name={col.name} onclose={() => (reviewing = false)} ondone={reviewed} />
+  {/if}
 
   <!-- You already have a copy: making another is fine (you might prune each
        differently), but say so first so it isn't an accident. -->
@@ -220,6 +293,11 @@
   .sub { margin: var(--space-1) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .sub a { color: var(--accent); font-weight: 600; }
   .mycopy { margin-top: var(--space-4); }
+  .followbox { display: inline-flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); cursor: pointer; }
+  .followbox input { width: 18px; height: 18px; margin: 0; flex: none; accent-color: var(--accent); }
+  .updates { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+  .updates .followbox, .updates .sub { margin-top: 0; }
+  .bannerrow { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); }
   /* The pill sits in a line of text, so it carries its own gap to the separator after it. */
   .feedscard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: var(--space-4); }
   /* The row that opens the card. As tall open as closed, so the Export button arriving doesn't move anything. */

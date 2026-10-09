@@ -5,6 +5,7 @@
  *   bookmark  someone I follow bookmarked a post
  *   note      someone I follow wrote a note on a post
  *   mention   someone @mentioned me in a note (lib/mentions.ts)
+ *   original  a collection I copied has feeds my copy doesn't (lib/original.ts)
  *
  * **Derived, not stored**, like activity (lib/activity.ts): there is no
  * notifications table. Each one is read off the row it is about, so an
@@ -39,12 +40,18 @@
  *   - A mention shows when their profile is public and their notes are shared
  *     with me, whether or not I follow them: being named is the point. It
  *     supersedes the plain "noted" line for the same note.
+ *   - An original names how many feeds my copy doesn't have, not which, and
+ *     only for a copy with updates on whose original I can still see
+ *     (lib/original.ts decides that, as the copy's page does). It is dated by
+ *     the newest of those feeds going into the original, so it comes back
+ *     when another arrives, and is gone once I've taken or passed on them all.
  *   - Nothing I did myself.
  */
 import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { mentionsHandleSql } from "./mentions.js";
 import { noteJson } from "./notes.js";
+import { newInOriginal, originalOf } from "./original.js";
 import { allows, type Audience, type ShareLevel } from "./visibility.js";
 
 /** How far back the list goes. */
@@ -54,7 +61,7 @@ export const CAP = 100;
 
 /** How far back `since` may reach when a script asks for a range. The list still holds at most CAP. */
 export const MAX_DAYS = 365;
-export const KINDS = ["follow", "bookmark", "note", "mention"] as const;
+export const KINDS = ["follow", "bookmark", "note", "mention", "original"] as const;
 export type Kind = (typeof KINDS)[number];
 
 /**
@@ -133,7 +140,13 @@ export type SaveRow = { id: number; author: Author; post: PostRef; savedAt: stri
  */
 export type MentionRow = { id: number; author: Author; at: string; bookmark: Record<string, unknown> };
 
-export type Candidates = { follows: FollowRow[]; saves: SaveRow[]; mentions: MentionRow[] };
+/**
+ * One of my copies with updates on, whose original I can still see: how many
+ * feeds it has that my copy doesn't, and when the newest went in.
+ */
+export type OriginalRow = { copy: { name: string; slug: string }; original: { name: string; slug: string }; owner: Person; count: number; latest: string | null };
+
+export type Candidates = { follows: FollowRow[]; saves: SaveRow[]; mentions: MentionRow[]; originals: OriginalRow[] };
 
 type Who = Omit<Person, "id">;
 const who = (p: Person): Who => ({ handle: p.handle, displayName: p.displayName, avatarUpdatedAt: p.avatarUpdatedAt });
@@ -141,7 +154,8 @@ const who = (p: Person): Who => ({ handle: p.handle, displayName: p.displayName,
 export type Notification =
   | { kind: "follow"; key: string; at: string; isNew: boolean; person: Who }
   | { kind: "bookmark" | "note"; key: string; at: string; isNew: boolean; person: Who; post: PostRef }
-  | { kind: "mention"; key: string; at: string; isNew: boolean; person: Who; bookmark: Record<string, unknown> };
+  | { kind: "mention"; key: string; at: string; isNew: boolean; person: Who; bookmark: Record<string, unknown> }
+  | { kind: "original"; key: string; at: string; isNew: boolean; person: Who; count: number; copy: { name: string; slug: string }; original: { name: string; slug: string } };
 
 /** A notification before it is judged new or not. */
 type Draft = Notification extends infer N ? (N extends unknown ? Omit<N, "isNew"> : never) : never;
@@ -190,6 +204,11 @@ export function assemble(meId: number, c: Candidates, opts: { seenAt: string; si
     }
   }
 
+  for (const o of c.originals) {
+    if (o.count < 1 || !inWindow(o.latest)) continue;
+    out.push({ kind: "original", key: `original:${o.copy.slug}`, at: o.latest!, person: who(o.owner), count: o.count, copy: o.copy, original: o.original });
+  }
+
   const kept = opts.kinds ? out.filter((n) => opts.kinds!.includes(n.kind)) : out;
   kept.sort((x, y) => Date.parse(y.at) - Date.parse(x.at) || (x.key < y.key ? -1 : 1));
   const items = kept.slice(0, CAP).map((n) => ({ ...n, isNew: Date.parse(n.at) > seen }) as Notification);
@@ -220,7 +239,8 @@ const authorOf = (r: AuthorDbRow): Author => ({
  * Everything that could be a notification for me in the window, straight from
  * the tables. Three bounded reads: my followers by the followee index, the
  * bookmarks of the people I follow by (user, saved_at), and notes written or
- * edited lately by the partial index on note_updated_at.
+ * edited lately by the partial index on note_updated_at. Then one comparison
+ * per copy of mine with updates on.
  */
 export async function candidatesFor(me: { id: number; handle: string }, since: string, until: string): Promise<Candidates> {
   const follows = await db.execute<{ at: Date; id: number; handle: string; displayName: string | null; avatarUpdatedAt: Date | null; profileVisibility: "public" | "private" }>(sql`
@@ -268,7 +288,19 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
     order by b.note_updated_at desc limit ${CAP}
   `);
 
+  // Few per person, each compared when asked (lib/original.ts): nothing about an original is stored.
+  const copies = await db.execute<{ id: number; name: string; slug: string }>(sql`
+    select id, name, slug from collections where user_id = ${me.id} and follows_original and copied_from_id is not null`);
+  const originals: OriginalRow[] = [];
+  for (const cp of copies.rows) {
+    const orig = await originalOf(Number(cp.id), me.id);
+    if (!orig) continue;
+    const { count, latest } = await newInOriginal(Number(cp.id), orig);
+    originals.push({ copy: { name: cp.name, slug: cp.slug }, original: { name: orig.name, slug: orig.slug }, owner: orig.owner, count, latest });
+  }
+
   return {
+    originals,
     follows: follows.rows.map((r) => ({ at: iso(r.at)!, person: { id: Number(r.id), handle: r.handle, displayName: r.displayName, avatarUpdatedAt: iso(r.avatarUpdatedAt), profileVisibility: r.profileVisibility } })),
     saves: saves.rows.map((r) => ({
       id: Number(r.id), author: authorOf(r), savedAt: iso(r.savedAt)!, noteCreatedAt: iso(r.noteCreatedAt), followedAt: iso(r.followedAt)!,

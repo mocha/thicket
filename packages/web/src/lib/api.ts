@@ -175,6 +175,14 @@ export type CollectionFeed = {
   displayName: string | null;
 };
 export type CollectionDetail = Collection & { userId: number; feeds: CollectionFeed[]; children: Collection[] };
+/** A feed my copy's original has and my copy doesn't. `ignored`: I passed on it before. `addedAt`: when it went into the original. */
+export type OriginalFeed = PublicCollectionFeed & { addedAt: string | null; ignored: boolean };
+export type OriginalUpdates = {
+  followsOriginal: boolean;
+  /** Null when this isn't a copy, or its original is gone or no longer shared with me. */
+  original: { name: string; slug: string; owner: NotificationPerson } | null;
+  feeds: OriginalFeed[];
+};
 export type ImportResult = { feeds: number; collections: number; skipped: string[] };
 
 export const collectionsApi = {
@@ -182,10 +190,14 @@ export const collectionsApi = {
   /** Feeds that would stop being followed if this collection were deleted. */
   orphans: (id: number) => j<{ feeds: { id: number; title: string | null; url: string; siteUrl: string | null; slug: string; hasIcon: boolean }[] }>(`/api/collections/${id}/orphans`),
   create: (name: string, parentId?: number) => j<Collection>('/api/collections', { method: 'POST', body: JSON.stringify({ name, parentId }) }),
-  update: (id: number, patch: { name?: string; description?: string; parentId?: number; visibility?: ShareLevel }) => j<Collection>(`/api/collections/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  update: (id: number, patch: { name?: string; description?: string; parentId?: number; visibility?: ShareLevel; followsOriginal?: boolean }) => j<Collection>(`/api/collections/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   remove: (id: number) => j<{ deleted: number }>(`/api/collections/${id}`, { method: 'DELETE' }),
   /** Merge this collection into another of mine: that one keeps its name and gains these feeds and sub-collections; this one is deleted. */
   merge: (id: number, intoId: number) => j<{ into: { id: number; name: string; slug: string }; added: number; movedChildren: number }>(`/api/collections/${id}/merge`, { method: 'POST', body: JSON.stringify({ intoId }) }),
+  /** For a copy: what its original has that it doesn't, new feeds first, then the ones I passed on before (issue #52). */
+  original: (id: number) => j<OriginalUpdates>(`/api/collections/${id}/original`),
+  /** Finish reviewing a copy's original: `add` goes into the copy, `ignore` is passed on and not counted as new again. */
+  reviewOriginal: (id: number, add: number[], ignore: number[]) => j<{ added: number; ignored: number }>(`/api/collections/${id}/original`, { method: 'POST', body: JSON.stringify({ add, ignore }) }),
   removeFeed: (id: number, feedId: number) => j<unknown>(`/api/collections/${id}/feeds/${feedId}`, { method: 'DELETE' }),
   addFeed: (id: number, feedId: number) => j<unknown>(`/api/collections/${id}/feeds/${feedId}`, { method: 'PUT' }),
   setFeedCollections: (feedId: number, collectionIds: number[]) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${feedId}/collections`, { method: 'PUT', body: JSON.stringify({ collectionIds }) }),
@@ -276,11 +288,13 @@ export type NotificationPost = { url: string; title: string | null; siteTitle: s
  *   bookmark  `person` (someone I follow) bookmarked `post`
  *   note      `person` (someone I follow) wrote a note on `post`
  *   mention   `person` @mentioned me in the note on `bookmark`
+ *   original  `person`'s `original`, which I copied as `copy`, has `count` feeds my copy doesn't
  */
 export type Notification =
   | { kind: 'follow'; key: string; at: string; isNew: boolean; person: NotificationPerson }
   | { kind: 'bookmark' | 'note'; key: string; at: string; isNew: boolean; person: NotificationPerson; post: NotificationPost }
-  | { kind: 'mention'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark };
+  | { kind: 'mention'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark }
+  | { kind: 'original'; key: string; at: string; isNew: boolean; person: NotificationPerson; count: number; copy: { name: string; slug: string }; original: { name: string; slug: string } };
 
 export const notificationsApi = {
   /** The last 30 days, at most 100. Reading does not mark them seen; `asOf` is what to pass to `seen`. */
@@ -537,6 +551,12 @@ export type PublicCollection = {
   myCopy: { slug: string; name: string; sharedFeeds: number } | null;
   /** For the owner: the collection this one was copied from, while they can still see it. */
   copiedFrom: { name: string; slug: string; owner: PublicUser } | null;
+  /**
+   * For the owner of a copy (issue #52): whether they're told when the
+   * original has feeds the copy doesn't, whether the original can still be
+   * seen, and how many feeds are new in it. Null when it isn't a copy.
+   */
+  updates: { on: boolean; available: boolean; newFeeds: number } | null;
 };
 /** Someone's saved post on their profile: their note, if they share notes with me, and whether I have saved it too. */
 export type PublicBookmark = Omit<Bookmark, 'notes'> & { myBookmarkId: number | null };
@@ -551,7 +571,7 @@ export const profilesApi = {
   unfollow: (handle: string) => j<{ handle: string; isFollowing: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/follow`, { method: 'DELETE' }),
   collection: (handle: string, slug: string) => j<PublicCollection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}`),
   /** `replaceStarter`: this copy finishes signing up to get it, so an untouched, empty "My first collection" goes. */
-  copyCollection: (handle: string, slug: string, opts: { replaceStarter?: boolean } = {}) => j<Collection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/copy`, { method: 'POST', body: JSON.stringify(opts) }),
+  copyCollection: (handle: string, slug: string, opts: { replaceStarter?: boolean; follow?: boolean } = {}) => j<Collection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/copy`, { method: 'POST', body: JSON.stringify(opts) }),
   opmlUrl: (handle: string, slug: string) => `/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/opml`,
   /**
    * Their bookmarks, newest activity first. `notes`: only the ones with a note

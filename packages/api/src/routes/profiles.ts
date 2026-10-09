@@ -24,6 +24,7 @@ import { noteJson } from "../lib/notes.js";
 import { activeAtSql } from "./bookmarks.js";
 import { allowedLevels, allowedLevelsSql, allows, isFriendOf, type Audience, type ShareLevel } from "../lib/visibility.js";
 import { visitorCap } from "../lib/instance.js";
+import { updatesFor } from "../lib/original.js";
 
 export const profiles = new Hono();
 
@@ -293,10 +294,12 @@ profiles.get("/:handle/collections/:slug", async (c) => {
         from newest`)).rows[0] ?? null
     : null;
   const copiedFrom = r.isMe ? await copiedFromFor(r.col.id, r.viewer!.id) : null;
+  // For the owner of a copy: updates from its original (issue #52).
+  const updates = r.isMe ? await updatesFor(r.col.id, r.viewer!.id) : null;
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
   return c.json({
     id: r.col.id, name: r.col.name, slug: r.col.slug, description: r.col.description, visibility: r.col.visibility, createdAt: iso(r.col.createdAt),
-    owner: publicUser(r.u), isMe: r.isMe, myCopy, copiedFrom,
+    owner: publicUser(r.u), isMe: r.isMe, myCopy, copiedFrom, updates,
     feeds: feeds.rows.map((f: any) => ({ ...f, lastItemAt: iso(f.lastItemAt) })),
     children: children.rows,
   });
@@ -322,6 +325,10 @@ profiles.get("/:handle/collections/:slug/opml", async (c) => {
  * sub-collections included. The copy is mine and independent; copied_from_id
  * records where it came from. Feeds I already follow simply gain a collection.
  *
+ * Body { follow: true }: tell me when the original has feeds my copy doesn't
+ * (issue #52). Set on the copy itself; its sub-collections come along as part
+ * of it (lib/original.ts).
+ *
  * Body { replaceStarter: true }: this copy finishes signing up to get it, so
  * the empty "My first collection" every account starts with goes too. Only
  * while it's still untouched: the account is under a day old, and the
@@ -329,7 +336,7 @@ profiles.get("/:handle/collections/:slug/opml", async (c) => {
  */
 profiles.post("/:handle/collections/:slug/copy", async (c) => {
   const me = currentUser(c);
-  const body = await c.req.json<{ replaceStarter?: boolean }>().catch(() => ({} as { replaceStarter?: boolean }));
+  const body = await c.req.json<{ replaceStarter?: boolean; follow?: boolean }>().catch(() => ({} as { replaceStarter?: boolean; follow?: boolean }));
   const r = await visibleCollection(c, c.req.param("handle"), c.req.param("slug"));
   if ("error" in r) return c.json({ error: r.error }, r.status);
   if (r.isMe) return c.json({ error: "That’s already yours." }, 400);
@@ -357,9 +364,9 @@ profiles.post("/:handle/collections/:slug/copy", async (c) => {
 
     // A sub-collection's name can collide with something elsewhere in my tree,
     // so each one asks for its own free slug as it is created.
-    async function copyTree(srcId: number, parentId: number, nm: string, description: string | null) {
+    async function copyTree(srcId: number, parentId: number, nm: string, description: string | null, followsOriginal = false) {
       const slug = await uniqueCollectionSlug(me.id, nm, { tx });
-      const [col] = await tx.insert(schema.collections).values({ userId: me.id, parentId, name: nm, slug, description, copiedFromId: srcId }).returning();
+      const [col] = await tx.insert(schema.collections).values({ userId: me.id, parentId, name: nm, slug, description, copiedFromId: srcId, followsOriginal }).returning();
       await tx.execute(sql`insert into collection_feeds (collection_id, feed_id, title_override) select ${col.id}, feed_id, title_override from collection_feeds where collection_id = ${srcId} on conflict do nothing`);
       // Sub-collections the owner doesn't share with me stay behind; I copy
       // what I can see, which is what the page showed me.
@@ -367,7 +374,7 @@ profiles.post("/:handle/collections/:slug/copy", async (c) => {
       for (const k of kids) await copyTree(k.id, col.id, k.name, k.description);
       return col;
     }
-    return copyTree(r.col.id, me.rootCollectionId, name, raw.description);
+    return copyTree(r.col.id, me.rootCollectionId, name, raw.description, body.follow === true);
   });
   const [{ feedCount }] = (await db.execute<{ feedCount: number }>(sql`select count(*)::int as "feedCount" from collection_feeds where collection_id = ${created.id}`)).rows;
   return c.json({ ...created, feedCount }, 201);

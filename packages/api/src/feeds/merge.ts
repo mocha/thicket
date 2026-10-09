@@ -7,7 +7,7 @@
  *
  * The row at the address the fetch actually lands on survives. Everything
  * people did with the other one moves to it: the collections it was filed in,
- * their settings on it, blocks, and the bookmarks (notes included) on its posts.
+ * their settings on it, blocks, copies' passed-on lists, and the bookmarks (notes included) on its posts.
  * Posts the surviving feed already holds (same dedupe key, or failing that the
  * same link) are not copied; bookmarks are pointed at its copy.
  *
@@ -34,6 +34,10 @@ export async function mergeFeeds(fromId: number, intoId: number, why = "both fet
         updated_at = now()`);
     await tx.execute(sql`
       insert into blocks (user_id, feed_id) select user_id, ${intoId} from blocks where feed_id = ${fromId}
+      on conflict do nothing`);
+    // A feed passed on in a copy's updates (lib/original.ts) stays passed on under its surviving row.
+    await tx.execute(sql`
+      insert into copy_ignored_feeds (collection_id, feed_id, created_at) select collection_id, ${intoId}, created_at from copy_ignored_feeds where feed_id = ${fromId}
       on conflict do nothing`);
 
     // Each post on the old feed, and the surviving feed's copy of it if it has one.
