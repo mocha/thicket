@@ -144,7 +144,7 @@
     {@const bad = refused(g)}
     {@const renamed = g.keep && !!g.name.trim() && finalNames.get(gi) !== g.name.trim()}
     {@const blocked = settled(g) && !canKeep(g)}
-    <Card kind="section" as="section" class="import-section group {g.keep ? '' : 'off'}">
+    <Card kind="section" as="section" class="import-section {g.keep ? '' : 'off'}">
       <div class="ghead">
         <label class="keep">
           <input type="checkbox" checked={g.keep} onchange={(e) => toggleKeep(g, e)} />

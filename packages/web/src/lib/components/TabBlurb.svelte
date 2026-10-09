@@ -26,10 +26,10 @@
 {/if}
 
 <style>
-  /* Global because the boxed blurb's element is drawn by the shared Card; the class is this piece's own. */
-  :global(.tabblurb) { margin: var(--space-2) 0 var(--space-4); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); text-align: center; text-wrap: pretty; }
+  /* The boxed blurb's element is drawn by the shared Card, so it is reached with a global rule. */
+  .tabblurb, :global(.tabblurb.boxed) { margin: var(--space-2) 0 var(--space-4); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); text-align: center; text-wrap: pretty; }
   :global(.tabblurb.boxed) { margin: 0 0 var(--space-3); }
   .t { font-weight: 600; }
   .i { display: inline-block; vertical-align: -3px; margin-right: var(--space-2); line-height: 0; }
-  :global(.tabblurb a), :global(.tabblurb button) { padding: 0; font: inherit; color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+  .tabblurb :global(a), .tabblurb :global(button), :global(.tabblurb.boxed a), :global(.tabblurb.boxed button) { padding: 0; font: inherit; color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 </style>

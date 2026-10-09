@@ -156,7 +156,7 @@
 <style>
   /* The filter sits on its own, just above the list it narrows. */
   .filter { margin: 0 0 var(--space-3); }
-  .pad { padding: var(--space-4); }
+  .pad { padding: var(--card-pad); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
   .list { list-style: none; margin: 0; padding: 0; }
   li a { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-3) calc(var(--space-4) + var(--indent, 0px)); border-top: 1px solid var(--line); }

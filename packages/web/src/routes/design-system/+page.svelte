@@ -308,19 +308,19 @@
   <section class="group" id="principles" aria-labelledby="principles-h">
     <h2 id="principles-h">Principles</h2>
     <div class="principles">
-      <Card kind="section" as="div" class="tile">
+      <Card kind="section" as="div">
         <h3>Everything hangs off tokens</h3>
         <p>No component names a raw color, size, or corner. They reach for a token, and the token decides. Reskinning is a token change, not a component change.</p>
       </Card>
-      <Card kind="section" as="div" class="tile">
+      <Card kind="section" as="div">
         <h3>Three theme states, not two</h3>
         <p>Light and dark, plus "follow the device" — the state most people never leave. On top of that sit seven full color themes, from soft sepia to hard black-and-white for e-ink.</p>
       </Card>
-      <Card kind="section" as="div" class="tile">
+      <Card kind="section" as="div">
         <h3>One of each</h3>
         <p>One button. One card. One text field. If a screen needs something the kit doesn't have, the kit is what changes — so nothing drifts into a second, slightly-different version.</p>
       </Card>
-      <Card kind="section" as="div" class="tile">
+      <Card kind="section" as="div">
         <h3>Readable by default</h3>
         <p>Every color pair clears the contrast bar in both light and dark. Focus rings, keyboard paths, and screen-reader labels are built into the parts, not bolted on later.</p>
       </Card>

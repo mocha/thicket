@@ -170,7 +170,7 @@
 {/if}
 
 <style>
-  .pad { padding: var(--space-4); }
+  .pad { padding: var(--card-pad); }
   .foot { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin: 0; }
   .acts { list-style: none; margin: 0; padding: 0; }

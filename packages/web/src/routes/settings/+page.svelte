@@ -58,7 +58,7 @@
   {#snippet description()}How thicket looks and how reading in it works.{/snippet}
 </PageHeader>
 
-<Card kind="section" as="section" class="setting">
+<Card kind="section" as="section" class="settings-section">
   <label class="switch">
     <input type="checkbox" checked={isSource()} disabled={savingDisplay} onchange={toggleSource} />
     <span>
@@ -68,38 +68,38 @@
   </label>
 </Card>
 
-<Card kind="section" as="section" class="setting" id="display">
+<Card kind="section" as="section" class="settings-section" id="display">
   <h2>Appearance</h2>
   <Tiles name="Appearance" options={APPEARANCES} value={display.appearance} art={appearanceArt(display.palette, display.accent)} onchange={(v) => choose({ appearance: v }, 'appearance')} />
 </Card>
 
-<Card kind="section" as="section" class="setting">
+<Card kind="section" as="section" class="settings-section">
   <h2>Color theme</h2>
   <ThemePicker />
 </Card>
 
-<Card kind="section" as="section" class="setting">
+<Card kind="section" as="section" class="settings-section">
   <h2>Fonts</h2>
   <FontTable />
 </Card>
 
-<Card kind="section" as="section" class="setting">
+<Card kind="section" as="section" class="settings-section">
   <h2>Opening a post</h2>
   <Tiles name="Opening a post" options={READING_MODES} value={display.reading} art={READING_ART} notes onchange={(v) => choose({ reading: v }, 'reading')} />
 </Card>
 
-<Card kind="section" as="section" class="setting">
+<Card kind="section" as="section" class="settings-section">
   <h2>Unread posts</h2>
   <Tiles name="Unread posts" options={FRESH_OPTIONS} value={display.fresh ? 'on' : 'off'} art={FRESH_ART} notes onchange={(v) => choose({ fresh: v === 'on' }, 'fresh')} />
 </Card>
 
-<Card kind="section" as="section" class="setting">
+<Card kind="section" as="section" class="settings-section">
   <h2>Scrolling or pages</h2>
   <Tiles name="Scrolling or pages" options={LAYOUTS} value={display.layout} art={LAYOUT_ART} notes onchange={(v) => choose({ layout: v }, 'layout')} />
 </Card>
 
 
-<Card kind="section" as="section" class="setting">
+<Card kind="section" as="section" class="settings-section">
   <h2>Notes from other people</h2>
   <p class="help">Whose notes appear under posts as you read. Yours always do.</p>
   <fieldset>
@@ -118,7 +118,7 @@
   </fieldset>
 </Card>
 
-<Card kind="section" as="section" class="setting">
+<Card kind="section" as="section" class="settings-section">
   <h2>YouTube</h2>
   <p class="help">What every YouTube channel shows unless you change it on that channel.</p>
   <fieldset>
@@ -134,7 +134,7 @@
 </Card>
 
 {#if me.instanceTracking}
-  <Card kind="section" as="section" class="setting">
+  <Card kind="section" as="section" class="settings-section">
     <h2>Privacy</h2>
     <label class="switch">
       <input type="checkbox" checked={tracking} onchange={(e) => set({ trackActivity: e.currentTarget.checked }, e.currentTarget.checked ? 'Usage tracking on' : 'Usage tracking off')} />
@@ -148,7 +148,7 @@
 
 
 {#if me.isAdmin}
-  <Card kind="section" as="section" class="setting admin">
+  <Card kind="section" as="section" class="settings-section">
     <h2>Admin</h2>
     <p class="help">You’re an admin of this instance. Sign ups, invites, and accounts live on the <a href="/admin">Admin page</a>.</p>
   </Card>
@@ -156,7 +156,7 @@
 
 <style>
   /* The page has no element of its own around its sections, so the room between them is set on the cards' own class. */
-  :global(.setting) { margin-bottom: var(--space-4); }
+  :global(.settings-section) { margin-bottom: var(--space-4); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   /* When a description follows the header, pull it up tight; the header's gap then sits under the description. */
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
@@ -171,5 +171,5 @@
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
   .radio small, .switch small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  :global(.admin) .help a { color: var(--accent); font-weight: 600; }
+  .help a { color: var(--accent); font-weight: 600; }
 </style>
