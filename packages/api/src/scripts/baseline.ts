@@ -1,7 +1,7 @@
 /**
  * One-time: mark the initial migration as already applied on a database that
  * was built with `drizzle-kit push` before migrations existed. After this,
- * boot-time migrate() applies only what's newer.
+ * boot-time migrations apply any SQL hash missing from the ledger.
  *   pnpm db:baseline
  * Safe to re-run; does nothing if the migrations table already has rows.
  */
@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { db, pool } from "../db/client.js";
-import { MIGRATIONS_DIR } from "../db/migrate.js";
+import { MIGRATIONS_DIR } from "../db/migrations.js";
 
 const journal = JSON.parse(readFileSync(join(MIGRATIONS_DIR, "meta", "_journal.json"), "utf8")) as { entries: { idx: number; when: number; tag: string }[] };
 const first = journal.entries[0];
