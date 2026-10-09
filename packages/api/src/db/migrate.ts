@@ -2,7 +2,8 @@
  * Apply pending SQL migrations from ./drizzle. Runs on every boot (see
  * index.ts) so "upgrade" is pull and restart, and can be run alone with
  * `pnpm db:migrate`. Migrations are generated with `pnpm db:generate` after a
- * schema change; never edit applied ones.
+ * schema change. Never edit applied SQL: its hash is its identity, so an edit
+ * can replay it. CI rejects edits, and boot refuses likely checksum drift.
  *
  * Databases created before migrations existed (the original lab instance)
  * are baselined once with scripts/baseline.ts, which records the initial

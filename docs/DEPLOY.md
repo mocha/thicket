@@ -138,6 +138,9 @@ Migrations are checked against every SQL hash in
 later is applied if its hash is missing, regardless of its timestamp.
 Existing Drizzle history and baselines work without conversion. Never edit
 SQL that has already been applied: its hash is its identity.
+SQL files are checked out with LF line endings on every platform. The
+`Migration integrity` PR check rejects modifications, renames, or deletions
+of existing migration SQL; make subsequent changes in a new migration.
 
 Before deploying the hash-based runner for the first time, compare the live
 ledger with the full migration list in the new checkout:
@@ -148,11 +151,18 @@ pnpm --filter @thicket/api db:audit
 node dist/scripts/audit-migrations.js
 ```
 
+The audit uses `DATABASE_URL`, exactly like the server, and prints the target
+host, port, and database without credentials or connection options. It never
+automatically switches to `DATABASE_PUBLIC_URL`. If you need Railway's public
+endpoint outside its private network, set `DATABASE_URL` to that endpoint
+explicitly for the audit command.
+
 The audit uses a read-only transaction and creates nothing. Save its output
 with the deployment record. It lists every migration by name and hash, marks
 missing migrations at or below the old timestamp cutoff as `SKIPPED by old
 cutoff`, and reports recorded hashes absent from the checkout. It exits with
-status 1 if anything is pending or unmatched. Review those differences before
+status 1 for previously skipped migrations, unmatched history, or an audit
+error. Ordinary newer pending migrations exit successfully. Review the list before
 restarting: the new runner will apply all missing migrations, including any
 previously skipped ones. An unmatched hash may mean an applied SQL file was
 edited, or this checkout is older than the database; resolve that history
@@ -163,6 +173,13 @@ Migration SQL and ledger entries commit together; if any statement fails,
 the batch rolls back, the error identifies the migration and database reason,
 and the server exits before listening. Overlapping boots serialize migration
 checks with a transaction-scoped advisory lock.
+Unmatched ledger hashes are also logged at boot. They do not prevent running
+an older application image. If a pending migration has the same timestamp as
+an unmatched recorded hash, boot refuses the batch before any migration SQL
+runs: this suggests an applied file was edited. Restore its original bytes
+and investigate the audit rather than replaying a possible data migration.
+Postgres error details, hints, context, and statement positions are retained
+in startup errors; deferred constraint errors are identified as commit failures.
 
 ## Rate limiting at the proxy
 

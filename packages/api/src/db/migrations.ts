@@ -7,6 +7,10 @@ import type { Pool } from "pg";
 
 export const MIGRATIONS_DIR = fileURLToPath(new URL("../../drizzle", import.meta.url));
 
+// Reserved advisory-lock namespace/key for thicket's migration checklist.
+// Keep these stable so different application versions coordinate their boots.
+const MIGRATION_LOCK = [214208, 1];
+
 export interface Migration {
   tag: string;
   when: number;
@@ -60,35 +64,53 @@ export async function applyMigrations(
   log: (message: string) => void = console.log,
 ): Promise<void> {
   const client = await pool.connect();
-  let current: Migration | undefined;
+  let phase = "migration setup";
   let committed = false;
   try {
     await client.query("BEGIN");
     // Serialize overlapping boots; read the ledger only after taking the lock.
-    await client.query("SELECT pg_advisory_xact_lock(214208, 1)");
+    await client.query("SELECT pg_advisory_xact_lock($1, $2)", MIGRATION_LOCK);
     await client.query("CREATE SCHEMA IF NOT EXISTS drizzle");
     await client.query(`CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (
       id serial PRIMARY KEY, hash text NOT NULL, created_at bigint
     )`);
     const { rows } = await client.query<MigrationRecord>("SELECT hash, created_at FROM drizzle.__drizzle_migrations");
-    const { pending } = migrationChecklist(migrations, rows);
+    const { pending, unknown } = migrationChecklist(migrations, rows);
+    if (unknown.length) {
+      log(`[db] warning: ${unknown.length} ledger record(s) match no migration file: ${unknown.map((r) => r.hash).join(", ")}`);
+    }
+    // A different hash at an existing migration's stamp suggests edited SQL.
+    // Check the whole batch before running any of it. Unknown newer history
+    // alone is allowed, so rolling back to an older checkout still works.
     for (const migration of pending) {
-      current = migration;
+      if (unknown.some((r) => r.created_at !== null && Number(r.created_at) === migration.when)) {
+        phase = `migration ${migration.tag}`;
+        throw new Error(`checksum differs from recorded history at timestamp ${migration.when}; SQL may have been edited after apply. Restore the original SQL and audit the migration history`);
+      }
+    }
+    for (const migration of pending) {
+      phase = `migration ${migration.tag}`;
       log(`[db] applying ${migration.tag}`);
       for (const statement of migration.statements) {
         if (statement.trim()) await client.query(statement);
       }
       await client.query("INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ($1, $2)", [migration.hash, migration.when]);
     }
+    phase = "migration commit";
     await client.query("COMMIT");
     committed = true;
+    phase = "migration reporting";
     // Only claim success once the batch is durable. Failed batches roll back in full.
     for (const migration of pending) log(`[db] applied ${migration.tag}`);
     log(`[db] migrations up to date; applied ${pending.length}: ${pending.map((m) => m.tag).join(", ") || "none"}`);
   } catch (error) {
     if (!committed) await client.query("ROLLBACK").catch(() => {});
     const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(`[db] ${current ? `migration ${current.tag}` : "migration setup"} failed: ${reason}${committed ? "" : "; transaction rolled back"}`, { cause: error });
+    const fields = error && typeof error === "object" ? error as Record<string, unknown> : {};
+    const details = ["detail", "hint", "where", "position"]
+      .filter((key) => typeof fields[key] === "string" && fields[key])
+      .map((key) => `\n[db] ${key}: ${fields[key]}`).join("");
+    throw new Error(`[db] ${phase} failed: ${reason}${committed ? "" : "; transaction rolled back"}${details}`, { cause: error });
   } finally {
     client.release();
   }

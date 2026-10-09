@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { test } from "node:test";
 import pg from "pg";
 import { applyMigrations, auditMigrations, migrationChecklist, readMigrations, type Migration } from "./migrations.js";
+import { auditTarget, runMigrationAudit } from "../scripts/audit-migrations.js";
 
 function migration(tag: string, when: number, source: string): Migration {
   return { tag, when, hash: createHash("sha256").update(source).digest("hex"), statements: source.split("--> statement-breakpoint") };
@@ -61,8 +62,43 @@ test("PostgreSQL migration regressions", { skip: !testUrl }, async (t) => {
       const files = readMigrations();
       const result = await auditMigrations(pool, files);
       assert.deepEqual(result.pending, files);
+      const logs: string[] = [];
+      assert.equal(await runMigrationAudit(url.toString(), (m) => logs.push(m)), 0);
+      assert.ok(logs[0].includes(`target ${auditTarget(url.toString())};`));
+      assert.ok(logs.at(-1)?.includes(`${files.length} pending, 0 previously skipped, 0 unknown records`));
       const { rows } = await pool.query("SELECT to_regnamespace('drizzle') AS schema");
       assert.equal(rows[0].schema, null);
+    });
+
+    await t.test("unmatched newer ledger records warn without blocking missing migrations or older code", async () => {
+      await reset();
+      await applyMigrations(pool, [], () => {});
+      await pool.query("INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ($1, $2)", ["newer-checkout-hash", 30]);
+      const missing = migration("missing_older", 10, "CREATE TABLE missing_older (id integer)");
+      const logs: string[] = [];
+      await applyMigrations(pool, [missing], (m) => logs.push(m));
+      assert.ok(logs.includes("[db] warning: 1 ledger record(s) match no migration file: newer-checkout-hash"));
+      assert.ok(logs.includes("[db] applied missing_older"));
+      assert.equal((await pool.query("SELECT * FROM drizzle.__drizzle_migrations")).rowCount, 2);
+      await applyMigrations(pool, [missing], (m) => logs.push(m));
+      assert.equal(logs.filter((m) => m.startsWith("[db] warning:")).length, 2);
+      assert.equal(logs.filter((m) => m === "[db] applied missing_older").length, 1);
+    });
+
+    await t.test("edited data migrations refuse boot before any pending SQL can run", async () => {
+      await reset();
+      await pool.query("CREATE TABLE counter (n integer); INSERT INTO counter VALUES (0)");
+      const applied = migration("increment", 10, "UPDATE counter SET n = n + 1");
+      await applyMigrations(pool, [applied], () => {});
+      const edited = migration(applied.tag, applied.when, applied.statements[0] + "\n-- comment edit");
+      const otherwisePending = migration("other_pending", 20, "CREATE TABLE should_not_run (id integer)");
+      const logs: string[] = [];
+      await assert.rejects(applyMigrations(pool, [otherwisePending, edited], (m) => logs.push(m)), /migration increment failed: checksum differs from recorded history at timestamp 10/);
+      assert.ok(logs[0].includes(applied.hash));
+      assert.ok(!logs.some((m) => m.startsWith("[db] applying ")));
+      assert.equal((await pool.query("SELECT n FROM counter")).rows[0].n, 1);
+      assert.equal((await pool.query("SELECT to_regclass('should_not_run') AS table")).rows[0].table, null);
+      assert.equal((await pool.query("SELECT * FROM drizzle.__drizzle_migrations")).rowCount, 1);
     });
 
     await t.test("older migration merged later runs once, with names in boot logs", async () => {
@@ -117,6 +153,31 @@ test("PostgreSQL migration regressions", { skip: !testUrl }, async (t) => {
       const slow = migration("slow", 10, "SELECT pg_sleep(0.15);--> statement-breakpoint\nCREATE TABLE once_only (id integer)");
       await Promise.all([applyMigrations(pool, [slow], () => {}), applyMigrations(pool, [slow], () => {})]);
       assert.equal((await pool.query("SELECT * FROM drizzle.__drizzle_migrations")).rowCount, 1);
+    });
+
+    await t.test("a unique violation retains the PostgreSQL detail in the startup error", async () => {
+      await reset();
+      const duplicate = migration("duplicate_values", 10, "CREATE TABLE duplicates (id integer); INSERT INTO duplicates VALUES (1), (1);--> statement-breakpoint\nCREATE UNIQUE INDEX duplicates_id ON duplicates (id)");
+      await assert.rejects(applyMigrations(pool, [duplicate], () => {}), (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /migration duplicate_values failed: could not create unique index "duplicates_id"/);
+        assert.match(error.message, /detail: Key \(id\)=\(1\) is duplicated/);
+        return true;
+      });
+    });
+
+    await t.test("a deferred constraint failure is attributed to commit rather than the last migration", async () => {
+      await reset();
+      const deferred = migration("deferred_values", 10, "CREATE TABLE deferred_values (id integer UNIQUE DEFERRABLE INITIALLY DEFERRED); INSERT INTO deferred_values VALUES (1), (1)");
+      const logs: string[] = [];
+      await assert.rejects(applyMigrations(pool, [deferred], (m) => logs.push(m)), (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /migration commit failed: duplicate key value violates unique constraint/);
+        assert.match(error.message, /detail: Key \(id\)=\(1\) already exists/);
+        return true;
+      });
+      assert.ok(!logs.some((m) => m.startsWith("[db] applied ")));
+      assert.equal((await pool.query("SELECT to_regclass('deferred_values') AS table")).rows[0].table, null);
     });
 
     await t.test("every real migration applies on a fresh database and a second boot does nothing", async () => {
