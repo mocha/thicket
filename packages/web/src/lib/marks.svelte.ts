@@ -102,10 +102,18 @@ export function recount(collectionId: number, remaining: number) {
 }
 
 let inflight: Promise<void> | null = null;
+/** A fresh count was asked for while one was under way: run once more when it ends, with the points as they are by then. */
+let again = false;
 
+/**
+ * Callers wait for any refresh under way rather than take the counts from
+ * before it: a catch-up in one list refreshes every count, and the next list
+ * opened must see that. A forced refresh asked for mid-flight runs after the
+ * current one, since that one may have left before the point moved.
+ */
 export function loadMarks(force = false): Promise<void> {
+  if (inflight) { if (force) again = true; return inflight; }
   if (marks.loaded && !force) return Promise.resolve();
-  if (inflight) return inflight;
   inflight = loadCollections()
     .then((cs) => seedMissing(cs.list.map((c) => c.id)))
     .catch(() => { /* no list this time; the points already here still count */ })
@@ -123,7 +131,10 @@ export function loadMarks(force = false): Promise<void> {
       marks.at = Date.now();
     })
     .catch(() => { /* the sidebar just shows no counts until the next try */ })
-    .finally(() => { inflight = null; });
+    .finally(() => {
+      inflight = null;
+      if (again) { again = false; return loadMarks(true); }
+    });
   return inflight;
 }
 
