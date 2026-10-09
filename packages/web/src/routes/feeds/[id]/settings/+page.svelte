@@ -319,7 +319,13 @@
     {#snippet removeLede()}
       {#if impact}
         <div class="said">
-          <p>This deletes “{feed ? feedName(feed) : 'this feed'}” for everyone. That includes <strong>{plural(impact.posts, 'post')}</strong> and <strong>{plural(impact.collections, 'collection')}</strong> belonging to <strong>{plural(impact.followers, 'person', 'people')}</strong>.{#if impact.bookmarks}{' '}<strong>{plural(impact.bookmarks, 'bookmark')}</strong> {impact.bookmarks === 1 ? 'keeps its' : 'keep their'} saved copy and any note, but {impact.bookmarks === 1 ? 'loses' : 'lose'} the link to the post.{/if}</p>
+          <p>This deletes “{feed ? feedName(feed) : 'this feed'}” for everyone. That includes:</p>
+          <ul>
+            <li><strong>{plural(impact.posts, 'post')}</strong></li>
+            <li><strong>{plural(impact.collections, 'collection')}</strong> belonging to <strong>{plural(impact.followers, 'person', 'people')}</strong></li>
+            {#if impact.bookmarks}<li>links from <strong>{plural(impact.bookmarks, 'bookmark')}</strong></li>{/if}
+          </ul>
+          {#if impact.bookmarks}<p>Bookmarks keep their saved copy and notes.</p>{/if}
           <p>This action can’t be undone. Anyone can add the feed back later, but older posts may not come back with it.</p>
         </div>
       {:else}
@@ -349,9 +355,10 @@
   .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
   .hint.inline { margin: 0; }
   /* The line under a section heading: tucked up against it, then the usual gap before what it describes. */
-  /* The remove warning's two paragraphs: what goes, then that it's for good. */
+  /* The remove warning: what goes, as a list, then that it's for good. */
   .said { display: flex; flex-direction: column; gap: var(--space-2); }
-  .said p { margin: 0; }
+  .said p, .said ul { margin: 0; }
+  .said ul { padding-left: var(--space-5); }
   .hint.lede { margin: calc(var(--space-2) * -1) 0 var(--space-3); }
   .radios { display: flex; flex-direction: column; gap: var(--space-2); }
   .radios label { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
