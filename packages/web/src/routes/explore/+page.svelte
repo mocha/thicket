@@ -719,7 +719,7 @@
 <div bind:this={sentinel} aria-hidden="true"></div>
 
 {#if threeFilters}
-  <Sheet title="Filters" lede="Choose what this list shows, and in what order." bind:dialog={filtersDialog}>
+  <Sheet title="Filters" lede="Choose what this list shows and in what order." bind:dialog={filtersDialog}>
     <div class="sheet-rows">{@render filterFields()}</div>
   </Sheet>
 {/if}

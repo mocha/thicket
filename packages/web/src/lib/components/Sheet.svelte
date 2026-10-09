@@ -8,7 +8,9 @@
    * - The title and a close button. A panel about one thing (a feed) can swap
    *   the title for its own `header`, an icon and name, say; the close button
    *   stays, and `title` still names the panel for screen readers.
-   * - The `lede`: one gray line under the title saying what the panel is for.
+   * - The `lede`, the panel's description: a short sentence under the title
+   *   saying what the panel is for. Leave it off when the title already says
+   *   it all (Following needs nothing more).
    *   Text, or a snippet when it carries more (a "Saved" note beside it).
    * - The task's content. Settings stacked one per row sit in a `sheet-rows`
    *   box, which splits them with a hairline.
