@@ -51,7 +51,7 @@
   <div class="sheet">
     <header>
       {#if header}<div class="custom">{@render header()}</div>{:else}<h2 id={titleId}>{title}</h2>{/if}
-      <IconButton class="close" icon="close" label="Close" disabled={locked} onclick={() => dialog?.close()} />
+      <span class="x"><IconButton icon="close" label="Close" disabled={locked} onclick={() => dialog?.close()} /></span>
     </header>
     {#if typeof lede === 'string'}<p class="lede">{lede}</p>
     {:else if lede}<div class="lede">{@render lede()}</div>{/if}
@@ -74,8 +74,10 @@
   header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   /* A custom header takes the room; the close button keeps to the top corner beside it. */
   .custom { flex: 1; min-width: 0; }
-  .custom + :global(.close) { align-self: flex-start; }
-  h2 { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); overflow-wrap: anywhere; }
+  .x { display: flex; flex: none; }
+  .custom + .x { align-self: flex-start; }
+  /* A custom header's name is the panel's title, so it looks like one. */
+  h2, .custom :global(h2) { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); overflow-wrap: anywhere; }
   /* Pulled up against the title so the two read as one block. */
   .lede { margin: calc(-1 * var(--space-2)) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
   div.lede { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
@@ -83,10 +85,9 @@
   /* Settings one per row: each row's name above its choice, the rows split by a hairline. */
   .sheet :global(.sheet-rows > *) { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
   .sheet :global(.sheet-rows > :last-child) { padding-bottom: 0; }
-  .foot { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); }
-  .foot :global(.sheet-action) { display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-4); border-radius: var(--radius-md); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
+  /* The finishing button spans the width; anything under it, like a red text link, sits centered. */
+  .foot { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
+  .foot :global(.sheet-action) { align-self: stretch; display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-4); border-radius: var(--radius-md); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); }
   .foot :global(.sheet-action.danger) { background: var(--danger); color: var(--danger-ink); }
   .foot :global(.sheet-action:disabled) { opacity: 0.5; }
-  /* A red text link under the main button sits centered beneath it. */
-  .foot :global(.btn.link) { align-self: center; }
 </style>

@@ -96,7 +96,6 @@
 <style>
   .id { display: flex; align-items: center; gap: var(--space-3); }
   .who { flex: 1; min-width: 0; }
-  h2 { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); line-height: 1.2; overflow-wrap: anywhere; }
   .host { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
   /* "Requires subscription" sits beside the address, and drops under it when the line runs out. */
   .addr { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }

@@ -89,11 +89,11 @@
 
 <!-- The line under the title says what the list is for: where a new follow will go (updating as you tick), or the rule for one you already follow. -->
 {#snippet lede()}
-  {#if adding}<p>{collectionStore.loaded ? whereItGoes(picked) : ''}</p>
+  {#if adding}{#if collectionStore.loaded}<p>{whereItGoes(picked)}</p>{/if}
   {:else}<p>Every feed you follow lives in at least one collection.</p><SavedNote show={saved} />{/if}
 {/snippet}
 
-<Sheet title={adding || !following ? `Follow ${name}` : `Following ${name}`} {lede} bind:dialog {onclose}>
+<Sheet title={adding || !following ? `Follow ${name}` : `Following ${name}`} lede={adding && !collectionStore.loaded ? undefined : lede} bind:dialog {onclose}>
   {#if adding}
     <CollectionList ids={picked} via="follow_sheet" disabled={busy} ontoggle={pick} oncreated={(id) => (picked = [...picked, id])} />
   {:else}
