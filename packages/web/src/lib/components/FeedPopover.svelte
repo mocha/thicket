@@ -95,7 +95,8 @@
 </Sheet>
 
 <style>
-  .id { display: flex; align-items: center; gap: var(--space-3); }
+  /* The icon sits at the top, beside the name, however tall the address and Follow make the block. */
+  .id { display: flex; align-items: flex-start; gap: var(--space-3); }
   .who { flex: 1; min-width: 0; }
   .host { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
   /* "Requires subscription" sits beside the address, and drops under it when the line runs out. */
