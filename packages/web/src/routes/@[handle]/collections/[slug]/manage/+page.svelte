@@ -311,13 +311,11 @@
 {#if col}
   <Sheet
     title="Delete “{col.name}”?"
-    lede={orphans === null
-      ? 'Checking its feeds…'
-      : `${orphans.length === 0 ? 'Its feeds are all in your other collections, so you’ll keep following them.' : `You’ll stop following the ${orphans.length === 1 ? '1 feed that’s' : `${orphans.length} feeds that are`} only in this collection.`} This can’t be undone.`}
     alert
     locked={deleting}
     bind:dialog={confirmEl}
   >
+    <p class="warn">{orphans === null ? 'Checking its feeds…' : `${orphans.length === 0 ? 'Its feeds are all in your other collections, so you’ll keep following them.' : `You’ll stop following the ${orphans.length === 1 ? '1 feed that’s' : `${orphans.length} feeds that are`} only in this collection.`} This can’t be undone.`}</p>
     {#if orphans?.length}
       <button class="reveal tap" onclick={() => (showOrphans = !showOrphans)} aria-expanded={showOrphans}>
         {showOrphans ? 'Hide' : 'Show'} {orphans.length === 1 ? 'the feed' : `the ${orphans.length} feeds`}
@@ -343,6 +341,8 @@
 {/if}
 
 <style>
+  /* What deleting does, as the panel's body: the regular text color, a step smaller. */
+  .warn { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
   .reveal { align-self: flex-start; display: inline-flex; align-items: center; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
   .orphans { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); max-height: 40vh; overflow-y: auto; }
   .orphans li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
