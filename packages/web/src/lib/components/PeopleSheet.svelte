@@ -24,7 +24,7 @@
 </script>
 
 <Sheet
-  title={which === 'following' ? 'Following' : 'Followers'}
+  title={which === 'followers' ? 'Followers' : isMe ? 'Following' : `@${handle} is following`}
   lede={which === 'followers' ? 'Only you can see who follows you. Following you doesn’t show them anything you haven’t shared with everyone.' : undefined}
   bind:dialog
   {onclose}
