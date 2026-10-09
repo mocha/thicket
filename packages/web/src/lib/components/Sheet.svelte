@@ -101,8 +101,9 @@
   .aside { flex: none; }
   /* A custom header's name is the panel's title, so it looks like one. */
   h2, .custom :global(h2) { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); line-height: var(--title-lh); overflow-wrap: break-word; }
-  /* The description keeps the Sheet's usual space under the title: pulled any closer, it crowds a title that wraps. */
-  .lede { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
+  /* The description sits a step closer to the title than the Sheet's other parts (8px, not 12),
+     so the two read as one block; any closer and it crowds a title that wraps. */
+  .lede { margin: calc(-1 * var(--space-1)) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
   div.lede { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
   div.lede :global(p) { margin: 0; }
   /* Settings one per row: each row's name above its choice, the rows split by a hairline. */
