@@ -47,6 +47,10 @@ test("PostgreSQL migration regressions", { skip: !testUrl }, async (t) => {
   const url = new URL(testUrl!);
   url.pathname = `/${name}`;
   const pool = new pg.Pool({ connectionString: url.toString(), max: 4 });
+  const closedConnections: Promise<void>[] = [];
+  pool.on("connect", (client) => {
+    closedConnections.push(new Promise((resolve) => client.once("end", resolve)));
+  });
   const reset = async () => {
     await pool.query("DROP SCHEMA IF EXISTS drizzle CASCADE");
     await pool.query("DROP SCHEMA public CASCADE");
@@ -129,6 +133,9 @@ test("PostgreSQL migration regressions", { skip: !testUrl }, async (t) => {
     });
   } finally {
     await pool.end();
+    // Pool shutdown can resolve before every client emits end. Wait for the
+    // sockets to close before forcing the disposable database to drop.
+    await Promise.all(closedConnections);
     await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`);
     await admin.end();
   }
