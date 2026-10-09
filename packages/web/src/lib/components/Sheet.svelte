@@ -36,7 +36,7 @@
    * the phone is on its side) the whole Sheet scrolls, so the footer's action
    * can always be reached. `locked` holds it open while something can't be
    * interrupted, such as a photo saving. `alert` marks a confirm that can't be
-   * undone, so screen readers announce it as a warning, reading the lede with it. The parent opens it
+   * undone, so screen readers announce it as a warning, reading the lede with it (or the body, when there's no lede). The parent opens it
    * with `dialog.showModal()`.
    */
   import type { Snippet } from 'svelte';
@@ -50,6 +50,7 @@
   const way = $derived(dismiss ?? (footer ? 'Cancel' : 'Done'));
   const titleId = $props.id();
   const ledeId = `${titleId}-lede`;
+  const bodyId = `${titleId}-body`;
 </script>
 
 <dialog
@@ -60,7 +61,7 @@
   role={alert ? 'alertdialog' : undefined}
   aria-labelledby={header ? undefined : titleId}
   aria-label={header ? title : undefined}
-  aria-describedby={alert && lede ? ledeId : undefined}
+  aria-describedby={alert ? (lede ? ledeId : bodyId) : undefined}
 >
   <div class="sheet">
     <header>
@@ -69,7 +70,8 @@
     </header>
     {#if typeof lede === 'string'}<p class="lede" id={ledeId}>{lede}</p>
     {:else if lede}<div class="lede" id={ledeId}>{@render lede()}</div>{/if}
-    {@render children?.()}
+    <!-- A confirm with no description is described by its body, so the warning is read with the title. -->
+    {#if alert && !lede}<div class="body" id={bodyId}>{@render children?.()}</div>{:else}{@render children?.()}{/if}
     {#if footer || way}
       <div class="foot">
         {@render footer?.()}
@@ -106,6 +108,8 @@
   .lede { margin: calc(-1 * var(--space-2)) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
   div.lede { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
   div.lede :global(p) { margin: 0; }
+  /* Lays out as if the wrapper weren't there; it exists only to be pointed at. */
+  .body { display: contents; }
   /* Settings one per row: each row's name above its choice, a hairline between rows but
      none above the first, so no panel has a line under its header. */
   .sheet :global(.sheet-rows > *) { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); padding: var(--space-3) 0; border-top: 1px solid var(--line); }

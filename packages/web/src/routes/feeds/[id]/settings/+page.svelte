@@ -316,7 +316,7 @@
       </div>
     </details>
 
-    {#snippet removeLede()}
+    <Sheet title="Remove this feed for everyone?" alert locked={removing} bind:dialog={removeDialog}>
       {#if impact}
         <div class="said">
           <p>This deletes “{feed ? feedName(feed) : 'this feed'}” for everyone. That includes:</p>
@@ -329,10 +329,8 @@
           <p>This action can’t be undone. Anyone can add the feed back later, but older posts may not come back with it.</p>
         </div>
       {:else}
-        <p>Counting what this would take with it…</p>
+        <p class="said">Counting what this would take with it…</p>
       {/if}
-    {/snippet}
-    <Sheet title="Remove this feed for everyone?" lede={removeLede} alert locked={removing} bind:dialog={removeDialog}>
       {#snippet footer()}
         <Button variant="danger" solid size="lg" onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</Button>
       {/snippet}
@@ -356,7 +354,7 @@
   .hint.inline { margin: 0; }
   /* The line under a section heading: tucked up against it, then the usual gap before what it describes. */
   /* The remove warning: what goes, as a list, then that it's for good. */
-  .said { display: flex; flex-direction: column; gap: var(--space-2); }
+  .said { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; color: var(--text); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
   .said p, .said ul { margin: 0; }
   .said ul { padding-left: var(--space-5); }
   .hint.lede { margin: calc(var(--space-2) * -1) 0 var(--space-3); }
