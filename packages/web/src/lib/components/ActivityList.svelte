@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Card from './Card.svelte';
   import Dot from '$lib/components/Dot.svelte';
   /**
    * What a person has been up to: feeds they added, collections they made or
@@ -92,7 +93,7 @@
 {#if entries !== null && entries.length === 0 && !failed}
   <EmptyNote icon="activity" title="No activity yet" text={isMe ? 'Follow a feed, bookmark a post, or write a note, and it shows up here.' : 'Nothing to show yet.'} />
 {:else}
-<div class="card">
+<Card kind="list" as="div">
     {#if failed}
       <div class="pad"><p class="status">{failed}</p></div>
     {:else if entries === null}
@@ -161,7 +162,7 @@
         <div class="foot"><VisitorMore cap={cappedAt} /></div>
       {/if}
     {/if}
-</div>
+</Card>
 {/if}
 
 {#if source}
@@ -169,7 +170,6 @@
 {/if}
 
 <style>
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .pad { padding: var(--space-4); }
   .foot { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin: 0; }

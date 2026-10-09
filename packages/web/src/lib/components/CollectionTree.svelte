@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Card from './Card.svelte';
   /**
    * A person's collections, shown as the tree they are: the same shape the
    * sidebar shows. Top level is anything whose parent isn't in the list: the
@@ -99,7 +100,7 @@
 {#if cols.length === 0 && !creatable}
   <EmptyNote icon="collections" title="No collections yet" text={isMe ? 'A collection is a handful of feeds you read together.' : 'No collections to show.'} />
 {:else}
-<div class="card">
+<Card kind="list" as="div">
     <ul class="list">
       {#if creatable}
         <li class="new">
@@ -149,13 +150,12 @@
     {#if cols.length === 0 && isMe}
       <div class="pad"><p class="status">A collection is a handful of feeds you read together. Make one above, then add feeds to it from any feed’s Follow menu.</p></div>
     {/if}
-</div>
+</Card>
 {/if}
 
 <style>
   /* The filter sits on its own, just above the list it narrows. */
   .filter { margin: 0 0 var(--space-3); }
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .pad { padding: var(--space-4); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
   .list { list-style: none; margin: 0; padding: 0; }

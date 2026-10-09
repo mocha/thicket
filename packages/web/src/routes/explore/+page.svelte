@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Card from '$lib/components/Card.svelte';
   import Dot from '$lib/components/Dot.svelte';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
@@ -673,44 +674,44 @@
     {#if res.feeds.rows.length}
       <section class="group">
         <h2>Feeds <Badge>{res.feeds.total.toLocaleString()}</Badge>{#if res.feeds.total > res.feeds.rows.length}<button class="link all tap" onclick={() => setScope('feeds')}>See all</button>{/if}</h2>
-        <ul class="list">{#each res.feeds.rows as f (f.id)}{@render feedRow(f, f)}{/each}</ul>
+        <Card kind="list" as="ul">{#each res.feeds.rows as f (f.id)}{@render feedRow(f, f)}{/each}</Card>
       </section>
     {/if}
     {#if res.collections.rows.length}
       <section class="group">
         <h2>Collections <Badge>{res.collections.total.toLocaleString()}</Badge>{#if res.collections.total > res.collections.rows.length}<button class="link all tap" onclick={() => setScope('collections')}>See all</button>{/if}</h2>
-        <ul class="list">{#each res.collections.rows as c (c.id)}{@render colRow(c, c)}{/each}</ul>
+        <Card kind="list" as="ul">{#each res.collections.rows as c (c.id)}{@render colRow(c, c)}{/each}</Card>
       </section>
     {/if}
     {#if res.posts.rows.length}
       <section class="group">
         <h2>Posts <Badge>{res.posts.total.toLocaleString()}</Badge>{#if res.posts.total > res.posts.rows.length}<button class="link all tap" onclick={() => setScope('posts')}>See all</button>{/if}</h2>
-        <ul class="list">{#each res.posts.rows as p (p.id)}{@render postRow(p)}{/each}</ul>
+        <Card kind="list" as="ul">{#each res.posts.rows as p (p.id)}{@render postRow(p)}{/each}</Card>
       </section>
     {/if}
     {#if res.people.rows.length}
       <section class="group">
         <h2>People <Badge>{res.people.total.toLocaleString()}</Badge>{#if res.people.total > res.people.rows.length}<button class="link all tap" onclick={() => setScope('people')}>See all</button>{/if}</h2>
-        <ul class="list">{#each res.people.rows as u (u.handle)}{@render personRow(u, u)}{/each}</ul>
+        <Card kind="list" as="ul">{#each res.people.rows as u (u.handle)}{@render personRow(u, u)}{/each}</Card>
       </section>
     {/if}
   {:else}
     <section class="group">
       <h2>{SCOPES.find((s) => s.id === scope)?.label} <Badge>{(group?.total ?? 0).toLocaleString()}</Badge></h2>
-      <ul class="list">
+      <Card kind="list" as="ul">
         {#if scope === 'feeds'}{#each rows as f (( f as SearchFeed).id)}{@render feedRow(f as SearchFeed, f as SearchFeed)}{/each}
         {:else if scope === 'collections'}{#each rows as c ((c as SearchCollection).id)}{@render colRow(c as SearchCollection, c as SearchCollection)}{/each}
         {:else if scope === 'posts'}{#each rows as p ((p as SearchPost).id)}{@render postRow(p as SearchPost)}{/each}
         {:else}{#each rows as u ((u as SearchPerson).handle)}{@render personRow(u as SearchPerson, u as SearchPerson)}{/each}{/if}
-      </ul>
+      </Card>
     </section>
   {/if}
 {:else if browseAs === 'feeds'}
-  <div class="browse">{@render filterBar()}<ul class="list">{#each feeds as f (f.id)}{@render feedRow(f, null)}{/each}</ul></div>
+  <Card kind="list" as="div" class="browse">{@render filterBar()}<ul class="list">{#each feeds as f (f.id)}{@render feedRow(f, null)}{/each}</ul></Card>
 {:else if browseAs === 'collections'}
-  <div class="browse">{@render filterBar()}<ul class="list">{#each cols as c (c.id)}{@render colRow(c, null)}{/each}</ul></div>
+  <Card kind="list" as="div" class="browse">{@render filterBar()}<ul class="list">{#each cols as c (c.id)}{@render colRow(c, null)}{/each}</ul></Card>
 {:else}
-  <div class="browse">{@render filterBar()}<ul class="list">{#each users as u (u.handle)}{@render personRow(u, null)}{/each}</ul></div>
+  <Card kind="list" as="div" class="browse">{@render filterBar()}<ul class="list">{#each users as u (u.handle)}{@render personRow(u, null)}{/each}</ul></Card>
 {/if}
 
 </div>
@@ -740,7 +741,7 @@
      centered together, and never pinned to the edge when the text fills the line. */
   /* Browsing, the filters and list are one card; the caption leads it, inset to
      match the card's side padding. */
-  .browse :global(.blurb) { margin: 0; padding: var(--space-5) var(--space-3) var(--space-2); }
+  :global(.browse) :global(.blurb) { margin: 0; padding: var(--space-5) var(--space-3) var(--space-2); }
   .group { margin-bottom: var(--space-5); }
   .group h2 { margin-bottom: var(--space-2); }
   /* Beats .link’s inherited size below: “See all” is a small action, not part of the heading. */
@@ -768,7 +769,7 @@
   @media (min-width: 601px) {
     .filters.fold { flex-wrap: nowrap; }
     .filters.snug { column-gap: var(--space-2); }
-    .filters.unfit, .browse .filters.unfit { visibility: hidden; height: 0; padding-block: 0; margin-block: 0; overflow: hidden; }
+    .filters.unfit, :global(.browse) .filters.unfit { visibility: hidden; height: 0; padding-block: 0; margin-block: 0; overflow: hidden; }
     .filters.fold :global(.filter) { flex: none; }
   }
   /* The folded row. Drawn as a box with the dropdown's own outline, corner and
@@ -783,18 +784,16 @@
     border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface);
   }
   /* Inside the list card it keeps the card's side padding around it. */
-  .browse .filters-row { width: calc(100% - var(--space-3) * 2); margin: var(--space-3) var(--space-3) var(--space-2); }
+  :global(.browse) .filters-row { width: calc(100% - var(--space-3) * 2); margin: var(--space-3) var(--space-3) var(--space-2); }
   .fr-icon { flex: none; color: var(--accent); }
   .fr-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
   .fr-name { font-weight: 600; color: var(--text); line-height: 1.25; }
   .fr-now { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
   .fr-caret { flex: none; display: grid; color: var(--text-2); }
-  .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  /* Browse: the filters are the list card's header, so the two read as one unit. */
-  .browse { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .browse .filters { margin: 0; padding: var(--space-3) var(--space-3) var(--space-1); }
-  .browse .list { background: none; box-shadow: none; border-radius: 0; }
-  li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3); border-top: 1px solid var(--line); flex-wrap: wrap; }
+  /* Browse: the filters are the list card's header, so the two read as one unit; the rows below are part of the same card. */
+  .list { list-style: none; margin: 0; padding: 0; }
+  :global(.browse) .filters { margin: 0; padding: var(--space-3) var(--space-3) var(--space-1); }
+  li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); flex-wrap: wrap; }
   /* On a phone a row's button would squeeze the description into a column
      four words wide, so it drops to its own line and the text gets the row.
      Every kind of row keeps that button at the right, so they all line up. */

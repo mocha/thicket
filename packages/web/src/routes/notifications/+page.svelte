@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Card from '$lib/components/Card.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   /**
    * Notifications (issue #184): the last 30 days of what concerns me, newest
@@ -90,7 +91,7 @@
   {#each groups as g (g.key)}
   <section class="day">
   <h2 class={g.key === todayKey ? 'visually-hidden' : 'dayhead'}>{g.label}</h2>
-  <ul class="list">
+  <Card kind="list" as="ul" class="notif-list">
     {#each g.items as n (n.key)}
       <li class:new={n.isNew} class:rich={n.kind === 'mention'}>
         {#if n.isNew}<span class="visually-hidden">New: </span>{/if}
@@ -112,7 +113,7 @@
         {/if}
       </li>
     {/each}
-  </ul>
+  </Card>
   </section>
   {/each}
 {/if}
@@ -128,11 +129,10 @@
   .day { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); }
   /* The same day heading as New posts, without the sticking. */
   .dayhead { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; border: var(--card-border, 0); }
-  .list > li { position: relative; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
-  .list > li:first-child { border-top: 0; }
+  :global(.notif-list > li) { position: relative; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
+  :global(.notif-list > li:first-child) { border-top: 0; }
   /* New since last time: a tint and an accent edge, so it reads in grayscale too (the edge), not by color alone. */
-  .list > li.new { background: color-mix(in srgb, var(--accent) 9%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
+  :global(.notif-list > li.new) { background: color-mix(in srgb, var(--accent) 9%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
   .line { display: flex; align-items: center; gap: var(--space-2); margin: 0; min-width: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .who { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text); font-weight: 600; }
   @media (hover: hover) { .who:hover span, .post:hover { text-decoration: underline; text-underline-offset: 3px; } }

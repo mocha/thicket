@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Card from '$lib/components/Card.svelte';
   import Dot from '$lib/components/Dot.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { onMount } from 'svelte';
@@ -171,7 +172,7 @@
 
   <!-- The collection's feeds, in one card: a row that opens it (like the Filters row on Explore), then the list inside. On my own collection, the open card also offers the list as a file. -->
   {#if col.feeds.length > 0 || col.children.length > 0}
-  <section class="feedscard">
+  <Card kind="list" as="section" class="feedscard">
     <div class="fc-head">
       <button class="reveal tap" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{showFeeds ? (col.feeds.length === 1 ? 'Hide feed' : 'Hide feeds') : col.feeds.length === 1 ? 'See the 1 feed in this collection' : `See all ${col.feeds.length} feeds in this collection`}<Icon name="caret" size={14} stroke={2.4} dir={showFeeds ? 'down' : 'right'} /></button>
       {#if col.isMe && showFeeds && col.feeds.length > 0}
@@ -204,7 +205,7 @@
       {/if}
     </div>
     {/if}
-  </section>
+  </Card>
   {/if}
 
   {#if col.isMe && col.feeds.length === 0}
@@ -219,18 +220,17 @@
   .sub a { color: var(--accent); font-weight: 600; }
   .mycopy { margin-top: var(--space-4); }
   /* The pill sits in a line of text, so it carries its own gap to the separator after it. */
-  .feedscard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: var(--space-4); }
+  :global(.feedscard) { margin-bottom: var(--space-4); }
   /* The row that opens the card. As tall open as closed, so the Export button arriving doesn't move anything. */
   .fc-head { display: flex; align-items: center; gap: var(--space-3); min-height: 52px; padding: var(--space-2) var(--space-4); }
   /* The whole strip to the left of Export opens and closes the list, not just the words. */
   .reveal { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-1); text-align: left; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
-  /* Inside the card the lists are part of it, not cards of their own. */
-  .feedscard .list { background: none; box-shadow: none; border-radius: 0; border-top: 1px solid var(--line); }
   /* 2px of top padding is an optical nudge: the buttons sit on the title's line. */
   /* The link keeps its own padding; pull it back so its words start at the title's left edge. */
   .visitoraction { margin: var(--space-2) 0 0 calc(-1 * var(--space-2)); }
   .bad { color: var(--danger); }
-  .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  /* Inside the card the lists are part of it, not cards of their own: each starts under a hairline. */
+  .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
   .list li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .list li:first-child { border-top: 0; }
   .children li { padding: 0; }

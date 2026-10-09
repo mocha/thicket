@@ -307,22 +307,22 @@
   <section class="group" id="principles" aria-labelledby="principles-h">
     <h2 id="principles-h">Principles</h2>
     <div class="principles">
-      <div class="tile">
+      <Card kind="section" as="div" class="tile">
         <h3>Everything hangs off tokens</h3>
         <p>No component names a raw color, size, or corner. They reach for a token, and the token decides. Reskinning is a token change, not a component change.</p>
-      </div>
-      <div class="tile">
+      </Card>
+      <Card kind="section" as="div" class="tile">
         <h3>Three theme states, not two</h3>
         <p>Light and dark, plus "follow the device" — the state most people never leave. On top of that sit seven full color themes, from soft sepia to hard black-and-white for e-ink.</p>
-      </div>
-      <div class="tile">
+      </Card>
+      <Card kind="section" as="div" class="tile">
         <h3>One of each</h3>
         <p>One button. One card. One text field. If a screen needs something the kit doesn't have, the kit is what changes — so nothing drifts into a second, slightly-different version.</p>
-      </div>
-      <div class="tile">
+      </Card>
+      <Card kind="section" as="div" class="tile">
         <h3>Readable by default</h3>
         <p>Every color pair clears the contrast bar in both light and dark. Focus rings, keyboard paths, and screen-reader labels are built into the parts, not bolted on later.</p>
-      </div>
+      </Card>
     </div>
   </section>
 
@@ -831,12 +831,8 @@
 
   /* ---- Principles ---- */
   .principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3); }
-  .tile {
-    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: var(--space-4); box-shadow: var(--shadow);
-  }
-  .tile h3 { margin: 0 0 var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; }
-  .tile p { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; }
+  .principles h3 { margin: 0 0 var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; }
+  .principles p { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; }
 
   /* ---- Color ---- */
   .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-3); }
