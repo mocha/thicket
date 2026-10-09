@@ -53,7 +53,7 @@
   <div class="sheet">
     <header>
       {#if header}<div class="custom">{@render header()}</div>{:else}<h2 id={titleId}>{title}</h2>{/if}
-      <span class="x"><IconButton icon="close" label="Close" disabled={locked} onclick={() => dialog?.close()} /></span>
+      <span class="x"><IconButton icon="close" label="Close" stretch disabled={locked} onclick={() => dialog?.close()} /></span>
     </header>
     {#if typeof lede === 'string'}<p class="lede" id={ledeId}>{lede}</p>
     {:else if lede}<div class="lede" id={ledeId}>{@render lede()}</div>{/if}
@@ -76,7 +76,10 @@
   header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   /* A custom header takes the room; the close button keeps to the top corner beside it. */
   .custom { flex: 1; min-width: 0; }
-  .x { display: flex; flex: none; }
+  /* On a touch screen the close button answers taps across 44px, the size a
+     finger needs, while the circle and the header's layout stay as drawn. */
+  .x { display: flex; flex: none; position: relative; }
+  @media (pointer: coarse) { .x { width: 44px; height: 44px; margin: -6px; align-items: center; justify-content: center; } }
   .custom + .x { align-self: flex-start; }
   /* A custom header's name is the panel's title, so it looks like one. */
   h2, .custom :global(h2) { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); overflow-wrap: anywhere; }
