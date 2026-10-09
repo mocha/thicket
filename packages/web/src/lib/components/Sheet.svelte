@@ -93,12 +93,14 @@
   @media (min-width: 700px) {
     .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 460px; border-radius: var(--radius-lg); max-height: 86vh; max-height: 86dvh; }
   }
-  header { --title-lh: calc(var(--text-xl) * var(--size-headings) * 1.25); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-  /* A custom header takes the room beside the aside. */
-  .custom { flex: 1; min-width: 0; }
+  header { --title-lh: calc(var(--text-xl) * var(--size-headings) * 1.25); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  /* A custom header takes the room beside the aside. It asks for at least 12rem; when
+     that and the aside don't both fit, the aside moves to its own line, so a
+     name is never squeezed until it breaks mid-word. */
+  .custom { flex: 1 1 12rem; min-width: 0; }
   .aside { flex: none; }
   /* A custom header's name is the panel's title, so it looks like one. */
-  h2, .custom :global(h2) { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); line-height: var(--title-lh); overflow-wrap: anywhere; }
+  h2, .custom :global(h2) { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); line-height: var(--title-lh); overflow-wrap: break-word; }
   /* The description keeps the Sheet's usual space under the title: pulled any closer, it crowds a title that wraps. */
   .lede { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
   div.lede { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
