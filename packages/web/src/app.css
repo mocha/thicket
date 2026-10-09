@@ -115,7 +115,7 @@
   /* Corner ladder. Every rounded corner in the app is one of these.
      xs     inline code and highlight marks, too small for a bigger curve
      sm     controls, rows, inputs, small tiles
-     md     dropdown and menu panels, and a few compact cards
+     md     dropdown and menu panels, the picture cropper
      radius cards, the reader, panels
      lg     bottom sheets (top corners) and the desktop dialogs they become
      pill   buttons, chips, tabs

@@ -163,7 +163,7 @@
   const corners = [
     { name: 'radius-xs', px: 4, use: 'Inline code, highlight marks' },
     { name: 'radius-sm', px: 10, use: 'Controls, rows, inputs' },
-    { name: 'radius-md', px: 14, use: 'Menus, compact cards' },
+    { name: 'radius-md', px: 14, use: 'Menus, the picture cropper' },
     { name: 'radius', px: 16, use: 'Cards, the reader, panels' },
     { name: 'radius-lg', px: 20, use: 'Sheets and dialogs' },
     { name: 'radius-pill', px: 999, use: 'Buttons, chips, tabs' }
@@ -211,6 +211,7 @@
         { id: 'banner', label: 'Banner' },
         { id: 'breadcrumb', label: 'Breadcrumb' },
         { id: 'button', label: 'Button' },
+        { id: 'card', label: 'Card' },
         { id: 'choice-group', label: 'Choice group' },
         { id: 'dot', label: 'Dot' },
         { id: 'empty-note', label: 'Empty note' },
@@ -516,6 +517,39 @@
       </div>
     </section>
 
+    <section class="entry" id="card" aria-labelledby="card-h">
+      <h3 class="entry-h" id="card-h">Card</h3>
+      <p class="section-lede">The one box lifted off the page: the card color, the rounded corner, and the soft shadow. On Crisp and Black and white, which have no shadow, a thin outline draws the edge instead. Every card is one of three kinds, and cards of the same kind look the same on every screen. The space inside a card belongs to the card; the space around it belongs to the screen.</p>
+
+      <h4 class="sub">Content card</h4>
+      <p class="section-lede">One post, bookmark, or starter pack. The whole card is something to tap, so it gives a little when pressed. Its picture can run to the edge; the words sit 16px in.</p>
+      <div class="stack">
+        <Card as="div">
+          <h3 class="card-title">A post’s title, in the headings face</h3>
+          <p class="card-summary">The summary under it, in the reading face, stopping after three lines.</p>
+        </Card>
+      </div>
+
+      <h4 class="sub">List card</h4>
+      <p class="section-lede">Rows, one under another: Activity, a collection’s feeds, Explore’s results, Notifications. The card has no space inside of its own; each row sets itself 16px in from the edge.</p>
+      <div class="stack">
+        <Card kind="list" as="ul">
+          <li class="demo-row">The first row</li>
+          <li class="demo-row">The second row</li>
+          <li class="demo-row">The third row</li>
+        </Card>
+      </div>
+
+      <h4 class="sub">Section card</h4>
+      <p class="section-lede">A group of settings, or one message standing on its own, like an empty section or who can see a profile tab. 16px of space inside, and nothing in it is cut off at the edge, so a menu or a focus ring can reach past it.</p>
+      <div class="stack">
+        <Card kind="section" as="section">
+          <h4 class="demo-section-h">Unread posts</h4>
+          <p class="demo-post-plain">The settings for one thing sit together on one card.</p>
+        </Card>
+      </div>
+    </section>
+
     <section class="entry" id="choice-group" aria-labelledby="choice-group-h">
       <h3 class="entry-h" id="choice-group-h">Choice group</h3>
       <p class="section-lede">Pick one, and it takes effect at once — a setting, not a tab. Nothing else on the page moves. When the options can’t sit on one line in the space they have (a small phone, large text), the group becomes a dropdown with the same choices. It never wraps and never slides sideways. Every option is outlined in the accent color so the row reads as something to press; the chosen one gets an accent wash, accent words, and an outline twice as thick.</p>
@@ -810,6 +844,10 @@
      short of the top when jumped to, so the jump menu doesn't cover the heading. */
   .group, .entry { scroll-margin-top: calc(var(--space-6) + var(--space-6)); }
   .group { margin: calc(var(--space-6) + var(--space-5)) 0 0; padding-top: var(--space-4); border-top: 2px solid var(--text); }
+  .demo-row { padding: var(--space-3) var(--card-pad); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .demo-row:first-child { border-top: 0; }
+  .demo-section-h { margin: 0 0 var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; }
+  .demo-post-plain { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .demo-post { margin: 0; padding: var(--card-pad); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .entry { margin: var(--space-6) 0 0; padding-top: var(--space-5); border-top: 1px solid var(--line); }
   h2 {
