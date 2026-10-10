@@ -648,12 +648,7 @@
   </li>
 {/snippet}
 
-<!-- What the tabs above switch between. -->
-<div id="explore-results" role="tabpanel" aria-label={scopeLabel}>
-{#if error}
-  <p class="status error" role="alert">Couldn’t load: {error}</p>
-{:else if nothing}
-  {@render filterBar()}
+{#snippet emptyMessage()}
   <div class="empty">
     {#if searching && scope !== 'all' && found > 0}
       <p>No {scopeLabel.toLowerCase()} match “{q}”, but {plural(found, 'other result')} {found === 1 ? 'does' : 'do'}. <button class="link" onclick={() => setScope('all')}>Show everything</button>.</p>
@@ -670,6 +665,21 @@
       <p>No other public profiles here yet.</p>
     {/if}
   </div>
+{/snippet}
+
+<!-- What the tabs above switch between. -->
+<div id="explore-results" role="tabpanel" aria-label={scopeLabel}>
+{#if error}
+  <p class="status error" role="alert">Couldn’t load: {error}</p>
+{:else if nothing}
+  <!-- Browsing, the message takes the rows' place inside the list card, so a filter that empties the list
+       leaves the filters where they were. A search's filters always sit above its cards, so its message does too. -->
+  {#if searching}
+    {@render filterBar()}
+    {@render emptyMessage()}
+  {:else}
+    <Card kind="list" as="div" class="browse">{@render filterBar()}{@render emptyMessage()}</Card>
+  {/if}
 {:else if searching && res}
   {@render filterBar()}
   {#if scope === 'all'}
