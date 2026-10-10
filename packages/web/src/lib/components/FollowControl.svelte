@@ -14,13 +14,16 @@
    * The choosing happens in a Sheet like Add a feed's, not a menu hanging off
    * the button: a long list of collections needs the room, and filing a feed
    * should look the same however you got there.
+   * It's the shared Button: the pale green secondary look until the feed is
+   * filed somewhere, the plain ghost look once it is.
    */
   import { api } from '$lib/api';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
+  import Button from './Button.svelte';
   import FollowSheet from './FollowSheet.svelte';
 
-  let { feedId, ids = $bindable(), name = 'this feed', compact = false, small = false, followLabel = 'Follow', onchange }: {
-    feedId: number; ids: number[]; name?: string; compact?: boolean; /** The small size every page header's buttons use. */ small?: boolean; /** What it says before you follow, where "Follow" alone would be unclear: "Follow this feed" on a feed's page. */ followLabel?: string; onchange?: (ids: number[]) => void;
+  let { feedId, ids = $bindable(), name = 'this feed', small = false, followLabel = 'Follow', onchange, class: klass = '' }: {
+    feedId: number; ids: number[]; name?: string; /** The small Button, as on a row of a list and in a page header. */ small?: boolean; /** For the screen to place the button. */ class?: string; /** What it says before you follow, where "Follow" alone would be unclear: "Follow this feed" on a feed's page. */ followLabel?: string; onchange?: (ids: number[]) => void;
   } = $props();
 
   let open = $state(false);
@@ -47,22 +50,15 @@
   $effect(() => { if (following) void loadCollections(); });
 </script>
 
-<button class="follow tap" class:on={following} class:compact class:small onclick={show} aria-haspopup="dialog" aria-expanded={open}><span class="lbl">{label}</span></button>
+<Button size={small ? 'sm' : 'md'} variant={following ? 'ghost' : 'secondary'} class="follow {klass}" onclick={show} aria-haspopup="dialog" aria-expanded={open}><span class="lbl">{label}</span></Button>
 
 {#if open}
   <FollowSheet {feedId} bind:ids {name} {onchange} onclose={() => (open = false)} />
 {/if}
 
 <style>
-  /* A collection name can be long; the button gives it room, then ellipsis. */
-  .follow { flex: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); background: var(--surface); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; white-space: nowrap; max-width: min(20ch, 100%); }
-  /* The label does the clipping rather than the button, so the button's touch
-     area (see `.tap` in app.css) can reach past its edges. */
-  .lbl { display: block; overflow: hidden; text-overflow: ellipsis; }
-  .follow.on { background: var(--accent-tint); border-color: transparent; }
-  .follow:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
-  /* Hover draws the outline back in rather than deepening the wash, which would dim the lettering on it. */
-  .follow.on:hover { background: var(--accent-tint); border-color: var(--accent); }
-  .compact { padding: var(--space-1) var(--space-4); }
-  .small { padding: var(--space-1) var(--space-3); }
+  /* A collection name can be long; the label gives it room, then ellipsis. The
+     label does the clipping rather than the button, so the button's touch
+     area can reach past its edges. */
+  .lbl { display: block; max-width: 20ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
