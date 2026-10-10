@@ -154,7 +154,7 @@
           <input class="name" bind:value={g.name} disabled={!g.keep} aria-label="Collection name" />
           <small>
             {#if blocked}{g.feeds.some((f) => f.state === 'unsure') ? 'None of these could be checked' : 'Nothing here can be added'}{:else if renamed}Created as <strong>{finalNames.get(gi)}</strong>, beside the <strong>{g.name.trim()}</strong> you already have{:else}New collection{/if}
-            <Dot /> {ok.length} to add{#if bad.length} <Dot /> {bad.length} can’t be added{/if}
+            <Dot /> {ok.length} to add{#if bad.length}{' '}<Dot />{' '}{bad.length} can’t be added{/if}
           </small>
         </div>
       </div>
