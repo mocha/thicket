@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Card from '$lib/components/Card.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { api, authApi, bookmarksApi, ApiError } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
@@ -148,7 +149,7 @@
 </PageHeader>
 
 {#if hosted}
-  <section class="card">
+  <Card kind="section" as="section" class="account-section">
     <h2>Email</h2>
     <p class="help">If you forget your password, we’ll email you a link to reset it. We won’t send you anything else, and no one else can see this address.</p>
 
@@ -188,10 +189,10 @@
         </div>
       </form>
     {/if}
-  </section>
+  </Card>
 {/if}
 
-<section class="card">
+<Card kind="section" as="section" class="account-section">
   <h2>Change password</h2>
   <form onsubmit={(e) => { e.preventDefault(); void changePassword(); }}>
     <Field label="Current password" error={pwError?.field === 'current' ? pwError.message : null}>
@@ -214,11 +215,11 @@
     </p>
     {#if resetError}<p class="bad" role="alert">{resetError}</p>{/if}
   {/if}
-</section>
+</Card>
 
 <!-- The way in sits beside the way out: bring your reading here, take it with
      you. The import itself is a page of its own (/import); this is its door. -->
-<section class="card">
+<Card kind="section" as="section" class="account-section">
   <h2>Import feeds</h2>
   <div class="export">
     <div class="what">
@@ -226,9 +227,9 @@
     </div>
     <Button href="/import">Import feeds</Button>
   </div>
-</section>
+</Card>
 
-<section class="card">
+<Card kind="section" as="section" class="account-section">
   <h2>Export my data</h2>
 
   <!-- One row per thing to download: what it is and what you get on the left,
@@ -242,12 +243,13 @@
   </div>
 
   <p class="note also">To export a single collection, click its gear button to access its manage features.</p>
-</section>
+</Card>
 
 <ApiTokens available={tokensAvailable} />
 
 <style>
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
+  /* The page has no element of its own around its sections, so the room between them is set on the cards' own class. */
+  :global(.account-section) { margin-bottom: var(--space-4); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
   .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }

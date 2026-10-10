@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Card from './Card.svelte';
   import { tokensApi, type ApiToken, type ApiTokenKind } from '$lib/api';
   import { longAgo } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
@@ -90,7 +91,7 @@
   }
 </script>
 
-<section class="card" class:off={!available} aria-labelledby="api-tokens-title">
+<Card kind="section" as="section" class="api-tokens {available ? '' : 'off'}" aria-labelledby="api-tokens-title">
   <h2 id="api-tokens-title">API tokens</h2>
   <p class="help">A token lets another app or AI assistant use your thicket account. Enable one, copy it, and paste it into the app. Only give it to apps you trust.</p>
   {#if !available}<p class="unavailable">{unavailable}</p>{/if}
@@ -139,11 +140,11 @@
   <p class="how">
     Building your own app? See the <a href="/api/openapi.json">technical reference</a>.
   </p>
-</section>
+</Card>
 
 <style>
   /* The card and its heading match the other sections of the Account page. */
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
+  :global(.api-tokens) { margin-bottom: var(--space-4); }
   h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
   h2 + .help { margin-top: calc(-1 * var(--space-2)); }
   .help, .how { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
@@ -156,7 +157,7 @@
   h3 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; line-height: 1.3; }
   .can { margin: var(--space-1) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   /* Off: the two kinds read as not on offer, while the explanation above stays at full strength. */
-  .off .what { opacity: 0.6; }
+  :global(.api-tokens.off) .what { opacity: 0.6; }
 
   .token { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-3); }
   .value {

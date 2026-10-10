@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Card from '$lib/components/Card.svelte';
   import Dot from '$lib/components/Dot.svelte';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
@@ -77,12 +78,13 @@
    */
   const narrowToNetwork = $derived(page.url.searchParams.get('by') === 'following');
   const since = $derived(page.url.searchParams.get('since'));
+  /** `summary` is how the folded Filters box names the order, after "Show everyone · Added any time". */
   const sorts = [
-    { id: 'popular', label: 'Popular' },
-    { id: 'recent', label: 'Recent posts' },
-    { id: 'posts', label: 'Most active' },
-    { id: 'title', label: 'A–Z' },
-    { id: 'added', label: 'Newest here' }
+    { id: 'popular', label: 'Popular', summary: 'Most popular' },
+    { id: 'recent', label: 'Recent posts', summary: 'Most recent posts' },
+    { id: 'posts', label: 'Most active', summary: 'Most active' },
+    { id: 'title', label: 'A–Z', summary: 'A to Z' },
+    { id: 'added', label: 'Newest here', summary: 'Newest here' }
   ];
   // 'followers' is the old name for 'popular'; saved links still land on it. ?sort= is also a
   // search's feed order (below), so a value that isn't a browse order is read as the default.
@@ -370,45 +372,18 @@
   );
   const scopeLabel = $derived(SCOPES.find((s) => s.id === scope)?.label ?? '');
 
-  /* On a phone, browsing feeds has three filters, and stacked they push the
-     list most of the way down the first screen. There they fold into one row
-     that names what's chosen and opens the same three dropdowns in a Sheet. */
+  /* Browsing feeds has three filters. Laid out, they push the list down or
+     crowd the card, so at every width they fold into one box that names
+     what's chosen and opens the same three dropdowns in a Sheet. */
   const ADDED: Record<string, string> = { '': 'Any time', '24h': 'Past 24 hours', week: 'Past week', month: 'Past month', year: 'Past year' };
   const threeFilters = $derived(!searching && browseAs === 'feeds');
+  /* Each part reads as a phrase on its own: "Show everyone · Added any time · Most popular". */
   const filterSummary = $derived([
-    narrowToNetwork ? 'People I follow' : 'Everyone',
-    ADDED[since ?? ''] ?? 'Any time',
-    sorts.find((x) => x.id === sort)?.label ?? 'Popular'
+    narrowToNetwork ? 'Show people I follow' : 'Show everyone',
+    `Added ${(ADDED[since ?? ''] ?? 'Any time').toLowerCase()}`,
+    sorts.find((x) => x.id === sort)?.summary ?? 'Most popular'
   ]);
   let filtersDialog = $state<HTMLDialogElement | null>(null);
-
-  /* Off the phone the three sit in one row, which has to actually fit: longer
-     wording or larger text can make them wider than the card. Measured, the
-     row is 'roomy' (the normal gaps), 'snug' (tighter gaps, when that is all
-     it takes), or 'fold' (they don't fit on one line at all, so they fold
-     into the Filters box the same way they do on a phone). It never wraps a
-     filter onto a second line. */
-  let filtersEl = $state<HTMLDivElement | null>(null);
-  let fit = $state<'roomy' | 'snug' | 'fold'>('roomy');
-  $effect(() => {
-    const el = filtersEl;
-    if (!el || !threeFilters) { fit = 'roomy'; return; }
-    const measure = () => {
-      const kids = [...el.children] as HTMLElement[];
-      if (!kids.length || !el.clientWidth || getComputedStyle(el).flexDirection === 'column') return;
-      const cs = getComputedStyle(el);
-      const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-      const need = kids.reduce((w, k) => w + k.offsetWidth, 0);
-      const gaps = kids.length - 1;
-      fit = need + 16 * gaps <= room ? 'roomy' : need + 8 * gaps <= room ? 'snug' : 'fold';
-    };
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    for (const k of el.children) ro.observe(k);
-    measure();
-    void document.fonts?.ready.then(measure);
-    return () => ro.disconnect();
-  });
 
   /**
    * What a screen reader is told when a search comes back: how many results,
@@ -527,15 +502,14 @@
 {#snippet filterBar()}
   <TabBlurb class="blurb" text={SCOPE_BLURB[scope]}>{#snippet icon()}{@render scopeIcon(scope)}{/snippet}</TabBlurb>
   {#if threeFilters}
-    <button type="button" class="filters-row" class:wide={fit === 'fold'} onclick={() => filtersDialog?.showModal()} aria-haspopup="dialog">
+    <button type="button" class="filters-row" onclick={() => filtersDialog?.showModal()} aria-haspopup="dialog">
       <svg class="fr-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>
-      <span class="fr-text"><span class="fr-name">Filters</span><span class="fr-now">{#each filterSummary as part, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{part}{/each}</span></span>
+      <span class="fr-text"><span class="fr-name">Filters</span><span class="fr-now">{#each filterSummary as part, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}<span class="fr-part">{part}</span>{/each}</span></span>
       <span class="fr-caret"><Icon name="caret" dir="down" size={20} /></span>
     </button>
+  {:else}
+    <div class="filters">{@render filterFields()}</div>
   {/if}
-  <div class="filters" class:fold={threeFilters} class:snug={threeFilters && fit === 'snug'} class:unfit={threeFilters && fit === 'fold'} bind:this={filtersEl} inert={threeFilters && fit === 'fold'}>
-    {@render filterFields()}
-  </div>
   <!-- What the chosen order means, said under the row rather than inside it so
        the filters stay one line. The dropdown points at it, so it is read out too. -->
   {#if sortsFeeds}<p class="sort-help" id="feed-sort-help">{feedSortHelp}</p>{/if}
@@ -645,12 +619,7 @@
   </li>
 {/snippet}
 
-<!-- What the tabs above switch between. -->
-<div id="explore-results" role="tabpanel" aria-label={scopeLabel}>
-{#if error}
-  <p class="status error" role="alert">Couldn’t load: {error}</p>
-{:else if nothing}
-  {@render filterBar()}
+{#snippet emptyMessage()}
   <div class="empty">
     {#if searching && scope !== 'all' && found > 0}
       <p>No {scopeLabel.toLowerCase()} match “{q}”, but {plural(found, 'other result')} {found === 1 ? 'does' : 'do'}. <button class="link" onclick={() => setScope('all')}>Show everything</button>.</p>
@@ -667,50 +636,65 @@
       <p>No other public profiles here yet.</p>
     {/if}
   </div>
+{/snippet}
+
+<!-- What the tabs above switch between. -->
+<div id="explore-results" role="tabpanel" aria-label={scopeLabel}>
+{#if error}
+  <p class="status error" role="alert">Couldn’t load: {error}</p>
+{:else if nothing}
+  <!-- Browsing, the message takes the rows' place inside the list card, so a filter that empties the list
+       leaves the filters where they were. A search's filters always sit above its cards, so its message does too. -->
+  {#if searching}
+    {@render filterBar()}
+    {@render emptyMessage()}
+  {:else}
+    <Card kind="list" as="div" class="browse">{@render filterBar()}{@render emptyMessage()}</Card>
+  {/if}
 {:else if searching && res}
   {@render filterBar()}
   {#if scope === 'all'}
     {#if res.feeds.rows.length}
       <section class="group">
         <h2>Feeds <Badge>{res.feeds.total.toLocaleString()}</Badge>{#if res.feeds.total > res.feeds.rows.length}<button class="link all tap" onclick={() => setScope('feeds')}>See all</button>{/if}</h2>
-        <ul class="list">{#each res.feeds.rows as f (f.id)}{@render feedRow(f, f)}{/each}</ul>
+        <Card kind="list" as="ul">{#each res.feeds.rows as f (f.id)}{@render feedRow(f, f)}{/each}</Card>
       </section>
     {/if}
     {#if res.collections.rows.length}
       <section class="group">
         <h2>Collections <Badge>{res.collections.total.toLocaleString()}</Badge>{#if res.collections.total > res.collections.rows.length}<button class="link all tap" onclick={() => setScope('collections')}>See all</button>{/if}</h2>
-        <ul class="list">{#each res.collections.rows as c (c.id)}{@render colRow(c, c)}{/each}</ul>
+        <Card kind="list" as="ul">{#each res.collections.rows as c (c.id)}{@render colRow(c, c)}{/each}</Card>
       </section>
     {/if}
     {#if res.posts.rows.length}
       <section class="group">
         <h2>Posts <Badge>{res.posts.total.toLocaleString()}</Badge>{#if res.posts.total > res.posts.rows.length}<button class="link all tap" onclick={() => setScope('posts')}>See all</button>{/if}</h2>
-        <ul class="list">{#each res.posts.rows as p (p.id)}{@render postRow(p)}{/each}</ul>
+        <Card kind="list" as="ul">{#each res.posts.rows as p (p.id)}{@render postRow(p)}{/each}</Card>
       </section>
     {/if}
     {#if res.people.rows.length}
       <section class="group">
         <h2>People <Badge>{res.people.total.toLocaleString()}</Badge>{#if res.people.total > res.people.rows.length}<button class="link all tap" onclick={() => setScope('people')}>See all</button>{/if}</h2>
-        <ul class="list">{#each res.people.rows as u (u.handle)}{@render personRow(u, u)}{/each}</ul>
+        <Card kind="list" as="ul">{#each res.people.rows as u (u.handle)}{@render personRow(u, u)}{/each}</Card>
       </section>
     {/if}
   {:else}
     <section class="group">
       <h2>{SCOPES.find((s) => s.id === scope)?.label} <Badge>{(group?.total ?? 0).toLocaleString()}</Badge></h2>
-      <ul class="list">
+      <Card kind="list" as="ul">
         {#if scope === 'feeds'}{#each rows as f (( f as SearchFeed).id)}{@render feedRow(f as SearchFeed, f as SearchFeed)}{/each}
         {:else if scope === 'collections'}{#each rows as c ((c as SearchCollection).id)}{@render colRow(c as SearchCollection, c as SearchCollection)}{/each}
         {:else if scope === 'posts'}{#each rows as p ((p as SearchPost).id)}{@render postRow(p as SearchPost)}{/each}
         {:else}{#each rows as u ((u as SearchPerson).handle)}{@render personRow(u as SearchPerson, u as SearchPerson)}{/each}{/if}
-      </ul>
+      </Card>
     </section>
   {/if}
 {:else if browseAs === 'feeds'}
-  <div class="browse">{@render filterBar()}<ul class="list">{#each feeds as f (f.id)}{@render feedRow(f, null)}{/each}</ul></div>
+  <Card kind="list" as="div" class="browse">{@render filterBar()}<ul class="list">{#each feeds as f (f.id)}{@render feedRow(f, null)}{/each}</ul></Card>
 {:else if browseAs === 'collections'}
-  <div class="browse">{@render filterBar()}<ul class="list">{#each cols as c (c.id)}{@render colRow(c, null)}{/each}</ul></div>
+  <Card kind="list" as="div" class="browse">{@render filterBar()}<ul class="list">{#each cols as c (c.id)}{@render colRow(c, null)}{/each}</ul></Card>
 {:else}
-  <div class="browse">{@render filterBar()}<ul class="list">{#each users as u (u.handle)}{@render personRow(u, null)}{/each}</ul></div>
+  <Card kind="list" as="div" class="browse">{@render filterBar()}<ul class="list">{#each users as u (u.handle)}{@render personRow(u, null)}{/each}</ul></Card>
 {/if}
 
 </div>
@@ -740,7 +724,7 @@
      centered together, and never pinned to the edge when the text fills the line. */
   /* Browsing, the filters and list are one card; the caption leads it, inset to
      match the card's side padding. */
-  .browse :global(.blurb) { margin: 0; padding: var(--space-5) var(--space-3) var(--space-2); }
+  :global(.browse) :global(.blurb) { margin: 0; padding: var(--space-5) var(--space-3) var(--space-2); }
   .group { margin-bottom: var(--space-5); }
   .group h2 { margin-bottom: var(--space-2); }
   /* Beats .link’s inherited size below: “See all” is a small action, not part of the heading. */
@@ -757,44 +741,28 @@
   @media (max-width: 600px) {
     .filters { flex-direction: column; align-items: stretch; }
     .filters :global(.filter) { flex-direction: column; align-items: stretch; }
-    /* Three filters fold into the one row above them; see the script. */
-    .filters.fold { display: none; }
-  }
-  /* Off the phone: the row never wraps a filter onto a second line. It closes
-     its gaps when that is all it takes to fit (16px to 8px, the two the script
-     measures against), and when even that isn't enough it is swapped for the
-     Filters box: still laid out, so it can be measured again, but taking no
-     height and out of sight and reach. */
-  @media (min-width: 601px) {
-    .filters.fold { flex-wrap: nowrap; }
-    .filters.snug { column-gap: var(--space-2); }
-    .filters.unfit, .browse .filters.unfit { visibility: hidden; height: 0; padding-block: 0; margin-block: 0; overflow: hidden; }
-    .filters.fold :global(.filter) { flex: none; }
   }
   /* The folded row. Drawn as a box with the dropdown's own outline, corner and
      caret, so it reads as something to press rather than a line of text: an
      icon, what it is, and what's chosen now. */
-  .filters-row { display: none; }
-  @media (max-width: 600px) { .filters-row { display: flex; } }
-  .filters-row.wide { display: flex; }
   .filters-row {
-    align-items: center; gap: var(--space-3); width: 100%; min-height: 52px; text-align: left;
+    display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 52px; text-align: left;
     padding: var(--space-2) var(--space-3); margin-bottom: var(--space-2);
     border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface);
   }
   /* Inside the list card it keeps the card's side padding around it. */
-  .browse .filters-row { width: calc(100% - var(--space-3) * 2); margin: var(--space-3) var(--space-3) var(--space-2); }
+  :global(.browse) .filters-row { width: calc(100% - var(--card-pad) * 2); margin: var(--space-3) var(--card-pad) var(--space-2); }
   .fr-icon { flex: none; color: var(--accent); }
   .fr-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
   .fr-name { font-weight: 600; color: var(--text); line-height: 1.25; }
   .fr-now { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
+  /* Each choice stays on one line, so a long summary breaks at the dots, never mid-phrase. */
+  .fr-part { white-space: nowrap; }
   .fr-caret { flex: none; display: grid; color: var(--text-2); }
-  .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  /* Browse: the filters are the list card's header, so the two read as one unit. */
-  .browse { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-  .browse .filters { margin: 0; padding: var(--space-3) var(--space-3) var(--space-1); }
-  .browse .list { background: none; box-shadow: none; border-radius: 0; }
-  li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3); border-top: 1px solid var(--line); flex-wrap: wrap; }
+  /* Browse: the filters are the list card's header, so the two read as one unit; the rows below are part of the same card. */
+  .list { list-style: none; margin: 0; padding: 0; }
+  :global(.browse) .filters { margin: 0; padding: var(--space-3) var(--card-pad) var(--space-1); }
+  li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); flex-wrap: wrap; }
   /* On a phone a row's button would squeeze the description into a column
      four words wide, so it drops to its own line and the text gets the row.
      Every kind of row keeps that button at the right, so they all line up. */

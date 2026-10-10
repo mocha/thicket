@@ -163,7 +163,7 @@
   const corners = [
     { name: 'radius-xs', px: 4, use: 'Inline code, highlight marks' },
     { name: 'radius-sm', px: 10, use: 'Controls, rows, inputs' },
-    { name: 'radius-md', px: 14, use: 'Menus, compact cards' },
+    { name: 'radius-md', px: 14, use: 'Menus, the picture cropper' },
     { name: 'radius', px: 16, use: 'Cards, the reader, panels' },
     { name: 'radius-lg', px: 20, use: 'Sheets and dialogs' },
     { name: 'radius-pill', px: 999, use: 'Buttons, chips, tabs' }
@@ -211,6 +211,7 @@
         { id: 'banner', label: 'Banner' },
         { id: 'breadcrumb', label: 'Breadcrumb' },
         { id: 'button', label: 'Button' },
+        { id: 'card', label: 'Card' },
         { id: 'choice-group', label: 'Choice group' },
         { id: 'dot', label: 'Dot' },
         { id: 'empty-note', label: 'Empty note' },
@@ -307,22 +308,22 @@
   <section class="group" id="principles" aria-labelledby="principles-h">
     <h2 id="principles-h">Principles</h2>
     <div class="principles">
-      <div class="tile">
+      <Card kind="section" as="div">
         <h3>Everything hangs off tokens</h3>
         <p>No component names a raw color, size, or corner. They reach for a token, and the token decides. Reskinning is a token change, not a component change.</p>
-      </div>
-      <div class="tile">
+      </Card>
+      <Card kind="section" as="div">
         <h3>Three theme states, not two</h3>
         <p>Light and dark, plus "follow the device" — the state most people never leave. On top of that sit seven full color themes, from soft sepia to hard black-and-white for e-ink.</p>
-      </div>
-      <div class="tile">
+      </Card>
+      <Card kind="section" as="div">
         <h3>One of each</h3>
         <p>One button. One card. One text field. If a screen needs something the kit doesn't have, the kit is what changes — so nothing drifts into a second, slightly-different version.</p>
-      </div>
-      <div class="tile">
+      </Card>
+      <Card kind="section" as="div">
         <h3>Readable by default</h3>
         <p>Every color pair clears the contrast bar in both light and dark. Focus rings, keyboard paths, and screen-reader labels are built into the parts, not bolted on later.</p>
-      </div>
+      </Card>
     </div>
   </section>
 
@@ -513,6 +514,39 @@
       <div class="row">
         <Button variant="primary" disabled>Disabled</Button>
         <Button variant="primary" loading>Loading</Button>
+      </div>
+    </section>
+
+    <section class="entry" id="card" aria-labelledby="card-h">
+      <h3 class="entry-h" id="card-h">Card</h3>
+      <p class="section-lede">The one box lifted off the page: the card color, the rounded corner, and the soft shadow. On Crisp and Black and white, which have no shadow, a thin outline draws the edge instead. Every card is one of three kinds, and cards of the same kind look the same on every screen. The space inside a card belongs to the card; the space around it belongs to the screen.</p>
+
+      <h4 class="sub">Content card</h4>
+      <p class="section-lede">One post, bookmark, or starter pack. The whole card is something to tap, so it gives a little when pressed. Its picture can run to the edge; the words sit 16px in.</p>
+      <div class="stack">
+        <Card as="div">
+          <h3 class="card-title">A post’s title, in the headings face</h3>
+          <p class="card-summary">The summary under it, in the reading face, stopping after three lines.</p>
+        </Card>
+      </div>
+
+      <h4 class="sub">List card</h4>
+      <p class="section-lede">Rows, one under another: Activity, a collection’s feeds, Explore’s results, Notifications. The card has no space inside of its own; each row sets itself 16px in from the edge.</p>
+      <div class="stack">
+        <Card kind="list" as="ul">
+          <li class="demo-row">The first row</li>
+          <li class="demo-row">The second row</li>
+          <li class="demo-row">The third row</li>
+        </Card>
+      </div>
+
+      <h4 class="sub">Section card</h4>
+      <p class="section-lede">A group of settings, or one message standing on its own, like an empty section or who can see a profile tab. 16px of space inside, and nothing in it is cut off at the edge, so a menu or a focus ring can reach past it.</p>
+      <div class="stack">
+        <Card kind="section" as="section">
+          <h4 class="demo-section-h">Unread posts</h4>
+          <p class="demo-post-plain">The settings for one thing sit together on one card.</p>
+        </Card>
       </div>
     </section>
 
@@ -810,6 +844,10 @@
      short of the top when jumped to, so the jump menu doesn't cover the heading. */
   .group, .entry { scroll-margin-top: calc(var(--space-6) + var(--space-6)); }
   .group { margin: calc(var(--space-6) + var(--space-5)) 0 0; padding-top: var(--space-4); border-top: 2px solid var(--text); }
+  .demo-row { padding: var(--space-3) var(--card-pad); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .demo-row:first-child { border-top: 0; }
+  .demo-section-h { margin: 0 0 var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; }
+  .demo-post-plain { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .demo-post { margin: 0; padding: var(--card-pad); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .entry { margin: var(--space-6) 0 0; padding-top: var(--space-5); border-top: 1px solid var(--line); }
   h2 {
@@ -831,12 +869,8 @@
 
   /* ---- Principles ---- */
   .principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3); }
-  .tile {
-    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: var(--space-4); box-shadow: var(--shadow);
-  }
-  .tile h3 { margin: 0 0 var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; }
-  .tile p { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; }
+  .principles h3 { margin: 0 0 var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; }
+  .principles p { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; }
 
   /* ---- Color ---- */
   .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-3); }

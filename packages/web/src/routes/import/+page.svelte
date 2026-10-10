@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Card from '$lib/components/Card.svelte';
   import Dot from '$lib/components/Dot.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { onMount } from 'svelte';
@@ -95,19 +96,19 @@
 </PageHeader>
 
 {#if imp.step === 'choose'}
-  <section class="card">
+  <Card kind="section" as="section" class="import-section">
     <h2>From another reader</h2>
     <ImportHelp via="file" errors={false} />
-  </section>
+  </Card>
 
-  <section class="card">
+  <Card kind="section" as="section" class="import-section">
     <h2>From a link</h2>
     <p class="help">Paste a link to someone else’s collection, or to an OPML file</p>
     <form class="linkrow" onsubmit={(e) => { e.preventDefault(); if (link.trim()) void readImport(() => importApi.readLink(link.trim()), 'link'); }}>
       <Input type="url" inputmode="url" inset bind:value={link} placeholder="{page.url.host}/@name/collections/…" aria-label="Link to a collection or OPML file" class="link" />
       <Button variant="primary" size="lg" type="submit" disabled={!link.trim()} loading={imp.busy}>Preview</Button>
     </form>
-  </section>
+  </Card>
 
   {#if imp.error}<p class="bad" role="alert">{imp.error}</p>{/if}
 {:else if imp.step === 'review' && imp.preview}
@@ -143,7 +144,7 @@
     {@const bad = refused(g)}
     {@const renamed = g.keep && !!g.name.trim() && finalNames.get(gi) !== g.name.trim()}
     {@const blocked = settled(g) && !canKeep(g)}
-    <section class="card group" class:off={!g.keep}>
+    <Card kind="section" as="section" class="import-section {g.keep ? '' : 'off'}">
       <div class="ghead">
         <label class="keep">
           <input type="checkbox" checked={g.keep} onchange={(e) => toggleKeep(g, e)} />
@@ -189,7 +190,7 @@
           </ul>
         {/if}
       {/if}
-    </section>
+    </Card>
   {/each}
 
   {#if imp.error}<p class="bad" role="alert">{imp.error}</p>{/if}
@@ -203,7 +204,7 @@
     </Button>
   </div>
 {:else if imp.step === 'done'}
-  <section class="card">
+  <Card kind="section" as="section" class="import-section">
     <h2>Done</h2>
     <p class="help">New feeds start arriving over the next few minutes, as thicket fetches each one for the first time.</p>
     <ul class="feeds">
@@ -215,11 +216,12 @@
       {/each}
     </ul>
     <div class="row"><Button onclick={startOver}>Import another</Button></div>
-  </section>
+  </Card>
 {/if}
 
 <style>
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
+  /* The room between sections is set on the cards' own class, since the cards are drawn by the shared Card. */
+  :global(.import-section) { margin-bottom: 14px; }
   h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
   h2 + .help { margin-top: -8px; }
   h3 { font-size: calc(14px * var(--size-app)); margin: 16px 0 8px; color: var(--text-2); }
@@ -236,7 +238,7 @@
   .bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
   .bar span { display: block; height: 100%; background: var(--accent); transition: width 200ms ease; }
 
-  .group.off { opacity: 0.6; }
+  :global(.import-section.off) { opacity: 0.6; }
   .ghead { display: flex; flex-direction: column; gap: 10px; }
   .keep { display: flex; align-items: center; gap: 8px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); cursor: pointer; }
   .keep input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
