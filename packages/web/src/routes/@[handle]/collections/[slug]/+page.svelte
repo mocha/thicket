@@ -1,19 +1,15 @@
 <script lang="ts">
   import Card from '$lib/components/Card.svelte';
-  import Dot from '$lib/components/Dot.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { api, collectionHref, feedHref, manageCollectionHref, profileHref, profilesApi, type PublicCollection } from '$lib/api';
+  import { api, collectionHref, manageCollectionHref, profileHref, profilesApi, type PublicCollection } from '$lib/api';
   import { openAddFeed } from '$lib/addfeed.svelte';
   import { session } from '$lib/session.svelte';
   import { loadCollections } from '$lib/collections.svelte';
-  import { feedOrigin, hostOf, relativeTime } from '$lib/time';
-  import { feedListName } from '$lib/feedname';
   import { audienceTag } from '$lib/visibility';
-  import SourceIcon from '$lib/components/SourceIcon.svelte';
-  import FollowControl from '$lib/components/FollowControl.svelte';
+  import FeedRow from '$lib/components/FeedRow.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
@@ -182,18 +178,8 @@
     {#if showFeeds}
     <div id="collection-feeds">
       <ul class="list list-rows">
-        <!-- The name's link stretches over the row, so the icon and the rest of the row open the feed too, as on Explore. -->
         {#each col.feeds as f (f.id)}
-          <li class="feed">
-            <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={40} />
-            <div class="meta">
-              <a class="title row-name whole" href={feedHref(f)}>{feedListName(f)}</a>
-              <div class="sub2 row-details">{feedOrigin(f)}{#if f.lastItemAt}{' '}<Dot />{' '}{relativeTime(f.lastItemAt)}{/if}{' '}<Dot />{' '}{f.followerCount} {f.followerCount === 1 ? 'follower' : 'followers'}{#if f.failing} <Dot /> <span class="bad">failing</span>{/if}</div>
-            </div>
-            {#if session.user}
-              <FollowControl feedId={f.id} ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} small />
-            {/if}
-          </li>
+          <FeedRow feed={f} failing={f.failing} followers={f.followerCount} follow={!!session.user} />
         {/each}
       </ul>
       {#if col.children.length}
@@ -228,18 +214,9 @@
   /* 2px of top padding is an optical nudge: the buttons sit on the title's line. */
   /* The link keeps its own padding; pull it back so its words start at the title's left edge. */
   .visitoraction { margin: var(--space-2) 0 0 calc(-1 * var(--space-2)); }
-  .bad { color: var(--danger); }
   /* Inside the card the lists are part of it, not cards of their own: each starts under a hairline. */
   .list { border-top: 1px solid var(--line); }
-  .feed { display: flex; align-items: center; gap: var(--space-3); }
   .name { flex: 1; }
-  .meta { flex: 1; min-width: 0; }
-  .title { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  li.feed { position: relative; }
-  .whole::after { content: ''; position: absolute; inset: 0; }
-  li.feed :global(.follow) { position: relative; z-index: 1; }
-  @media (hover: hover) { li.feed:hover .title { text-decoration: underline; text-underline-offset: 3px; } }
-  .sub2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   .status { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }

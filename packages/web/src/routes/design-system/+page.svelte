@@ -664,6 +664,7 @@
 
       <h4 class="sub">A row for one thing</h4>
       <p class="section-lede">A feed, a person, a collection, or a post: something you can open. A 40px picture leads (a feed’s icon or a person’s picture; a collection has none), then the name in 16px bold, with the details under it in 14px gray. Used on Explore, a collection’s feeds, Collections, Import, and the people someone follows.</p>
+      <p class="section-lede">A feed is always the one Feed row, wherever feeds are listed: its name (with a Failing badge when its checks fail) and its site under it in dark, then its description and the facts about it (how often it posts, its latest post, its followers) in gray.</p>
       <div class="stack">
         <Card kind="list" as="ul" class="list-rows">
           <li class="demo-thing">

@@ -10,9 +10,8 @@
     type SearchResults, type SearchScope, type SearchFeed, type SearchCollection, type SearchPost, type SearchPerson,
     type FeedSearchSort, DEFAULT_FEED_SORT, feedSortFrom
   } from '$lib/api';
-  import { feedOrigin, hostOf, longAgo, postRate, relativeTime, webHref } from '$lib/time';
+  import { hostOf, longAgo, relativeTime, webHref } from '$lib/time';
   import { highlight, latestShort, mentionRate, plural } from '$lib/words';
-  import { feedListName } from '$lib/feedname';
   import { session } from '$lib/session.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
@@ -24,7 +23,7 @@
   import Icon from '$lib/components/Icon.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FeedPopover from '$lib/components/FeedPopover.svelte';
-  import FollowControl from '$lib/components/FollowControl.svelte';
+  import FeedRow from '$lib/components/FeedRow.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
   import TabBlurb from '$lib/components/TabBlurb.svelte';
@@ -518,35 +517,24 @@
 
 <!-- Rows. Each kind knows how to show its own evidence; see lib/words.ts. -->
 {#snippet feedRow(f: SearchFeed | Feed, ev: SearchFeed | null)}
-  {@const net = !ev && feedsNetwork ? (f as Feed).networkFollowers : 0}
   <!-- Sorted by newest post, a search row shows the date it is sorted by. -->
-  {@const latest = (!ev || (sortsFeeds && feedSort === 'posted')) && f.lastItemAt ? f.lastItemAt : null}
-  <li>
-    <a class="row tap" href={feedHref(f)} onclick={() => (opened = { feed: f.id })}>
-      <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={40} />
-      <div class="meta">
-        <!-- Who the feed is (name, then its site), what it's about, then how it behaves. -->
-        <span class="named"><span class="title row-name">{feedListName(f)}</span>{#if f.consecutiveFailures >= 3}<Badge class="own">Failing</Badge>{/if}</span>
-        <span class="sub2 row-details origin">{feedOrigin(f)}</span>
-        {#if f.description}<span class="desc">{f.description}</span>{/if}
-        {#if f.postsLast30d || latest || net}
-          <span class="sub2 row-details facts">
-            {#if f.postsLast30d}Publishes about {postRate(f.postsLast30d)}{/if}
-            {#if latest}{#if f.postsLast30d}{' '}<Dot />{' '}latest{:else}Latest{/if} {longAgo(latest)}{/if}
-            {#if net}{#if f.postsLast30d || latest}{' '}<Dot />{' '}{/if}<span class="net-n">{net} {net === 1 ? 'person' : 'people'} you follow</span>{/if}
-          </span>
-        {/if}
-        {#if ev && ev.matchesLast30d > 0}
-          <span class="why"><span aria-hidden="true">~</span><span class="visually-hidden">about </span>{mentionRate(ev.matchesLast30d)} “{q}”{#if ev.lastMatchAt}{' '}<span class="nowrap">({latestShort(ev.lastMatchAt)})</span>{/if}</span>
-        {:else if ev && ev.lastMatchAt}
-          <span class="why">Last mentioned “{q}” {longAgo(ev.lastMatchAt)}</span>
-        {:else if ev}
-          <span class="why">Name matches, but no posts mention “{q}”</span>
-        {/if}
-      </div>
-    </a>
-    <FollowControl feedId={f.id} bind:ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} small onchange={() => void api.feed(f.id).then((u) => Object.assign(f, u))} />
-  </li>
+  <FeedRow
+    feed={f}
+    failing={f.consecutiveFailures >= 3}
+    postsLast30d={f.postsLast30d}
+    network={!ev && feedsNetwork ? ((f as Feed).networkFollowers ?? 0) : 0}
+    latest={!ev || (sortsFeeds && feedSort === 'posted')}
+    onopen={() => (opened = { feed: f.id })}
+    onchange={() => void api.feed(f.id).then((u) => Object.assign(f, u))}
+  >
+    {#if ev && ev.matchesLast30d > 0}
+      <span class="why"><span aria-hidden="true">~</span><span class="visually-hidden">about </span>{mentionRate(ev.matchesLast30d)} “{q}”{#if ev.lastMatchAt}{' '}<span class="nowrap">({latestShort(ev.lastMatchAt)})</span>{/if}</span>
+    {:else if ev && ev.lastMatchAt}
+      <span class="why">Last mentioned “{q}” {longAgo(ev.lastMatchAt)}</span>
+    {:else if ev}
+      <span class="why">Name matches, but no posts mention “{q}”</span>
+    {/if}
+  </FeedRow>
 {/snippet}
 
 {#snippet colRow(c: ExploreCollection | SearchCollection, ev: SearchCollection | null)}
@@ -797,20 +785,12 @@
      splitting inside the brackets. */
   .nowrap { white-space: nowrap; }
   .who { color: var(--text-2); font-weight: 600; }
-  /* A feed row reads top to bottom: its name, the site it's from tight under it
-     like a byline, what it says about itself, then how often it posts. Each
-     line's color says what it is about: dark is the feed's own facts (its site,
-     how often it posts), grey is the feed describing itself, green is your
-     search. A post row's byline (its
-     feed and when) sits tight under its title the same way. The -2px is
-     optical: it takes back some of the empty space above and below each line of
-     text, so the name and the line under it read as a pair. */
-  .sub2.origin, .sub2.byline { margin-top: -2px; color: var(--text); }
-  .sub2.facts { color: var(--text); }
+  /* A post row's byline (its feed and when) sits tight under its title, and
+     the snippet keeps its distance below. The -2px is optical: it takes back
+     some of the empty space above and below each line of text, so the two
+     lines read as a pair. */
+  .sub2.byline { margin-top: -2px; color: var(--text); }
   .byline + .desc { margin-top: var(--space-2); }
-  .origin + .desc { margin-top: var(--space-1); }
-  .desc + .facts { margin-top: var(--space-1); }
-  .net-n { color: var(--accent); font-weight: 600; }
   .stack { display: inline-flex; flex: none; width: 40px; height: 40px; position: relative; }
   /* The overlapped avatars are placed, not spaced: 9px centers them in the 40px box and steps each one across. */
   .stack :global(> *) { position: absolute; top: 9px; }
