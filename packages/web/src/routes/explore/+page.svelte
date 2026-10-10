@@ -591,7 +591,7 @@
       </div>
     </div>
     {#if session.user}
-      <Button size="sm" variant={p.bookmarkId ? 'ghost' : 'secondary'} class="save" onclick={() => toggleBookmark(p)} disabled={markBusy === p.id} aria-pressed={!!p.bookmarkId}>
+      <Button size="sm" variant={p.bookmarkId ? 'secondary' : 'ghost'} class="save" onclick={() => toggleBookmark(p)} disabled={markBusy === p.id} aria-pressed={!!p.bookmarkId}>
         {p.bookmarkId ? 'Bookmarked' : 'Bookmark'}
       </Button>
     {/if}
@@ -793,11 +793,12 @@
      splitting inside the brackets. */
   .nowrap { white-space: nowrap; }
   .who { color: var(--text-2); font-weight: 600; }
-  /* The facts sit tight under the name, like a byline, and the description keeps
-     its distance below; green is your search. The -2px is optical: it takes back
-     some of the empty space above and below each line of text, so the two lines
-     read as a pair. */
-  .sub2.byline { margin-top: -2px; }
+  /* Each line's color says what it is about: dark is the feed (its name and these
+     facts), grey is the feed describing itself, green is your search. The facts sit
+     tight under the name, like a byline, and the description keeps its distance
+     below. The -2px is optical: it takes back some of the empty space above and
+     below each line of text, so the two lines read as a pair. */
+  .sub2.byline { margin-top: -2px; color: var(--text); }
   .byline + .desc { margin-top: var(--space-2); }
   .net-n { color: var(--accent); font-weight: 600; }
   .bad { color: var(--danger); }

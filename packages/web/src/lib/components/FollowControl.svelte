@@ -14,8 +14,8 @@
    * The choosing happens in a Sheet like Add a feed's, not a menu hanging off
    * the button: a long list of collections needs the room, and filing a feed
    * should look the same however you got there.
-   * It's the shared Button: the pale green secondary look until the feed is
-   * filed somewhere, the plain ghost look once it is.
+   * It's the shared Button: the plain ghost look until the feed is filed
+   * somewhere, the pale green secondary look once it is.
    */
   import { api } from '$lib/api';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
@@ -50,7 +50,7 @@
   $effect(() => { if (following) void loadCollections(); });
 </script>
 
-<Button size={small ? 'sm' : 'md'} variant={following ? 'ghost' : 'secondary'} class="follow {klass}" onclick={show} aria-haspopup="dialog" aria-expanded={open}><span class="lbl">{label}</span></Button>
+<Button size={small ? 'sm' : 'md'} variant={following ? 'secondary' : 'ghost'} class="follow {klass}" onclick={show} aria-haspopup="dialog" aria-expanded={open}><span class="lbl">{label}</span></Button>
 
 {#if open}
   <FollowSheet {feedId} bind:ids {name} {onchange} onclose={() => (open = false)} />

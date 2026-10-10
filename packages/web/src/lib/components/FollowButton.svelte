@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
-   * Follow for a person: one tap. It's the shared small Button: the pale
-   * green secondary look while it asks to be pressed, the plain ghost look
-   * once you follow, so the done state steps back. A feed's Follow
+   * Follow for a person: one tap. It's the shared small Button: the plain
+   * ghost look until you follow, then the pale green secondary look, so green
+   * means "you have this", as on the bookmark icon. A feed's Follow
    * (FollowControl) wears the same two looks; it also asks which collection
    * the feed goes in.
    *
@@ -25,8 +25,8 @@
   let { following = false, label = 'Follow', busy = false, href, onclick, class: klass = '' }: Props = $props();
 </script>
 
-{#if href}<Button size="sm" variant="secondary" class="follow {klass}" {href}><span class="lbl">{label}</span></Button>
-{:else}<Button size="sm" variant={following ? 'ghost' : 'secondary'} class="follow {klass}" disabled={busy} aria-pressed={following} {onclick}><span class="lbl">{following ? 'Following' : label}</span></Button>{/if}
+{#if href}<Button size="sm" class="follow {klass}" {href}><span class="lbl">{label}</span></Button>
+{:else}<Button size="sm" variant={following ? 'secondary' : 'ghost'} class="follow {klass}" disabled={busy} aria-pressed={following} {onclick}><span class="lbl">{following ? 'Following' : label}</span></Button>{/if}
 
 <style>
   /* A long label is cut short rather than pushing the page wider; the words clip themselves so the touch area can still reach past the edges. */

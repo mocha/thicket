@@ -611,7 +611,7 @@
 
     <section class="entry" id="follow-button" aria-labelledby="follow-button-h">
       <h3 class="entry-h" id="follow-button-h">Follow button</h3>
-      <p class="section-lede">Follow for a person: one tap. It’s the small Button, in the pale green secondary look until you follow, then the plain ghost look. A feed’s Follow and a post’s Bookmark on Explore use the same two looks; a feed’s Follow also asks which collection the feed goes in. Signed out, it’s a link that goes to sign in first.</p>
+      <p class="section-lede">Follow for a person: one tap. It’s the small Button, in the plain ghost look until you follow, then the pale green secondary look: green means you have it, as on the bookmark icon. A feed’s Follow and a post’s Bookmark on Explore use the same two looks; a feed’s Follow also asks which collection the feed goes in. Signed out, it’s a link that goes to sign in first.</p>
       <div class="row"><FollowButton onclick={() => {}} /><FollowButton following onclick={() => {}} /></div>
     </section>
 
