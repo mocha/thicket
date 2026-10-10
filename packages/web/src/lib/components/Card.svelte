@@ -33,6 +33,10 @@
    * both stop after three lines. A card that wants fewer lines sets
    * `--title-lines` or `--summary-lines` on its own element.
    *
+   * A section card's heading and the description under it are shared the
+   * same way: give them `section-title` and `section-description`, and every
+   * settings-style screen (Settings, Account, Admin, Import) spaces them alike.
+   *
    * `compact` is the paged layout's density mode: a card that fills a fixed
    * frame, with a tighter edge and no press animation.
    *
@@ -128,4 +132,22 @@
     /* A summary is often a bare web address; it wraps instead of running off the card. */
     overflow-wrap: anywhere;
   }
+
+  /* The one section heading, and the description under it. The description
+     sits tight under the heading; the heading's own gap then falls under the
+     description, before the controls. */
+  .section :global(.section-title) {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font);
+    font-size: calc(var(--text-xl) * var(--size-app));
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .section :global(.section-description) {
+    margin: 0 0 var(--space-3);
+    font-size: calc(var(--text-sm) * var(--size-app));
+    color: var(--text-2);
+    line-height: 1.4;
+  }
+  .section :global(.section-title + .section-description) { margin-top: calc(-1 * var(--space-2)); }
 </style>
