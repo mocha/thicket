@@ -49,6 +49,7 @@
   let demoSheet = $state<HTMLDialogElement | null>(null);
   let demoConfirm = $state<HTMLDialogElement | null>(null);
   let demoShow = $state('everyone');
+  let demoInvite = $state('');
 
   /* ---- Live theme preview: set <html> attributes, restore on the way out ---- */
   type Appearance = 'system' | 'light' | 'dark';
@@ -493,7 +494,7 @@
 
     <section class="entry" id="button" aria-labelledby="button-h">
       <h3 class="entry-h" id="button-h">Button</h3>
-      <p class="section-lede">One button, four looks. Primary for the main move, secondary for a move a screen offers many times over (one per card), ghost for everything else, danger for the destructive one. Three sizes. Danger has a solid fill too, for the final confirm of something that can’t be undone. Any look can also be a link, just its words, for a quiet second action under the main one. On a touchscreen every button, tab, and choice can be tapped across at least 44 by 44, whatever size it’s drawn: an invisible area reaches past its edges to make up the difference. Anything else small and tappable gets the same by taking the <code>tap</code> class.</p>
+      <p class="section-lede">One button, four looks. Primary for the main move, secondary for a move a screen offers many times over (one per card), ghost for everything else, danger for the destructive one. Three sizes; the Card entry says which one a section card uses where. Danger has a solid fill too, for the final confirm of something that can’t be undone. Any look can also be a link, just its words, for a quiet second action under the main one. On a touchscreen every button, tab, and choice can be tapped across at least 44 by 44, whatever size it’s drawn: an invisible area reaches past its edges to make up the difference. Anything else small and tappable gets the same by taking the <code>tap</code> class.</p>
 
       <div class="row">
         <Button variant="primary">Primary</Button>
@@ -541,11 +542,21 @@
       </div>
 
       <h4 class="sub">Section card</h4>
-      <p class="section-lede">A group of settings, or one message standing on its own, like an empty section or who can see a profile tab. 16px of space inside, and nothing in it is cut off at the edge, so a menu or a focus ring can reach past it.</p>
+      <p class="section-lede">A group of settings, or one message standing on its own, like an empty section or who can see a profile tab. 16px of space inside, and nothing in it is cut off at the edge, so a menu or a focus ring can reach past it. It opens with a 21px bold heading in the interface face, and often a short gray description tucked under it; Settings, Account, Admin, and Import all use this same pair. Cards on those pages sit 16px apart.</p>
+      <p class="section-lede">Buttons on a section card follow one rule. A Button beside a text box is the large size, so it’s as tall as the box. A Button that acts on one row of a list is small. The Button that finishes the card’s form, or is the card’s only action, is the regular size.</p>
       <div class="stack">
         <Card kind="section" as="section">
-          <h4 class="demo-section-h">Unread posts</h4>
-          <p class="demo-post-plain">The settings for one thing sit together on one card.</p>
+          <h4 class="section-title">Invite links</h4>
+          <p class="section-description">Each link works once and lasts two weeks.</p>
+          <form class="demo-inline" onsubmit={(e) => e.preventDefault()}>
+            <Input inset bind:value={demoInvite} placeholder="Who is this for? (optional note)" aria-label="Who is this invite for?" class="demo-grow" />
+            <Button variant="primary" size="lg" type="submit">New invite link</Button>
+          </form>
+          <div class="demo-inline demo-invite">
+            <span class="demo-grow">For Sam</span>
+            <Button size="sm">Copy link</Button>
+            <Button variant="danger" size="sm">Revoke</Button>
+          </div>
         </Card>
       </div>
     </section>
@@ -846,8 +857,9 @@
   .group { margin: calc(var(--space-6) + var(--space-5)) 0 0; padding-top: var(--space-4); border-top: 2px solid var(--text); }
   .demo-row { padding: var(--space-3) var(--card-pad); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
   .demo-row:first-child { border-top: 0; }
-  .demo-section-h { margin: 0 0 var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; }
-  .demo-post-plain { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .demo-inline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+  .demo-inline :global(.demo-grow) { flex: 1 1 12rem; min-width: 0; }
+  .demo-invite { margin-top: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .demo-post { margin: 0; padding: var(--card-pad); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .entry { margin: var(--space-6) 0 0; padding-top: var(--space-5); border-top: 1px solid var(--line); }
   h2 {
