@@ -24,6 +24,7 @@
   import FeedPopover from '$lib/components/FeedPopover.svelte';
   import FeedRow from '$lib/components/FeedRow.svelte';
   import PersonRow from '$lib/components/PersonRow.svelte';
+  import CollectionRow from '$lib/components/CollectionRow.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
   import TabBlurb from '$lib/components/TabBlurb.svelte';
   import Badge from '$lib/components/Badge.svelte';
@@ -537,27 +538,18 @@
 {/snippet}
 
 {#snippet colRow(c: ExploreCollection | SearchCollection, ev: SearchCollection | null)}
-  <li>
-    <a class="row tap" href={collectionHref(c.handle, c.slug)}>
-      <span class="stack" aria-hidden="true">
-        {#each c.sample.slice(0, 3) as s (s.id)}<SourceIcon feedId={s.id} hasIcon={s.hasIcon} name={s.title ?? '?'} size={22} />{/each}
+  <CollectionRow href={collectionHref(c.handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} owner={c.displayName ?? `@${c.handle}`} sample={c.sample}>
+    <!-- The same pills as a profile's Collections: whose it is shows beside the name, not only in the byline. -->
+    {#snippet badges()}{#if ev?.isMine}<Badge>Yours</Badge>{:else if ev?.copiedByMe}<Badge>Copied</Badge>{/if}{/snippet}
+    {#if ev && ev.matches > 0}
+      <span class="why">
+        <strong>{plural(ev.matchingFeeds, 'feed')}</strong> in it {ev.matchingFeeds === 1 ? 'has' : 'have'} posted about “{q}”
+        {#if ev.lastMatchAt} <Dot /> most recent {longAgo(ev.lastMatchAt)}{/if}
       </span>
-      <div class="meta">
-        <!-- The same pills as a profile's Collections: whose it is shows beside the name, not only in the byline. -->
-        <span class="named"><span class="title row-name">{c.name}</span>{#if ev?.isMine}<Badge class="own">Yours</Badge>{:else if ev?.copiedByMe}<Badge class="own">Copied</Badge>{/if}</span>
-        {#if ev && ev.matches > 0}
-          <span class="why">
-            <strong>{plural(ev.matchingFeeds, 'feed')}</strong> in it {ev.matchingFeeds === 1 ? 'has' : 'have'} posted about “{q}”
-            {#if ev.lastMatchAt} <Dot /> most recent {longAgo(ev.lastMatchAt)}{/if}
-          </span>
-        {:else if ev}
-          <span class="why">Matches the name</span>
-        {/if}
-        <span class="sub2 row-details">by <span class="who">{c.displayName ?? `@${c.handle}`}</span> <Dot /> {plural(c.feedCount, 'feed')}{#if c.description} <Dot /> {c.description}{/if}</span>
-      </div>
-      <span class="chev" aria-hidden="true">›</span>
-    </a>
-  </li>
+    {:else if ev}
+      <span class="why">Matches the name</span>
+    {/if}
+  </CollectionRow>
 {/snippet}
 
 <!--
@@ -753,8 +745,6 @@
   }
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .named { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
-  .named :global(.own) { flex: none; }
   .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* Wraps rather than truncates: every part of it is a fact someone is deciding on.
      --text-2, not --text-3, because these facts are read, and --text-3 falls short
@@ -772,20 +762,12 @@
   /* When the line has to wrap, "(latest 13h ago)" moves down whole instead of
      splitting inside the brackets. */
   .nowrap { white-space: nowrap; }
-  .who { color: var(--text-2); font-weight: 600; }
   /* A post row's byline (its feed and when) sits tight under its title, and
      the snippet keeps its distance below. The -2px is optical: it takes back
      some of the empty space above and below each line of text, so the two
      lines read as a pair. */
   .sub2.byline { margin-top: -2px; color: var(--text); }
   .byline + .desc { margin-top: var(--space-2); }
-  .stack { display: inline-flex; flex: none; width: 40px; height: 40px; position: relative; }
-  /* The overlapped avatars are placed, not spaced: 9px centers them in the 40px box and steps each one across. */
-  .stack :global(> *) { position: absolute; top: 9px; }
-  .stack :global(> :nth-child(1)) { left: 0; z-index: 3; }
-  .stack :global(> :nth-child(2)) { left: 9px; z-index: 2; }
-  .stack :global(> :nth-child(3)) { left: 18px; z-index: 1; }
-  .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   /* A post row: the title's link covers the row; the feed's buttons and Bookmark sit over it. */
   li.post { position: relative; }
   .whole::after { content: ''; position: absolute; inset: 0; }

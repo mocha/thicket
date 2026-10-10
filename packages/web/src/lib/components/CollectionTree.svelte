@@ -26,6 +26,7 @@
   import { marks, countText } from '$lib/marks.svelte';
   import { display } from '$lib/display.svelte';
   import Badge from './Badge.svelte';
+  import CollectionRow from './CollectionRow.svelte';
   import Button from './Button.svelte';
   import Field from './Field.svelte';
   import Input from './Input.svelte';
@@ -67,18 +68,13 @@
 </script>
 
 {#snippet colRow(c: ProfileCollection, depth: number, withKids = true)}
-  <li class:nested={depth > 0}>
-    <a class="row-link" href={publicCollectionHref(handle, c.slug)} style:--depth={depth}>
-      <div class="meta">
-        <span class="name row-name">{c.name}{#if isMe && audienceTag(c.visibility)}<Badge class="aftertext">{audienceTag(c.visibility)}</Badge>{/if}</span>
-        {#if c.description}<span class="desc row-details">{c.description}</span>{/if}
-      </div>
+  <CollectionRow href={publicCollectionHref(handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} {depth}>
+    {#snippet badges()}
+      {#if isMe && audienceTag(c.visibility)}<Badge>{audienceTag(c.visibility)}</Badge>{/if}
       {#if isMe && display.fresh && countText(marks.byId[c.id])}<Badge tone="accent">{countText(marks.byId[c.id])} new</Badge>{/if}
       {#if c.copiedByMe}<Badge>Copied</Badge>{/if}
-      <span class="count row-details">{c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'}</span>
-      <span class="chev" aria-hidden="true">›</span>
-    </a>
-  </li>
+    {/snippet}
+  </CollectionRow>
   {#if withKids}
     {#each childCols(c.id) as k (k.id)}
       {@render colRow(k, depth + 1)}
@@ -158,17 +154,6 @@
   .filter { margin: 0 0 var(--space-3); }
   .pad { padding: var(--card-pad); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
-  /* Each level in steps in by one spacing step. */
-  li a { padding-left: calc(var(--card-pad) + var(--depth, 0) * var(--space-5)); }
-  /* A sub-collection is indented and its name sits quieter than its parent's, so the tree reads at a glance. */
-  .nested .name { font-weight: 500; color: var(--text-2); }
-  .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* A pill riding after a name needs its own gap: the words beside it are text, not a flex row. */
-  .name :global(.aftertext) { margin-left: var(--space-2); }
-  .desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .count { white-space: nowrap; }
-  .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   .add { width: 100%; color: var(--accent); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); text-align: left; }
   .plus { font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; width: 14px; }
   .new form { display: flex; gap: var(--space-2); }

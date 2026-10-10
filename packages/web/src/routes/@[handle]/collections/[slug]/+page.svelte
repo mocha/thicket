@@ -10,6 +10,7 @@
   import { loadCollections } from '$lib/collections.svelte';
   import { audienceTag } from '$lib/visibility';
   import FeedRow from '$lib/components/FeedRow.svelte';
+  import CollectionRow from '$lib/components/CollectionRow.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
@@ -185,7 +186,7 @@
       {#if col.children.length}
         <ul class="list list-rows">
           {#each col.children as c (c.id)}
-            <li><a class="row-link" href={collectionHref(handle, c.slug)}><span class="name row-name">{c.name}</span><span class="row-details">{c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'}</span><span class="chev" aria-hidden="true">›</span></a></li>
+            <CollectionRow href={collectionHref(handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} />
           {/each}
         </ul>
       {/if}
@@ -216,8 +217,6 @@
   .visitoraction { margin: var(--space-2) 0 0 calc(-1 * var(--space-2)); }
   /* Inside the card the lists are part of it, not cards of their own: each starts under a hairline. */
   .list { border-top: 1px solid var(--line); }
-  .name { flex: 1; }
-  .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   .status { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
   .empty h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-app)); margin: 0 0 var(--space-2); }
