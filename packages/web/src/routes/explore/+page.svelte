@@ -5,7 +5,7 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import {
-    api, bookmarksApi, exploreApi, searchApi, feedHref, collectionHref, profileHref, profilesApi,
+    api, bookmarksApi, exploreApi, searchApi, feedHref, collectionHref, profilesApi,
     type Feed, type ExploreCollection, type ExploreUser,
     type SearchResults, type SearchScope, type SearchFeed, type SearchCollection, type SearchPost, type SearchPerson,
     type FeedSearchSort, DEFAULT_FEED_SORT, feedSortFrom
@@ -14,7 +14,6 @@
   import { highlight, latestShort, mentionRate, plural } from '$lib/words';
   import { session } from '$lib/session.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
-  import FollowButton from '$lib/components/FollowButton.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
@@ -24,7 +23,7 @@
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FeedPopover from '$lib/components/FeedPopover.svelte';
   import FeedRow from '$lib/components/FeedRow.svelte';
-  import Avatar from '$lib/components/Avatar.svelte';
+  import PersonRow from '$lib/components/PersonRow.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
   import TabBlurb from '$lib/components/TabBlurb.svelte';
   import Badge from '$lib/components/Badge.svelte';
@@ -591,25 +590,15 @@
 {/snippet}
 
 {#snippet personRow(u: ExploreUser | SearchPerson, ev: SearchPerson | null)}
-  <li>
-    <a class="row tap" href={profileHref(u.handle)} onclick={() => (opened = { person: u.handle })}>
-      <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={40} v={u.avatarUpdatedAt} />
-      <div class="meta">
-        <span class="title row-name">{u.displayName ?? u.handle} <span class="handle">@{u.handle}</span></span>
-        {#if ev && ev.notesMatch + ev.marksMatch > 0}
-          <span class="why">
-            {#if ev.notesMatch}<strong>{plural(ev.notesMatch, 'note')}</strong> about “{q}”{/if}
-            {#if ev.notesMatch && ev.marksMatch} <Dot /> {/if}
-            {#if ev.marksMatch}<strong>{plural(ev.marksMatch, 'bookmark')}</strong> about “{q}”{/if}
-          </span>
-        {/if}
-        <span class="sub2 row-details">
-          {plural(u.feeds, 'feed')} <Dot /> {u.collections} public {u.collections === 1 ? 'collection' : 'collections'}{#if u.bio} <Dot /> {u.bio}{/if}
-        </span>
-      </div>
-    </a>
-    <FollowButton following={u.isFollowing} busy={followBusy === u.handle} onclick={() => toggleFollow(u)} />
-  </li>
+  <PersonRow person={u} feeds={u.feeds} collections={u.collections} following={u.isFollowing} busy={followBusy === u.handle} onfollow={() => toggleFollow(u)} onopen={() => (opened = { person: u.handle })}>
+    {#if ev && ev.notesMatch + ev.marksMatch > 0}
+      <span class="why">
+        {#if ev.notesMatch}<strong>{plural(ev.notesMatch, 'note')}</strong> about “{q}”{/if}
+        {#if ev.notesMatch && ev.marksMatch} <Dot /> {/if}
+        {#if ev.marksMatch}<strong>{plural(ev.marksMatch, 'bookmark')}</strong> about “{q}”{/if}
+      </span>
+    {/if}
+  </PersonRow>
 {/snippet}
 
 {#snippet emptyMessage()}
@@ -767,7 +756,6 @@
   .named { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
   .named :global(.own) { flex: none; }
   .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .handle { font-weight: 400; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin-left: var(--space-1); }
   /* Wraps rather than truncates: every part of it is a fact someone is deciding on.
      --text-2, not --text-3, because these facts are read, and --text-3 falls short
      of readable contrast in most themes. The gap sets it apart from the
