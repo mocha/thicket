@@ -68,14 +68,14 @@
 
 {#snippet colRow(c: ProfileCollection, depth: number, withKids = true)}
   <li class:nested={depth > 0}>
-    <a href={publicCollectionHref(handle, c.slug)} style:--indent="{depth * 18}px">
+    <a class="row-link" href={publicCollectionHref(handle, c.slug)} style:--depth={depth}>
       <div class="meta">
-        <span class="name">{c.name}{#if isMe && audienceTag(c.visibility)}<Badge class="aftertext">{audienceTag(c.visibility)}</Badge>{/if}</span>
-        {#if c.description}<span class="desc">{c.description}</span>{/if}
+        <span class="name row-name">{c.name}{#if isMe && audienceTag(c.visibility)}<Badge class="aftertext">{audienceTag(c.visibility)}</Badge>{/if}</span>
+        {#if c.description}<span class="desc row-details">{c.description}</span>{/if}
       </div>
       {#if isMe && display.fresh && countText(marks.byId[c.id])}<Badge tone="accent">{countText(marks.byId[c.id])} new</Badge>{/if}
       {#if c.copiedByMe}<Badge>Copied</Badge>{/if}
-      <span class="count">{c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'}</span>
+      <span class="count row-details">{c.feedCount} {c.feedCount === 1 ? 'feed' : 'feeds'}</span>
       <span class="chev" aria-hidden="true">›</span>
     </a>
   </li>
@@ -101,7 +101,7 @@
   <EmptyNote icon="collections" title="No collections yet" text={isMe ? 'A collection is a handful of feeds you read together.' : 'No collections to show.'} />
 {:else}
 <Card kind="list" as="div">
-    <ul class="list">
+    <ul class="list-rows">
       {#if creatable}
         <li class="new">
           {#if creating}
@@ -127,7 +127,7 @@
               </Field>
             </form>
           {:else}
-            <button class="add tap" onclick={() => { creating = true; queueMicrotask(() => newInput?.focus()); }}><span class="plus" aria-hidden="true">+</span> New collection</button>
+            <button class="add row-link tap" onclick={() => { creating = true; queueMicrotask(() => newInput?.focus()); }}><span class="plus" aria-hidden="true">+</span> New collection</button>
           {/if}
         </li>
       {/if}
@@ -158,23 +158,21 @@
   .filter { margin: 0 0 var(--space-3); }
   .pad { padding: var(--card-pad); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
-  .list { list-style: none; margin: 0; padding: 0; }
-  li a { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-3) calc(var(--space-4) + var(--indent, 0px)); border-top: 1px solid var(--line); }
-  li:first-child a { border-top: 0; }
+  /* Each level in steps in by one spacing step. */
+  li a { padding-left: calc(var(--card-pad) + var(--depth, 0) * var(--space-5)); }
   /* A sub-collection is indented and its name sits quieter than its parent's, so the tree reads at a glance. */
   .nested .name { font-weight: 500; color: var(--text-2); }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* A pill riding after a name needs its own gap: the words beside it are text, not a flex row. */
   .name :global(.aftertext) { margin-left: var(--space-2); }
-  .desc { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; }
+  .desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .count { white-space: nowrap; }
   .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
-  .add { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); text-align: left; }
-  li:first-child .add, li:first-child form { border-top: 0; }
+  .add { width: 100%; color: var(--accent); font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); text-align: left; }
   .plus { font-size: calc(var(--text-xl) * var(--size-app)); line-height: 1; width: 14px; }
-  .new form { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
+  .new form { display: flex; gap: var(--space-2); }
   .new form :global(.grow) { flex: 1; min-width: 0; }
-  .nomatch { margin: 0; padding: 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .nomatch:not(:empty) { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
+  .nomatch { margin: 0; padding: 0 var(--card-pad); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .nomatch:not(:empty) { padding: var(--space-3) var(--card-pad); border-top: 1px solid var(--line); }
 </style>
