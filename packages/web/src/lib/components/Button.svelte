@@ -105,6 +105,12 @@
     padding: var(--space-3) var(--space-5);
     font-size: calc(var(--text-base) * var(--size-app));
   }
+  /* A text box's text never drops under 16px on a touchscreen (see Input), so
+     the large size, which sits beside one, keeps the same floor and the two
+     stay the same height. */
+  @media (pointer: coarse) {
+    .btn.lg { font-size: max(16px, calc(var(--text-base) * var(--size-app))); }
+  }
 
   .btn.primary {
     background: var(--accent);

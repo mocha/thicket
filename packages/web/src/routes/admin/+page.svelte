@@ -278,7 +278,7 @@
 {/if}
 
 <style>
-  code { font-size: calc(var(--text-sm) * var(--size-app)); /* 1px vertical is optical: an inline code chip stays on the text's line. */ background: var(--surface-2); padding: 1px var(--space-2); border-radius: var(--radius-xs); }
+  code { font-size: calc(var(--text-sm) * var(--size-app)); /* 1px vertical is optical: an inline code chip stays on the text's line. */ background: var(--surface-2); padding: 1px var(--space-2); border-radius: var(--radius-xs); overflow-wrap: anywhere; }
   /* The room between sections is set on the cards' own class, since the cards are drawn by the shared Card. */
   :global(.admin-section) { margin-bottom: var(--space-4); }
   /* Accounts carries its count beside the heading. */

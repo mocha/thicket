@@ -543,7 +543,7 @@
 
       <h4 class="sub">Section card</h4>
       <p class="section-lede">A group of settings, or one message standing on its own, like an empty section or who can see a profile tab. 16px of space inside, and nothing in it is cut off at the edge, so a menu or a focus ring can reach past it. It opens with a 21px bold heading in the interface face, and often a short gray description tucked under it; Settings, Account, Admin, and Import all use this same pair. Cards on those pages sit 16px apart.</p>
-      <p class="section-lede">Buttons on a section card follow one rule. A Button beside a text box is the large size, so it’s as tall as the box. A Button that acts on one row of a list is small. The Button that finishes the card’s form, or is the card’s only action, is the regular size.</p>
+      <p class="section-lede">Buttons on a section card follow one rule. A Button beside a text box is the large size, so it’s as tall as the box, on a touchscreen too. A Button that acts on one row of a list is small. The Button that finishes the card’s form, or is the card’s only action, is the regular size.</p>
       <div class="stack">
         <Card kind="section" as="section">
           <h4 class="section-title">Invite links</h4>
