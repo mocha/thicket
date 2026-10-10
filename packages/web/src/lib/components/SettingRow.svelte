@@ -33,7 +33,7 @@
     padding: var(--space-3) 0; border: 0; border-bottom: 1px solid var(--line); background: none;
     font: inherit; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text); text-align: left;
   }
-  .row:first-child { border-top: 1px solid var(--line); }
+  /* No line above the first row: the title and dialog description above it already set it apart, as on every list of rows. */
   /* The last row ends the list without a line of its own; whatever follows sets its own edge. */
   .row:last-child { border-bottom: 0; }
   button.row { cursor: pointer; }
