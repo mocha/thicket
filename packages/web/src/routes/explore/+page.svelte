@@ -372,9 +372,9 @@
   );
   const scopeLabel = $derived(SCOPES.find((s) => s.id === scope)?.label ?? '');
 
-  /* On a phone, browsing feeds has three filters, and stacked they push the
-     list most of the way down the first screen. There they fold into one row
-     that names what's chosen and opens the same three dropdowns in a Sheet. */
+  /* Browsing feeds has three filters. Laid out, they push the list down or
+     crowd the card, so at every width they fold into one box that names
+     what's chosen and opens the same three dropdowns in a Sheet. */
   const ADDED: Record<string, string> = { '': 'Any time', '24h': 'Past 24 hours', week: 'Past week', month: 'Past month', year: 'Past year' };
   const threeFilters = $derived(!searching && browseAs === 'feeds');
   /* Each part reads as a phrase on its own: "Show everyone · Added any time · Most popular". */
@@ -384,34 +384,6 @@
     sorts.find((x) => x.id === sort)?.summary ?? 'Most popular'
   ]);
   let filtersDialog = $state<HTMLDialogElement | null>(null);
-
-  /* Off the phone the three sit in one row, which has to actually fit: longer
-     wording or larger text can make them wider than the card. Measured, the
-     row is 'roomy' (the normal gaps), 'snug' (tighter gaps, when that is all
-     it takes), or 'fold' (they don't fit on one line at all, so they fold
-     into the Filters box the same way they do on a phone). It never wraps a
-     filter onto a second line. */
-  let filtersEl = $state<HTMLDivElement | null>(null);
-  let fit = $state<'roomy' | 'snug' | 'fold'>('roomy');
-  $effect(() => {
-    const el = filtersEl;
-    if (!el || !threeFilters) { fit = 'roomy'; return; }
-    const measure = () => {
-      const kids = [...el.children] as HTMLElement[];
-      if (!kids.length || !el.clientWidth || getComputedStyle(el).flexDirection === 'column') return;
-      const cs = getComputedStyle(el);
-      const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-      const need = kids.reduce((w, k) => w + k.offsetWidth, 0);
-      const gaps = kids.length - 1;
-      fit = need + 16 * gaps <= room ? 'roomy' : need + 8 * gaps <= room ? 'snug' : 'fold';
-    };
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    for (const k of el.children) ro.observe(k);
-    measure();
-    void document.fonts?.ready.then(measure);
-    return () => ro.disconnect();
-  });
 
   /**
    * What a screen reader is told when a search comes back: how many results,
@@ -530,15 +502,14 @@
 {#snippet filterBar()}
   <TabBlurb class="blurb" text={SCOPE_BLURB[scope]}>{#snippet icon()}{@render scopeIcon(scope)}{/snippet}</TabBlurb>
   {#if threeFilters}
-    <button type="button" class="filters-row" class:wide={fit === 'fold'} onclick={() => filtersDialog?.showModal()} aria-haspopup="dialog">
+    <button type="button" class="filters-row" onclick={() => filtersDialog?.showModal()} aria-haspopup="dialog">
       <svg class="fr-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>
       <span class="fr-text"><span class="fr-name">Filters</span><span class="fr-now">{#each filterSummary as part, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}<span class="fr-part">{part}</span>{/each}</span></span>
       <span class="fr-caret"><Icon name="caret" dir="down" size={20} /></span>
     </button>
+  {:else}
+    <div class="filters">{@render filterFields()}</div>
   {/if}
-  <div class="filters" class:fold={threeFilters} class:snug={threeFilters && fit === 'snug'} class:unfit={threeFilters && fit === 'fold'} bind:this={filtersEl} inert={threeFilters && fit === 'fold'}>
-    {@render filterFields()}
-  </div>
   <!-- What the chosen order means, said under the row rather than inside it so
        the filters stay one line. The dropdown points at it, so it is read out too. -->
   {#if sortsFeeds}<p class="sort-help" id="feed-sort-help">{feedSortHelp}</p>{/if}
@@ -770,28 +741,12 @@
   @media (max-width: 600px) {
     .filters { flex-direction: column; align-items: stretch; }
     .filters :global(.filter) { flex-direction: column; align-items: stretch; }
-    /* Three filters fold into the one row above them; see the script. */
-    .filters.fold { display: none; }
-  }
-  /* Off the phone: the row never wraps a filter onto a second line. It closes
-     its gaps when that is all it takes to fit (16px to 8px, the two the script
-     measures against), and when even that isn't enough it is swapped for the
-     Filters box: still laid out, so it can be measured again, but taking no
-     height and out of sight and reach. */
-  @media (min-width: 601px) {
-    .filters.fold { flex-wrap: nowrap; }
-    .filters.snug { column-gap: var(--space-2); }
-    .filters.unfit, :global(.browse) .filters.unfit { visibility: hidden; height: 0; padding-block: 0; margin-block: 0; overflow: hidden; }
-    .filters.fold :global(.filter) { flex: none; }
   }
   /* The folded row. Drawn as a box with the dropdown's own outline, corner and
      caret, so it reads as something to press rather than a line of text: an
      icon, what it is, and what's chosen now. */
-  .filters-row { display: none; }
-  @media (max-width: 600px) { .filters-row { display: flex; } }
-  .filters-row.wide { display: flex; }
   .filters-row {
-    align-items: center; gap: var(--space-3); width: 100%; min-height: 52px; text-align: left;
+    display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 52px; text-align: left;
     padding: var(--space-2) var(--space-3); margin-bottom: var(--space-2);
     border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface);
   }
