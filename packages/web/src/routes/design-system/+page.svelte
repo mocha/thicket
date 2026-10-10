@@ -220,6 +220,7 @@
         { id: 'follow-button', label: 'Follow button' },
         { id: 'icon-button', label: 'Icon button' },
         { id: 'input', label: 'Input' },
+        { id: 'list-row', label: 'List row' },
         { id: 'monogram', label: 'Monogram' },
         { id: 'note', label: 'Note' },
         { id: 'page-header', label: 'Page header' },
@@ -532,12 +533,12 @@
       </div>
 
       <h4 class="sub">List card</h4>
-      <p class="section-lede">Rows, one under another: Activity, a collection’s feeds, Explore’s results, Notifications. The card has no space inside of its own; each row sets itself 16px in from the edge.</p>
+      <p class="section-lede">Rows, one under another: Activity, a collection’s feeds, Explore’s results, Notifications. The card has no space inside of its own; each row sets itself 16px in from the edge. The rows themselves are a <a href="#list-row">List row</a>.</p>
       <div class="stack">
-        <Card kind="list" as="ul">
-          <li class="demo-row">The first row</li>
-          <li class="demo-row">The second row</li>
-          <li class="demo-row">The third row</li>
+        <Card kind="list" as="ul" class="list-rows">
+          <li class="row-event">The first row</li>
+          <li class="row-event">The second row</li>
+          <li class="row-event">The third row</li>
         </Card>
       </div>
 
@@ -610,7 +611,7 @@
 
     <section class="entry" id="follow-button" aria-labelledby="follow-button-h">
       <h3 class="entry-h" id="follow-button-h">Follow button</h3>
-      <p class="section-lede">Follow for a person: one tap, a green outline, tinted green once you follow. It has the same look as a feed’s Follow, which also asks which collection the feed goes in. Signed out, it’s a link that goes to sign in first.</p>
+      <p class="section-lede">Follow for a person: one tap. It’s the small Button, in the pale green secondary look until you follow, then the plain ghost look. A feed’s Follow and a post’s Bookmark on Explore use the same two looks; a feed’s Follow also asks which collection the feed goes in. Signed out, it’s a link that goes to sign in first.</p>
       <div class="row"><FollowButton onclick={() => {}} /><FollowButton following onclick={() => {}} /></div>
     </section>
 
@@ -655,6 +656,41 @@
           {/snippet}
         </Field>
       </div>
+    </section>
+
+    <section class="entry" id="list-row" aria-labelledby="list-row-h">
+      <h3 class="entry-h" id="list-row-h">List row</h3>
+      <p class="section-lede">Every list of rows, on a list card or in a Sheet, is laid out the same way: 12px above and below each row, its text 16px in from the card’s edge, and a thin line between rows but none above the first. A Button on a row is the small size, and sits as far in from the right edge as the text does from the left. There are two kinds of row.</p>
+
+      <h4 class="sub">A row for one thing</h4>
+      <p class="section-lede">A feed, a person, a collection, or a post: something you can open. A 40px picture leads (a feed’s icon or a person’s picture; a collection has none), then the name in 16px bold, with the details under it in 14px gray. Used on Explore, a collection’s feeds, Collections, Import, and the people someone follows.</p>
+      <div class="stack">
+        <Card kind="list" as="ul" class="list-rows">
+          <li class="demo-thing">
+            <Monogram name="Daring Fireball" size={40} />
+            <span class="demo-meta"><span class="row-name">Daring Fireball</span><span class="row-details">daringfireball.net <Dot /> publishes about 2 posts a day</span></span>
+            <FollowButton onclick={() => {}} />
+          </li>
+          <li class="demo-thing">
+            <Avatar handle="maya" name="Maya Chen" size={40} />
+            <span class="demo-meta"><span class="row-name">Maya Chen</span><span class="row-details">@maya</span></span>
+            <FollowButton following onclick={() => {}} />
+          </li>
+        </Card>
+      </div>
+
+      <h4 class="sub">A row for something that happened</h4>
+      <p class="section-lede">Activity and Notifications: one 14px sentence saying who did what, with the names and titles in bold and when at the end. A long title trails off rather than wrapping. A mention on Notifications also shows the post under its sentence, flat, with no card of its own.</p>
+      <div class="stack">
+        <Card kind="list" as="div">
+          <ul class="list-rows">
+            <li class="row-event"><strong class="demo-strong">@maya</strong> started following you <span class="demo-when">2h</span></li>
+            <li class="row-event">Added 3 feeds to <strong class="demo-strong">Small Web</strong> <span class="demo-when">1d</span></li>
+          </ul>
+          <button class="row-more" onclick={() => {}}>Show more</button>
+        </Card>
+      </div>
+      <p class="section-lede">More rows (Show more, See all 12) is one line of accent words under the last row, spaced like a row.</p>
     </section>
 
     <section class="entry" id="monogram" aria-labelledby="monogram-h">
@@ -855,8 +891,10 @@
      short of the top when jumped to, so the jump menu doesn't cover the heading. */
   .group, .entry { scroll-margin-top: calc(var(--space-6) + var(--space-6)); }
   .group { margin: calc(var(--space-6) + var(--space-5)) 0 0; padding-top: var(--space-4); border-top: 2px solid var(--text); }
-  .demo-row { padding: var(--space-3) var(--card-pad); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .demo-row:first-child { border-top: 0; }
+  .demo-thing { display: flex; align-items: center; gap: var(--space-3); }
+  .demo-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .demo-strong { color: var(--text); font-weight: 600; }
+  .demo-when { float: right; }
   .demo-inline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
   .demo-inline :global(.demo-grow) { flex: 1 1 12rem; min-width: 0; }
   .demo-invite { margin-top: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
