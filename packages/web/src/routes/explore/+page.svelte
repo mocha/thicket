@@ -78,12 +78,13 @@
    */
   const narrowToNetwork = $derived(page.url.searchParams.get('by') === 'following');
   const since = $derived(page.url.searchParams.get('since'));
+  /** `summary` is how the folded Filters box names the order, after "Show everyone · Added any time". */
   const sorts = [
-    { id: 'popular', label: 'Popular' },
-    { id: 'recent', label: 'Recent posts' },
-    { id: 'posts', label: 'Most active' },
-    { id: 'title', label: 'A–Z' },
-    { id: 'added', label: 'Newest here' }
+    { id: 'popular', label: 'Popular', summary: 'Most popular' },
+    { id: 'recent', label: 'Recent posts', summary: 'Most recent posts' },
+    { id: 'posts', label: 'Most active', summary: 'Most active' },
+    { id: 'title', label: 'A–Z', summary: 'A to Z' },
+    { id: 'added', label: 'Newest here', summary: 'Newest here' }
   ];
   // 'followers' is the old name for 'popular'; saved links still land on it. ?sort= is also a
   // search's feed order (below), so a value that isn't a browse order is read as the default.
@@ -376,10 +377,11 @@
      that names what's chosen and opens the same three dropdowns in a Sheet. */
   const ADDED: Record<string, string> = { '': 'Any time', '24h': 'Past 24 hours', week: 'Past week', month: 'Past month', year: 'Past year' };
   const threeFilters = $derived(!searching && browseAs === 'feeds');
+  /* Each part reads as a phrase on its own: "Show everyone · Added any time · Most popular". */
   const filterSummary = $derived([
-    narrowToNetwork ? 'People I follow' : 'Everyone',
-    ADDED[since ?? ''] ?? 'Any time',
-    sorts.find((x) => x.id === sort)?.label ?? 'Popular'
+    narrowToNetwork ? 'Show people I follow' : 'Show everyone',
+    `Added ${(ADDED[since ?? ''] ?? 'Any time').toLowerCase()}`,
+    sorts.find((x) => x.id === sort)?.summary ?? 'Most popular'
   ]);
   let filtersDialog = $state<HTMLDialogElement | null>(null);
 
@@ -530,7 +532,7 @@
   {#if threeFilters}
     <button type="button" class="filters-row" class:wide={fit === 'fold'} onclick={() => filtersDialog?.showModal()} aria-haspopup="dialog">
       <svg class="fr-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>
-      <span class="fr-text"><span class="fr-name">Filters</span><span class="fr-now">{#each filterSummary as part, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{part}{/each}</span></span>
+      <span class="fr-text"><span class="fr-name">Filters</span><span class="fr-now">{#each filterSummary as part, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}<span class="fr-part">{part}</span>{/each}</span></span>
       <span class="fr-caret"><Icon name="caret" dir="down" size={20} /></span>
     </button>
   {/if}
@@ -784,15 +786,17 @@
     border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface);
   }
   /* Inside the list card it keeps the card's side padding around it. */
-  :global(.browse) .filters-row { width: calc(100% - var(--space-3) * 2); margin: var(--space-3) var(--space-3) var(--space-2); }
+  :global(.browse) .filters-row { width: calc(100% - var(--card-pad) * 2); margin: var(--space-3) var(--card-pad) var(--space-2); }
   .fr-icon { flex: none; color: var(--accent); }
   .fr-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
   .fr-name { font-weight: 600; color: var(--text); line-height: 1.25; }
   .fr-now { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
+  /* Each choice stays on one line, so a long summary breaks at the dots, never mid-phrase. */
+  .fr-part { white-space: nowrap; }
   .fr-caret { flex: none; display: grid; color: var(--text-2); }
   /* Browse: the filters are the list card's header, so the two read as one unit; the rows below are part of the same card. */
   .list { list-style: none; margin: 0; padding: 0; }
-  :global(.browse) .filters { margin: 0; padding: var(--space-3) var(--space-3) var(--space-1); }
+  :global(.browse) .filters { margin: 0; padding: var(--space-3) var(--card-pad) var(--space-1); }
   li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); flex-wrap: wrap; }
   /* On a phone a row's button would squeeze the description into a column
      four words wide, so it drops to its own line and the text gets the row.
