@@ -496,7 +496,11 @@ export type StarterCandidate = { handle: string; displayName: string | null; col
 export type PublicUser = { handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: string; avatarUpdatedAt: string | null };
 export type ProfileCollection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null;
   /** The viewer has a copy of this one (never true on your own profile). */
-  copiedByMe: boolean };
+  copiedByMe: boolean;
+  /** A few of its feeds, for the icons at the front of its row. */
+  sample: CollectionSample[] };
+/** A few of a collection's feeds, drawn overlapped at the front of its row. */
+export type CollectionSample = { id: number; title: string | null; hasIcon: boolean };
 export type Profile =
   | { handle: string; private: true }
   | (PublicUser & {
@@ -527,7 +531,7 @@ export type PublicCollectionFeed = {
 };
 export type PublicCollection = {
   id: number; name: string; slug: string; description: string | null; visibility: ShareLevel; createdAt: string | null;
-  owner: PublicUser; isMe: boolean; feeds: PublicCollectionFeed[]; children: { id: number; name: string; slug: string; description: string | null; feedCount: number }[];
+  owner: PublicUser; isMe: boolean; feeds: PublicCollectionFeed[]; children: { id: number; name: string; slug: string; description: string | null; feedCount: number; sample: CollectionSample[] }[];
   /**
    * For a signed-in visitor: the copy they already made of this collection, if
    * any, and how many of this collection's feeds it has. A copy with all of
@@ -586,7 +590,7 @@ export type ActivityEntry =
 
 export type ExploreCollection = {
   id: number; name: string; slug: string; description: string | null; handle: string; displayName: string | null; feedCount: number;
-  sample: { id: number; title: string | null; hasIcon: boolean }[];
+  sample: CollectionSample[];
 };
 export type ExploreUser = {
   handle: string; displayName: string | null; bio: string | null; createdAt: string;

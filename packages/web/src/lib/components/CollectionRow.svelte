@@ -7,13 +7,13 @@
    * and whose it is tight under it, both dark; then its description and how
    * many feeds it holds, gray. The whole row opens it, so it ends in an arrow.
    *
-   * Explore shows a few of its feeds' icons at the front, which a profile
-   * doesn't have to hand, so the picture is left off there. A collection
+   * A few of its feeds' icons, overlapped, are its picture. A collection
    * inside another steps in one spacing step per level (`depth`), and its
    * name sits quieter, so the tree reads at a glance. Anything more a screen
    * wants to say (why a search found it) goes in `children`, under the facts.
    */
   import type { Snippet } from 'svelte';
+  import type { CollectionSample } from '$lib/api';
   import { plural } from '$lib/words';
   import SourceIcon from './SourceIcon.svelte';
 
@@ -25,7 +25,7 @@
     /** Whose it is, said as "by …"; left off on the owner's own profile. */
     owner?: string;
     /** A few of its feeds, drawn overlapped as its picture. */
-    sample?: { id: number; title: string | null; hasIcon: boolean }[];
+    sample?: CollectionSample[];
     depth?: number;
     badges?: Snippet;
     children?: Snippet;

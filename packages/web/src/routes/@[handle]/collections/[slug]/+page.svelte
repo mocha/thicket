@@ -186,7 +186,7 @@
       {#if col.children.length}
         <ul class="list list-rows">
           {#each col.children as c (c.id)}
-            <CollectionRow href={collectionHref(handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} />
+            <CollectionRow href={collectionHref(handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} sample={c.sample} />
           {/each}
         </ul>
       {/if}

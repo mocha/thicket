@@ -68,7 +68,7 @@
 </script>
 
 {#snippet colRow(c: ProfileCollection, depth: number, withKids = true)}
-  <CollectionRow href={publicCollectionHref(handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} {depth}>
+  <CollectionRow href={publicCollectionHref(handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} sample={c.sample} {depth}>
     {#snippet badges()}
       {#if isMe && audienceTag(c.visibility)}<Badge>{audienceTag(c.visibility)}</Badge>{/if}
       {#if isMe && display.fresh && countText(marks.byId[c.id])}<Badge tone="accent">{countText(marks.byId[c.id])} new</Badge>{/if}

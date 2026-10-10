@@ -6,6 +6,7 @@
  */
 import { Hono } from "hono";
 import { sql, type SQL } from "drizzle-orm";
+import { collectionSample } from "../lib/subtree.js";
 import { db } from "../db/client.js";
 import { getSetting } from "../lib/instance.js";
 import { notARepeatOf } from "../lib/visibility.js";
@@ -51,11 +52,7 @@ explore.get("/collections", async (c) => {
     ${shown(filters)}
     select col.id, col.name, col.slug, col.description, u.handle, u.display_name as "displayName",
            (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount",
-           (select coalesce(json_agg(x), '[]'::json) from (
-              select f.id, coalesce(cf.title_override, f.title) as title,
-                     exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon"
-              from collection_feeds cf join feeds f on f.id = cf.feed_id
-              where cf.collection_id = col.id order by f.last_item_at desc nulls last limit 4) x) as sample
+           ${collectionSample(sql`col.id`, 4)} as sample
     from collections col join users u on u.id = col.user_id
     where col.id in (select id from shown)
     order by "feedCount" desc, col.created_at desc limit ${limit + 1} offset ${offset}
@@ -104,11 +101,7 @@ explore.get("/featured", async (c) => {
     select col.id, col.name, col.slug, col.description, u.handle, u.display_name as "displayName",
            col.user_id = ${viewerId} as "isMine",
            (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount",
-           (select coalesce(json_agg(x), '[]'::json) from (
-              select f.id, coalesce(cf.title_override, f.title) as title,
-                     exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon"
-              from collection_feeds cf join feeds f on f.id = cf.feed_id
-              where cf.collection_id = col.id order by f.last_item_at desc nulls last limit 5) x) as sample
+           ${collectionSample(sql`col.id`, 5)} as sample
     from collections col join users u on u.id = col.user_id
     where ${where}
     order by ${order} limit 6
