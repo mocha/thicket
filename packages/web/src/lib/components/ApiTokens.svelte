@@ -92,8 +92,8 @@
 </script>
 
 <Card kind="section" as="section" class="api-tokens {available ? '' : 'off'}" aria-labelledby="api-tokens-title">
-  <h2 id="api-tokens-title">API tokens</h2>
-  <p class="help">A token lets another app or AI assistant use your thicket account. Enable one, copy it, and paste it into the app. Only give it to apps you trust.</p>
+  <h2 class="section-title" id="api-tokens-title">API tokens</h2>
+  <p class="section-description">A token lets another app or AI assistant use your thicket account. Enable one, copy it, and paste it into the app. Only give it to apps you trust.</p>
   {#if !available}<p class="unavailable">{unavailable}</p>{/if}
 
   <ul class="kinds">
@@ -143,11 +143,9 @@
 </Card>
 
 <style>
-  /* The card and its heading match the other sections of the Account page. */
+  /* The room under the card matches the other sections of the Account page. */
   :global(.api-tokens) { margin-bottom: var(--space-4); }
-  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
-  h2 + .help { margin-top: calc(-1 * var(--space-2)); }
-  .help, .how { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
+  .how { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   .unavailable { margin: 0 0 var(--space-3); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
 
   .kinds { list-style: none; margin: 0; padding: 0; }

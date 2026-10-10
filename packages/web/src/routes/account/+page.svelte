@@ -150,8 +150,8 @@
 
 {#if hosted}
   <Card kind="section" as="section" class="account-section">
-    <h2>Email</h2>
-    <p class="help">If you forget your password, we’ll email you a link to reset it. We won’t send you anything else, and no one else can see this address.</p>
+    <h2 class="section-title">Email</h2>
+    <p class="section-description">If you forget your password, we’ll email you a link to reset it. We won’t send you anything else, and no one else can see this address.</p>
 
     <!-- The address and its one action share a row; the status, when there is
          one, is a single line under it with Resend as a link at its end. -->
@@ -193,7 +193,7 @@
 {/if}
 
 <Card kind="section" as="section" class="account-section">
-  <h2>Change password</h2>
+  <h2 class="section-title">Change password</h2>
   <form onsubmit={(e) => { e.preventDefault(); void changePassword(); }}>
     <Field label="Current password" error={pwError?.field === 'current' ? pwError.message : null}>
       {#snippet children({ id, describedBy, invalid })}
@@ -220,7 +220,7 @@
 <!-- The way in sits beside the way out: bring your reading here, take it with
      you. The import itself is a page of its own (/import); this is its door. -->
 <Card kind="section" as="section" class="account-section">
-  <h2>Import feeds</h2>
+  <h2 class="section-title">Import feeds</h2>
   <div class="export">
     <div class="what">
       <p>From another reader, or a link to someone’s collection.</p>
@@ -230,7 +230,7 @@
 </Card>
 
 <Card kind="section" as="section" class="account-section">
-  <h2>Export my data</h2>
+  <h2 class="section-title">Export my data</h2>
 
   <!-- One row per thing to download: what it is and what you get on the left,
        its button on the right. The next export gets a row of its own here. -->
@@ -250,9 +250,6 @@
 <style>
   /* The page has no element of its own around its sections, so the room between them is set on the cards' own class. */
   :global(.account-section) { margin-bottom: var(--space-4); }
-  h2 { font-size: calc(var(--text-xl) * var(--size-app)); margin: 0 0 var(--space-3); line-height: 1.25; }
-  h2 + .help { margin-top: calc(-1 * var(--space-2)); }
-  .help { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); line-height: 1.4; }
   .address { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   .who { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
   .addr { font-weight: 600; overflow-wrap: anywhere; }

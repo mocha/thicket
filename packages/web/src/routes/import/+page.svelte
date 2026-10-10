@@ -97,13 +97,13 @@
 
 {#if imp.step === 'choose'}
   <Card kind="section" as="section" class="import-section">
-    <h2>From another reader</h2>
+    <h2 class="section-title">From another reader</h2>
     <ImportHelp via="file" errors={false} />
   </Card>
 
   <Card kind="section" as="section" class="import-section">
-    <h2>From a link</h2>
-    <p class="help">Paste a link to someone else’s collection, or to an OPML file</p>
+    <h2 class="section-title">From a link</h2>
+    <p class="section-description">Paste a link to someone else’s collection, or to an OPML file</p>
     <form class="linkrow" onsubmit={(e) => { e.preventDefault(); if (link.trim()) void readImport(() => importApi.readLink(link.trim()), 'link'); }}>
       <Input type="url" inputmode="url" inset bind:value={link} placeholder="{page.url.host}/@name/collections/…" aria-label="Link to a collection or OPML file" class="link" />
       <Button variant="primary" size="lg" type="submit" disabled={!link.trim()} loading={imp.busy}>Preview</Button>
@@ -154,7 +154,7 @@
           <input class="name" bind:value={g.name} disabled={!g.keep} aria-label="Collection name" />
           <small>
             {#if blocked}{g.feeds.some((f) => f.state === 'unsure') ? 'None of these could be checked' : 'Nothing here can be added'}{:else if renamed}Created as <strong>{finalNames.get(gi)}</strong>, beside the <strong>{g.name.trim()}</strong> you already have{:else}New collection{/if}
-            <Dot /> {ok.length} to add{#if bad.length} <Dot /> {bad.length} can’t be added{/if}
+            <Dot /> {ok.length} to add{#if bad.length}{' '}<Dot />{' '}{bad.length} can’t be added{/if}
           </small>
         </div>
       </div>
@@ -205,8 +205,8 @@
   </div>
 {:else if imp.step === 'done'}
   <Card kind="section" as="section" class="import-section">
-    <h2>Done</h2>
-    <p class="help">New feeds start arriving over the next few minutes, as thicket fetches each one for the first time.</p>
+    <h2 class="section-title">Done</h2>
+    <p class="section-description">New feeds start arriving over the next few minutes, as thicket fetches each one for the first time.</p>
     <ul class="feeds">
       {#each imp.committed as c (c.id)}
         <li>
@@ -221,48 +221,47 @@
 
 <style>
   /* The room between sections is set on the cards' own class, since the cards are drawn by the shared Card. */
-  :global(.import-section) { margin-bottom: 14px; }
-  h2 { font-size: calc(20px * var(--size-app)); margin: 0 0 12px; line-height: 1.25; }
-  h2 + .help { margin-top: -8px; }
-  h3 { font-size: calc(14px * var(--size-app)); margin: 16px 0 8px; color: var(--text-2); }
-  .help { margin: 0 0 12px; font-size: calc(14px * var(--size-app)); color: var(--text-2); line-height: 1.45; max-width: 66ch; }
-  .lede { margin: 0 0 10px; color: var(--text-2); line-height: 1.45; max-width: 66ch; }
-  .fine { margin: 0 0 12px; font-size: calc(13px * var(--size-app)); color: var(--text-2); }
+  :global(.import-section) { margin-bottom: var(--space-4); }
+  h3 { font-size: calc(var(--text-sm) * var(--size-app)); margin: var(--space-4) 0 var(--space-2); color: var(--text-2); }
+  .lede { margin: 0 0 var(--space-3); color: var(--text-2); line-height: 1.45; max-width: 66ch; }
+  .fine { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .row { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
   .linkrow { display: flex; align-items: center; gap: var(--space-2); }
   .linkrow :global(.link) { flex: 1; min-width: 0; }
   input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .bad { color: var(--danger); margin: 0 0 14px; font-size: calc(14px * var(--size-app)); }
+  .bad { color: var(--danger); margin: 0 0 var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); }
 
-  .progress { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; font-size: calc(13px * var(--size-app)); color: var(--text-2); }
-  .bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .progress { display: flex; flex-direction: column; gap: var(--space-2); margin: 0 0 var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .bar { height: 6px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
   .bar span { display: block; height: 100%; background: var(--accent); transition: width 200ms ease; }
 
   :global(.import-section.off) { opacity: 0.6; }
-  .ghead { display: flex; flex-direction: column; gap: 10px; }
-  .keep { display: flex; align-items: center; gap: 8px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--text-2); cursor: pointer; }
+  .ghead { display: flex; flex-direction: column; gap: var(--space-3); }
+  .keep { display: flex; align-items: center; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); cursor: pointer; }
   .keep input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
-  .gname { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-  .name { font-size: calc(18px * var(--size-app)); font-weight: 700; padding: 6px 8px; margin-left: -8px; border-radius: 8px; border: 1px solid var(--field-line); background: transparent; color: var(--text); font-family: inherit; width: 100%; }
+  .gname { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+  /* Pulled left by its own inset, so the name lines up with the text above it. */
+  .name { font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; padding: var(--space-1) var(--space-2); margin-left: calc(-1 * var(--space-2)); border-radius: var(--radius-sm); border: 1px solid var(--field-line); background: transparent; color: var(--text); font-family: inherit; width: 100%; }
   /* A folder that's switched off isn't being named, so its box goes back to plain text. */
   .name:disabled { border-color: transparent; }
-  .gname small { font-size: calc(13px * var(--size-app)); color: var(--text-2); }
+  .gname small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
 
-  .feeds { list-style: none; margin: 12px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; }
-  .feeds li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-top: 1px solid var(--line); font-size: calc(14px * var(--size-app)); }
+  .feeds { list-style: none; margin: var(--space-3) 0 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-md); }
+  .feeds li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
   .feeds li:first-child { border-top: 0; }
-  .feeds li.why { border-top: 0; padding-top: 0; font-size: calc(12px * var(--size-app)); color: var(--text-2); }
+  .feeds li.why { border-top: 0; padding-top: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .fname { flex: 1; min-width: 0; display: flex; flex-direction: column; font-weight: 600; overflow-wrap: anywhere; color: var(--text); }
-  .fname small { font-weight: 400; font-size: calc(12px * var(--size-app)); color: var(--text-2); }
-  .tag { flex: none; font-size: calc(12px * var(--size-app)); font-weight: 600; color: var(--text-2); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }
+  .fname small { font-weight: 400; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  /* 2px top and bottom is optical, as on Badge: the pill hugs its word. */
+  .tag { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); padding: 2px var(--space-2); border-radius: var(--radius-pill); border: 1px solid var(--line); }
   .tag.good { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
   .tag.unsure { color: var(--text-2); border-style: dashed; }
   .tag.wait { border-color: transparent; }
   .refused { border-color: color-mix(in srgb, var(--danger) 30%, var(--line)); }
   .refused li { align-items: flex-start; }
-  .reason { flex: 1.2; min-width: 0; font-size: calc(13px * var(--size-app)); color: var(--text-2); }
-  .count { flex: none; font-size: calc(13px * var(--size-app)); color: var(--text-2); }
-  .more { margin-top: 8px; font-size: calc(14px * var(--size-app)); font-weight: 600; color: var(--accent); }
+  .reason { flex: 1.2; min-width: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .count { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .more { margin-top: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
 
   /* Pinned to the bottom while a long review scrolls, so the main action is always in reach. On a
      phone it sits on top of the tab bar; where the sidebar shows there is no tab bar. */
@@ -274,7 +273,7 @@
   }
   @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) { .footer { bottom: 0; padding-bottom: calc(var(--space-3) + var(--safe-b, 0px)); } }
   @media (max-width: 520px) {
-    .refused li { flex-direction: column; gap: 4px; }
+    .refused li { flex-direction: column; gap: var(--space-1); }
     /* Two long labels don't fit side by side on a phone: stack them, main action on top. */
     .footer { flex-direction: column-reverse; }
   }

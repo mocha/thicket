@@ -1,5 +1,6 @@
 <script lang="ts">
   import Card from '$lib/components/Card.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import Dot from '$lib/components/Dot.svelte';
   /**
    * The instance, for its admins: who can sign up, invite links, the accounts.
@@ -158,21 +159,19 @@
 
 <svelte:head><title>Admin · thicket</title></svelte:head>
 
-<header class="top">
-  <h1>Admin</h1>
-  {#if instance}<p class="sub">{instance.name} <Dot /> <code>{instance.url}</code></p>{/if}
-</header>
+{#snippet site()}{instance?.name} <Dot /> <code>{instance?.url}</code>{/snippet}
+<PageHeader name="Admin" description={instance ? site : undefined} />
 
 {#if instance}
   <Card kind="section" as="section" class="admin-section">
-    <h2>This instance</h2>
+    <h2 class="section-title">This instance</h2>
     <form class="inline" onsubmit={(e) => { e.preventDefault(); void saveName(); }}>
       <Field label="Name" class="grow">
         {#snippet children({ id, describedBy, invalid })}
           <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={name} maxlength={60} placeholder={instance!.url.replace(/^https?:\/\//, '')} />
         {/snippet}
       </Field>
-      <Button type="submit" size="sm" disabled={name.trim() === instance.name}>Save</Button>
+      <Button type="submit" size="lg" disabled={name.trim() === instance.name}>Save</Button>
     </form>
     <fieldset>
       <legend>Who can sign up</legend>
@@ -188,14 +187,14 @@
   </Card>
 
   <Card kind="section" as="section" class="admin-section">
-    <h2>Invite links</h2>
+    <h2 class="section-title">Invite links</h2>
     <form class="mint" onsubmit={(e) => { e.preventDefault(); void mint(); }}>
       <Field label="Who is this invite for?" hideLabel class="grow">
         {#snippet children({ id, describedBy, invalid })}
           <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={inviteNote} placeholder="Who is this for? (optional note)" maxlength={120} />
         {/snippet}
       </Field>
-      <Button type="submit" variant="primary" size="sm" disabled={minting}>{minting ? 'Creating…' : 'New invite link'}</Button>
+      <Button type="submit" variant="primary" size="lg" disabled={minting}>{minting ? 'Creating…' : 'New invite link'}</Button>
     </form>
     {#if openInvites.length}
       <ul class="invites">
@@ -214,8 +213,8 @@
   </Card>
 
   <Card kind="section" as="section" class="admin-section">
-    <h2>Starter packs</h2>
-    <p class="help">Someone who has just signed up follows nothing, so the first screen offers them collections to copy. Point it at an account and its public collections become those packs — curate them by signing in as that account and making collections the normal way. An account made for the purpose works well, and its profile doubles as a worked example: what it reads, bookmarks and notes.</p>
+    <h2 class="section-title">Starter packs</h2>
+    <p class="section-description">Someone who has just signed up follows nothing, so the first screen offers them collections to copy. Point it at an account and its public collections become those packs — curate them by signing in as that account and making collections the normal way. An account made for the purpose works well, and its profile doubles as a worked example: what it reads, bookmarks and notes.</p>
     {#if starterCandidates.length}
       <ul class="packs">
         {#each starterCandidates as u (u.handle)}
@@ -245,7 +244,7 @@
   </Card>
 
   <Card kind="section" as="section" class="admin-section">
-    <h2>Accounts <Badge>{users.length}</Badge></h2>
+    <h2 class="section-title">Accounts <Badge>{users.length}</Badge></h2>
     {#if issued}
       <div class="issued" role="status">
         <p><strong>Temporary password for @{issued.handle}:</strong> <code>{issued.password}</code></p>
@@ -279,14 +278,11 @@
 {/if}
 
 <style>
-  .top { margin-bottom: var(--space-4); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
-  /* 2px is an optical nudge under the title, not a spacing step. */
-  .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  code { font-size: calc(var(--text-sm) * var(--size-app)); /* 1px vertical is optical: an inline code chip stays on the text's line. */ background: var(--surface-2); padding: 1px var(--space-2); border-radius: var(--radius-xs); }
+  code { font-size: calc(var(--text-sm) * var(--size-app)); /* 1px vertical is optical: an inline code chip stays on the text's line. */ background: var(--surface-2); padding: 1px var(--space-2); border-radius: var(--radius-xs); overflow-wrap: anywhere; }
   /* The room between sections is set on the cards' own class, since the cards are drawn by the shared Card. */
   :global(.admin-section) { margin-bottom: var(--space-4); }
-  h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 var(--space-3); display: flex; align-items: baseline; gap: var(--space-2); }
+  /* Accounts carries its count beside the heading. */
+  .section-title { display: flex; align-items: baseline; gap: var(--space-2); }
   .help { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .inline { display: flex; gap: var(--space-2); align-items: flex-end; margin-bottom: var(--space-4); }
   /* The field takes the room the button beside it doesn't. */
