@@ -8,8 +8,8 @@
    *
    * Most of it is one terse line to skim: who, what, and the post's title
    * linking to the post. A mention is the exception: it was written to me, so
-   * it comes in full, the post with the note on it, the same card a profile's
-   * bookmarks use.
+   * it comes in full, the post with the note on it, the same content a
+   * profile's Bookmark cards show, drawn flat inside its row.
    *
    * Opening the page marks everything seen, so the bubble in the sidebar
    * clears. What was new stays highlighted for this visit, so you can still
@@ -91,17 +91,17 @@
   {#each groups as g (g.key)}
   <section class="day">
   <h2 class={g.key === todayKey ? 'visually-hidden' : 'dayhead'}>{g.label}</h2>
-  <Card kind="list" as="ul">
+  <Card kind="list" as="ul" class="list-rows">
     {#each g.items as n (n.key)}
       <li class:new={n.isNew} class:rich={n.kind === 'mention'}>
         {#if n.isNew}<span class="visually-hidden">New: </span>{/if}
         {#if n.kind === 'mention'}
-          <p class="line">{@render who(n.person)} <span class="verb">mentioned you in a note</span> <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time></p>
-          <ul class="card"><BookmarkCard b={n.bookmark} author={n.person} onopen={() => api.event('bookmark_opened', { via: 'notifications' })} /></ul>
+          <p class="line row-event">{@render who(n.person)} <span class="verb">mentioned you in a note</span> <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time></p>
+          <BookmarkCard flat b={n.bookmark} author={n.person} onopen={() => api.event('bookmark_opened', { via: 'notifications' })} />
         {:else if n.kind === 'follow'}
-          <p class="line">{@render who(n.person)} <span class="verb">started following you</span> <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time></p>
+          <p class="line row-event">{@render who(n.person)} <span class="verb">started following you</span> <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time></p>
         {:else}
-          <p class="line">
+          <p class="line row-event">
             {@render who(n.person)}
             <span class="verb">{n.kind === 'note' ? 'noted' : 'bookmarked'}</span>
             <button class="source tap" onclick={() => openSource(n.post.feedId, n.post.hasIcon, n.post.siteTitle ?? hostOf(n.post.url))} aria-label="About {n.post.siteTitle ?? hostOf(n.post.url)}" title="About {n.post.siteTitle ?? hostOf(n.post.url)}">
@@ -129,11 +129,13 @@
   .day { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); }
   /* The same day heading as New posts, without the sticking. */
   .dayhead { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .day li { position: relative; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
-  .day li:first-child { border-top: 0; }
+  .day li { position: relative; }
+  /* A mention runs edge to edge: its line keeps the row's inset, and the post under it brings its own, the same as on its card. */
+  .day li.rich { padding-left: 0; padding-right: 0; padding-bottom: 0; }
+  .rich .line { padding: 0 var(--card-pad); }
   /* New since last time: a tint and an accent edge, so it reads in grayscale too (the edge), not by color alone. */
   .day li.new { background: color-mix(in srgb, var(--accent) 9%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
-  .line { display: flex; align-items: center; gap: var(--space-2); margin: 0; min-width: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .line { display: flex; align-items: center; gap: var(--space-2); margin: 0; min-width: 0; }
   .who { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text); font-weight: 600; }
   @media (hover: hover) { .who:hover span, .post:hover { text-decoration: underline; text-underline-offset: 3px; } }
   .verb { flex: none; }
@@ -141,9 +143,6 @@
   /* The title takes what room is left and trails off; the time stays whole at the end. */
   .post { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
   time { flex: none; margin-left: auto; padding-left: var(--space-2); color: var(--text-2); }
-
-  /* A mention: the line, then the post with the note on it, as a card inside the row. */
-  .card { list-style: none; margin: var(--space-3) 0 0; padding: 0; }
 
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-2)) var(--space-5); color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
