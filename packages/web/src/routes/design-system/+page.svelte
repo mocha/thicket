@@ -464,11 +464,12 @@
 
     <section class="entry" id="badge" aria-labelledby="badge-h">
       <h3 class="entry-h" id="badge-h">Badge</h3>
-      <p class="section-lede">A short status word or a count that rides alongside something else. Never something you press.</p>
+      <p class="section-lede">A short status word or a count that rides alongside something else. Never something you press. Gray for a label or a count, filled green for what’s new, soft red for something wrong, like a feed that’s failing.</p>
       <div class="row">
         <Badge>Private</Badge>
         <Badge>12</Badge>
         <Badge tone="accent">3 new</Badge>
+        <Badge tone="danger">Failing</Badge>
         <span class="dot-demo">New<Badge variant="dot" title="Something new" /></span>
       </div>
     </section>

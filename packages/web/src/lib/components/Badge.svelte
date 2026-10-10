@@ -6,10 +6,12 @@
    * something else — a heading, a row, a name. It is never something you press:
    * anything clickable is a Button, an IconButton, or a ChoiceGroup option.
    *
-   * Three looks, and only three:
+   * Four looks, and only four:
    *   neutral pill  the quiet gray one — a label ("Private") or a count ("12")
    *   accent pill   the filled one, for "what's new" counts that should catch
    *                 the eye
+   *   danger pill   soft red: a pale wash of the theme's red with red
+   *                 lettering, for something wrong ("Failing")
    *   dot           an 8px accent circle for "something new" where a number
    *                 would say nothing. The dot is always the accent color;
    *                 there is no quiet dot.
@@ -26,7 +28,7 @@
    * component).
    */
   interface Props {
-    tone?: 'neutral' | 'accent';
+    tone?: 'neutral' | 'accent' | 'danger';
     variant?: 'pill' | 'dot';
     /** Hover text. On a dot it is also what a screen reader announces. */
     title?: string;
@@ -85,6 +87,16 @@
   .pill.accent {
     background: var(--accent);
     color: var(--accent-ink);
+  }
+
+  /* Soft, like the secondary button's pale green: a wash of the red, not a
+     fill, so a warning in a list doesn't shout. On the two hard-edged themes
+     it is outlined in the red, as the neutral pill is outlined there. */
+  .pill.danger {
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+    color: var(--danger);
+    border: var(--card-border, 0);
+    border-color: var(--danger);
   }
 
   /* The ring lifts the dot off whatever it is pinned to — an icon, an avatar.

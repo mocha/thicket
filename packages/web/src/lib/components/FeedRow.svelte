@@ -58,7 +58,7 @@
   <a class="row tap" href={feedHref(f)} onclick={() => onopen?.()}>
     <SourceIcon feedId={f.id} hasIcon={f.hasIcon} {name} size={40} />
     <div class="meta">
-      <span class="named"><span class="title row-name">{feedListName(f)}</span>{#if failing}<Badge>Failing</Badge>{/if}</span>
+      <span class="named"><span class="title row-name">{feedListName(f)}</span>{#if failing}<Badge tone="danger">Failing</Badge>{/if}</span>
       <span class="row-details origin">{feedOrigin(f)}</span>
       {#if f.description}<span class="row-details desc">{f.description}</span>{/if}
       {#if facts.length || network}
