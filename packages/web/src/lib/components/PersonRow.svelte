@@ -63,7 +63,7 @@
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .handle { font-weight: 400; color: var(--text-2); }
-  .bio { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .bio { margin-top: var(--space-1); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
   .facts { margin-top: var(--space-1); }
   /* Last, so it wins over the row's own sizing above. On a phone the button
      would squeeze the bio into a column four words wide, so it drops to its
