@@ -9,7 +9,7 @@
  * Default handle: christie, else the first user. Default count: 24. Idempotent:
  * a URL the account already saved is left alone (unique on user + url).
  */
-import { db, pool, schema } from "../db/client.js";
+import { db, schema, endPools } from "../db/client.js";
 import { eq, sql } from "drizzle-orm";
 
 const handle = process.argv[2] ?? "christie";
@@ -59,8 +59,8 @@ async function main() {
 }
 
 main()
-  .then(() => pool.end())
+  .then(() => endPools())
   .catch((e) => {
     console.error(e);
-    return pool.end().then(() => process.exit(1));
+    return endPools().then(() => process.exit(1));
   });

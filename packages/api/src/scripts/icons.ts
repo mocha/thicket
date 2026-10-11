@@ -1,6 +1,6 @@
 /** Backfill site icons for feeds that have never been checked. `pnpm icons` */
 import { isNull, sql } from "drizzle-orm";
-import { db, pool, schema } from "../db/client.js";
+import { db, schema, endPools } from "../db/client.js";
 import { markAllGeneric, refreshIcon } from "../feeds/icons.js";
 
 const CONCURRENCY = 8;
@@ -22,6 +22,6 @@ async function main() {
   console.log(` icons flagged as platform defaults`);
   const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(schema.feedIcons);
   console.log(`done: ${ok} new icons this run, ${n} total cached`);
-  await pool.end();
+  await endPools();
 }
 main().catch((e) => { console.error(e); process.exit(1); });

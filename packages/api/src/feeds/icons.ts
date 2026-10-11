@@ -24,7 +24,8 @@
  */
 import { createHash } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
-import { db, schema } from "../db/client.js";
+// Background work: the worker pool, so fetching never takes a request's connection (db/client.ts).
+import { workerDb as db, schema } from "../db/client.js";
 import { httpGet, httpGetBytes } from "./http.js";
 import { HostCoolingDown } from "./hosts.js";
 import { isYouTubeUrl } from "./youtube.js";

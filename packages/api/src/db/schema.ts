@@ -278,6 +278,23 @@ export const feeds = pgTable("feeds", {
   lastItemAt: timestamp("last_item_at", { withTimezone: true }),
   /** When we last looked for a site icon (success or not). Rechecked monthly. */
   iconCheckedAt: timestamp("icon_checked_at", { withTimezone: true }),
+  /*
+   * Counts the lists sort by, kept on the row so a sort reads a column instead
+   * of counting every feed's posts on every page view (lib/counts.ts).
+   *
+   * follower_count and item_count are recounted for the affected feed by
+   * triggers whenever its collection_feeds or items rows change (drizzle/0029),
+   * so they are exact as of the last write. posts_30d and posts_90d change as
+   * time passes with no write to trigger on, so the counts job recounts them
+   * hourly; it also re-checks the trigger-kept two nightly and logs any drift.
+   */
+  /** Distinct people with this feed in at least one of their collections. */
+  followerCount: integer("follower_count").notNull().default(0),
+  /** Every post we hold for this feed. */
+  itemCount: integer("item_count").notNull().default(0),
+  /** Posts published in the last 30 / 90 days, as of the counts job's last hourly pass. */
+  posts30d: integer("posts_30d").notNull().default(0),
+  posts90d: integer("posts_90d").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
@@ -418,6 +435,8 @@ export const collections = pgTable("collections", {
   visibility: shareLevel("visibility").notNull().default("public"),
   /** Provenance when copied from another user's collection. Informational; the copy is independent. */
   copiedFromId: bigint("copied_from_id", { mode: "number" }),
+  /** Feeds in this collection, kept by a trigger on collection_feeds (drizzle/0029). Explore sorts by it. */
+  feedCount: integer("feed_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   /** One address per collection: /@handle/collections/:slug resolves to exactly one row. */

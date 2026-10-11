@@ -15,7 +15,7 @@
   } = $props();
 </script>
 
-<p class="more"><strong>That’s everything.</strong>{#if hidden} {hidden} hidden by your blocks.{/if} Want more to read? <a href="/explore" onclick={() => api.event('explore_from_end', { from })}>Find something new to follow</a> in Explore.</p>
+<p class="more"><strong>That’s everything.</strong>{#if hidden} {hidden} hidden by your blocks.{/if} Want more to read? <a href="/explore?scope=feeds" onclick={() => api.event('explore_from_end', { from })}>Find something new to follow</a> in Explore.</p>
 
 <style>
   /* The same box as VisitorMore, so the two ends of a list read as one thing. */

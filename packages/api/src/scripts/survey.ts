@@ -32,7 +32,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 // --- keep Postgres out of the picture -------------------------------------------------------------
 delete process.env.DATABASE_URL;
 const stub = "data:text/javascript," + encodeURIComponent(
-  "export const db = { execute: async () => ({ rows: [], rowCount: 0 }) }; export const pool = { end: async () => {} }; export const schema = {};",
+  "export const db = { execute: async () => ({ rows: [], rowCount: 0 }) }; export const workerDb = db; export const pool = { end: async () => {} }; export const endPools = async () => {}; export const schema = {};",
 );
 register("data:text/javascript," + encodeURIComponent(`
   const STUB = ${JSON.stringify(stub)};

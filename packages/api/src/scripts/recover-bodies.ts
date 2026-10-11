@@ -20,7 +20,7 @@
  * "no body" to "a body", so it is safe to re-run and safe to stop halfway.
  */
 import { eq, sql } from "drizzle-orm";
-import { db, pool, schema } from "../db/client.js";
+import { db, schema, endPools } from "../db/client.js";
 import { httpGet } from "../feeds/http.js";
 import { parseFeedDocument } from "../feeds/parse.js";
 
@@ -51,7 +51,7 @@ const totalGaps = targets.reduce((n, t) => n + Number(t.gaps), 0);
 console.log(`${targets.length} feeds hold ${totalGaps.toLocaleString()} items with no body`);
 if (dry || targets.length === 0) {
   console.log(dry ? "dry run, stopping here" : "nothing to do");
-  await pool.end();
+  await endPools();
   process.exit(0);
 }
 
@@ -116,4 +116,4 @@ const [{ have, all }] = (await db.execute<{ have: number; all: number }>(sql`
   select count(*) filter (where content is not null and content <> '')::int as have, count(*)::int as all from items
 `)).rows;
 console.log(`items with a body: ${have.toLocaleString()} of ${all.toLocaleString()} (${Math.round((have / all) * 100)}%)`);
-await pool.end();
+await endPools();

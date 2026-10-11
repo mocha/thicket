@@ -50,7 +50,7 @@ explore.get("/collections", async (c) => {
   const rows = await db.execute(sql`
     ${shown(filters)}
     select col.id, col.name, col.slug, col.description, u.handle, u.display_name as "displayName",
-           (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount",
+           col.feed_count as "feedCount",
            (select coalesce(json_agg(x), '[]'::json) from (
               select f.id, coalesce(cf.title_override, f.title) as title,
                      exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon"
@@ -103,7 +103,7 @@ explore.get("/featured", async (c) => {
   const rows = await db.execute(sql`
     select col.id, col.name, col.slug, col.description, u.handle, u.display_name as "displayName",
            col.user_id = ${viewerId} as "isMine",
-           (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount",
+           col.feed_count as "feedCount",
            (select coalesce(json_agg(x), '[]'::json) from (
               select f.id, coalesce(cf.title_override, f.title) as title,
                      exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon"
