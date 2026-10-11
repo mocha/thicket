@@ -11,7 +11,8 @@
    *   accent pill   the filled one, for "what's new" counts that should catch
    *                 the eye
    *   soft pill     soft green: the secondary button's pale wash and green
-   *                 lettering, for a quieter status ("New" on a post)
+   *                 lettering, for what's new on a card or row ("New" on a
+   *                 post, "30 new" on a collection)
    *   danger pill   soft red: a pale wash of the theme's red with red
    *                 lettering, for something wrong ("Failing")
    *   dot           an 8px accent circle for "something new" where a number
