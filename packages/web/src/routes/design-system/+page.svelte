@@ -32,6 +32,7 @@
   import Monogram from '$lib/components/Monogram.svelte';
   import Card from '$lib/components/Card.svelte';
   import CardMeta from '$lib/components/CardMeta.svelte';
+  import CardFooter from '$lib/components/CardFooter.svelte';
   import FeedRow from '$lib/components/FeedRow.svelte';
   import PersonRow from '$lib/components/PersonRow.svelte';
   import CollectionRow from '$lib/components/CollectionRow.svelte';
@@ -541,7 +542,8 @@
         <li><strong>Source line.</strong> The site’s icon, its name, and when the post went up: the shared source line, the same on every card. A starter pack shows a row of its sites’ icons in place of one, then whose it is and how many sites.</li>
         <li><strong>Picture.</strong> Wide, across the top of the card from edge to edge, on the article card and the Bookmark card alike. On the Pages layout, where every card is one height, it’s an 88px square at the right of the title instead.</li>
         <li><strong>Title, then summary.</strong> The title in the headings face; the summary in the reading face, stopping after a few lines. The words sit 16px in.</li>
-        <li><strong>Bottom row.</strong> Who wrote it, or when you bookmarked it, on the left; what you can do on the right, as icon buttons (Add a note, Bookmark, or Remove). A starter pack’s Copy button sits here too. Nothing floats in a corner or sits in the top line.</li>
+        <li><strong>Bottom row.</strong> Who wrote it, or when you bookmarked it, on the left; what you can do on the right, as icon buttons (Add a note, Bookmark, or Remove): the shared card footer. A starter pack’s Copy button sits here too. Nothing floats in a corner or sits in the top line.</li>
+        <li><strong>Searched words.</strong> On a search’s results, the words that matched are tinted in the title and the summary, the same way on every card.</li>
       </ul>
       <div class="stack">
         <Card as="div" pad={false}>
@@ -550,12 +552,13 @@
             <div class="demo-picture" aria-hidden="true"></div>
             <h3 class="card-title">A post’s title, in the headings face</h3>
             <p class="card-summary">The summary under it, in the reading face, stopping after a few lines.</p>
-            <div class="demo-bottom">
+            <CardFooter>
               <span>Author or “Bookmarked 5d”</span>
-              <span class="demo-grow"></span>
-              <IconButton icon="note" label="Add a note" title="Add a note" />
-              <IconButton icon="bookmark" label="Bookmark" title="Bookmark" />
-            </div>
+              {#snippet actions()}
+                <IconButton icon="note" label="Add a note" title="Add a note" />
+                <IconButton icon="bookmark" label="Bookmark" title="Bookmark" />
+              {/snippet}
+            </CardFooter>
           </div>
         </Card>
       </div>
@@ -924,11 +927,8 @@
   .demo-list { display: flex; flex-direction: column; gap: var(--space-2); padding-left: 1.2em; }
   /* A sketch of the content card's parts, at its real insets; the live cards are on any feed. */
   .demo-content { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) 0 var(--space-2); }
-  .demo-content > :not(.demo-picture, .demo-bottom) { margin-inline: var(--card-pad); }
+  .demo-content > :not(.demo-picture) { margin-inline: var(--card-pad); }
   .demo-picture { aspect-ratio: 16 / 9; background: var(--surface-2); }
-  /* The icon buttons' circles run past their glyphs, so the row stops 8px short on the right, as on the real cards. */
-  .demo-bottom { display: flex; align-items: center; gap: var(--space-1); margin: 0 var(--space-2) 0 var(--card-pad); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .demo-bottom .demo-grow { flex: 1; }
   .demo-inline :global(.demo-grow) { flex: 1 1 12rem; min-width: 0; }
   .demo-invite { margin-top: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .demo-post { margin: 0; padding: var(--card-pad); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
