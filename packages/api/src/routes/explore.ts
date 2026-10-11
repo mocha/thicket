@@ -146,8 +146,9 @@ explore.get("/featured", async (c) => {
 });
 
 /**
- * The orders the people browse list can take. "name" is the default and keeps
- * the order this list has always had: people you follow first, then A to Z.
+ * The orders the people browse list can take. "name" is the default: A to Z
+ * by the name people go by, the same as a searched list's "name", with nobody
+ * moved up for being followed (Show: People I follow narrows to them instead).
  * "newest" is the newest to join. Never most followed: see below.
  */
 export const BROWSE_PEOPLE_SORTS = ["name", "newest"] as const;
@@ -155,7 +156,7 @@ export type BrowsePeopleSort = (typeof BROWSE_PEOPLE_SORTS)[number];
 export const DEFAULT_BROWSE_PEOPLE_SORT: BrowsePeopleSort = "name";
 export const browsePeopleSortFrom = oneOf(BROWSE_PEOPLE_SORTS, DEFAULT_BROWSE_PEOPLE_SORT);
 const BROWSE_PEOPLE_ORDER: Record<BrowsePeopleSort, SQL> = {
-  name: sql`"isFollowing" desc, lower(coalesce(u.display_name, u.handle))`,
+  name: sql`lower(coalesce(u.display_name, u.handle)), u.handle`,
   newest: sql`u.created_at desc, u.id desc`,
 };
 

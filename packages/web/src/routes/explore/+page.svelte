@@ -585,18 +585,23 @@
 
 {#snippet emptyMessage()}
   <div class="empty">
-    {#if searching}
+    {#if since}
+      <!-- A time window can empty any list, searched or not, so it says so before anything else. -->
+      <p>Nothing {scope === 'posts' ? 'was posted' : scope === 'people' ? 'joined' : 'was added'}{searching ? ` that matches “${q}”` : ''} in that time. <button class="link" onclick={() => setParams({ since: null })}>Show any time</button>.</p>
+    {:else if searching}
       <p>No {scopeLabel.toLowerCase()} match “{q}”. {#if scope !== 'posts'}<button class="link" onclick={() => setScope('posts')}>Search posts instead</button>, or try{:else}Try{/if} another tab above.</p>
     {:else if scope === 'posts'}
       {#if feedsNetwork}<p>Nothing new from the feeds the people you follow read. <button class="link" onclick={() => setParams({ by: null })}>Show everyone’s</button>.</p>
+      {:else if sortId === 'bookmarked' || sortId === 'noted'}<p>Nobody has {sortId === 'noted' ? 'written a note on' : 'bookmarked'} a post yet. <button class="link" onclick={() => setSort('newest')}>Show the newest posts</button>.</p>
       {:else}<p>No posts yet. Follow a feed and its posts will turn up here.</p>{/if}
     {:else if browseAs === 'feeds'}
       {#if feedsNetwork}<p>The people you follow haven’t followed anything you don’t already. <button class="link" onclick={() => setParams({ by: null })}>Show the whole index</button>.</p>
-      {:else if since}<p>Nothing was added in that time.</p>
       {:else}<p>Nobody has added a feed yet. Be the first: press <strong>Add a new feed</strong> and paste a site’s address.</p>{/if}
     {:else if browseAs === 'collections'}
       {#if narrowToNetwork}<p>The people you follow haven’t shared any collections yet. <button class="link" onclick={() => setParams({ by: null })}>Show everyone’s</button>.</p>
       {:else}<p>No one has shared a public collection yet. Yours could be first: open a collection, Manage, and set it to Public.</p>{/if}
+    {:else if narrowToNetwork}
+      <p>You don’t follow anyone yet. <button class="link" onclick={() => setParams({ by: null })}>Show everyone</button>.</p>
     {:else}
       <p>No other public profiles here yet.</p>
     {/if}
