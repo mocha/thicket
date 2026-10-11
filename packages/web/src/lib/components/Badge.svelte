@@ -79,12 +79,14 @@
   }
 
   /* Outlined, not filled, so a label reads as plain information beside the
-     filled soft pills that report a status. The line takes 1px from the
-     padding all round, so it stays the same size as the others. */
+     filled soft pills that report a status. The line is the quietest text
+     gray, a step darker than the dividers so the pill holds its shape, and
+     takes 1px from the padding all round, so it stays the same size as the
+     others. */
   .pill.neutral {
     background: none;
     color: var(--text-2);
-    border: 1px solid var(--line);
+    border: 1px solid var(--text-3);
     padding: 1px calc(var(--space-2) - 1px);
   }
 
