@@ -20,7 +20,7 @@ explore.get("/collections", async (c) => {
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 6)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
   const filters = [sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public' and u.collections_visibility = 'public'
-      and col.feed_count > 0`];
+      and exists(select 1 from collection_feeds cf where cf.collection_id = col.id)`];
   if (q) {
     const like = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
     filters.push(sql`(col.name ilike ${like} or col.description ilike ${like})`);
@@ -90,7 +90,7 @@ explore.get("/featured", async (c) => {
   const viewerId = viewer?.id ?? -1;
   const handle = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
   const visible = sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public'
-    and u.collections_visibility = 'public' and col.feed_count > 0`;
+    and u.collections_visibility = 'public' and exists(select 1 from collection_feeds cf where cf.collection_id = col.id)`;
   const curated = handle
     ? (await db.execute<{ id: number }>(sql`select id from users where handle = ${handle} and profile_visibility = 'public' and collections_visibility = 'public'`)).rows[0]
     : undefined;

@@ -9,9 +9,18 @@
 --  - follower_count, item_count, collections.feed_count: recounted by the
 --    triggers below for just the feeds or collections a statement touched.
 --    A recount, never a +1/-1, so a missed or doubled event can't leave a
---    permanent error. Two transactions writing the same feed at once can each
---    miss the other's rows; the nightly reconcile in lib/counts.ts fixes that
---    and logs it.
+--    permanent error.
+--
+--    Concurrent writers: each recount first locks the rows it is about to
+--    count, then counts in a statement of its own. A statement's snapshot is
+--    taken when it starts, so a writer that had to wait for the lock counts
+--    after the other has committed, and sees its rows. Without that, adding
+--    feed B and removing feed A in two overlapping transactions left a
+--    collection holding B stored as empty (PR #267 review). FOR NO KEY UPDATE
+--    leaves alone the key-share lock that inserting a collection_feeds row
+--    takes on its collection; rows are locked in id order so two recounts
+--    can't each hold what the other wants. The nightly reconcile in
+--    lib/counts.ts still rechecks everything and logs any drift.
 --  - posts_30d, posts_90d: change as time passes with no write to hang a
 --    trigger on, so lib/counts.ts recounts them hourly.
 --
@@ -30,8 +39,12 @@ ALTER TABLE "feeds" ADD COLUMN "posts_30d" integer DEFAULT 0 NOT NULL;--> statem
 ALTER TABLE "feeds" ADD COLUMN "posts_90d" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 
 -- Recount followers for these feeds and feed counts for these collections.
--- Only rows whose number changed are written, so a no-op costs no dead tuple.
-create or replace function thicket_recount_follows(feed_ids bigint[], collection_ids bigint[]) returns void language sql as $$
+-- Lock first, count after (see the top of this file). Only rows whose number
+-- changed are written, so a no-op costs no dead tuple.
+create or replace function thicket_recount_follows(feed_ids bigint[], collection_ids bigint[]) returns void language plpgsql as $$
+begin
+  perform 1 from feeds where id = any(feed_ids) order by id for no key update;
+  perform 1 from collections where id = any(collection_ids) order by id for no key update;
   update feeds f set follower_count = n.c
   from (select f2.id, (select count(distinct col.user_id)::int from collection_feeds cf
                         join collections col on col.id = cf.collection_id where cf.feed_id = f2.id) as c
@@ -41,7 +54,7 @@ create or replace function thicket_recount_follows(feed_ids bigint[], collection
   from (select c2.id, (select count(*)::int from collection_feeds cf where cf.collection_id = c2.id) as c
         from collections c2 where c2.id = any(collection_ids)) n
   where col.id = n.id and col.feed_count <> n.c;
-$$;--> statement-breakpoint
+end $$;--> statement-breakpoint
 
 create or replace function thicket_collection_feeds_ins() returns trigger language plpgsql as $$
 begin
@@ -68,13 +81,15 @@ create trigger collection_feeds_counts_del after delete on collection_feeds
 create trigger collection_feeds_counts_upd after update on collection_feeds
   referencing old table as old_rows new table as new_rows for each statement execute function thicket_collection_feeds_upd();--> statement-breakpoint
 
--- Recount stored posts for these feeds.
-create or replace function thicket_recount_items(feed_ids bigint[]) returns void language sql as $$
+-- Recount stored posts for these feeds. Lock first, count after, as above.
+create or replace function thicket_recount_items(feed_ids bigint[]) returns void language plpgsql as $$
+begin
+  perform 1 from feeds where id = any(feed_ids) order by id for no key update;
   update feeds f set item_count = n.c
   from (select f2.id, (select count(*)::int from items i where i.feed_id = f2.id) as c
         from feeds f2 where f2.id = any(feed_ids)) n
   where f.id = n.id and f.item_count <> n.c;
-$$;--> statement-breakpoint
+end $$;--> statement-breakpoint
 
 create or replace function thicket_items_ins() returns trigger language plpgsql as $$
 begin

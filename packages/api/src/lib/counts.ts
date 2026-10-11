@@ -5,11 +5,15 @@
  *
  *  - **Totals** (feeds.follower_count, feeds.item_count,
  *    collections.feed_count) are recounted by triggers for whatever a write
- *    touched, so they are right the moment it commits. `reconcile` recounts
- *    every row nightly anyway and logs anything it had to correct: two
- *    transactions writing one feed at once can each miss the other's rows, and
- *    a count nobody checks drifts without anyone noticing. A non-zero drift
- *    in the log is worth a look; the triggers should make it rare.
+ *    touched, so they are right the moment it commits; each recount locks the
+ *    rows it counts first, so overlapping writers take turns rather than each
+ *    missing the other's rows. `reconcile` recounts every row nightly anyway
+ *    and logs anything it had to correct, because a count nobody checks drifts
+ *    without anyone noticing. A non-zero drift in the log means a write path
+ *    the triggers don't cover, and is worth a look.
+ *
+ *    These counts order and label lists; they never decide whether something
+ *    is shown at all. That stays an exact check (routes/explore.ts).
  *
  *  - **Windows** (feeds.posts_30d, feeds.posts_90d) change because time
  *    passes, not because anything was written, so no trigger can keep them.

@@ -25,7 +25,11 @@ test("stored counts stay equal to a fresh count through every write path", { ski
   const url = new URL(testUrl!);
   url.pathname = `/${name}`;
   process.env.DATABASE_URL = url.toString();
-  const { pool, endPools } = await import("../db/client.js");
+  const { pool, workerPool, endPools } = await import("../db/client.js");
+  // Pool shutdown can resolve before every client emits end (as in db/migrations.test.ts):
+  // wait for the sockets to close before forcing the disposable database to drop.
+  const closedConnections: Promise<void>[] = [];
+  for (const p of [pool, workerPool]) p.on("connect", (client) => { closedConnections.push(new Promise((resolve) => client.once("end", resolve))); });
   const { applyMigrations, readMigrations } = await import("../db/migrations.js");
   const { reconcile, recountWindows } = await import("./counts.js");
   const { mergeFeeds } = await import("../feeds/merge.js");
@@ -135,6 +139,46 @@ test("stored counts stay equal to a fresh count through every write path", { ski
       assert.deepEqual(await wrong(), []);
     });
 
+    await t.test("two overlapping transactions, one adding a feed and one removing another, leave the right count and the collection listed", async () => {
+      // PR #267 review: transaction 2's recount used to run before transaction 1
+      // committed, count 0, and store it, hiding a public collection that still
+      // held a feed from Explore until the nightly reconcile.
+      const { Hono } = await import("hono");
+      const { explore } = await import("../routes/explore.js");
+      const app = new Hono();
+      app.route("/", explore);
+      const cy = await user("cy");
+      const fa = await feed("https://a.example/feed");
+      const fb = await feed("https://b.example/feed");
+      await add(cy.a, fa);
+      const listed = async () => {
+        const cols = (await (await app.request("/collections?limit=50")).json()).collections.map((c: any) => c.id);
+        const featured = (await (await app.request("/featured")).json()).collections.map((c: any) => c.id);
+        return { cols: cols.includes(cy.a), featured: featured.includes(cy.a) };
+      };
+      assert.deepEqual(await listed(), { cols: true, featured: true });
+
+      const t1 = await pool.connect();
+      const t2 = await pool.connect();
+      try {
+        await t1.query("begin");
+        await t1.query("insert into collection_feeds (collection_id, feed_id) values ($1, $2)", [cy.a, fb]);
+        await t2.query("begin");
+        const removing = t2.query("delete from collection_feeds where collection_id = $1 and feed_id = $2", [cy.a, fa]);
+        await new Promise((r) => setTimeout(r, 200));
+        await t1.query("commit");
+        await removing;
+        await t2.query("commit");
+      } finally {
+        t1.release();
+        t2.release();
+      }
+      const r = await one("select feed_count as stored, (select count(*)::int from collection_feeds where collection_id = $1) as actual from collections where id = $1", [cy.a]);
+      assert.deepEqual({ stored: r.stored, actual: r.actual }, { stored: 1, actual: 1 });
+      assert.deepEqual(await listed(), { cols: true, featured: true });
+      assert.deepEqual(await wrong(), []);
+    });
+
     await t.test("the nightly reconcile finds nothing to correct, and fixes what it finds", async () => {
       assert.deepEqual(await reconcile(), { followers: 0, items: 0, collections: 0 });
       // Knock a number out of true behind the triggers' back, as a missed write would.
@@ -146,6 +190,7 @@ test("stored counts stay equal to a fresh count through every write path", { ski
     });
   } finally {
     await endPools();
+    await Promise.all(closedConnections);
     await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`);
     await admin.end();
   }
