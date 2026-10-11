@@ -28,6 +28,9 @@
   let scroller = $state<HTMLElement | null>(null);
   let sheet = $state<HTMLElement | null>(null);
   let head = $state<HTMLElement | null>(null);
+  let readerEl = $state<HTMLElement | null>(null);
+  /** Whether the last press was a key rather than a tap or click; read when the reader opens. Not state: nothing redraws on it. */
+  let byKeyboard = false;
 
   /* ---- Paged reading: the article is laid out in columns one screen wide and shown one column at a time. ---- */
   const paged = $derived(display.layout === 'paged');
@@ -96,11 +99,18 @@
     if (item && openFor === item.id) {
       // Paged: not modal, so the bottom bar stays live while reading and the reader sits above it.
       if (!dialog?.open) {
+        // Opened from the keyboard, the browser's own first stop (the feed name, ringed) is
+        // right. Opened by a tap or click, that ring reads as the feed name being selected,
+        // so start just before the header instead: no ring, and Tab still goes feed name,
+        // note, bookmark, close. The note editor, opening with the post, keeps its focus.
         if (paged) dialog?.show(); else dialog?.showModal();
-        // Start in the post itself, not on the first button in the header: opening
-        // with a tap shouldn't ring the feed name. Tab still walks from the top. The
-        // note editor, when it opens with the post, keeps the focus it took.
-        if (!scroller?.contains(document.activeElement)) scroller?.focus({ preventScroll: true });
+        // Focusable only for that moment, so the browser's own first stop is still the feed name.
+        if (!byKeyboard && readerEl && !sheet?.contains(document.activeElement)) {
+          const el = readerEl;
+          el.tabIndex = -1;
+          el.focus({ preventScroll: true });
+          el.addEventListener('blur', () => el.removeAttribute('tabindex'), { once: true });
+        }
       }
     } else if (item) {
       popover = false;
@@ -164,11 +174,11 @@
   function outbound() { if (item) api.event('item_opened', { itemId: item.id, feedId: item.feedId, via: 'reader' }); }
 </script>
 
-<svelte:window onkeydown={keys} />
+<svelte:window onkeydown={keys} onkeydowncapture={() => (byKeyboard = true)} onpointerdowncapture={() => (byKeyboard = false)} />
 
 <dialog bind:this={dialog} class:paged onclose={() => closeReader()} oncancel={canceled} onclick={(e) => { if (e.target === dialog) close(); }} aria-label={item?.title ?? 'Post'}>
   {#if item}
-    <article class="reader">
+    <article class="reader" bind:this={readerEl}>
       <header bind:this={head}>
         <CardMeta feedId={item.feedId} hasIcon={item.hasIcon} name={source} when={item.publishedAt} onsource={openSource} />
         <span class="spacer"></span>
@@ -176,7 +186,7 @@
         <IconButton icon="close" label="Close" iconSize={20} onclick={close} />
       </header>
 
-      <div class="scroll" class:paged bind:this={scroller} tabindex="-1">
+      <div class="scroll" class:paged bind:this={scroller}>
         <div class="page" bind:this={sheet} onfocusin={follow} style:column-count={paged && pageW ? cols : undefined} style:height={paged && pageH ? `${pageH}px` : undefined} style:transform={paged ? `translateX(${-pageIndex * pageW}px)` : undefined}>
           {#if editing}
             <NoteEditor itemId={item.id} note={item.myNote} onsaved={noteSaved} ondeleted={() => { if (item) item.myNote = null; editing = false; }} oncancel={() => (editing = false)} />
@@ -236,6 +246,7 @@
 <style>
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
   dialog::backdrop { background: var(--scrim); }
+  .reader:focus { outline: none; }
   .reader {
     position: fixed; inset: 0; display: flex; flex-direction: column;
     background: var(--surface); color: var(--text);
@@ -250,7 +261,6 @@
   }
   .spacer { flex: 1; }
 
-  .scroll:focus { outline: none; }
   .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .page { max-width: 680px; margin: 0 auto; padding: var(--space-5) var(--space-4) calc(var(--space-5) + var(--safe-b)); }
   h1 { margin: 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
