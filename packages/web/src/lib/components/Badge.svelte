@@ -7,7 +7,7 @@
    * anything clickable is a Button, an IconButton, or a ChoiceGroup option.
    *
    * Five looks, and only five:
-   *   neutral pill  the quiet gray one — a label ("Private") or a count ("12")
+   *   neutral pill  the quiet gray outline — a label ("Private") or a count ("12")
    *   accent pill   the filled one, for "what's new" counts that should catch
    *                 the eye
    *   soft pill     soft green: the secondary button's pale wash and green
@@ -78,13 +78,14 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* On the two hard-edged color themes every surface is the same flat color,
-     so the quiet pill would melt into the page. There it gets the same outline
-     the cards get. */
+  /* Outlined, not filled, so a label reads as plain information beside the
+     filled soft pills that report a status. The line takes 1px from the
+     padding all round, so it stays the same size as the others. */
   .pill.neutral {
-    background: var(--surface-2);
+    background: none;
     color: var(--text-2);
-    border: var(--card-border, 0);
+    border: 1px solid var(--line);
+    padding: 1px calc(var(--space-2) - 1px);
   }
 
   .pill.accent {
@@ -103,7 +104,7 @@
 
   /* Soft, like the secondary button's pale green: a wash of the red, not a
      fill, so a warning in a list doesn't shout. On the two hard-edged themes
-     it is outlined in the red, as the neutral pill is outlined there. */
+     it is outlined in the red, as cards are outlined there. */
   .pill.danger {
     background: color-mix(in srgb, var(--danger) 12%, var(--surface));
     color: var(--danger);
