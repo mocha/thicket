@@ -76,6 +76,14 @@ export function isDbBusy(err: unknown): boolean {
  * (production logged a 499 whose query went on for 6 s), holding a connection
  * the next search needed.
  *
+ * The signal is checked at three points, because an abort event only reaches
+ * a listener that was already there when it fired: before waiting for a
+ * connection, again once one is free (the wait is longest exactly when the
+ * pool is busy, which is when an abandoned request matters most), and before
+ * every statement (a request that runs two, like a search narrowed to people I
+ * follow, can be abandoned between them, while no statement is running to
+ * cancel). A statement already running is cancelled in Postgres.
+ *
  * A connection whose request was abandoned is closed rather than reused, and
  * only after the cancel has been delivered: a cancel that arrived late could
  * otherwise stop whatever the connection's next borrower was running.
@@ -90,7 +98,11 @@ export async function cancellable<T>(signal: AbortSignal | undefined, run: (q: (
   const onAbort = () => { cancelled = controlPool.query("select pg_cancel_backend($1)", [pid]).catch(() => {}); };
   signal?.addEventListener("abort", onAbort, { once: true });
   try {
-    return await run((query) => scoped.execute(query));
+    signal?.throwIfAborted();
+    return await run(async (query) => {
+      signal?.throwIfAborted();
+      return scoped.execute(query);
+    });
   } finally {
     signal?.removeEventListener("abort", onAbort);
     if (cancelled) await cancelled;

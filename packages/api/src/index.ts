@@ -59,11 +59,13 @@ for (const [base, router] of ROUTERS) app.route(base, router);
  */
 app.onError((err, c) => {
   if (err instanceof HTTPException) return err.getResponse();
+  // A browser that moved on (a new search, another tab): whatever stopped the
+  // request, nobody is there to read the answer, and it is not worth a line.
+  if (c.req.raw.signal.aborted) return c.json({ error: "cancelled" }, 503);
   if (isDbBusy(err)) {
-    // A browser that moved on (a new search, another tab) is the normal case and not worth a line.
-    // Otherwise one short line, never the message: drizzle's carries the SQL and its parameters,
+    // One short line, never the message: drizzle's carries the SQL and its parameters,
     // which here are what someone searched for, and that is not the log's business.
-    if (!c.req.raw.signal.aborted) console.warn(`[db] ${c.req.method} ${c.req.path}: timed out or no connection free`);
+    console.warn(`[db] ${c.req.method} ${c.req.path}: timed out or no connection free`);
     return c.json({ error: "That took too long. Please try again in a moment." }, 503);
   }
   console.error(err);
