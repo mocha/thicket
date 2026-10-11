@@ -617,12 +617,28 @@ export const exploreApi = {
 // ---- search ----------------------------------------------------------------
 
 /**
- * One query, four kinds of answer. Feeds and collections are aggregations over
- * the posts that matched, so every row carries its own evidence — `matches`,
- * `posts`, `lastMatchAt` — and the UI says it in words instead of showing a
- * rank. `nameMatch` marks a row found by its name rather than by its posts.
+ * One query, over one kind of thing at a time: the tab you are on. Feeds and
+ * collections are aggregations over the posts that matched, so every row
+ * carries its own evidence — `matches`, `posts`, `lastMatchAt` — and the UI
+ * says it in words instead of showing a rank. `nameMatch` marks a row found by
+ * its name rather than by its posts.
  */
-export type SearchScope = 'all' | 'feeds' | 'collections' | 'posts' | 'people';
+export type SearchScope = 'posts' | 'feeds' | 'collections' | 'people';
+export const SEARCH_SCOPES: SearchScope[] = ['posts', 'feeds', 'collections', 'people'];
+/** Posts, when nothing says otherwise. `all` is the retired everything-at-once scope; old links land on posts. */
+export const DEFAULT_SCOPE: SearchScope = 'posts';
+export const scopeFrom = (v: string | null | undefined): SearchScope =>
+  SEARCH_SCOPES.includes(v as SearchScope) ? (v as SearchScope) : DEFAULT_SCOPE;
+/**
+ * How a Posts search is ordered; the API's PostSort. Newest first by default,
+ * the same order Posts has with nothing typed. `relevance` is the old order:
+ * the best matches, tilted toward recent ones.
+ */
+export type PostSearchSort = 'newest' | 'relevance';
+export const POST_SEARCH_SORTS: PostSearchSort[] = ['newest', 'relevance'];
+export const DEFAULT_POST_SORT: PostSearchSort = 'newest';
+export const postSortFrom = (v: string | null | undefined): PostSearchSort =>
+  POST_SEARCH_SORTS.includes(v as PostSearchSort) ? (v as PostSearchSort) : DEFAULT_POST_SORT;
 /**
  * How the Feeds list of a search is ordered (issue 182); the API's FeedSort.
  * `about` is the default, the nearest to the relevance order the list had
@@ -658,25 +674,29 @@ export type SearchPerson = {
   nameMatch: boolean; notesMatch: number; marksMatch: number;
   feeds: number; collections: number; isFollowing: boolean; avatarUpdatedAt: string | null;
 };
-export type SearchGroup<T> = { rows: T[]; total: number; nextOffset: number | null };
-export type SearchResults = {
-  q: string; scope: SearchScope;
-  /** The order the feeds came back in; always the default unless scope is feeds. */
-  sort?: FeedSearchSort;
-  feeds: SearchGroup<SearchFeed>; collections: SearchGroup<SearchCollection>;
-  posts: SearchGroup<SearchPost>; people: SearchGroup<SearchPerson>;
-};
+/** `total` is null for the newest posts with nothing typed: the API doesn't count every post to print one number. */
+export type SearchGroup<T> = { rows: T[]; total: number | null; nextOffset: number | null };
+type SearchRows = { feeds: SearchFeed; collections: SearchCollection; posts: SearchPost; people: SearchPerson };
+/** The one list asked for, under its scope's name: `{ q, scope: 'posts', posts: { rows, total, nextOffset } }`. */
+export type SearchResults<S extends SearchScope = SearchScope> = {
+  q: string; scope: S;
+  /** The order the list came back in, for feeds and posts. */
+  sort: FeedSearchSort | PostSearchSort | null;
+} & { [K in S]: SearchGroup<SearchRows[K]> };
 
 export const searchApi = {
-  run: (opts: { q: string; scope?: SearchScope; limit?: number; offset?: number; network?: string | null; sort?: FeedSearchSort }) => {
-    const p = new URLSearchParams({ q: opts.q });
-    if (opts.scope && opts.scope !== 'all') p.set('scope', opts.scope);
+  /**
+   * `signal` cancels the request, and the API then cancels its query in the
+   * database, so a search nobody is waiting for stops costing anything.
+   */
+  run: <S extends SearchScope>(opts: { q: string; scope: S; limit?: number; offset?: number; network?: string | null; sort?: FeedSearchSort | PostSearchSort }, signal?: AbortSignal) => {
+    const p = new URLSearchParams({ q: opts.q, scope: opts.scope });
     if (opts.limit) p.set('limit', String(opts.limit));
     if (opts.offset) p.set('offset', String(opts.offset));
     if (opts.network) p.set('network', opts.network);
-    // Only the Feeds list takes an order; the API ignores it anywhere else.
-    if (opts.sort && opts.scope === 'feeds') p.set('sort', opts.sort);
-    return j<SearchResults>(`/api/search?${p}`);
+    // Feeds and Posts take an order; the API ignores it anywhere else.
+    if (opts.sort && (opts.scope === 'feeds' || opts.scope === 'posts')) p.set('sort', opts.sort);
+    return j<SearchResults<S>>(`/api/search?${p}`, { signal });
   }
 };
 

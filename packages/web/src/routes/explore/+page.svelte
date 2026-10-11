@@ -1,14 +1,16 @@
 <script lang="ts">
   import Card from '$lib/components/Card.svelte';
   import Dot from '$lib/components/Dot.svelte';
-  import { onMount } from 'svelte';
+  import Button from '$lib/components/Button.svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import {
     api, bookmarksApi, exploreApi, searchApi, feedHref, collectionHref, profileHref, profilesApi,
     type Feed, type ExploreCollection, type ExploreUser,
     type SearchResults, type SearchScope, type SearchFeed, type SearchCollection, type SearchPost, type SearchPerson,
-    type FeedSearchSort, DEFAULT_FEED_SORT, feedSortFrom
+    type FeedSearchSort, DEFAULT_FEED_SORT, feedSortFrom, DEFAULT_SCOPE, scopeFrom,
+    type PostSearchSort, DEFAULT_POST_SORT, postSortFrom
   } from '$lib/api';
   import { feedOrigin, hostOf, longAgo, postRate, relativeTime, webHref } from '$lib/time';
   import { highlight, latestShort, mentionRate, plural } from '$lib/words';
@@ -33,26 +35,29 @@
   import { recall, keepOnLeave } from '$lib/listmemory';
 
   /**
-   * Explore is one search box over everything, plus the browse lists you land
-   * on before you have typed anything.
+   * Explore is one search box and four tabs: Posts, Feeds, Collections,
+   * People. The tab is what you are searching for; a search runs for that tab
+   * alone, when you press Enter or Search, never as you type.
    *
-   * It used to be three tabs — feeds, collections, users — each running its own
-   * search and never pooling the answers, so a search for a *topic* found
-   * nothing: no feed is named "Mercedes", though plenty write about it. Now one
-   * query goes to /api/search, which searches the posts and returns feeds and
-   * collections as aggregations over what matched, and the tabs have become a
-   * scope filter that narrows one answer instead of picking between four.
+   * It used to search all four at once on every keystroke, so each tab could
+   * show a count. On production that was eight database queries per keystroke,
+   * and a few people typing at once took the whole service down (2026-10-11).
+   * Now: one query per search, sent when asked for. Switching tabs with a
+   * search in place sends it for the new tab; anything still on its way for
+   * the old tab, or for an older search, is cancelled, in the database too.
    *
-   * With nothing typed the scope still selects a browse list, because an empty
-   * search box should not produce an empty page and the index is worth looking
-   * at unfiltered. Everything lives in the URL (?q=, ?scope=, filters) so any
-   * view is a link.
+   * Feeds and collections are still found through what their posts say (no
+   * feed is named "Mercedes", though plenty write about it): /api/search
+   * builds them from the matching posts.
+   *
+   * With nothing typed each tab is a browse list: the newest posts on the
+   * instance (where Explore opens), the feed index, public collections, people.
+   * Everything lives in the URL (?q=, ?scope=, filters) so any view is a link.
    */
   const SCOPES: { id: SearchScope; label: string }[] = [
-    { id: 'all', label: 'Everything' },
+    { id: 'posts', label: 'Posts' },
     { id: 'feeds', label: 'Feeds' },
     { id: 'collections', label: 'Collections' },
-    { id: 'posts', label: 'Posts' },
     { id: 'people', label: 'People' }
   ];
   /**
@@ -60,16 +65,19 @@
    * per scope, on every view — the tabs pick the view, this says what it is.
    */
   const SCOPE_BLURB: Record<SearchScope, string> = {
-    all: 'Feeds, collections, posts, and people, together in one search.',
     feeds: 'Sites that publish a feed. Follow one and you’ll see every new post it publishes.',
     collections: 'Topical sets of feeds people share, so you can follow along.',
-    posts: 'Individual posts from across every feed on thicket.',
+    posts: 'Individual posts from across every feed on thicket, newest first.',
     people: 'Public profiles you can browse and follow.'
   };
   const q = $derived((page.url.searchParams.get('q') ?? '').trim());
-  const scope = $derived(((page.url.searchParams.get('scope') as SearchScope | null) ?? 'all') as SearchScope);
+  const scope = $derived(scopeFrom(page.url.searchParams.get('scope')));
   const searching = $derived(q.length > 0);
-  /** With no query, Everything and Feeds both mean the index; Posts has no browse list. */
+  /**
+   * Posts always load through /api/search: with words, a search; without, the
+   * newest posts. The other tabs have their own browse lists until you search.
+   */
+  const viaSearch = $derived(searching || scope === 'posts');
   const browseAs = $derived(scope === 'collections' ? 'collections' : scope === 'people' ? 'users' : 'feeds');
 
   /**
@@ -106,6 +114,19 @@
   ]);
   const feedSortHelp = $derived(feedSorts.find((s) => s.id === feedSort)?.help ?? '');
   const sortsFeeds = $derived(searching && scope === 'feeds');
+
+  /** A Posts search's order. Newest first unless asked; with nothing typed it is always newest. */
+  const postSort = $derived(postSortFrom(page.url.searchParams.get('sort')));
+  const sortsPosts = $derived(searching && scope === 'posts');
+  const postSorts: { id: PostSearchSort; label: string }[] = [
+    { id: 'newest', label: 'Newest first' },
+    { id: 'relevance', label: 'Best match' }
+  ];
+  function setPostSort(v: string) {
+    const s = postSortFrom(v);
+    setParams({ sort: s === DEFAULT_POST_SORT ? null : s });
+    api.event('explore_post_sort', { sort: s });
+  }
   function setFeedSort(v: string) {
     const s = feedSortFrom(v);
     setParams({ sort: s === DEFAULT_FEED_SORT ? null : s });
@@ -119,30 +140,34 @@
     for (const [k, v] of Object.entries(patch)) v ? p.set(k, v) : p.delete(k);
     void goto(`/explore${p.size ? `?${p}` : ''}`, { replaceState: true, keepFocus: true });
   }
+  /** A search in place goes with you: the new tab loads it straight away (the load effect below). */
   function setScope(s: SearchScope) {
-    setParams({ scope: s === 'all' ? null : s, since: null, sort: null });
+    setParams({ scope: s === DEFAULT_SCOPE ? null : s, since: null, sort: null });
     api.event('explore_scope', { scope: s, searching });
   }
 
+  /**
+   * What is in the box. Typing changes only this; nothing is sent until Enter
+   * or Search. A new search replaces ?q=, and the load that follows cancels
+   * whatever the old one still had on its way.
+   */
   let draft = $state('');
   let searchInput = $state<HTMLInputElement | null>(null);
-  let timer: ReturnType<typeof setTimeout>;
-  function onSearch(v: string) {
-    draft = v;
-    clearTimeout(timer);
+  function submitSearch(e: SubmitEvent) {
+    e.preventDefault();
+    const v = draft.trim();
     // Starting or ending a search drops ?sort=: a browse order and a search order are different lists.
-    timer = setTimeout(() => setParams(!!v.trim() === searching ? { q: v.trim() || null } : { q: v.trim() || null, sort: null }), 250);
+    setParams(!!v === searching ? { q: v || null } : { q: v || null, sort: null });
   }
   function clearSearch() {
     draft = '';
-    clearTimeout(timer);
     setParams({ q: null, sort: null });
     searchInput?.focus();
   }
 
   /* ---- search ---- */
   let res = $state<SearchResults | null>(null);
-  /** Rows for a narrowed scope, accumulated across pages. */
+  /** The rows of the current tab's list, accumulated across pages. */
   let more = $state<(SearchFeed | SearchCollection | SearchPost | SearchPerson)[]>([]);
   let moreNext = $state<number | null>(null);
   /**
@@ -152,25 +177,10 @@
    */
   let moreScope = $state<SearchScope | null>(null);
   const rows = $derived(moreScope === scope ? more : []);
-  const group = $derived(res && scope !== 'all' ? res[scope] : null);
-  const found = $derived(res ? res.feeds.total + res.collections.total + res.posts.total + res.people.total : 0);
-  function countFor(s: SearchScope) {
-    if (!res) return null;
-    return s === 'all' ? found : res[s].total;
-  }
-  /* Posts only make sense once something is typed, and a scope with nothing in
-     it is shown but switched off, so the counts still say "nothing here". */
-  const scopeTabs = $derived(
-    SCOPES.filter((s) => searching || s.id !== 'posts').map((s) => {
-      const n = searching ? countFor(s.id) : null;
-      return {
-        value: s.id,
-        label: s.label,
-        count: n ?? undefined,
-        disabled: n === 0
-      };
-    })
-  );
+  /** How long the current tab's list is: null for the newest posts, which aren't counted. */
+  const total = $derived<number | null>(res && moreScope === scope ? ((res as Record<string, any>)[scope]?.total ?? null) : null);
+  /* No counts on the tabs: only the tab you are on has been searched. */
+  const scopeTabs = $derived(SCOPES.map((s) => ({ value: s.id, label: s.label })));
 
   /**
    * Every list on the page loads through here. A fresh load (reset) always goes
@@ -182,36 +192,53 @@
    * clears it nor blocks the new view's load, which is what left the page stuck
    * on "Loading…" when a search was cleared mid-request. Scrolling for more (not
    * a reset) waits its turn and stops at the end.
+   *
+   * A fresh load also cancels the one before it, so a request nobody will look
+   * at stops at once, in the database as well (api/search cancels its query
+   * when the browser drops the request). So does leaving the page.
    */
   let latestLoad = 0;
+  let inFlight: AbortController | null = null;
+  onDestroy(() => inFlight?.abort());
   /** Said to a screen reader when scrolling brings in more rows: "25 more loaded, 50 in all." The rows themselves aren't read out. */
   let loadedSaid = $state('');
-  const shown = () => (searching ? more.length : browseAs === 'feeds' ? feeds.length : browseAs === 'collections' ? cols.length : users.length);
-  async function load<T>(reset: boolean, hasMore: boolean, request: () => Promise<T>, apply: (r: T) => void) {
+  const shown = () => (viaSearch ? more.length : browseAs === 'feeds' ? feeds.length : browseAs === 'collections' ? cols.length : users.length);
+  async function load<T>(reset: boolean, hasMore: boolean, request: (signal: AbortSignal) => Promise<T>, apply: (r: T) => void) {
     if (!reset && (loading || !hasMore)) return;
+    if (reset) inFlight?.abort();
+    const ac = new AbortController();
+    inFlight = ac;
     const key = loadedKey;
     const id = ++latestLoad;
     const isCurrent = () => key === loadedKey && id === latestLoad;
     loading = true; error = null;
     try {
-      const r = await request();
+      const r = await request(ac.signal);
       if (isCurrent()) {
         const before = shown();
         apply(r);
         const now = shown();
         loadedSaid = !reset && now > before ? `${(now - before).toLocaleString()} more loaded, ${now.toLocaleString()} in all.` : '';
       }
-    } catch (e) { if (isCurrent()) error = e instanceof Error ? e.message : String(e); } finally { if (isCurrent()) loading = false; }
+    } catch (e) {
+      // A cancelled request was replaced on purpose; it is not an error to show.
+      if (isCurrent() && !ac.signal.aborted) error = e instanceof Error ? e.message : String(e);
+    } finally { if (isCurrent()) loading = false; }
   }
 
   function loadSearch(reset = false) {
     const s = scope;
-    return load(reset, s === 'all' || moreNext !== null,
-      () => searchApi.run({ q, scope: s, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork, sort: s === 'feeds' ? feedSort : undefined }),
+    const sort = s === 'feeds' ? feedSort : s === 'posts' ? postSort : undefined;
+    return load(reset, moreNext !== null,
+      (signal) => searchApi.run({ q, scope: s, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork, sort }, signal),
       (r) => {
+        const got = (r as Record<string, any>)[s] as { rows: any[]; nextOffset: number | null };
         res = r;
-        if (s === 'all') { more = []; moreNext = null; }
-        else { more = reset ? r[s].rows : [...more, ...r[s].rows]; moreNext = r[s].nextOffset; }
+        // The newest posts move while you scroll; a post that slid onto the next page shows once.
+        const seen = new Set(reset ? [] : more.map((x) => ('id' in x ? x.id : x.handle)));
+        const fresh = got.rows.filter((x) => !seen.has('id' in x ? x.id : x.handle));
+        more = reset ? got.rows : [...more, ...fresh];
+        moreNext = got.nextOffset;
         moreScope = s;
       });
   }
@@ -320,11 +347,11 @@
   async function refreshOpened(o: Opened) {
     try {
       if ('feed' in o) {
-        const rows = [...feeds, ...(res?.feeds.rows ?? []), ...(moreScope === 'feeds' ? more : [])] as (Feed | SearchFeed)[];
+        const rows = [...feeds, ...(moreScope === 'feeds' ? more : [])] as (Feed | SearchFeed)[];
         const hits = rows.filter((f) => f.id === o.feed);
         if (hits.length) { const u = await api.feed(o.feed); for (const f of hits) Object.assign(f, u); }
       } else {
-        const rows = [...users, ...(res?.people.rows ?? []), ...(moreScope === 'people' ? more : [])] as (ExploreUser | SearchPerson)[];
+        const rows = [...users, ...(moreScope === 'people' ? more : [])] as (ExploreUser | SearchPerson)[];
         const hits = rows.filter((u) => u.handle === o.person);
         if (hits.length) { const p = await profilesApi.get(o.person); if (!p.private) for (const u of hits) u.isFollowing = p.people.isFollowing; }
       }
@@ -339,9 +366,7 @@
   });
 
   function loadMore() {
-    // The "Everything" scope isn't paginated (it shows a fixed top slice per kind),
-    // so its sentinel must not re-run the same page-0 search on every scroll.
-    if (searching) { if (scope !== 'all') void loadSearch(); }
+    if (viaSearch) void loadSearch();
     else if (browseAs === 'feeds') void loadFeeds();
     else if (browseAs === 'collections') void loadCols();
     else void loadUsers();
@@ -349,10 +374,10 @@
 
   $effect(() => {
     if (followsAnyone === null) return; // wait until we know the default
-    const key = `${q}|${scope}|${feedsNetwork}|${since}|${sort}|${sortsFeeds ? feedSort : ''}`;
+    const key = `${q}|${scope}|${feedsNetwork}|${since}|${sort}|${sortsFeeds ? feedSort : ''}|${sortsPosts ? postSort : ''}`;
     if (loadedKey === key) return;
     loadedKey = key;
-    if (searching) { res = null; more = []; moreNext = null; void loadSearch(true); }
+    if (viaSearch) { res = null; more = []; moreNext = null; void loadSearch(true); }
     else if (browseAs === 'feeds') { feeds = []; feedsNext = null; void loadFeeds(true); }
     else if (browseAs === 'collections') { cols = []; colsNext = null; void loadCols(true); }
     else { users = []; usersNext = null; void loadUsers(true); }
@@ -366,8 +391,8 @@
 
   /** Empty is per scope, not per query: "no people match" while 300 posts do. */
   const nothing = $derived(
-    !loading && (searching
-      ? res !== null && (scope === 'all' ? found === 0 : res[scope].total === 0)
+    !loading && (viaSearch
+      ? res !== null && moreScope === scope && more.length === 0
       : (browseAs === 'feeds' ? feeds.length : browseAs === 'collections' ? cols.length : users.length) === 0)
   );
   const scopeLabel = $derived(SCOPES.find((s) => s.id === scope)?.label ?? '');
@@ -376,7 +401,7 @@
      crowd the card, so at every width they fold into one box that names
      what's chosen and opens the same three dropdowns in a Sheet. */
   const ADDED: Record<string, string> = { '': 'Any time', '24h': 'Past 24 hours', week: 'Past week', month: 'Past month', year: 'Past year' };
-  const threeFilters = $derived(!searching && browseAs === 'feeds');
+  const threeFilters = $derived(!viaSearch && browseAs === 'feeds');
   /* Each part reads as a phrase on its own: "Show everyone · Added any time · Most popular". */
   const filterSummary = $derived([
     narrowToNetwork ? 'Show people I follow' : 'Show everyone',
@@ -390,13 +415,10 @@
    * and of what. The results redraw as you type, and without this nothing says
    * so. Empty while a search is still on its way, so only the answer is read.
    */
-  const KINDS: Record<Exclude<SearchScope, 'all'>, [string, string]> = { feeds: ['feed', 'feeds'], collections: ['collection', 'collections'], posts: ['post', 'posts'], people: ['person', 'people'] };
+  const KINDS: Record<SearchScope, [string, string]> = { feeds: ['feed', 'feeds'], collections: ['collection', 'collections'], posts: ['post', 'posts'], people: ['person', 'people'] };
   const said = $derived.by(() => {
-    if (!searching || loading || !res) return '';
-    if (scope !== 'all') return res[scope].total === 0 ? `No ${KINDS[scope][1]} match “${q}”.` : `${plural(res[scope].total, ...KINDS[scope])} for “${q}”.`;
-    if (found === 0) return `Nothing matches “${q}”.`;
-    const parts = (Object.keys(KINDS) as Exclude<SearchScope, 'all'>[]).filter((k) => res![k].total > 0).map((k) => plural(res![k].total, ...KINDS[k]));
-    return `${plural(found, 'result')} for “${q}”: ${parts.join(', ')}.`;
+    if (!searching || loading || !res || total === null) return '';
+    return total === 0 ? `No ${KINDS[scope][1]} match “${q}”.` : `${plural(total, ...KINDS[scope])} for “${q}”.`;
   });
 </script>
 
@@ -408,22 +430,26 @@
 </PageHeader>
 
 <section class="pane">
-  <div class="head">
+  <!-- Nothing is searched until Enter or Search: typing only edits the box. -->
+  <form class="head" role="search" onsubmit={submitSearch}>
     <Field label="Search" hideLabel>
       {#snippet children({ id })}
         <Input
           {id}
+          enterkeyhint="search"
           bind:element={searchInput}
           variant="search"
           size="lg"
           value={draft}
-          oninput={(e) => onSearch(e.currentTarget.value)}
+          oninput={(e) => (draft = e.currentTarget.value)}
           onclear={clearSearch}
-          placeholder="Search for anything"
-        />
+          placeholder="Search {SCOPES.find((s) => s.id === scope)?.label.toLowerCase()}"
+        >
+          {#snippet trailing()}<Button type="submit" variant="primary" disabled={!draft.trim() || draft.trim() === q}>Search</Button>{/snippet}
+        </Input>
       {/snippet}
     </Field>
-  </div>
+  </form>
 
   <Tabs
     class="scopes"
@@ -447,7 +473,6 @@
     {:else if s === 'collections'}<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.57 3.9a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" /><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" /><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
     {:else if s === 'posts'}<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" />
     {:else if s === 'people'}<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    {:else}<rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
     {/if}
   </svg>
 {/snippet}
@@ -466,7 +491,7 @@
       ]}
       onchange={(e) => setParams({ by: e.currentTarget.value === 'following' ? 'following' : null })}
     />
-    {#if !searching && browseAs === 'feeds'}
+    {#if !viaSearch && browseAs === 'feeds'}
       <Select
         class="filter"
         label="Added"
@@ -495,6 +520,16 @@
         options={feedSorts.map((s) => ({ value: s.id, label: s.label }))}
         aria-describedby="feed-sort-help"
         onchange={(e) => setFeedSort(e.currentTarget.value)}
+      />
+    {/if}
+    {#if sortsPosts}
+      <Select
+        class="filter"
+        label="Sort by"
+        size="sm"
+        value={postSort}
+        options={postSorts.map((s) => ({ value: s.id, label: s.label }))}
+        onchange={(e) => setPostSort(e.currentTarget.value)}
       />
     {/if}
 {/snippet}
@@ -621,10 +656,11 @@
 
 {#snippet emptyMessage()}
   <div class="empty">
-    {#if searching && scope !== 'all' && found > 0}
-      <p>No {scopeLabel.toLowerCase()} match “{q}”, but {plural(found, 'other result')} {found === 1 ? 'does' : 'do'}. <button class="link" onclick={() => setScope('all')}>Show everything</button>.</p>
-    {:else if searching}
-      <p>Nothing here matches “{q}”. Search looks at feed names and descriptions, the posts those feeds have published, collection names, and people’s profiles.</p>
+    {#if searching}
+      <p>No {scopeLabel.toLowerCase()} match “{q}”. {#if scope !== 'posts'}<button class="link" onclick={() => setScope('posts')}>Search posts instead</button>, or try{:else}Try{/if} another tab above.</p>
+    {:else if scope === 'posts'}
+      {#if feedsNetwork}<p>Nothing new from the feeds the people you follow read. <button class="link" onclick={() => setParams({ by: null })}>Show everyone’s</button>.</p>
+      {:else}<p>No posts yet. Follow a feed and its posts will turn up here.</p>{/if}
     {:else if browseAs === 'feeds'}
       {#if feedsNetwork}<p>The people you follow haven’t followed anything you don’t already. <button class="link" onclick={() => setParams({ by: null })}>Show the whole index</button>.</p>
       {:else if since}<p>Nothing was added in that time.</p>
@@ -645,50 +681,24 @@
 {:else if nothing}
   <!-- Browsing, the message takes the rows' place inside the list card, so a filter that empties the list
        leaves the filters where they were. A search's filters always sit above its cards, so its message does too. -->
-  {#if searching}
+  {#if viaSearch}
     {@render filterBar()}
     {@render emptyMessage()}
   {:else}
     <Card kind="list" as="div" class="browse">{@render filterBar()}{@render emptyMessage()}</Card>
   {/if}
-{:else if searching && res}
+{:else if viaSearch}
+  <!-- Its filters show at once; the list arrives under them. -->
   {@render filterBar()}
-  {#if scope === 'all'}
-    {#if res.feeds.rows.length}
-      <section class="group">
-        <h2>Feeds <Badge>{res.feeds.total.toLocaleString()}</Badge>{#if res.feeds.total > res.feeds.rows.length}<button class="link all tap" onclick={() => setScope('feeds')}>See all</button>{/if}</h2>
-        <Card kind="list" as="ul">{#each res.feeds.rows as f (f.id)}{@render feedRow(f, f)}{/each}</Card>
-      </section>
-    {/if}
-    {#if res.collections.rows.length}
-      <section class="group">
-        <h2>Collections <Badge>{res.collections.total.toLocaleString()}</Badge>{#if res.collections.total > res.collections.rows.length}<button class="link all tap" onclick={() => setScope('collections')}>See all</button>{/if}</h2>
-        <Card kind="list" as="ul">{#each res.collections.rows as c (c.id)}{@render colRow(c, c)}{/each}</Card>
-      </section>
-    {/if}
-    {#if res.posts.rows.length}
-      <section class="group">
-        <h2>Posts <Badge>{res.posts.total.toLocaleString()}</Badge>{#if res.posts.total > res.posts.rows.length}<button class="link all tap" onclick={() => setScope('posts')}>See all</button>{/if}</h2>
-        <Card kind="list" as="ul">{#each res.posts.rows as p (p.id)}{@render postRow(p)}{/each}</Card>
-      </section>
-    {/if}
-    {#if res.people.rows.length}
-      <section class="group">
-        <h2>People <Badge>{res.people.total.toLocaleString()}</Badge>{#if res.people.total > res.people.rows.length}<button class="link all tap" onclick={() => setScope('people')}>See all</button>{/if}</h2>
-        <Card kind="list" as="ul">{#each res.people.rows as u (u.handle)}{@render personRow(u, u)}{/each}</Card>
-      </section>
-    {/if}
-  {:else}
-    <section class="group">
-      <h2>{SCOPES.find((s) => s.id === scope)?.label} <Badge>{(group?.total ?? 0).toLocaleString()}</Badge></h2>
-      <Card kind="list" as="ul">
-        {#if scope === 'feeds'}{#each rows as f (( f as SearchFeed).id)}{@render feedRow(f as SearchFeed, f as SearchFeed)}{/each}
-        {:else if scope === 'collections'}{#each rows as c ((c as SearchCollection).id)}{@render colRow(c as SearchCollection, c as SearchCollection)}{/each}
-        {:else if scope === 'posts'}{#each rows as p ((p as SearchPost).id)}{@render postRow(p as SearchPost)}{/each}
-        {:else}{#each rows as u ((u as SearchPerson).handle)}{@render personRow(u as SearchPerson, u as SearchPerson)}{/each}{/if}
-      </Card>
-    </section>
-  {/if}
+  {#if res}<section class="group">
+    <h2>{#if searching}{scopeLabel}{#if total !== null} <Badge>{total.toLocaleString()}</Badge>{/if}{:else}Newest posts{/if}</h2>
+    <Card kind="list" as="ul">
+      {#if scope === 'feeds'}{#each rows as f ((f as SearchFeed).id)}{@render feedRow(f as SearchFeed, f as SearchFeed)}{/each}
+      {:else if scope === 'collections'}{#each rows as c ((c as SearchCollection).id)}{@render colRow(c as SearchCollection, c as SearchCollection)}{/each}
+      {:else if scope === 'posts'}{#each rows as p ((p as SearchPost).id)}{@render postRow(p as SearchPost)}{/each}
+      {:else}{#each rows as u ((u as SearchPerson).handle)}{@render personRow(u as SearchPerson, u as SearchPerson)}{/each}{/if}
+    </Card>
+  </section>{/if}
 {:else if browseAs === 'feeds'}
   <Card kind="list" as="div" class="browse">{@render filterBar()}<ul class="list">{#each feeds as f (f.id)}{@render feedRow(f, null)}{/each}</ul></Card>
 {:else if browseAs === 'collections'}
@@ -727,8 +737,6 @@
   :global(.browse) :global(.blurb) { margin: 0; padding: var(--space-5) var(--space-3) var(--space-2); }
   .group { margin-bottom: var(--space-5); }
   .group h2 { margin-bottom: var(--space-2); }
-  /* Beats .link’s inherited size below: “See all” is a small action, not part of the heading. */
-  h2 .all { margin-left: auto; font-family: var(--font); font-size: calc(var(--text-sm) * var(--size-app)); }
   .filters { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; margin-bottom: var(--space-1); }
   /* The note under the filters saying what the chosen order means. */
   .sort-help { margin: 0 0 var(--space-3); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; text-wrap: pretty; }
