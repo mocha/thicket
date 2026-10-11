@@ -91,7 +91,7 @@
 
   /** A long search would stretch the dropdown, which is as wide as its longest choice. */
   const term = $derived(q.length > 18 ? 'this search' : `“${q}”`);
-  type Order = { id: string; label: string; help?: string };
+  type Order = { id: string; label: string };
   /**
    * The orders on offer for this tab, searching or not; the first is the
    * default. The ids are the API's (routes/search.ts, routes/explore.ts,
@@ -106,10 +106,10 @@
       { id: 'noted', label: 'Most noted' }
     ];
     if (scope === 'feeds') return searching ? [
-      { id: 'about', label: `Most mentions of ${term}`, help: `Feeds with the most posts mentioning “${q}” in the last 90 days come first. Feeds that only match by name come last.` },
-      { id: 'mentioned', label: `Most recent mention of ${term}`, help: `Feeds that mentioned “${q}” most recently come first. Feeds that only match by name come last.` },
-      { id: 'active', label: 'Number of posts (last 90d)', help: 'Feeds that posted the most in the last 90 days, about anything, come first.' },
-      { id: 'posted', label: 'Most recent post', help: 'Feeds with the newest posts, about anything, come first.' }
+      { id: 'about', label: `Most mentions of ${term}` },
+      { id: 'mentioned', label: `Most recent mention of ${term}` },
+      { id: 'active', label: 'Number of posts (last 90d)' },
+      { id: 'posted', label: 'Most recent post' }
     ] : [
       { id: 'popular', label: 'Most popular' },
       { id: 'recent', label: 'Most recent posts' },
@@ -509,7 +509,6 @@
       size="sm"
       value={sortId}
       options={orders.map((o) => ({ value: o.id, label: o.label }))}
-      aria-describedby={order.help ? 'sort-help' : undefined}
       onchange={(e) => setSort(e.currentTarget.value)}
     />
 {/snippet}
@@ -528,8 +527,6 @@
     <span class="fr-text"><span class="fr-name">Filters</span><span class="fr-now">{#each filterSummary as part, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}<span class="fr-part">{part}</span>{/each}</span></span>
     <span class="fr-caret"><Icon name="caret" dir="down" size={20} /></span>
   </button>
-  <!-- What the chosen order means, when it needs saying, under the box. The dropdown points at it, so it is read out too. -->
-  {#if order.help}<p class="sort-help" id="sort-help">{order.help}</p>{/if}
 {/snippet}
 
 <!-- Rows. Each kind knows how to show its own evidence; see lib/words.ts. -->
@@ -661,8 +658,6 @@
   .count { margin: 0; padding: var(--space-1) var(--card-pad) var(--space-3); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   /* Article cards under the list card's top, spaced as in a feed. */
   .posts { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); }
-  /* The note under the filters saying what the chosen order means. */
-  .sort-help { margin: 0 0 var(--space-3); padding: 0 var(--card-pad, 0); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; text-wrap: pretty; }
   /* The folded row. Drawn as a box with the dropdown's own outline, corner and
      caret, so it reads as something to press rather than a line of text: an
      icon, what it is, and what's chosen now. */
