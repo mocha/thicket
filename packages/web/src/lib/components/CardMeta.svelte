@@ -71,7 +71,10 @@
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
-    padding: var(--space-1) var(--space-2) var(--space-1) 0;
+    /* Room on the right for the hover background, taken back with the
+       margin so the gap after the name matches the gap after the dot. */
+    padding: var(--space-1) var(--space-1) var(--space-1) 0;
+    margin-right: calc(-1 * var(--space-1));
     border-radius: var(--radius-sm);
     text-align: left;
   }
