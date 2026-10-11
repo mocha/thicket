@@ -11,7 +11,6 @@
   import { goto } from '$app/navigation';
   import { api, adminApi, profileHref, type AdminUser, type InstanceStatus, type Invite, type SignupPolicy } from '$lib/api';
   import { session } from '$lib/session.svelte';
-  import type { StarterCandidate } from '$lib/api';
   import { relativeTime } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
@@ -43,18 +42,20 @@
   /** A freshly minted temporary password, shown once. */
   let issued = $state<{ handle: string; password: string } | null>(null);
   /** Starter packs: one account's public collections are what a newcomer is offered. */
-  let starterCandidates = $state<StarterCandidate[]>([]);
-  let starter = $state<string | null>(null);
+  let starter = $state('');
+  let starterError = $state<string | null>(null);
   let savingStarter = $state(false);
 
-  async function setStarter(handle: string | null) {
+  async function setStarter() {
+    if (savingStarter) return;
+    starterError = null;
     savingStarter = true;
     try {
-      const r = await adminApi.setStarter(handle);
-      starter = r.handle;
+      const r = await adminApi.setStarter(starter);
+      starter = r.handle ?? '';
       showToast(starter ? `Newcomers are offered @${starter}'s collections` : 'Newcomers get the fullest public collections instead');
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Could not save');
+      starterError = e instanceof Error ? e.message : 'Could not save';
     } finally {
       savingStarter = false;
     }
@@ -63,7 +64,7 @@
   async function load() {
     const [s, i, u, f] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter()]);
     instance = s; name = s.name; invites = i.invites; users = u.users;
-    starterCandidates = f.candidates; starter = f.handle;
+    starter = f.handle ?? '';
   }
   onMount(() => {
     if (!session.user?.isAdmin) return void goto('/new-posts', { replaceState: true });
@@ -215,32 +216,14 @@
   <Card kind="section" as="section" class="admin-section">
     <h2 class="section-title">Starter packs</h2>
     <p class="section-description">Someone who has just signed up follows nothing, so the first screen offers them collections to copy. Point it at an account and its public collections become those packs — curate them by signing in as that account and making collections the normal way. An account made for the purpose works well, and its profile doubles as a worked example: what it reads, bookmarks and notes.</p>
-    {#if starterCandidates.length}
-      <ul class="packs">
-        {#each starterCandidates as u (u.handle)}
-          <li class:on={starter === u.handle}>
-            <label>
-              <input type="radio" name="starter" checked={starter === u.handle} disabled={savingStarter} onchange={() => void setStarter(u.handle)} />
-              <span class="pk">
-                <strong>{u.displayName ?? `@${u.handle}`}</strong>
-                <small>@{u.handle} <Dot /> {u.collectionCount} public {u.collectionCount === 1 ? 'collection' : 'collections'} <Dot /> {u.feedCount} {u.feedCount === 1 ? 'site' : 'sites'}</small>
-              </span>
-            </label>
-          </li>
-        {/each}
-        <li class:on={starter === null}>
-          <label>
-            <input type="radio" name="starter" checked={starter === null} disabled={savingStarter} onchange={() => void setStarter(null)} />
-            <span class="pk">
-              <strong>Nobody in particular</strong>
-              <small>Fall back to the fullest public collections on the instance</small>
-            </span>
-          </label>
-        </li>
-      </ul>
-    {:else}
-      <p class="help">No account has a public collection yet. Once one does, it can be the starter account.</p>
-    {/if}
+    <form class="inline starter-form" onsubmit={(e) => { e.preventDefault(); void setStarter(); }}>
+      <Field label="Account handle" hint="Leave blank to use the fullest public collections on the instance." error={starterError} class="grow">
+        {#snippet children({ id, describedBy, invalid })}
+          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={starter} placeholder="@handle" autocomplete="off" autocapitalize="none" spellcheck={false} disabled={savingStarter} oninput={() => (starterError = null)} />
+        {/snippet}
+      </Field>
+      <Button type="submit" size="lg" disabled={savingStarter}>{savingStarter ? 'Saving…' : 'Save'}</Button>
+    </form>
   </Card>
 
   <Card kind="section" as="section" class="admin-section">
@@ -295,19 +278,12 @@
   /* The ring these used to borrow from the instance-name box, now said
      outright. A dial isn't typed into, so it only counts as keyboard focus
      when you actually tabbed to it. */
-  .radio input:focus-visible, .packs input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .radio input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radio span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .radio small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .mint { display: flex; gap: var(--space-2); }
-  .packs { list-style: none; margin: var(--space-3) 0; padding: 0; display: grid; gap: var(--space-2); }
-  .packs li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); border: 1px solid transparent; }
-  .packs li.on { border-color: var(--accent); }
-  .packs label { display: flex; align-items: center; gap: var(--space-2); flex: 1; cursor: pointer; }
-  .packs input { accent-color: var(--accent); }
-  .pk { display: flex; flex-direction: column; }
-  .pk small { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  @media (min-width: 760px) { .packs { grid-template-columns: repeat(2, 1fr); } }
+  .starter-form { margin: var(--space-3) 0 0; }
   .invites { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
   .invites li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); }
   .invites .note { flex: 1 1 8ch; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

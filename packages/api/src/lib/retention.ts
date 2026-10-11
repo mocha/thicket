@@ -1,14 +1,28 @@
 /**
- * Deleting what nobody reads, on a schedule.
+ * Keeping useful history and pruning the rest, on a schedule.
  *
  * Three windows, with very different defaults, because they hold very
  * different things:
  *
- *  - **Fetch log and events are on by default (90 days).** Operational
- *    exhaust. Measured 2026-09-12, the fetch log grows *faster than the posts
+ *  - **Fetch log defaults to 14 days (issue #259).** Recent attempts support
+ *    feed-failure and recovery investigations, host-level 403/429 checks
+ *    around deploys, and comparisons between two rolling seven-day windows.
+ *    Scheduling and politeness use current feed state and host_cooldowns,
+ *    not this history. Keep every outcome: successful checks with no new
+ *    posts establish recovery, failure-rate denominators, and polling yield.
+ *    Preserve evidence for longer incident investigations separately; add
+ *    longer-lived summaries only when a concrete consumer needs them.
+ *
+ *    Measured 2026-09-12, the fetch log grows *faster than the posts
  *    it logs* — 575 KB per feed per year against 486 KB of actual posts,
  *    because we write a row per attempt and 55% of attempts return nothing
- *    new. Nothing is lost by forgetting them.
+ *    new. Measured 2026-10-09: 75,000 attempts/day across 8,439 feeds,
+ *    about 134 bytes/row including indexes. At twice that fetch volume
+ *    (Kagi Pass 2), 14 days holds about 2.1M rows / 281 MB, versus 13.5M
+ *    rows / 1.81 GB for 90 days. Daily pruning adds up to another day's
+ *    arrivals (about 20 MB); cleanup backlog and dead tuples can add more.
+ *
+ *  - **Events default to 90 days.** Product analytics with their own window.
  *
  *  - **Posts are off by default,** and that is deliberate. A feed is not an
  *    archive: it serves a window, usually its last 15 or 25 entries, so a post

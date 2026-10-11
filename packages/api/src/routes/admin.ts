@@ -169,23 +169,12 @@ admin.delete("/invites/:code", async (c) => {
 
 /**
  * Starter packs: which account's public collections a newcomer is offered.
- * Returns the current handle plus the accounts eligible to be one (public
- * profile, collections shown, at least one non-empty public collection), so
- * the admin page can render the picker in a single request.
+ * Returns the current handle for the admin to edit. The account is checked
+ * when saving, so loading this setting doesn't need to enumerate accounts.
  */
 admin.get("/starter", async (c) => {
   const handle = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
-  const rows = await db.execute(sql`
-    select u.handle, u.display_name as "displayName",
-           count(distinct col.id)::int as "collectionCount",
-           count(distinct cf.feed_id)::int as "feedCount"
-    from users u
-    join collections col on col.user_id = u.id and col.parent_id is not null and col.visibility = 'public'
-    join collection_feeds cf on cf.collection_id = col.id
-    where u.profile_visibility = 'public' and u.collections_visibility = 'public'
-    group by u.handle, u.display_name
-    order by "collectionCount" desc, u.handle`);
-  return c.json({ handle: handle || null, candidates: rows.rows });
+  return c.json({ handle: handle || null });
 });
 
 admin.put("/starter", async (c) => {

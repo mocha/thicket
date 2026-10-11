@@ -105,7 +105,7 @@ with comments. Only `DATABASE_URL` and `PUBLIC_URL` are required.
 | `DB_STATEMENT_TIMEOUT_MS` | `15000` | A request's query is stopped after this long and the request answers 503 |
 | `DB_CONNECT_TIMEOUT_MS` | `5000` | A request that can't get a database connection within this long answers 503 instead of waiting |
 | `RETAIN_ITEMS_DAYS` | `0` (off) | Delete posts older than this. Off by default on purpose: feeds serve a window, not an archive, so a deleted post is usually gone for good. Posts with notes on them are always kept |
-| `RETAIN_FETCH_LOG_DAYS` | `90` | Delete fetch-log rows older than this |
+| `RETAIN_FETCH_LOG_DAYS` | `14` | Keep all fetch outcomes for recent incident investigations and rolling week-over-week comparisons; delete older rows. `0` disables pruning |
 | `RETAIN_EVENTS_DAYS` | `90` | Delete analytics events older than this |
 | `PORT` | `3000` | Listen port |
 | `HOSTED` | unset | readthicket.com only; leave unset on your own copy. Turns on what belongs to thicket's hosted service: public sign up, account email, and password reset |

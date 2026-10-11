@@ -483,7 +483,7 @@ export const adminApi = {
   createInvite: (note?: string) => j<Invite>('/api/admin/invites', { method: 'POST', body: JSON.stringify({ note }) }),
   revokeInvite: (code: string) => j<void>(`/api/admin/invites/${encodeURIComponent(code)}`, { method: 'DELETE' }),
   /** Starter packs: whose public collections a newcomer is offered. */
-  starter: () => j<{ handle: string | null; candidates: StarterCandidate[] }>('/api/admin/starter'),
+  starter: () => j<{ handle: string | null }>('/api/admin/starter'),
   setStarter: (handle: string | null) => j<{ handle: string | null }>('/api/admin/starter', { method: 'PUT', body: JSON.stringify({ handle: handle ?? '' }) })
 };
 
@@ -491,7 +491,6 @@ export const feedbackApi = {
   /** Send feedback (issue #153, readthicket.com only). `page` is the path the person was on; their handle goes with it only if `includeHandle`. */
   send: (body: string, page: string, includeHandle: boolean) => j<{ ok: true }>('/api/feedback', { method: 'POST', body: JSON.stringify({ body, page, includeHandle }) })
 };
-export type StarterCandidate = { handle: string; displayName: string | null; collectionCount: number; feedCount: number };
 
 export type PublicUser = { handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: string; avatarUpdatedAt: string | null };
 export type ProfileCollection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null;
