@@ -32,6 +32,7 @@ import { allowsSql, notARepeatOf } from "../lib/visibility.js";
 import { myBookmarkIdSql, noteColumns, postAddressSql } from "../lib/notes.js";
 import { feedSlugSql } from "../lib/slug.js";
 import { sinceIntervalFrom, sinceSql } from "../lib/since.js";
+import { oneOf } from "../lib/one-of.js";
 
 export const search = new Hono();
 
@@ -43,8 +44,7 @@ export const SCOPES: Scope[] = ["feeds", "collections", "posts", "people"];
  * page mostly showed.
  */
 export const DEFAULT_SCOPE: Scope = "posts";
-export const scopeFrom = (v: string | null | undefined): Scope =>
-  (SCOPES as string[]).includes(v ?? "") ? (v as Scope) : DEFAULT_SCOPE;
+export const scopeFrom = oneOf(SCOPES, DEFAULT_SCOPE);
 
 /** Every query a request runs goes through its own cancellable connection. */
 type Exec = (query: SQL) => Promise<{ rows: any[] }>;
@@ -112,7 +112,7 @@ const feedInNetwork = (feedIdCol: string, ids: number[]) =>
         where cf.feed_id = ${sql.raw(feedIdCol)} and col.user_id in (${idList(ids)}))`
     : sql`false`;
 /** A person is in the network when you follow them. */
-export const userInNetwork = (userIdCol: string, ids: number[]) =>
+const userInNetwork = (userIdCol: string, ids: number[]) =>
   ids.length ? sql`${sql.raw(userIdCol)} in (${idList(ids)})` : sql`false`;
 /** A collection is in the network when its owner is someone you follow. */
 const ownerInNetwork = (ids: number[]) => userInNetwork("col.user_id", ids);
@@ -201,8 +201,7 @@ export const FEED_SORTS = ["mentioned", "posted", "about", "active"] as const;
 export type FeedSort = (typeof FEED_SORTS)[number];
 export const DEFAULT_FEED_SORT: FeedSort = "about";
 /** Anything that isn't one of the four, including nothing, is the default. */
-export const feedSortFrom = (v: string | null | undefined): FeedSort =>
-  (FEED_SORTS as readonly string[]).includes(v ?? "") ? (v as FeedSort) : DEFAULT_FEED_SORT;
+export const feedSortFrom = oneOf(FEED_SORTS, DEFAULT_FEED_SORT);
 
 /**
  * Posts in the last 90 days that mention the words, per feed, and the 30-day
@@ -361,8 +360,7 @@ async function searchFeeds(x: Exec, q: string, userId: number, limit: number, of
 export const COLLECTION_SORTS = ["relevance", "feeds", "newest"] as const;
 export type CollectionSort = (typeof COLLECTION_SORTS)[number];
 export const DEFAULT_COLLECTION_SORT: CollectionSort = "relevance";
-export const collectionSortFrom = (v: string | null | undefined): CollectionSort =>
-  (COLLECTION_SORTS as readonly string[]).includes(v ?? "") ? (v as CollectionSort) : DEFAULT_COLLECTION_SORT;
+export const collectionSortFrom = oneOf(COLLECTION_SORTS, DEFAULT_COLLECTION_SORT);
 const COLLECTION_ORDER: Record<CollectionSort, SQL> = {
   relevance: sql`s.score desc, s.name_score desc nulls last, s."feedCount" desc, s.id`,
   feeds: sql`s."feedCount" desc, s.score desc, s.name_score desc nulls last, s.id`,
@@ -451,8 +449,7 @@ async function searchCollections(x: Exec, q: string, viewerId: number | null, li
 export const POST_SORTS = ["newest", "relevance", "bookmarked", "noted"] as const;
 export type PostSort = (typeof POST_SORTS)[number];
 export const DEFAULT_POST_SORT: PostSort = "newest";
-export const postSortFrom = (v: string | null | undefined): PostSort =>
-  (POST_SORTS as readonly string[]).includes(v ?? "") ? (v as PostSort) : DEFAULT_POST_SORT;
+export const postSortFrom = oneOf(POST_SORTS, DEFAULT_POST_SORT);
 
 /**
  * What a post result shows, given `i` (items) and `f` (feeds) joined in: the
@@ -500,8 +497,9 @@ const saves = (sort: "bookmarked" | "noted") => sql`
 /**
  * Posts that mention the words. Every order reads the same bounded sample (the
  * newest HIT_CAP matches), so the total is "4,000" at most for a common word:
- * the same honest cap the feed ranking has always used. The saved orders keep
- * the matches someone saved, looked up by address against the sample alone.
+ * the same honest cap the feed ranking has always used, and `capped` says the
+ * total reached it, so the page can say "4,000+". The saved orders keep the
+ * matches someone saved, looked up by address against the sample alone.
  */
 async function searchPosts(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null, sort: PostSort, since: string | null = null) {
   const me = viewerId ?? -1;
@@ -544,7 +542,7 @@ async function searchPosts(x: Exec, q: string, viewerId: number | null, limit: n
     order by pg.score desc, pg.published_at desc, pg.id desc
   `);
   const { page, total, nextOffset } = paged(rows.rows, limit, offset);
-  return { rows: page.map(shapePost), total, nextOffset };
+  return { rows: page.map(shapePost), total, nextOffset, capped: total >= HIT_CAP };
 }
 
 /**
@@ -620,8 +618,7 @@ async function savedPosts(x: Exec, viewerId: number | null, limit: number, offse
 export const PEOPLE_SORTS = ["relevance", "name", "newest"] as const;
 export type PeopleSort = (typeof PEOPLE_SORTS)[number];
 export const DEFAULT_PEOPLE_SORT: PeopleSort = "relevance";
-export const peopleSortFrom = (v: string | null | undefined): PeopleSort =>
-  (PEOPLE_SORTS as readonly string[]).includes(v ?? "") ? (v as PeopleSort) : DEFAULT_PEOPLE_SORT;
+export const peopleSortFrom = oneOf(PEOPLE_SORTS, DEFAULT_PEOPLE_SORT);
 const PEOPLE_ORDER: Record<PeopleSort, SQL> = {
   relevance: sql`c.name_score + 0.4 * ln(1 + c.notes_match + c.marks_match) desc,
              (c.notes_match + c.marks_match) desc, lower(coalesce(c."displayName", c.handle))`,
@@ -707,12 +704,15 @@ search.get("/", async (c) => {
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 25)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
   const sortParam = c.req.query("sort");
-  const sort =
-    scope === "feeds" ? feedSortFrom(sortParam)
-    : scope === "collections" ? collectionSortFrom(sortParam)
-    : scope === "people" ? peopleSortFrom(sortParam)
-    : !q && postSortFrom(sortParam) === "relevance" ? "newest"
-    : postSortFrom(sortParam);
+  const postSort = postSortFrom(sortParam);
+  // Each scope reads the sort as its own; carrying the scope alongside lets
+  // each branch below know which kind of sort it holds.
+  const asked =
+    scope === "feeds" ? { scope, sort: feedSortFrom(sortParam) }
+    : scope === "collections" ? { scope, sort: collectionSortFrom(sortParam) }
+    : scope === "people" ? { scope, sort: peopleSortFrom(sortParam) }
+    // With no words there is nothing to be relevant to, so it is newest.
+    : { scope, sort: !q && postSort === "relevance" ? "newest" as const : postSort };
   const network = c.req.query("network") === "1";
   const since = sinceIntervalFrom(c.req.query("since"));
 
@@ -720,17 +720,17 @@ search.get("/", async (c) => {
     if (!q && scope !== "posts") return { rows: [] as any[], total: 0, nextOffset: null as number | null };
     // "People I follow": null = filter off; a (possibly empty) id list = filter on.
     const net = network ? await followSet(x, viewerId) : null;
-    if (scope === "posts") {
-      if (q) return searchPosts(x, q, viewerId, limit, offset, net, sort as PostSort, since);
-      return sort === "bookmarked" || sort === "noted"
-        ? savedPosts(x, viewerId, limit, offset, net, since, sort)
+    if (asked.scope === "posts") {
+      if (q) return searchPosts(x, q, viewerId, limit, offset, net, asked.sort, since);
+      return asked.sort === "bookmarked" || asked.sort === "noted"
+        ? savedPosts(x, viewerId, limit, offset, net, since, asked.sort)
         : latestPosts(x, viewerId, limit, offset, net, since);
     }
-    if (scope === "feeds") return searchFeeds(x, q, viewerId ?? -1, limit, offset, net, sort as FeedSort, since);
-    if (scope === "collections") return searchCollections(x, q, viewerId, limit, offset, net, sort as CollectionSort, since);
-    return searchPeople(x, q, viewerId, limit, offset, net, sort as PeopleSort, since);
+    if (asked.scope === "feeds") return searchFeeds(x, q, viewerId ?? -1, limit, offset, net, asked.sort, since);
+    if (asked.scope === "collections") return searchCollections(x, q, viewerId, limit, offset, net, asked.sort, since);
+    return searchPeople(x, q, viewerId, limit, offset, net, asked.sort, since);
   });
   // The answer depends on who is asking; a shared cache must key on the cookie.
   c.header("vary", "cookie");
-  return c.json({ q, scope, sort, [scope]: list });
+  return c.json({ q, scope, sort: asked.sort, [scope]: list });
 });

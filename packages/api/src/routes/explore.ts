@@ -18,6 +18,7 @@ import { db } from "../db/client.js";
 import { getSetting } from "../lib/instance.js";
 import { notARepeatOf } from "../lib/visibility.js";
 import { sinceIntervalFrom, sinceSql } from "../lib/since.js";
+import { oneOf } from "../lib/one-of.js";
 
 export const explore = new Hono();
 
@@ -29,8 +30,7 @@ export const explore = new Hono();
 export const BROWSE_COLLECTION_SORTS = ["feeds", "newest", "name"] as const;
 export type BrowseCollectionSort = (typeof BROWSE_COLLECTION_SORTS)[number];
 export const DEFAULT_BROWSE_COLLECTION_SORT: BrowseCollectionSort = "feeds";
-export const browseCollectionSortFrom = (v: string | null | undefined): BrowseCollectionSort =>
-  (BROWSE_COLLECTION_SORTS as readonly string[]).includes(v ?? "") ? (v as BrowseCollectionSort) : DEFAULT_BROWSE_COLLECTION_SORT;
+export const browseCollectionSortFrom = oneOf(BROWSE_COLLECTION_SORTS, DEFAULT_BROWSE_COLLECTION_SORT);
 const BROWSE_COLLECTION_ORDER: Record<BrowseCollectionSort, SQL> = {
   feeds: sql`"feedCount" desc, col.created_at desc`,
   newest: sql`col.created_at desc, col.id desc`,
@@ -40,8 +40,7 @@ const BROWSE_COLLECTION_ORDER: Record<BrowseCollectionSort, SQL> = {
 /**
  * GET /api/explore/collections?q=&network=&since=&sort=&offset=&limit=
  *
- * `total` counts what the filters leave; `indexTotal` counts every collection
- * the list could show, whatever is filtered.
+ * `total` counts what the filters leave.
  */
 explore.get("/collections", async (c) => {
   const viewer = c.get("user");
@@ -80,7 +79,6 @@ explore.get("/collections", async (c) => {
         and ${notARepeatOf("l", "listed")}
     )`;
   const [{ total }] = (await db.execute<{ total: number }>(sql`${shown(filters)} select count(*)::int as total from shown`)).rows;
-  const [{ indexTotal }] = (await db.execute<{ indexTotal: number }>(sql`${shown(filters.slice(0, 1))} select count(*)::int as "indexTotal" from shown`)).rows;
   const rows = await db.execute(sql`
     ${shown(filters)}
     select col.id, col.name, col.slug, col.description, u.handle, u.display_name as "displayName",
@@ -94,7 +92,7 @@ explore.get("/collections", async (c) => {
   c.header("vary", "cookie");
   if (!viewer && !q) c.header("cache-control", "public, max-age=120");
   const page = rows.rows.slice(0, limit);
-  return c.json({ collections: page.map((r: any) => ({ ...r, id: Number(r.id) })), sort, total, indexTotal, nextOffset: rows.rows.length > limit ? offset + limit : null });
+  return c.json({ collections: page.map((r: any) => ({ ...r, id: Number(r.id) })), sort, total, nextOffset: rows.rows.length > limit ? offset + limit : null });
 });
 
 /**
@@ -155,8 +153,7 @@ explore.get("/featured", async (c) => {
 export const BROWSE_PEOPLE_SORTS = ["name", "newest"] as const;
 export type BrowsePeopleSort = (typeof BROWSE_PEOPLE_SORTS)[number];
 export const DEFAULT_BROWSE_PEOPLE_SORT: BrowsePeopleSort = "name";
-export const browsePeopleSortFrom = (v: string | null | undefined): BrowsePeopleSort =>
-  (BROWSE_PEOPLE_SORTS as readonly string[]).includes(v ?? "") ? (v as BrowsePeopleSort) : DEFAULT_BROWSE_PEOPLE_SORT;
+export const browsePeopleSortFrom = oneOf(BROWSE_PEOPLE_SORTS, DEFAULT_BROWSE_PEOPLE_SORT);
 const BROWSE_PEOPLE_ORDER: Record<BrowsePeopleSort, SQL> = {
   name: sql`"isFollowing" desc, lower(coalesce(u.display_name, u.handle))`,
   newest: sql`u.created_at desc, u.id desc`,
@@ -188,7 +185,6 @@ explore.get("/users", async (c) => {
   if (network) where.push(sql`exists(select 1 from user_follows uf where uf.follower_id = ${viewer.id} and uf.followee_id = u.id)`);
   if (since) where.push(sinceSql("u.created_at", since));
   const [{ total }] = (await db.execute<{ total: number }>(sql`select count(*)::int as total from users u where ${sql.join(where, sql` and `)}`)).rows;
-  const [{ indexTotal }] = (await db.execute<{ indexTotal: number }>(sql`select count(*)::int as "indexTotal" from users u where ${where[0]}`)).rows;
   const rows = await db.execute(sql`
     select u.handle, u.display_name as "displayName", u.bio, u.created_at as "createdAt",
            (select ua.updated_at from user_avatars ua where ua.user_id = u.id) as "avatarUpdatedAt",
@@ -200,5 +196,5 @@ explore.get("/users", async (c) => {
     order by ${BROWSE_PEOPLE_ORDER[sort]} limit ${limit + 1} offset ${offset}
   `);
   const page = rows.rows.slice(0, limit);
-  return c.json({ users: page.map((r: any) => ({ ...r, createdAt: new Date(r.createdAt).toISOString() })), sort, total, indexTotal, nextOffset: rows.rows.length > limit ? offset + limit : null });
+  return c.json({ users: page.map((r: any) => ({ ...r, createdAt: new Date(r.createdAt).toISOString() })), sort, total, nextOffset: rows.rows.length > limit ? offset + limit : null });
 });

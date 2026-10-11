@@ -25,6 +25,7 @@
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
   import { copyNext } from '$lib/copyintent.svelte';
+  import { plural } from '$lib/words';
 
   let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false }:
     { heading?: string; lede?: string; compact?: boolean } = $props();
@@ -41,8 +42,6 @@
       from = r.from;
     }).catch(() => {});
   });
-
-  const sites = (n: number) => `${n} ${n === 1 ? 'site' : 'sites'}`;
 
   async function copy(c: ExploreCollection) {
     if (copying) return;
@@ -73,9 +72,9 @@
                here the sites inside, whose it is, and how many. When the
                instance names one account for all of them, that's said once
                under the list instead, so the line just counts the sites. -->
-          <CardMeta feedId={null} name={from ? sites(c.feedCount) : (c.displayName ?? `@${c.handle}`)}>
+          <CardMeta feedId={null} name={from ? plural(c.feedCount, 'site') : (c.displayName ?? `@${c.handle}`)}>
             {#snippet icon()}<span class="icons" aria-hidden="true">{#each c.sample as f (f.id)}<SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title} size={20} />{/each}</span>{/snippet}
-            {#if !from}<Dot /><span class="count">{sites(c.feedCount)}</span>{/if}
+            {#if !from}<Dot /><span class="count">{plural(c.feedCount, 'site')}</span>{/if}
           </CardMeta>
           <!-- The name is the link, stretched over the whole card, so the card
                still opens the collection while the button below stays its own control. -->

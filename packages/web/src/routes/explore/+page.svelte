@@ -204,6 +204,8 @@
   const rows = $derived(moreScope === scope ? more : []);
   /** How long the current tab's list is: null for the newest posts, which aren't counted. */
   const total = $derived<number | null>(res && moreScope === scope ? ((res as Record<string, any>)[scope]?.total ?? null) : null);
+  /** The count stopped at the search's cap (only ever Posts), so there are more than it says. */
+  const capped = $derived<boolean>(res && moreScope === scope ? ((res as Record<string, any>)[scope]?.capped ?? false) : false);
   /* No counts on the tabs: only the tab you are on has been searched. */
   const scopeTabs = $derived(SCOPES.map((s) => ({ value: s.id, label: s.label })));
 
@@ -513,10 +515,10 @@
     />
 {/snippet}
 
-<!-- How many a search found, under the filters. A Posts search counts at most HIT_CAP matches (routes/search.ts), so a full count says "or more". -->
+<!-- How many a search found, under the filters. A Posts search stops counting at a cap (HIT_CAP in routes/search.ts), and a count that reached it says "or more": "4,000+". -->
 {#snippet countLine()}
   {#if searching && total !== null}
-    <p class="count">{total >= 4000 && scope === 'posts' ? '4,000+' : total.toLocaleString()} {total === 1 ? KINDS[scope][0] : KINDS[scope][1]} {scope === 'posts' ? (total === 1 ? 'mentions' : 'mention') : (total === 1 ? 'matches' : 'match')} “{q}”</p>
+    <p class="count">{total.toLocaleString()}{capped ? '+' : ''} {total === 1 ? KINDS[scope][0] : KINDS[scope][1]} {scope === 'posts' ? (total === 1 ? 'mentions' : 'mention') : (total === 1 ? 'matches' : 'match')} “{q}”</p>
   {/if}
 {/snippet}
 
@@ -675,7 +677,6 @@
   /* Each choice stays on one line, so a long summary breaks at the dots, never mid-phrase. */
   .fr-part { white-space: nowrap; }
   .fr-caret { flex: none; display: grid; color: var(--text-2); }
-  /* Browse: the filters are the list card's header, so the two read as one unit; the rows below are part of the same card. */
   /* The line about your search: for a feed, how often it mentions your words
      over the last 30 days; for a collection, how many of its feeds do. The gap
      above keeps it clear of the description; 1px below is an optical nudge. */

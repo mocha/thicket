@@ -23,9 +23,11 @@
   import { hostOf, relativeTime, savedHref, ugcRel, webHref } from '$lib/time';
   import { openReader, readsInline } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
-  import { highlight, unmarked } from '$lib/words';
+  import { startsMidway } from '$lib/words';
   import Card from './Card.svelte';
   import CardMeta from './CardMeta.svelte';
+  import CardFooter from './CardFooter.svelte';
+  import Marked from './Marked.svelte';
   import FeedPopover from './FeedPopover.svelte';
   import IconButton from './IconButton.svelte';
   import NoteBlock from './NoteBlock.svelte';
@@ -59,7 +61,7 @@
   const theirNote = $derived(!mine && b.note && author ? { ...b.note, author } : null);
   const marks = $derived('marks' in b ? (b.marks ?? null) : null);
   /* The matched summary is the part around the match; say so when it starts mid-way. */
-  const cut = $derived(!!marks?.summary && !(b.summary ?? '').trimStart().startsWith(unmarked(marks.summary).slice(0, 24)));
+  const cut = $derived(!!marks?.summary && startsMidway(b.summary, marks.summary));
   /** The note changed under the search, so its old highlight no longer describes it. */
   function forgetNoteMark() {
     if ('marks' in b && b.marks) b.marks.note = null;
@@ -117,13 +119,11 @@
   }
 </script>
 
-{#snippet marked(text: string)}{#each highlight(text) as part}{#if part.hit}<mark>{part.text}</mark>{:else}{part.text}{/if}{/each}{/snippet}
-
 {#snippet content()}
   <header>
     {#if marks?.site}
       <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} onsource={openSource}>
-        {#snippet label()}{@render marked(marks.site ?? '')}{/snippet}
+        {#snippet label()}<Marked text={marks.site ?? ''} />{/snippet}
       </CardMeta>
     {:else}
       <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} onsource={openSource} />
@@ -131,8 +131,8 @@
   </header>
   <a class="body" href={savedHref(b.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(b.url))} onclick={opened} onauxclick={opened}>
     <div class="text">
-      <svelte:element this={heading} class="card-title">{#if marks?.title}{@render marked(noOrphan(marks.title))}{:else}{noOrphan(b.title ?? b.url)}{/if}</svelte:element>
-      {#if marks?.summary}<p class="card-summary found">{#if cut}… {/if}{@render marked(marks.summary)}</p>
+      <svelte:element this={heading} class="card-title">{#if marks?.title}<Marked text={noOrphan(marks.title)} />{:else}{noOrphan(b.title ?? b.url)}{/if}</svelte:element>
+      {#if marks?.summary}<p class="card-summary found">{#if cut}… {/if}<Marked text={marks.summary} /></p>
       {:else if b.summary}<p class="card-summary">{b.summary}</p>{/if}
     </div>
     {#if b.imageUrl}<img class="thumb" src={b.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onerror={(e) => ((e.currentTarget as HTMLImageElement).hidden = true)} />{/if}
@@ -141,24 +141,24 @@
     <!-- The source post's discussion-style link (e.g. Hacker News's "Comments"), outside the body's own link. -->
     <a class="card-extralink tap" href={webHref(b.linkUrl)} target="_blank" rel={ugcRel(b.linkUrl)}>{b.linkLabel} →</a>
   {/if}
-  <!-- The bottom row: when it was saved on the left, what you can do on the
-       right. The same place as the article card's actions. -->
-  <footer>
+  <!-- The bottom row: when it was saved on the left, what you can do on the right. -->
+  <CardFooter>
     <span class="saved">Bookmarked <time datetime={b.savedAt} title={new Date(b.savedAt).toLocaleString()}>{relativeTime(b.savedAt)}</time></span>
-    <span class="spacer"></span>
-    <span class="actions">
-    {#if mine}
-      <IconButton icon="note" pressed={!!b.note} aria-expanded={editing} onclick={noteButton} label={b.note ? 'Edit my note' : 'Add a note'} title={b.note ? 'My note' : 'Add a note'} />
-    {/if}
-    {#if action}
-      {#if action.kind === 'remove'}
-        <IconButton class="remove" icon="close" onclick={action.run} label={action.label} title={action.title ?? action.label} />
-      {:else}
-        <IconButton icon="bookmark" pressed={action.on} onclick={action.run} label={action.label} title={action.title ?? action.label} />
-      {/if}
-    {/if}
-    </span>
-  </footer>
+    {#snippet actions()}
+      <span class="buttons">
+        {#if mine}
+          <IconButton icon="note" pressed={!!b.note} aria-expanded={editing} onclick={noteButton} label={b.note ? 'Edit my note' : 'Add a note'} title={b.note ? 'My note' : 'Add a note'} />
+        {/if}
+        {#if action}
+          {#if action.kind === 'remove'}
+            <IconButton class="remove" icon="close" onclick={action.run} label={action.label} title={action.title ?? action.label} />
+          {:else}
+            <IconButton icon="bookmark" pressed={action.on} onclick={action.run} label={action.label} title={action.title ?? action.label} />
+          {/if}
+        {/if}
+      </span>
+    {/snippet}
+  </CardFooter>
   {#if mine}
     {#if editing}
       <NoteEditor bookmarkId={b.id} note={b.note} onsaved={saved} ondeleted={deleted} oncancel={() => (editing = false)} />
@@ -195,20 +195,12 @@
   p { --summary-lines: 2; }
   /* The part of the summary a search matched gets a third line, so the match is not the bit cut off. */
   p.found { --summary-lines: 3; }
-  /* The words a search matched. The same highlight as a search result on Explore. */
-  mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
-  /* The same bottom row as the article card. The icon buttons' circles run past the glyph, so the row stops short on the right and the glyphs line up with the text's edge. */
-  footer {
-    display: flex; align-items: center; gap: var(--space-2); min-height: 32px;
-    padding: 0 var(--space-2) var(--space-2) var(--card-pad);
-    font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2);
-  }
-  .spacer { flex: 1; }
-  .actions { display: flex; flex: none; gap: var(--space-1); }
+  /* A little room between the note button and the one beside it. */
+  .buttons { display: flex; gap: var(--space-1); }
   .card-extralink { display: inline-block; margin: 0 var(--card-pad) var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
   @media (hover: hover) { .card-extralink:hover { text-decoration: underline; text-underline-offset: 3px; } }
   /* The same picture as the article card: edge to edge across the top, wider than the text by the card's inset on each side. */
   .thumb { order: -1; width: calc(100% + var(--card-pad) * 2); max-width: none; margin: 0 calc(var(--card-pad) * -1) var(--space-3); aspect-ratio: 16 / 9; object-fit: cover; background: var(--surface-2); }
   /* Taking a bookmark away is the one destructive thing here, so it hovers red. */
-  .actions :global(button.remove):hover { color: var(--danger); }
+  .buttons :global(button.remove):hover { color: var(--danger); }
 </style>
