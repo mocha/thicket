@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Card from '$lib/components/Card.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import Dot from '$lib/components/Dot.svelte';
   /**
    * The instance, for its admins: who can sign up, invite links, the accounts.
@@ -158,21 +160,19 @@
 
 <svelte:head><title>Admin · thicket</title></svelte:head>
 
-<header class="top">
-  <h1>Admin</h1>
-  {#if instance}<p class="sub">{instance.name} <Dot /> <code>{instance.url}</code></p>{/if}
-</header>
+{#snippet site()}{instance?.name} <Dot /> <code>{instance?.url}</code>{/snippet}
+<PageHeader name="Admin" description={instance ? site : undefined} />
 
 {#if instance}
-  <section class="card">
-    <h2>This instance</h2>
+  <Card kind="section" as="section" class="admin-section">
+    <h2 class="section-title">This instance</h2>
     <form class="inline" onsubmit={(e) => { e.preventDefault(); void saveName(); }}>
       <Field label="Name" class="grow">
         {#snippet children({ id, describedBy, invalid })}
           <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={name} maxlength={60} placeholder={instance!.url.replace(/^https?:\/\//, '')} />
         {/snippet}
       </Field>
-      <Button type="submit" size="sm" disabled={name.trim() === instance.name}>Save</Button>
+      <Button type="submit" size="lg" disabled={name.trim() === instance.name}>Save</Button>
     </form>
     <fieldset>
       <legend>Who can sign up</legend>
@@ -185,17 +185,17 @@
       <label class="radio"><input type="radio" name="visitors" checked={instance.visitorLimit} onchange={() => setVisitorLimit(true)} /><span><strong>The newest 100</strong><small>Feed pages, collections, and people’s notes, bookmarks and activity show their 100 most recent items, then ask visitors to log in or sign up.</small></span></label>
       <label class="radio"><input type="radio" name="visitors" checked={!instance.visitorLimit} onchange={() => setVisitorLimit(false)} /><span><strong>Everything</strong><small>Visitors can scroll back as far as anyone signed in.</small></span></label>
     </fieldset>
-  </section>
+  </Card>
 
-  <section class="card">
-    <h2>Invite links</h2>
+  <Card kind="section" as="section" class="admin-section">
+    <h2 class="section-title">Invite links</h2>
     <form class="mint" onsubmit={(e) => { e.preventDefault(); void mint(); }}>
       <Field label="Who is this invite for?" hideLabel class="grow">
         {#snippet children({ id, describedBy, invalid })}
           <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={inviteNote} placeholder="Who is this for? (optional note)" maxlength={120} />
         {/snippet}
       </Field>
-      <Button type="submit" variant="primary" size="sm" disabled={minting}>{minting ? 'Creating…' : 'New invite link'}</Button>
+      <Button type="submit" variant="primary" size="lg" disabled={minting}>{minting ? 'Creating…' : 'New invite link'}</Button>
     </form>
     {#if openInvites.length}
       <ul class="invites">
@@ -211,23 +211,23 @@
     {:else}
       <p class="help">No open invites. Each link works once and lasts two weeks.</p>
     {/if}
-  </section>
+  </Card>
 
-  <section class="card">
-    <h2>Starter packs</h2>
-    <p class="help">Someone who has just signed up follows nothing, so the first screen offers them collections to copy. Point it at an account and its public collections become those packs — curate them by signing in as that account and making collections the normal way. An account made for the purpose works well, and its profile doubles as a worked example: what it reads, bookmarks and notes.</p>
+  <Card kind="section" as="section" class="admin-section">
+    <h2 class="section-title">Starter packs</h2>
+    <p class="section-description">Someone who has just signed up follows nothing, so the first screen offers them collections to copy. Point it at an account and its public collections become those packs — curate them by signing in as that account and making collections the normal way. An account made for the purpose works well, and its profile doubles as a worked example: what it reads, bookmarks and notes.</p>
     <form class="inline starter-form" onsubmit={(e) => { e.preventDefault(); void setStarter(); }}>
       <Field label="Account handle" hint="Leave blank to use the fullest public collections on the instance." error={starterError} class="grow">
         {#snippet children({ id, describedBy, invalid })}
           <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={starter} placeholder="@handle" autocomplete="off" autocapitalize="none" spellcheck={false} disabled={savingStarter} oninput={() => (starterError = null)} />
         {/snippet}
       </Field>
-      <Button type="submit" size="sm" disabled={savingStarter}>{savingStarter ? 'Saving…' : 'Save'}</Button>
+      <Button type="submit" size="lg" disabled={savingStarter}>{savingStarter ? 'Saving…' : 'Save'}</Button>
     </form>
-  </section>
+  </Card>
 
-  <section class="card">
-    <h2>Accounts <Badge>{users.length}</Badge></h2>
+  <Card kind="section" as="section" class="admin-section">
+    <h2 class="section-title">Accounts <Badge>{users.length}</Badge></h2>
     {#if issued}
       <div class="issued" role="status">
         <p><strong>Temporary password for @{issued.handle}:</strong> <code>{issued.password}</code></p>
@@ -255,19 +255,17 @@
         </li>
       {/each}
     </ul>
-  </section>
+  </Card>
 {:else}
   <p class="status">Loading…</p>
 {/if}
 
 <style>
-  .top { margin-bottom: var(--space-4); }
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0; }
-  /* 2px is an optical nudge under the title, not a spacing step. */
-  .sub { margin: 2px 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  code { font-size: calc(var(--text-sm) * var(--size-app)); /* 1px vertical is optical: an inline code chip stays on the text's line. */ background: var(--surface-2); padding: 1px var(--space-2); border-radius: var(--radius-xs); }
-  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
-  h2 { font-size: calc(var(--text-base) * var(--size-app)); margin: 0 0 var(--space-3); display: flex; align-items: baseline; gap: var(--space-2); }
+  code { font-size: calc(var(--text-sm) * var(--size-app)); /* 1px vertical is optical: an inline code chip stays on the text's line. */ background: var(--surface-2); padding: 1px var(--space-2); border-radius: var(--radius-xs); overflow-wrap: anywhere; }
+  /* The room between sections is set on the cards' own class, since the cards are drawn by the shared Card. */
+  :global(.admin-section) { margin-bottom: var(--space-4); }
+  /* Accounts carries its count beside the heading. */
+  .section-title { display: flex; align-items: baseline; gap: var(--space-2); }
   .help { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .inline { display: flex; gap: var(--space-2); align-items: flex-end; margin-bottom: var(--space-4); }
   /* The field takes the room the button beside it doesn't. */

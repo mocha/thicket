@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Card from '$lib/components/Card.svelte';
   /**
    * A profile's Overview, at /@handle: the first few of each section, each
    * ending in a link to its own tab.
@@ -135,13 +136,13 @@
   <!-- Nothing here for a visitor: say so, then offer the one thing every public profile shows, who they follow. -->
   <div class="emptynote"><EmptyNote icon="hidden" title="{name} hasn’t shared anything yet" /></div>
   {#if following && following.length > 0}
-    <section class="emptycard">
+    <Card kind="list" as="section" class="followscard">
       <h3 class="follows">{name} follows</h3>
       <PeopleList people={following.slice(0, FOLLOWING_SHOWN)} />
       {#if following.length > FOLLOWING_SHOWN}
         <button type="button" class="seeall tap" aria-haspopup="dialog" onclick={() => (peopleOpen = true)}>See all {following.length}</button>
       {/if}
-    </section>
+    </Card>
   {/if}
   {#if peopleOpen}
     <PeopleSheet handle={profile.handle} which="following" isMe={false} people={following ?? undefined} onclose={() => (peopleOpen = false)} />
@@ -156,7 +157,7 @@
   .all { flex: none; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
   /* The empty profile: a card with the reason, then a card of who they follow. */
-  .emptycard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: var(--space-3); }
+  :global(.followscard) { margin-bottom: var(--space-3); }
   .emptynote { margin-bottom: var(--space-3); }
   .follows { margin: 0; padding: var(--space-3) var(--space-4) var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .seeall { display: block; width: 100%; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); text-align: center; }

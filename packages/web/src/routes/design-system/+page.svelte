@@ -33,6 +33,7 @@
   import Card from '$lib/components/Card.svelte';
   import NoteBlock from '$lib/components/NoteBlock.svelte';
   import SettingRow from '$lib/components/SettingRow.svelte';
+  import Sheet from '$lib/components/Sheet.svelte';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import { showToast } from '$lib/toast.svelte';
 
@@ -43,6 +44,12 @@
     { id: -1, body: 'Short, and it earns every sentence. Rare.', createdAt: ago(3), updatedAt: ago(3), author: { handle: 'ada', displayName: 'Ada Lovelace', avatarUpdatedAt: null } },
     { id: -2, body: 'The part about **street sessions** is the best thing I read this week.', createdAt: ago(9), updatedAt: ago(2), author: { handle: 'grace', displayName: null, avatarUpdatedAt: null } }
   ];
+
+  /* The two sample Sheets in the Sheet entry. */
+  let demoSheet = $state<HTMLDialogElement | null>(null);
+  let demoConfirm = $state<HTMLDialogElement | null>(null);
+  let demoShow = $state('everyone');
+  let demoInvite = $state('');
 
   /* ---- Live theme preview: set <html> attributes, restore on the way out ---- */
   type Appearance = 'system' | 'light' | 'dark';
@@ -157,7 +164,7 @@
   const corners = [
     { name: 'radius-xs', px: 4, use: 'Inline code, highlight marks' },
     { name: 'radius-sm', px: 10, use: 'Controls, rows, inputs' },
-    { name: 'radius-md', px: 14, use: 'Menus, compact cards' },
+    { name: 'radius-md', px: 14, use: 'Menus, the picture cropper' },
     { name: 'radius', px: 16, use: 'Cards, the reader, panels' },
     { name: 'radius-lg', px: 20, use: 'Sheets and dialogs' },
     { name: 'radius-pill', px: 999, use: 'Buttons, chips, tabs' }
@@ -166,8 +173,7 @@
   const shadows = [
     { name: 'shadow', use: 'A card resting on the page' },
     { name: 'shadow-menu', use: 'A menu or popover' },
-    { name: 'shadow-sheet', use: 'A bottom sheet' },
-    { name: 'shadow-dialog', use: 'A centered dialog' }
+    { name: 'shadow-sheet', use: 'A Sheet, at the bottom of a phone or centered on a bigger screen' }
   ];
 
   /* ---- Component demo state ---- */
@@ -206,6 +212,7 @@
         { id: 'banner', label: 'Banner' },
         { id: 'breadcrumb', label: 'Breadcrumb' },
         { id: 'button', label: 'Button' },
+        { id: 'card', label: 'Card' },
         { id: 'choice-group', label: 'Choice group' },
         { id: 'dot', label: 'Dot' },
         { id: 'empty-note', label: 'Empty note' },
@@ -218,6 +225,7 @@
         { id: 'page-header', label: 'Page header' },
         { id: 'select', label: 'Select' },
         { id: 'setup-tour', label: 'Setup tour' },
+        { id: 'sheet', label: 'Sheet' },
         { id: 'tabs', label: 'Tabs' },
         { id: 'textarea', label: 'Textarea' },
         { id: 'toast', label: 'Toast' }
@@ -301,22 +309,22 @@
   <section class="group" id="principles" aria-labelledby="principles-h">
     <h2 id="principles-h">Principles</h2>
     <div class="principles">
-      <div class="tile">
+      <Card kind="section" as="div">
         <h3>Everything hangs off tokens</h3>
         <p>No component names a raw color, size, or corner. They reach for a token, and the token decides. Reskinning is a token change, not a component change.</p>
-      </div>
-      <div class="tile">
+      </Card>
+      <Card kind="section" as="div">
         <h3>Three theme states, not two</h3>
         <p>Light and dark, plus "follow the device" — the state most people never leave. On top of that sit seven full color themes, from soft sepia to hard black-and-white for e-ink.</p>
-      </div>
-      <div class="tile">
+      </Card>
+      <Card kind="section" as="div">
         <h3>One of each</h3>
         <p>One button. One card. One text field. If a screen needs something the kit doesn't have, the kit is what changes — so nothing drifts into a second, slightly-different version.</p>
-      </div>
-      <div class="tile">
+      </Card>
+      <Card kind="section" as="div">
         <h3>Readable by default</h3>
         <p>Every color pair clears the contrast bar in both light and dark. Focus rings, keyboard paths, and screen-reader labels are built into the parts, not bolted on later.</p>
-      </div>
+      </Card>
     </div>
   </section>
 
@@ -486,7 +494,7 @@
 
     <section class="entry" id="button" aria-labelledby="button-h">
       <h3 class="entry-h" id="button-h">Button</h3>
-      <p class="section-lede">One button, four looks. Primary for the main move, secondary for a move a screen offers many times over (one per card), ghost for everything else, danger for the destructive one. Three sizes. Danger has a solid fill too, for the final confirm of something that can’t be undone. Any look can also be a link, just its words, for a quiet second action under the main one. On a touchscreen every button, tab, and choice can be tapped across at least 44 by 44, whatever size it’s drawn: an invisible area reaches past its edges to make up the difference. Anything else small and tappable gets the same by taking the <code>tap</code> class.</p>
+      <p class="section-lede">One button, four looks. Primary for the main move, secondary for a move a screen offers many times over (one per card), ghost for everything else, danger for the destructive one. Three sizes; the Card entry says which one a section card uses where. Danger has a solid fill too, for the final confirm of something that can’t be undone. Any look can also be a link, just its words, for a quiet second action under the main one. On a touchscreen every button, tab, and choice can be tapped across at least 44 by 44, whatever size it’s drawn: an invisible area reaches past its edges to make up the difference. Anything else small and tappable gets the same by taking the <code>tap</code> class.</p>
 
       <div class="row">
         <Button variant="primary">Primary</Button>
@@ -507,6 +515,49 @@
       <div class="row">
         <Button variant="primary" disabled>Disabled</Button>
         <Button variant="primary" loading>Loading</Button>
+      </div>
+    </section>
+
+    <section class="entry" id="card" aria-labelledby="card-h">
+      <h3 class="entry-h" id="card-h">Card</h3>
+      <p class="section-lede">The one box lifted off the page: the card color, the rounded corner, and the soft shadow. On Crisp and Black and white, which have no shadow, a thin outline draws the edge instead. Every card is one of three kinds, and cards of the same kind look the same on every screen. The space inside a card belongs to the card; the space around it belongs to the screen.</p>
+
+      <h4 class="sub">Content card</h4>
+      <p class="section-lede">One post, bookmark, or starter pack. The whole card is something to tap, so it gives a little when pressed. Its picture can run to the edge; the words sit 16px in.</p>
+      <div class="stack">
+        <Card as="div">
+          <h3 class="card-title">A post’s title, in the headings face</h3>
+          <p class="card-summary">The summary under it, in the reading face, stopping after three lines.</p>
+        </Card>
+      </div>
+
+      <h4 class="sub">List card</h4>
+      <p class="section-lede">Rows, one under another: Activity, a collection’s feeds, Explore’s results, Notifications. The card has no space inside of its own; each row sets itself 16px in from the edge.</p>
+      <div class="stack">
+        <Card kind="list" as="ul">
+          <li class="demo-row">The first row</li>
+          <li class="demo-row">The second row</li>
+          <li class="demo-row">The third row</li>
+        </Card>
+      </div>
+
+      <h4 class="sub">Section card</h4>
+      <p class="section-lede">A group of settings, or one message standing on its own, like an empty section or who can see a profile tab. 16px of space inside, and nothing in it is cut off at the edge, so a menu or a focus ring can reach past it. It opens with a 21px bold heading in the interface face, and often a short gray description tucked under it; Settings, Account, Admin, and Import all use this same pair. Cards on those pages sit 16px apart.</p>
+      <p class="section-lede">Buttons on a section card follow one rule. A Button beside a text box is the large size, so it’s as tall as the box, on a touchscreen too. A Button that acts on one row of a list is small. The Button that finishes the card’s form, or is the card’s only action, is the regular size.</p>
+      <div class="stack">
+        <Card kind="section" as="section">
+          <h4 class="section-title">Invite links</h4>
+          <p class="section-description">Each link works once and lasts two weeks.</p>
+          <form class="demo-inline" onsubmit={(e) => e.preventDefault()}>
+            <Input inset bind:value={demoInvite} placeholder="Who is this for? (optional note)" aria-label="Who is this invite for?" class="demo-grow" />
+            <Button variant="primary" size="lg" type="submit">New invite link</Button>
+          </form>
+          <div class="demo-inline demo-invite">
+            <span class="demo-grow">For Sam</span>
+            <Button size="sm">Copy link</Button>
+            <Button variant="danger" size="sm">Revoke</Button>
+          </div>
+        </Card>
       </div>
     </section>
 
@@ -565,7 +616,7 @@
 
     <section class="entry" id="icon-button" aria-labelledby="icon-button-h">
       <h3 class="entry-h" id="icon-button-h">Icon button</h3>
-      <p class="section-lede">A round tap target with one glyph and no words. Plain, or bordered for the one that sits beside a page title. Its focus ring shows only for someone arriving by keyboard, so a Sheet that opens with focus on its close button doesn't ring it after a tap.</p>
+      <p class="section-lede">A round tap target with one glyph and no words. Plain, or bordered for the one that sits beside a page title. Its focus ring shows only for someone arriving by keyboard, so a reading view that opens with focus on its close button doesn't ring it after a tap.</p>
       <div class="row">
         <IconButton icon="gear" label="Settings" />
         <IconButton icon="pencil" label="Edit" />
@@ -670,6 +721,30 @@
       <div class="row">
         <div class="tour-demo" aria-hidden="true"><NewPostsScene /></div>
       </div>
+    </section>
+
+    <section class="entry" id="sheet" aria-labelledby="sheet-h">
+      <h3 class="entry-h" id="sheet-h">Sheet</h3>
+      <p class="section-lede">Every panel for one task is a Sheet: Add a feed, Visibility, Filters, a delete confirm, all of them. On a phone it rises from the bottom; from 700px up it sits centered, 460px wide. Top to bottom: the title; a short description saying what the panel is for, left off when the title already says it all; the content; and, when the task has an end, one full-width primary Button that finishes it, or a solid danger Button when finishing means deleting something. Any other destructive choice is a red text link under it, never a button beside it. The way out is always last and always in words: a full-width ghost Button, Cancel, under the main one, as easy to hit as the button above it and never mistaken for it. A panel whose choices save as they’re made ends with a full-width primary Done instead. In a delete confirm, focus starts on Cancel. Tapping outside and Escape close it too. Settings stacked one per row get a thin line between rows, each name above its choice. A panel about one thing, like a feed, can swap the title for that thing’s icon and name, with an action about it, like Follow, at the right. A Sheet that’s saving something stays open until it’s done.</p>
+      <div class="row">
+        <Button onclick={() => demoSheet?.showModal()}>Open a Sheet</Button>
+        <Button variant="danger" onclick={() => demoConfirm?.showModal()}>Open a delete confirm</Button>
+      </div>
+      <Sheet title="Example" lede="A short description saying what this panel is for." bind:dialog={demoSheet}>
+        <div class="sheet-rows">
+          <Select label="Show" value={demoShow} options={[{ value: 'everyone', label: 'Everyone' }, { value: 'following', label: 'People I follow' }]} onchange={(e) => (demoShow = e.currentTarget.value)} />
+          <Select label="Sort" value="popular" options={[{ value: 'popular', label: 'Most followed' }, { value: 'new', label: 'Newest' }]} />
+        </div>
+        {#snippet footer()}
+          <Button variant="primary" size="lg" onclick={() => demoSheet?.close()}>Save</Button>
+          <Button variant="danger" link onclick={() => demoSheet?.close()}>Remove</Button>
+        {/snippet}
+      </Sheet>
+      <Sheet title="Delete “Example”?" lede="Say what goes with it. This can’t be undone." alert bind:dialog={demoConfirm}>
+        {#snippet footer()}
+          <Button variant="danger" solid size="lg" onclick={() => demoConfirm?.close()}>Delete collection</Button>
+        {/snippet}
+      </Sheet>
     </section>
 
     <section class="entry" id="tabs" aria-labelledby="tabs-h">
@@ -780,6 +855,11 @@
      short of the top when jumped to, so the jump menu doesn't cover the heading. */
   .group, .entry { scroll-margin-top: calc(var(--space-6) + var(--space-6)); }
   .group { margin: calc(var(--space-6) + var(--space-5)) 0 0; padding-top: var(--space-4); border-top: 2px solid var(--text); }
+  .demo-row { padding: var(--space-3) var(--card-pad); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .demo-row:first-child { border-top: 0; }
+  .demo-inline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+  .demo-inline :global(.demo-grow) { flex: 1 1 12rem; min-width: 0; }
+  .demo-invite { margin-top: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .demo-post { margin: 0; padding: var(--card-pad); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .entry { margin: var(--space-6) 0 0; padding-top: var(--space-5); border-top: 1px solid var(--line); }
   h2 {
@@ -801,12 +881,8 @@
 
   /* ---- Principles ---- */
   .principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3); }
-  .tile {
-    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: var(--space-4); box-shadow: var(--shadow);
-  }
-  .tile h3 { margin: 0 0 var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; }
-  .tile p { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; }
+  .principles h3 { margin: 0 0 var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; }
+  .principles p { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; }
 
   /* ---- Color ---- */
   .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-3); }

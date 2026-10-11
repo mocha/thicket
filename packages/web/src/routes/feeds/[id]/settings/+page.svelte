@@ -5,6 +5,7 @@
   import { api, adminApi, feedHref, type Feed } from '$lib/api';
   import { hostOf, relativeTime } from '$lib/time';
   import { feedName } from '$lib/feedname';
+  import { plural } from '$lib/words';
   import { resetNotice } from '$lib/feedsettings';
   import { loadCollections, namedCollections } from '$lib/collections.svelte';
   import CollectionCheckList from '$lib/components/CollectionCheckList.svelte';
@@ -15,6 +16,7 @@
   import Button from '$lib/components/Button.svelte';
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
+  import Sheet from '$lib/components/Sheet.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -88,7 +90,6 @@
       savingSubscription = false;
     }
   }
-  const n = (v: number, one: string, many: string) => `${v} ${v === 1 ? one : many}`;
 
   async function load() {
     try {
@@ -315,18 +316,25 @@
       </div>
     </details>
 
-    <dialog bind:this={removeDialog} class="remove" onclick={(e) => { if (e.target === removeDialog) removeDialog?.close(); }} aria-labelledby="remove-title">
-      <h2 id="remove-title">Remove {feedName(feed)} from thicket?</h2>
+    <Sheet title="Remove this feed for everyone?" alert locked={removing} bind:dialog={removeDialog}>
       {#if impact}
-        <p>This deletes, for everyone: <strong>{n(impact.posts, 'post', 'posts')}</strong>, and its place in <strong>{n(impact.collections, 'collection', 'collections')}</strong> belonging to <strong>{n(impact.followers, 'person', 'people')}</strong>. {impact.bookmarks ? `${n(impact.bookmarks, 'bookmark keeps', 'bookmarks keep')} ${impact.bookmarks === 1 ? 'its' : 'their'} saved copy and any note, but ${impact.bookmarks === 1 ? 'loses' : 'lose'} the link to the post.` : ''} It cannot be undone; the feed can be added again later, but its older posts may not come back with it.</p>
+        <div class="said">
+          <p>This deletes “{feed ? feedName(feed) : 'this feed'}” for everyone. That includes:</p>
+          <ul>
+            <li><strong>{plural(impact.posts, 'post')}</strong></li>
+            <li><strong>{plural(impact.collections, 'collection')}</strong> belonging to <strong>{plural(impact.followers, 'person', 'people')}</strong></li>
+            {#if impact.bookmarks}<li>links from <strong>{plural(impact.bookmarks, 'bookmark')}</strong></li>{/if}
+          </ul>
+          {#if impact.bookmarks}<p>Bookmarks keep their saved copy and notes.</p>{/if}
+          <p>This action can’t be undone. Anyone can add the feed back later, but older posts may not come back with it.</p>
+        </div>
       {:else}
-        <p class="hint">Counting what this would take with it…</p>
+        <p class="said">Counting what this would take with it…</p>
       {/if}
-      <div class="actions">
-        <Button onclick={() => removeDialog?.close()}>Keep it</Button>
-        <Button variant="danger" solid onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</Button>
-      </div>
-    </dialog>
+      {#snippet footer()}
+        <Button variant="danger" solid size="lg" onclick={confirmRemove} disabled={!impact || removing}>{removing ? 'Removing…' : 'Remove for everyone'}</Button>
+      {/snippet}
+    </Sheet>
   {/if}
 {:else}
   <p class="status">Loading…</p>
@@ -345,6 +353,10 @@
   .hint { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
   .hint.inline { margin: 0; }
   /* The line under a section heading: tucked up against it, then the usual gap before what it describes. */
+  /* The remove warning: what goes, as a list, then that it's for good. */
+  .said { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; color: var(--text); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
+  .said p, .said ul { margin: 0; }
+  .said ul { padding-left: var(--space-5); }
   .hint.lede { margin: calc(var(--space-2) * -1) 0 var(--space-3); }
   .radios { display: flex; flex-direction: column; gap: var(--space-2); }
   .radios label { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
@@ -356,11 +368,6 @@
   .admin { align-items: flex-start; }
   .admin .hint { margin: 0; }
   .admin .radios { align-self: stretch; }
-  dialog.remove { max-width: 440px; padding: var(--space-5) var(--space-5) var(--space-4); border: 0; border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: var(--shadow-dialog); }
-  dialog.remove::backdrop { background: var(--scrim); }
-  dialog.remove h2 { margin: 0 0 var(--space-3); font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); }
-  dialog.remove p { margin: 0 0 var(--space-4); line-height: 1.5; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  dialog.remove .actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
   .fold summary { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; list-style: none; color: var(--text-2); }
   .fold summary::-webkit-details-marker { display: none; }
   .fold summary h2 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Card from '$lib/components/Card.svelte';
   import Dot from '$lib/components/Dot.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { onMount } from 'svelte';
@@ -20,6 +21,7 @@
   import Badge from '$lib/components/Badge.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import River from '$lib/components/River.svelte';
+  import Sheet from '$lib/components/Sheet.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { COPY_PARAM, copyNext, welcome } from '$lib/copyintent.svelte';
 
@@ -156,24 +158,21 @@
 
   <!-- You already have a copy: making another is fine (you might prune each
        differently), but say so first so it isn't an accident. -->
-  <dialog bind:this={confirmAgain} onclick={(e) => { if (e.target === confirmAgain) confirmAgain?.close(); }} aria-labelledby="copy-again-title">
-    <div class="sheet confirm">
-      <h2 id="copy-again-title">Make another copy?</h2>
-      {#if partialCopy}
-        <p>You made {partialCopy.name} from this collection. It has {partialCopy.sharedFeeds} of these {col.feeds.length} feeds. Copying again makes a new, separate collection with all {col.feeds.length}.</p>
-      {:else}
-        <p>You already have a copy of this collection. Copying again makes a second, separate one — handy if you want to prune each down to different feeds.</p>
-      {/if}
-      <div class="confirmbtns">
-        <Button onclick={() => confirmAgain?.close()}>Cancel</Button>
-        <Button variant="primary" disabled={copying} onclick={() => { confirmAgain?.close(); void copy(); }}><Icon name="copy" size={16} />Copy again</Button>
-      </div>
-    </div>
-  </dialog>
+  <Sheet
+    title="Make another copy?"
+    lede={partialCopy
+      ? `You made ${partialCopy.name} from this collection. It has ${partialCopy.sharedFeeds} of these ${col.feeds.length} feeds. Copying again makes a new, separate collection with all ${col.feeds.length}.`
+      : 'You already have a copy of this collection. Copying again makes a second, separate one — handy if you want to prune each down to different feeds.'}
+    bind:dialog={confirmAgain}
+  >
+    {#snippet footer()}
+      <Button variant="primary" size="lg" disabled={copying} onclick={() => { confirmAgain?.close(); void copy(); }}><Icon name="copy" size={16} />Copy again</Button>
+    {/snippet}
+  </Sheet>
 
   <!-- The collection's feeds, in one card: a row that opens it (like the Filters row on Explore), then the list inside. On my own collection, the open card also offers the list as a file. -->
   {#if col.feeds.length > 0 || col.children.length > 0}
-  <section class="feedscard">
+  <Card kind="list" as="section" class="feedscard">
     <div class="fc-head">
       <button class="reveal tap" onclick={() => (showFeeds = !showFeeds)} aria-expanded={showFeeds} aria-controls="collection-feeds">{showFeeds ? (col.feeds.length === 1 ? 'Hide feed' : 'Hide feeds') : col.feeds.length === 1 ? 'See the 1 feed in this collection' : `See all ${col.feeds.length} feeds in this collection`}<Icon name="caret" size={14} stroke={2.4} dir={showFeeds ? 'down' : 'right'} /></button>
       {#if col.isMe && showFeeds && col.feeds.length > 0}
@@ -206,7 +205,7 @@
       {/if}
     </div>
     {/if}
-  </section>
+  </Card>
   {/if}
 
   {#if col.isMe && col.feeds.length === 0}
@@ -221,26 +220,17 @@
   .sub a { color: var(--accent); font-weight: 600; }
   .mycopy { margin-top: var(--space-4); }
   /* The pill sits in a line of text, so it carries its own gap to the separator after it. */
-  .feedscard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: var(--space-4); }
+  :global(.feedscard) { margin-bottom: var(--space-4); }
   /* The row that opens the card. As tall open as closed, so the Export button arriving doesn't move anything. */
   .fc-head { display: flex; align-items: center; gap: var(--space-3); min-height: 52px; padding: var(--space-2) var(--space-4); }
   /* The whole strip to the left of Export opens and closes the list, not just the words. */
   .reveal { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-1); text-align: left; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
-  /* Inside the card the lists are part of it, not cards of their own. */
-  .feedscard .list { background: none; box-shadow: none; border-radius: 0; border-top: 1px solid var(--line); }
   /* 2px of top padding is an optical nudge: the buttons sit on the title's line. */
   /* The link keeps its own padding; pull it back so its words start at the title's left edge. */
   .visitoraction { margin: var(--space-2) 0 0 calc(-1 * var(--space-2)); }
-  dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
-  dialog::backdrop { background: var(--scrim); }
-  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-5) var(--space-4) calc(var(--space-4) + var(--safe-b)); box-shadow: var(--shadow-sheet); }
-  @media (min-width: 700px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 560px; border-radius: var(--radius-lg); } }
-  .sheet h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-4); }
-  @media (min-width: 700px) { .sheet.confirm { width: 460px; } }
-  .confirm p { margin: 0 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .confirmbtns { display: flex; gap: var(--space-2); justify-content: flex-end; }
   .bad { color: var(--danger); }
-  .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  /* Inside the card the lists are part of it, not cards of their own: each starts under a hairline. */
+  .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
   .list li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
   .list li:first-child { border-top: 0; }
   .children li { padding: 0; }

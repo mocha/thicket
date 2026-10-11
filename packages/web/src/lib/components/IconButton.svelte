@@ -21,9 +21,9 @@
    * area grows to fill its nearest positioned container while the circle stays
    * the same size, so there is still one real button to focus and announce.
    *
-   * The focus ring shows only when focus arrived by keyboard. A Sheet or
-   * dialog hands focus to its first control as it opens, often its close
-   * button, and some browsers (Safari on iPad) would ring it even though the
+   * The focus ring shows only when focus arrived by keyboard. A dialog hands
+   * focus to its first control as it opens, often its close button (the
+   * Reader's), and some browsers (Safari on iPad) would ring it even though the
    * reader tapped to open it.
    */
   interface Props {
