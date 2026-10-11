@@ -540,7 +540,7 @@
       <p class="section-lede">One post, bookmark, or starter pack. The whole card is something to tap, so it gives a little when pressed. The article card, the Bookmark card, and the starter pack card are laid out the same way, top to bottom:</p>
       <ul class="section-lede demo-list">
         <li><strong>Source line.</strong> The site’s icon, its name, and when the post went up: the shared source line, the same on every card. A starter pack shows a row of its sites’ icons in place of one, then whose it is and how many sites.</li>
-        <li><strong>Picture.</strong> Wide, across the top of the card from edge to edge, on the article card and the Bookmark card alike. On the Pages layout, where every card is one height, it’s an 88px square at the right of the title instead.</li>
+        <li><strong>Picture.</strong> Wide, across the top of the card from edge to edge, on the article card and the Bookmark card alike. On the Pages layout, where every card is one height, it’s a small picture at the right of the title instead.</li>
         <li><strong>Title, then summary.</strong> The title in the headings face; the summary in the reading face, stopping after a few lines. The words sit 16px in.</li>
         <li><strong>Bottom row.</strong> Who wrote it, or when you bookmarked it, on the left; what you can do on the right, as icon buttons (Add a note, Bookmark, or Remove): the shared card footer. A starter pack’s Copy button sits here too. Nothing floats in a corner or sits in the top line.</li>
         <li><strong>Searched words.</strong> On a search’s results, the words that matched are tinted in the title and the summary, the same way on every card.</li>

@@ -480,16 +480,17 @@ const shapePost = (r: any) => ({ ...r, id: Number(r.id), feedId: Number(r.feedId
  * How many people saved each post, keyed by the address a bookmark is saved
  * under (lib/notes.ts), for the "bookmarked" and "noted" orders. Every bookmark
  * counts, whoever made it and whoever may see it: only the order is used, and
- * no count or name ever reaches the page. `item_id` is one post saved at that
- * address, so a post can be found by its id rather than by its url, which
- * items has no index on.
+ * no count or name ever reaches the page. `item_ids` are the posts saved at
+ * that address (one story can be saved from two feeds' copies of it), so a
+ * post can be found by its id rather than by its url, which items has no
+ * index on.
  *
  * Grouping by address is also what keeps one story carried by two feeds to one
  * row: it is one address, so it is one group.
  */
 const saves = (sort: "bookmarked" | "noted") => sql`
   saves as (
-    select b.url, count(*)::int as n, max(b.item_id) as item_id from bookmarks b
+    select b.url, count(*)::int as n, array_agg(distinct b.item_id) filter (where b.item_id is not null) as item_ids from bookmarks b
     ${sort === "noted" ? sql`where b.note is not null` : sql``}
     group by b.url
   )`;
@@ -497,9 +498,10 @@ const saves = (sort: "bookmarked" | "noted") => sql`
 /**
  * Posts that mention the words. Every order reads the same bounded sample (the
  * newest HIT_CAP matches), so the total is "4,000" at most for a common word:
- * the same honest cap the feed ranking has always used, and `capped` says the
- * total reached it, so the page can say "4,000+". The saved orders keep the
- * matches someone saved, looked up by address against the sample alone.
+ * the same honest cap the feed ranking has always used. `capped` says the
+ * sample filled up, so the page can say "4,000+". The saved orders keep the
+ * matches someone saved, looked up by address against the sample alone, so
+ * their total can be capped too: older saved posts past the sample are missed.
  */
 async function searchPosts(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null, sort: PostSort, since: string | null = null) {
   const me = viewerId ?? -1;
@@ -537,12 +539,13 @@ async function searchPosts(x: Exec, q: string, viewerId: number | null, limit: n
           order by score desc, m.published_at desc, m.id desc limit ${limit + 1} offset ${offset}`;
   const rows = await x(sql`
     with ${ctes}, pg as (${pageOf})
-    select (select count(*)::int from listed) as __total, ${postColumns(me, q)}
+    select (select count(*)::int from listed) as __total, (select count(*)::int from matched) as __sample, ${postColumns(me, q)}
     from pg join items i on i.id = pg.id join feeds f on f.id = i.feed_id
     order by pg.score desc, pg.published_at desc, pg.id desc
   `);
+  const sample = Number((rows.rows[0] as { __sample?: number } | undefined)?.__sample ?? 0);
   const { page, total, nextOffset } = paged(rows.rows, limit, offset);
-  return { rows: page.map(shapePost), total, nextOffset, capped: total >= HIT_CAP };
+  return { rows: page.map(({ __sample, ...r }: any) => shapePost(r)), total, nextOffset, capped: sample >= HIT_CAP };
 }
 
 /**
@@ -596,9 +599,13 @@ async function savedPosts(x: Exec, viewerId: number | null, limit: number, offse
   const rows = await x(sql`
     with ${saves(sort)}
     , listed as materialized (
-      select i.id, i.published_at, p.n from saves p join items i on i.id = p.item_id
+      -- The filters choose among a story's saved copies first, then the newest
+      -- copy left stands for it: picking one before filtering would drop the
+      -- story whenever that copy was the one outside the network or window.
+      select distinct on (p.url) i.id, i.published_at, p.n from saves p join items i on i.id = any(p.item_ids)
       where i.published_at <= now() and ${notBlocked(me)} and ${sinceSql("i.published_at", since)}
         ${net ? sql`and ${feedInNetwork("i.feed_id", net)}` : sql``}
+      order by p.url, i.published_at desc, i.id desc
     )
     , pg as (select l.* from listed l order by l.n desc, l.published_at desc, l.id desc limit ${limit + 1} offset ${offset})
     select (select count(*)::int from listed) as __total, ${postColumns(me, null)}
