@@ -65,7 +65,7 @@
       {#if facts.length || network || children}
         <span class="facts">
           {#if facts.length || network}
-            <span class="row-details">{#each facts as fact, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{i === 0 ? fact[0].toUpperCase() + fact.slice(1) : fact}{/each}{#if network}{#if facts.length}{' '}<Dot />{' '}{/if}<span class="net">{plural(network, 'person', 'people')} you follow</span>{/if}</span>
+            <span class="row-details">{#each facts as fact, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}<span class="fact">{i === 0 ? fact[0].toUpperCase() + fact.slice(1) : fact}</span>{/each}{#if network}{#if facts.length}{' '}<Dot />{' '}{/if}<span class="net">{plural(network, 'person', 'people')} you follow</span>{/if}</span>
           {/if}
           {#if children}<span class="row-details">{@render children()}</span>{/if}
         </span>
@@ -90,6 +90,8 @@
   .desc { margin-top: var(--space-1); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
   /* A step more room above the facts than between the other lines, so the description and the numbers read as two groups. */
   .facts { margin-top: var(--space-2); display: flex; flex-direction: column; }
+  /* A long line breaks at a dot, never inside a fact ("latest 5 / hours ago"). */
+  .fact { white-space: nowrap; }
   .net { color: var(--accent); font-weight: 600; }
   /* Last, so it wins over the row's own sizing above. On a phone the button would squeeze the description into a column four
      words wide, so it drops to its own line, at the right, and the text gets

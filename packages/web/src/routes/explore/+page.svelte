@@ -548,11 +548,12 @@
       Name matches, but no posts mention {@render searched()}
     {/if}
   {/snippet}
-  <!-- Sorted by newest post, a search row shows the date it is sorted by. -->
+  <!-- A search row shows what the search found, and the fact its order is
+       sorted by when that's something else: how much it posts, or its newest post. -->
   <FeedRow
     feed={f}
     failing={f.consecutiveFailures >= 3}
-    postsLast30d={f.postsLast30d}
+    postsLast30d={!ev || sortId === 'active' ? f.postsLast30d : undefined}
     network={!ev && feedsNetwork ? ((f as Feed).networkFollowers ?? 0) : 0}
     latest={!ev || sortsFeedsByPost}
     onopen={() => (opened = { feed: f.id })}
