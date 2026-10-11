@@ -12,7 +12,8 @@
    * last did (`latest` off where a list is sorted by something else and the
    * date would mislead), its followers, how many people you follow follow it.
    * Anything more a screen wants to say (why a search found it) goes in
-   * `children`, as one more fact at the end of the facts line.
+   * `children`, on a line of its own under the facts, so neither line runs
+   * long.
    */
   import type { Snippet } from 'svelte';
   import { feedHref } from '$lib/api';
@@ -62,8 +63,11 @@
       <span class="row-details origin">{feedOrigin(f)}</span>
       {#if f.description}<span class="row-details desc">{f.description}</span>{/if}
       {#if facts.length || network || children}
-        <span class="row-details facts">
-          {#each facts as fact, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{i === 0 ? fact[0].toUpperCase() + fact.slice(1) : fact}{/each}{#if network}{#if facts.length}{' '}<Dot />{' '}{/if}<span class="net">{plural(network, 'person', 'people')} you follow</span>{/if}{#if children}{#if facts.length || network}{'\u00a0'}<Dot />{' '}{/if}{@render children()}{/if}
+        <span class="facts">
+          {#if facts.length || network}
+            <span class="row-details">{#each facts as fact, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{i === 0 ? fact[0].toUpperCase() + fact.slice(1) : fact}{/each}{#if network}{#if facts.length}{' '}<Dot />{' '}{/if}<span class="net">{plural(network, 'person', 'people')} you follow</span>{/if}</span>
+          {/if}
+          {#if children}<span class="row-details">{@render children()}</span>{/if}
         </span>
       {/if}
     </div>
@@ -84,7 +88,8 @@
      empty space above and below each line of text, so the two read as a pair. */
   .origin { margin-top: -2px; color: var(--text); overflow-wrap: anywhere; }
   .desc { margin-top: var(--space-1); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-  .facts { margin-top: var(--space-1); }
+  /* A step more room above the facts than between the other lines, so the description and the numbers read as two groups. */
+  .facts { margin-top: var(--space-2); display: flex; flex-direction: column; }
   .net { color: var(--accent); font-weight: 600; }
   /* Last, so it wins over the row's own sizing above. On a phone the button would squeeze the description into a column four
      words wide, so it drops to its own line, at the right, and the text gets

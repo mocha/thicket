@@ -8,8 +8,8 @@
    * and drops under the text on a phone.
    *
    * Each fact shows only when the screen has it. Anything more a screen wants
-   * to say (why a search found them) goes in `children`, as one more fact at
-   * the end of the facts line.
+   * to say (why a search found them) goes in `children`, on a line of its own
+   * under the facts, so neither line runs long.
    */
   import type { Snippet } from 'svelte';
   import { profileHref } from '$lib/api';
@@ -48,7 +48,10 @@
       <span class="title row-name">{#if u.displayName}{u.displayName} <span class="handle">(@{u.handle})</span>{:else}@{u.handle}{/if}</span>
       {#if u.bio}<span class="row-details bio">{u.bio}</span>{/if}
       {#if facts.length || children}
-        <span class="row-details facts">{#each facts as fact, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{fact}{/each}{#if children}{#if facts.length}{'\u00a0'}<Dot />{' '}{/if}{@render children()}{/if}</span>
+        <span class="facts">
+          {#if facts.length}<span class="row-details">{#each facts as fact, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{fact}{/each}</span>{/if}
+          {#if children}<span class="row-details">{@render children()}</span>{/if}
+        </span>
       {/if}
     </div>
   </a>
@@ -64,7 +67,8 @@
   .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .handle { font-weight: 400; color: var(--text-2); }
   .bio { margin-top: var(--space-1); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-  .facts { margin-top: var(--space-1); }
+  /* A step more room above the facts than between the other lines, so the description and the numbers read as two groups. */
+  .facts { margin-top: var(--space-2); display: flex; flex-direction: column; }
   /* Last, so it wins over the row's own sizing above. On a phone the button
      would squeeze the bio into a column four words wide, so it drops to its
      own line, at the right, and the text gets the row. */
