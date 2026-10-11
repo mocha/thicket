@@ -3,7 +3,8 @@
  * scheduler hands out. Safe to call directly (manual refresh, seeding).
  */
 import { eq, sql } from "drizzle-orm";
-import { db, schema } from "../db/client.js";
+// Background work: the worker pool, so fetching never takes a request's connection (db/client.ts).
+import { workerDb as db, schema } from "../db/client.js";
 import { httpGet } from "./http.js";
 import { parseFeedDocument, type ParsedFeed } from "./parse.js";
 import { ICON_RECHECK_MS, refreshIcon } from "./icons.js";

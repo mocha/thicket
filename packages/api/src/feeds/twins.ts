@@ -16,7 +16,8 @@
  * is full of posts from other sections over the same days.
  */
 import { sql } from "drizzle-orm";
-import { db } from "../db/client.js";
+// Background work: the worker pool, so fetching never takes a request's connection (db/client.ts).
+import { workerDb as db } from "../db/client.js";
 
 /** Recent posts compared per feed, and the share that must match both ways. */
 const WINDOW = 30;

@@ -57,7 +57,7 @@
       removeDialog?.close();
       showToast(`Removed ${feedName(feed)} from thicket`);
       await loadCollections(true);
-      await goto('/explore', { replaceState: true });
+      await goto('/explore?scope=feeds', { replaceState: true });
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e));
     } finally {
@@ -95,7 +95,7 @@
     try {
       feed = await api.feed(id);
     } catch {
-      return void goto('/explore', { replaceState: true });
+      return void goto('/explore?scope=feeds', { replaceState: true });
     }
     ids = feed.myCollectionIds;
     diagOpen = feed.consecutiveFailures > 0;

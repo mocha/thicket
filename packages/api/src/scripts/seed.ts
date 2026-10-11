@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { rootCollectionOf } from "../lib/auth.js";
 import { addFeedToCollection, ensureFeedLazy, subscribe } from "../lib/subscribe.js";
-import { db, pool, schema } from "../db/client.js";
+import { db, schema, endPools } from "../db/client.js";
 import { and, eq } from "drizzle-orm";
 
 // Resolve relative to this script, not the shell's working directory, so
@@ -97,7 +97,7 @@ async function main() {
     }
     console.log(`small web: ${added} feeds registered in collection #${col.id}; the scheduler will fetch them`);
   }
-  await pool.end();
+  await endPools();
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

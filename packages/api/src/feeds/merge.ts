@@ -15,7 +15,8 @@
  * (drizzle/0008_feed_settings.sql); this is the general form.
  */
 import { sql } from "drizzle-orm";
-import { db } from "../db/client.js";
+// Background work: the worker pool, so fetching never takes a request's connection (db/client.ts).
+import { workerDb as db } from "../db/client.js";
 
 export async function mergeFeeds(fromId: number, intoId: number, why = "both fetch the same address"): Promise<void> {
   if (fromId === intoId) return;

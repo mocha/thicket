@@ -11,7 +11,7 @@
  * blocks, bookmarks and notes all move to the one that stays (feeds/merge.ts).
  */
 import { sql } from "drizzle-orm";
-import { db, pool } from "../db/client.js";
+import { db, endPools } from "../db/client.js";
 import { findTwin } from "../feeds/twins.js";
 import { mergeFeeds } from "../feeds/merge.js";
 
@@ -43,4 +43,4 @@ for (const id of ids) {
 }
 
 console.log(`\n${pairs} ${pairs === 1 ? "pair" : "pairs"} ${apply ? "folded" : "found; run with --apply to fold them"}`);
-await pool.end();
+await endPools();

@@ -49,7 +49,8 @@
  */
 import { setTimeout as sleep } from "node:timers/promises";
 import { sql } from "drizzle-orm";
-import { db } from "../db/client.js";
+// Background work: the worker pool, so fetching never takes a request's connection (db/client.ts).
+import { workerDb as db } from "../db/client.js";
 import { NetworkMap, SHARED_HOSTS, isNetworkKey, networkShouldPause, realDeps, type NetworkDeps } from "./networks.js";
 
 const DEFAULT_GAP_MS = 750;

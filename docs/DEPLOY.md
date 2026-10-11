@@ -77,6 +77,12 @@ deprecated, override the dashboard while they last, and stop being read on
 string from the dashboard, not the transaction-mode pooler; the transaction
 pooler doesn't support the prepared statements the driver uses.
 
+**Connections.** thicket opens up to `DB_POOL_MAX + DB_WORKER_POOL_MAX + 1`
+connections (31 by default): requests, background work, and one kept free for
+cancelling a search whose browser moved on. Postgres allows 100 out of the box,
+so this only matters on a plan with a small connection limit; lower the two
+pool sizes to fit, keeping the worker pool above `FETCH_CONCURRENCY`.
+
 **fly.io.** `fly launch` reads the Dockerfile. Attach a Postgres, set
 `PUBLIC_URL` to the Fly hostname, keep at least one machine running.
 
@@ -94,8 +100,12 @@ with comments. Only `DATABASE_URL` and `PUBLIC_URL` are required.
 | `TRACK_ACTIVITY` | `true` | Product analytics on/off for the whole instance |
 | `SCHEDULER` | `on` | `off` disables the in-process fetcher |
 | `FETCH_CONCURRENCY` | `8` | Parallel feed fetches |
+| `DB_POOL_MAX` | `20` | Database connections for requests people are waiting on |
+| `DB_WORKER_POOL_MAX` | `10` | Database connections for background work: fetching, retention, recounts. Keep it above `FETCH_CONCURRENCY` |
+| `DB_STATEMENT_TIMEOUT_MS` | `15000` | A request's query is stopped after this long and the request answers 503 |
+| `DB_CONNECT_TIMEOUT_MS` | `5000` | A request that can't get a database connection within this long answers 503 instead of waiting |
 | `RETAIN_ITEMS_DAYS` | `0` (off) | Delete posts older than this. Off by default on purpose: feeds serve a window, not an archive, so a deleted post is usually gone for good. Posts with notes on them are always kept |
-| `RETAIN_FETCH_LOG_DAYS` | `90` | Delete fetch-log rows older than this |
+| `RETAIN_FETCH_LOG_DAYS` | `14` | Keep all fetch outcomes for recent incident investigations and rolling week-over-week comparisons; delete older rows. `0` disables pruning |
 | `RETAIN_EVENTS_DAYS` | `90` | Delete analytics events older than this |
 | `PORT` | `3000` | Listen port |
 | `HOSTED` | unset | readthicket.com only; leave unset on your own copy. Turns on what belongs to thicket's hosted service: public sign up, account email, and password reset |

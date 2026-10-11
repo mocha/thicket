@@ -22,7 +22,8 @@
  * paths, Tumblr reblogs.
  */
 import { sql } from "drizzle-orm";
-import { db } from "../db/client.js";
+// Background work: the worker pool, so fetching never takes a request's connection (db/client.ts).
+import { workerDb as db } from "../db/client.js";
 
 /** Must stay byte-identical to the expression in items_feed_titlekey_idx (drizzle/0011_item_repeats.sql), or the index goes unused. */
 const titleKey = (alias: "o" | "n") => sql.raw(`lower(regexp_replace(${alias}.title, '[^[:alnum:]]+', '', 'g'))`);

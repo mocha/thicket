@@ -10,7 +10,7 @@
  * migration as applied without running it.
  */
 import { fileURLToPath } from "node:url";
-import { pool } from "./client.js";
+import { pool, endPools } from "./client.js";
 import { applyMigrations, readMigrations } from "./migrations.js";
 
 export { MIGRATIONS_DIR } from "./migrations.js";
@@ -29,6 +29,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
   } finally {
-    await pool.end();
+    await endPools();
   }
 }

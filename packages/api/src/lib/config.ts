@@ -74,10 +74,10 @@ export const FEEDBACK_AI = !!env("ANTHROPIC_API_KEY");
  * Posts default to OFF: a feed serves a window, not an archive, so a post we
  * delete is usually unrecoverable — thicket routinely holds more history than
  * the feed it came from. Turn it on only if the storage is worth more than the
- * archive. The logs default to 90 days because nothing is lost by forgetting
- * them, and the fetch log otherwise outgrows the posts it is logging.
+ * archive. Fetch logs default to 14 days for recent incident investigation
+ * and rolling week-over-week comparisons. Analytics events default to 90 days.
  * See lib/retention.ts.
  */
 export const RETAIN_ITEMS_DAYS = Number(env("RETAIN_ITEMS_DAYS") ?? 0);
-export const RETAIN_FETCH_LOG_DAYS = Number(env("RETAIN_FETCH_LOG_DAYS") ?? 90);
+export const RETAIN_FETCH_LOG_DAYS = Number(env("RETAIN_FETCH_LOG_DAYS") ?? 14);
 export const RETAIN_EVENTS_DAYS = Number(env("RETAIN_EVENTS_DAYS") ?? 90);

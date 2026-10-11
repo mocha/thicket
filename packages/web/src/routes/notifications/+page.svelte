@@ -84,7 +84,7 @@
   <div class="empty">
     <h2>Nothing yet</h2>
     <p>When someone follows you, it shows up here. So does every post the people you follow bookmark or write a note on, and any note that mentions you as @{session.user?.handle ?? 'yourhandle'}.</p>
-    <div class="ctas"><Button href="/explore">Find people to follow</Button></div>
+    <div class="ctas"><Button href="/explore?scope=people">Find people to follow</Button></div>
   </div>
 {:else}
   <!-- Grouped by day, under the same headings as New posts; today's needs none to look at, but keeps one to be read out. -->

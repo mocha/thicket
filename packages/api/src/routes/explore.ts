@@ -51,7 +51,7 @@ explore.get("/collections", async (c) => {
   const rows = await db.execute(sql`
     ${shown(filters)}
     select col.id, col.name, col.slug, col.description, u.handle, u.display_name as "displayName",
-           (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount",
+           col.feed_count as "feedCount",
            ${collectionSample(sql`col.id`, 4)} as sample
     from collections col join users u on u.id = col.user_id
     where col.id in (select id from shown)
@@ -100,7 +100,7 @@ explore.get("/featured", async (c) => {
   const rows = await db.execute(sql`
     select col.id, col.name, col.slug, col.description, u.handle, u.display_name as "displayName",
            col.user_id = ${viewerId} as "isMine",
-           (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount",
+           col.feed_count as "feedCount",
            ${collectionSample(sql`col.id`, 5)} as sample
     from collections col join users u on u.id = col.user_id
     where ${where}

@@ -11,17 +11,20 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { proxy } from "hono/proxy";
+import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 import { ROUTERS } from "./routes/index.js";
 import { startScheduler } from "./feeds/scheduler.js";
 import { attachUser, pruneSessions } from "./lib/auth.js";
 import { pruneEmailTokens } from "./lib/email-tokens.js";
 import { startRetention } from "./lib/retention.js";
+import { startCounts } from "./lib/counts.js";
 import { startFeedbackRetry } from "./lib/feedback.js";
 import { ensureAdmin, publicStatus } from "./lib/instance.js";
 import { runMigrations } from "./db/migrate.js";
-import { pool } from "./db/client.js";
+import { endPools, isDbBusy } from "./db/client.js";
 import { headForPath } from "./lib/meta.js";
+import { alternateLinks, llmsTxt, noscriptNote } from "./lib/agents.js";
 import { openApiDocument } from "./lib/openapi.js";
 import { EMAIL_REQUIRED, FETCH_CONCURRENCY, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, SITE_URL, SMTP_URL, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
 
@@ -35,7 +38,7 @@ try {
   await runMigrations();
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
-  await pool.end();
+  await endPools();
   process.exit(1);
 }
 await ensureAdmin();
@@ -49,12 +52,34 @@ app.use("/api/*", attachUser);
 
 for (const [base, router] of ROUTERS) app.route(base, router);
 
+/**
+ * The database said no in time: a query ran past its statement timeout, or no
+ * connection came free (db/client.ts). Both mean "busy, try again", which is a
+ * 503, not a crash. A query cancelled because its browser left lands here too;
+ * nobody reads that answer.
+ */
+app.onError((err, c) => {
+  if (err instanceof HTTPException) return err.getResponse();
+  // A browser that moved on (a new search, another tab): whatever stopped the
+  // request, nobody is there to read the answer, and it is not worth a line.
+  if (c.req.raw.signal.aborted) return c.json({ error: "cancelled" }, 503);
+  if (isDbBusy(err)) {
+    // One short line, never the message: drizzle's carries the SQL and its parameters,
+    // which here are what someone searched for, and that is not the log's business.
+    console.warn(`[db] ${c.req.method} ${c.req.path}: timed out or no connection free`);
+    return c.json({ error: "That took too long. Please try again in a moment." }, 503);
+  }
+  console.error(err);
+  return c.json({ error: "Internal Server Error" }, 500);
+});
+
 const scheduler = SCHEDULER
   ? startScheduler({ tickMs: SCHEDULER_TICK_MS, concurrency: FETCH_CONCURRENCY, log: (m) => console.log(`[fetch] ${m}`) })
   : null;
 setInterval(() => void pruneSessions().catch(() => {}), 3600_000).unref();
 setInterval(() => void pruneEmailTokens().catch(() => {}), 3600_000).unref();
 startRetention();
+startCounts();
 startFeedbackRetry();
 
 app.get("/api/health", async (c) => c.json({
@@ -64,6 +89,8 @@ app.get("/api/health", async (c) => c.json({
 }));
 // What an API token can do, described for applications and assistants (lib/openapi.ts). Readable by anyone.
 app.get("/api/openapi.json", (c) => c.json(openApiDocument(PUBLIC_URL), 200, { "cache-control": "public, max-age=300" }));
+// Wayfinding for AI agents (lib/agents.ts): what pages are made of, and how a token reads the rest.
+app.get("/llms.txt", async (c) => c.text(llmsTxt((await publicStatus()).name, PUBLIC_URL), 200, { "content-type": "text/markdown; charset=utf-8", "cache-control": "public, max-age=300" }));
 // Where the landing page was reviewed before it went live. Links to it were shared.
 app.get("/preview/landing", (c) => c.redirect("/", 301));
 app.notFound((c) => (c.req.path.startsWith("/api/") ? c.json({ error: "not found" }, 404) : c.text("not found", 404)));
@@ -110,11 +137,14 @@ if (WEB_DIR) {
   // SPA fallback: any other path is a client route. Public pages get a
   // server-rendered <head> (title, Open Graph, OPML link) so shared links unfurl.
   const index = readFileSync(join(WEB_DIR, "index.html"), "utf8");
+  // Programs that don't run JavaScript are pointed at the page's JSON and /llms.txt (lib/agents.ts).
   const HEAD_OPEN = /<head>\s*/;
+  const BODY_OPEN = /<body[^>]*>\s*/;
   app.get("*", async (c) => {
     if (c.req.path.startsWith("/api/")) return c.notFound();
-    const head = await headForPath(c.req.path);
-    return c.html(index.replace(HEAD_OPEN, (m) => `${m}${head}\n\t\t`), 200, { "cache-control": "no-cache" });
+    const head = [await headForPath(c.req.path), ...alternateLinks(c.req.path, PUBLIC_URL)].join("\n\t\t");
+    const html = index.replace(HEAD_OPEN, (m) => `${m}${head}\n\t\t`).replace(BODY_OPEN, (m) => `${m}${noscriptNote(c.req.path, PUBLIC_URL)}\n\t\t`);
+    return c.html(html, 200, { "cache-control": "no-cache" });
   });
 }
 

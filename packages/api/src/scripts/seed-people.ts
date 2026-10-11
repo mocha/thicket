@@ -10,7 +10,7 @@
  */
 import { createUser, findUserByHandle, rootCollectionOf } from "../lib/auth.js";
 import { addFeedToCollection } from "../lib/subscribe.js";
-import { db, pool, schema } from "../db/client.js";
+import { db, schema, endPools } from "../db/client.js";
 import { eq } from "drizzle-orm";
 
 const PASSWORD = "thicketdev123";
@@ -88,7 +88,7 @@ async function main() {
       console.log(`@${p.handle}: "${c.name}" (${c.feeds.length} feeds)`);
     }
   }
-  await pool.end();
+  await endPools();
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
