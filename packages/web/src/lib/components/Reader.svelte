@@ -84,6 +84,9 @@
   const others = $derived(item?.notes ?? []);
   /** A video post is watched, not read. */
   const isVideo = $derived(/(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/.test(hostOf(href)));
+  const outLabel = $derived(isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : undefined);
+  /** Height of the bar pinned under a preview, so the page turns and page number sit above it. */
+  let leaveH = $state(0);
   /** The card's picture leads the article unless the body brings its own. */
   const showHero = $derived(!!item?.imageUrl && content !== null && !content.hasImages);
 
@@ -92,7 +95,12 @@
   $effect(() => {
     if (item && openFor === item.id) {
       // Paged: not modal, so the bottom bar stays live while reading and the reader sits above it.
-      if (!dialog?.open) { if (paged) dialog?.show(); else dialog?.showModal(); }
+      if (!dialog?.open) {
+        if (paged) dialog?.show(); else dialog?.showModal();
+        // Start in the post itself, not on the first button in the header: opening
+        // with a tap shouldn't ring the feed name. Tab still walks from the top.
+        scroller?.focus({ preventScroll: true });
+      }
     } else if (item) {
       popover = false;
       dialog?.close();
@@ -167,7 +175,7 @@
         <IconButton icon="close" label="Close" iconSize={20} onclick={close} />
       </header>
 
-      <div class="scroll" class:paged bind:this={scroller}>
+      <div class="scroll" class:paged bind:this={scroller} tabindex="-1">
         <div class="page" bind:this={sheet} onfocusin={follow} style:column-count={paged && pageW ? cols : undefined} style:height={paged && pageH ? `${pageH}px` : undefined} style:transform={paged ? `translateX(${-pageIndex * pageW}px)` : undefined}>
           {#if editing}
             <NoteEditor itemId={item.id} note={item.myNote} onsaved={noteSaved} ondeleted={() => { if (item) item.myNote = null; editing = false; }} oncancel={() => (editing = false)} />
@@ -194,23 +202,28 @@
             <p class="loading" aria-live="polite">Loading…</p>
           {/if}
 
-          <footer>
-            {#if content?.partial}
-              <p class="partial">
-                {#if content.typicalLength !== null && content.typicalLength < 1000}This site only sends a preview of its posts.{:else}This looks like a preview, not the whole post.{/if}
-              </p>
-            {/if}
-            <ReadOnSiteLink {href} label={isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : undefined} onclick={outbound} />
-          </footer>
+          {#if !content?.partial}
+            <footer><ReadOnSiteLink {href} label={outLabel} onclick={outbound} /></footer>
+          {/if}
 
           {#if item.myNote && !editing}<NoteBlock note={item.myNote} mine onedit={() => (editing = true)} />{/if}
           {#each others as n (n.id)}<NoteBlock note={n} />{/each}
         </div>
       </div>
+
+      <!-- Only a preview: say so, and keep the way to the rest on screen the whole time, not at the end of a scroll. -->
+      {#if content?.partial}
+        <div class="leave" class:paged bind:offsetHeight={leaveH}>
+          <div class="leave-in">
+            <p class="partial">{content.typicalLength !== null && content.typicalLength < 1000 ? 'This site only sends a preview of its posts' : 'This looks like a preview, not the whole post'}</p>
+            <ReadOnSiteLink {href} label={outLabel} onclick={outbound} />
+          </div>
+        </div>
+      {/if}
     </article>
     {#if paged}
-      <div class="pagenum" aria-live="polite">{pageIndex + 1} / {pageCount}</div>
-      <Pager canPrev={pageIndex > 0} canNext={pageIndex < pageCount - 1} onprev={prevPage} onnext={nextPage} label="page" top="{headH}px" bottom="calc(var(--nav-h) + var(--safe-b))" inDialog />
+      <div class="pagenum" aria-live="polite" style:bottom={leaveH ? `calc(${leaveH}px + var(--space-1))` : undefined}>{pageIndex + 1} / {pageCount}</div>
+      <Pager canPrev={pageIndex > 0} canNext={pageIndex < pageCount - 1} onprev={prevPage} onnext={nextPage} label="page" top="{headH}px" bottom="calc(var(--nav-h) + var(--safe-b) + {content?.partial ? leaveH : 0}px)" inDialog />
     {/if}
   {/if}
 </dialog>
@@ -230,15 +243,17 @@
     .reader { inset: var(--space-5) auto var(--space-5) 50%; transform: translateX(-50%); width: min(760px, calc(100vw - 48px)); border-radius: var(--radius); box-shadow: var(--shadow); border: var(--card-border, 0); overflow: hidden; }
   }
   header {
-    display: flex; align-items: center; gap: var(--space-2); flex: none;
+    /* 12px between the 32px icons: each one's 44px touch area just meets the next, never overlaps it. */
+    display: flex; align-items: center; gap: var(--space-3); flex: none;
     padding: var(--space-3) var(--space-2) var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); min-width: 0;
   }
   .spacer { flex: 1; }
 
+  .scroll:focus { outline: none; }
   .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .page { max-width: 680px; margin: 0 auto; padding: var(--space-5) var(--space-4) calc(var(--space-5) + var(--safe-b)); }
   h1 { margin: 0; font-family: var(--font-headings); font-weight: 600; font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; letter-spacing: -0.012em; overflow-wrap: anywhere; text-wrap: balance; }
-  .byline { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .byline { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
   .hero { width: 100%; border-radius: var(--radius-sm); margin-top: var(--space-4); background: var(--surface-2); }
   .teaser { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: var(--space-4) 0 0; }
   .loading, .nobody { margin: var(--space-5) 0 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); }
@@ -266,11 +281,22 @@
   .body :global(a[data-embed]) { display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-5) var(--space-4); margin: 0 0 1em; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px dashed var(--line); font-weight: 600; text-decoration: none; }
   .body :global(a[data-embed])::before { content: '▶'; font-size: 0.85em; }
 
-  footer { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+  footer { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--line); }
+
+  /* The bar under a preview. On a phone the note sits over a full-width button; on a desk, side by side. */
+  .leave { flex: none; border-top: 1px solid var(--line); background: var(--surface); padding: var(--space-3) 0 calc(var(--space-3) + var(--safe-b)); }
+  .leave.paged { padding-bottom: var(--space-3); }
+  /* The same column as the post's words above it. */
+  .leave-in { max-width: 680px; margin: 0 auto; padding: 0 var(--space-4); box-sizing: border-box; display: flex; flex-direction: column; gap: var(--space-3); }
+  .leave-in :global(.btn) { width: 100%; }
   .partial { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  footer + :global(.note) { margin-top: var(--space-4); }
+  @media (min-width: 760px) {
+    .leave-in { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--space-4); }
+    .leave-in :global(.btn) { width: auto; }
+  }
   /* No card here, so the notes line up with the post's words, as on a post's own page. */
-  footer ~ :global(.note) { margin-left: 0; margin-right: 0; }
+  .page > :global(.note) { margin-left: 0; margin-right: 0; }
+  .page > :global(:not(.note) + .note) { margin-top: var(--space-4); }
 
   /* Paged: the sheet is as tall as the frame and flows into columns one frame wide; the transform picks the column. Nothing scrolls. */
   .scroll.paged { overflow: hidden; margin: 0 var(--pager-w); }
