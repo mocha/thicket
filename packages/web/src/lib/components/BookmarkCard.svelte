@@ -186,8 +186,10 @@
 <style>
   /* Flat: a row's room above is already there, so the source line sits close under the row's own line. */
   .flat header { padding-top: var(--space-2); }
+  /* Inside a row the picture can't run to the list card's edges, so it keeps to the text's edges, with rounded corners. */
+  .flat .thumb { width: 100%; margin: 0 0 var(--space-3); border-radius: var(--radius-sm); }
   header { padding: var(--card-pad) var(--card-pad) 0; }
-  .body { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-1) var(--card-pad) var(--space-2); }
+  .body { display: flex; flex-direction: column; padding: var(--space-2) var(--card-pad) var(--space-2); }
   .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
   @media (hover: hover) { .body:hover :global(.card-title) { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   p { --summary-lines: 2; }
@@ -205,7 +207,8 @@
   .actions { display: flex; flex: none; gap: var(--space-1); }
   .card-extralink { display: inline-block; margin: 0 var(--card-pad) var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
   @media (hover: hover) { .card-extralink:hover { text-decoration: underline; text-underline-offset: 3px; } }
-  .thumb { flex: none; width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--surface-2); }
+  /* The same picture as the article card: edge to edge across the top, wider than the text by the card's inset on each side. */
+  .thumb { order: -1; width: calc(100% + var(--card-pad) * 2); max-width: none; margin: 0 calc(var(--card-pad) * -1) var(--space-3); aspect-ratio: 16 / 9; object-fit: cover; background: var(--surface-2); }
   /* Taking a bookmark away is the one destructive thing here, so it hovers red. */
   .actions :global(button.remove):hover { color: var(--danger); }
 </style>
