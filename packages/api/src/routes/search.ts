@@ -519,7 +519,10 @@ async function latestPosts(x: Exec, viewerId: number | null, limit: number, offs
  * Someone with six notes about a thing is a better answer than someone who put
  * the word in their bio — and the audience rules still hold, so a private note
  * never ranks anybody. Signed-in only: this is for following, which is the same
- * rule the Explore users list already carried.
+ * rule the Explore users list already carried. Unlike that list, the viewer is
+ * in it, marked `isMe`: someone searching their own name expects to be found,
+ * and seeing themselves (or not, with a private profile) is how they check
+ * what everyone else sees.
  */
 async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: number, offset: number) {
   if (!viewerId) return { rows: [] as any[], total: 0, nextOffset: null as number | null };
@@ -543,7 +546,7 @@ async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: 
              ${named} as name_match,
              ${notesSeen} as notes_match, ${marksSeen} as marks_match
       from users u
-      where u.profile_visibility = 'public' and u.id <> ${viewerId}
+      where u.profile_visibility = 'public'
         and (${named} or ${notesSeen} > 0 or ${marksSeen} > 0)
     )
     select (select count(*)::int from cand) as __total,
@@ -552,7 +555,8 @@ async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: 
            (select ua.updated_at from user_avatars ua where ua.user_id = c.id) as "avatarUpdatedAt",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = c.id) as feeds,
            (select count(*)::int from collections col where col.user_id = c.id and col.parent_id is not null and col.visibility = 'public') as collections,
-           exists(select 1 from user_follows uf where uf.follower_id = ${viewerId} and uf.followee_id = c.id) as "isFollowing"
+           exists(select 1 from user_follows uf where uf.follower_id = ${viewerId} and uf.followee_id = c.id) as "isFollowing",
+           c.id = ${viewerId} as "isMe"
     from cand c
     order by c.name_score + 0.4 * ln(1 + c.notes_match + c.marks_match) desc,
              (c.notes_match + c.marks_match) desc, lower(coalesce(c."displayName", c.handle))

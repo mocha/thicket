@@ -660,7 +660,8 @@
         </span>
       </div>
     </a>
-    <FollowButton following={u.isFollowing} busy={followBusy === u.handle} onclick={() => toggleFollow(u)} />
+    {#if ev?.isMe}<span class="me">It’s you!</span>
+    {:else}<FollowButton following={u.isFollowing} busy={followBusy === u.handle} onclick={() => toggleFollow(u)} />{/if}
   </li>
 {/snippet}
 
@@ -786,7 +787,7 @@
      Every kind of row keeps that button at the right, so they all line up. */
   @media (max-width: 560px) {
     li > :global(.row) { flex-basis: 100%; }
-    li > :global(.follow), li > .save { margin-left: auto; }
+    li > :global(.follow), li > .save, li > .me { margin-left: auto; }
   }
   li:first-child { border-top: 0; }
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
@@ -808,6 +809,8 @@
      above keeps it clear of the description; 1px below is an optical nudge. */
   .why { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); margin: var(--space-2) 0 1px; }
   .why strong { font-weight: 700; }
+  /* Where your own row's Follow would be: Following's tint, but nothing to press. */
+  .me { flex: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); background: var(--accent-tint); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; white-space: nowrap; }
   /* When the line has to wrap, "(latest 13h ago)" moves down whole instead of
      splitting inside the brackets. */
   .nowrap { white-space: nowrap; }
