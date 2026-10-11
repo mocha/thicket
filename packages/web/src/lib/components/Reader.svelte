@@ -98,8 +98,9 @@
       if (!dialog?.open) {
         if (paged) dialog?.show(); else dialog?.showModal();
         // Start in the post itself, not on the first button in the header: opening
-        // with a tap shouldn't ring the feed name. Tab still walks from the top.
-        scroller?.focus({ preventScroll: true });
+        // with a tap shouldn't ring the feed name. Tab still walks from the top. The
+        // note editor, when it opens with the post, keeps the focus it took.
+        if (!scroller?.contains(document.activeElement)) scroller?.focus({ preventScroll: true });
       }
     } else if (item) {
       popover = false;
@@ -222,7 +223,7 @@
       {/if}
     </article>
     {#if paged}
-      <div class="pagenum" aria-live="polite" style:bottom={leaveH ? `calc(${leaveH}px + var(--space-1))` : undefined}>{pageIndex + 1} / {pageCount}</div>
+      <div class="pagenum" aria-live="polite" style:bottom={content?.partial && leaveH ? `calc(${leaveH}px + var(--space-1))` : undefined}>{pageIndex + 1} / {pageCount}</div>
       <Pager canPrev={pageIndex > 0} canNext={pageIndex < pageCount - 1} onprev={prevPage} onnext={nextPage} label="page" top="{headH}px" bottom="calc(var(--nav-h) + var(--safe-b) + {content?.partial ? leaveH : 0}px)" inDialog />
     {/if}
   {/if}
