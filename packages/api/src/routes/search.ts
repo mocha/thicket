@@ -29,8 +29,9 @@ import { sql, type SQL } from "drizzle-orm";
 import { collectionSample } from "../lib/subtree.js";
 import { cancellable } from "../db/client.js";
 import { allowsSql, notARepeatOf } from "../lib/visibility.js";
-import { myBookmarkIdSql, noteColumns } from "../lib/notes.js";
+import { myBookmarkIdSql, noteColumns, postAddressSql } from "../lib/notes.js";
 import { feedSlugSql } from "../lib/slug.js";
+import { sinceIntervalFrom, sinceSql } from "../lib/since.js";
 
 export const search = new Hono();
 
@@ -87,8 +88,9 @@ const likeFor = (q: string) => `%${q.replace(/[%_\\]/g, (m) => `\\${m}`)}%`;
 /**
  * "People I follow", applied to a search. It is the same rule the browse lists
  * use: a feed is in your network when someone you follow keeps it in a
- * collection, and a collection is in your network when its owner is someone you
- * follow. The follow set is resolved once (direct follows only — the toggle
+ * collection, a collection is in your network when its owner is someone you
+ * follow, a post is when its feed is, and a person is when you follow them.
+ * The follow set is resolved once (direct follows only — the toggle
  * offers one level) and then reused by each scope as a plain predicate.
  *
  * `net` is null when the filter is off, and an id list when it is on — an empty
@@ -109,8 +111,11 @@ const feedInNetwork = (feedIdCol: string, ids: number[]) =>
     ? sql`exists(select 1 from collection_feeds cf join collections col on col.id = cf.collection_id
         where cf.feed_id = ${sql.raw(feedIdCol)} and col.user_id in (${idList(ids)}))`
     : sql`false`;
+/** A person is in the network when you follow them. */
+export const userInNetwork = (userIdCol: string, ids: number[]) =>
+  ids.length ? sql`${sql.raw(userIdCol)} in (${idList(ids)})` : sql`false`;
 /** A collection is in the network when its owner is someone you follow. */
-const ownerInNetwork = (ids: number[]) => (ids.length ? sql`col.user_id in (${idList(ids)})` : sql`false`);
+const ownerInNetwork = (ids: number[]) => userInNetwork("col.user_id", ids);
 
 /**
  * The bounded sample of matching posts that every aggregation is built on, each
@@ -287,7 +292,7 @@ function paged(rows: any[], limit: number, offset: number) {
  * order at all to the people using it (issue 182), so the list is sorted by a
  * plain fact the reader picks (see FeedSort) and the score only breaks ties.
  */
-async function searchFeeds(x: Exec, q: string, userId: number, limit: number, offset: number, net: number[] | null = null, sort: FeedSort = DEFAULT_FEED_SORT) {
+async function searchFeeds(x: Exec, q: string, userId: number, limit: number, offset: number, net: number[] | null = null, sort: FeedSort = DEFAULT_FEED_SORT, since: string | null = null) {
   const like = likeFor(q);
   const named = sql`coalesce((f.title ilike ${like} or f.description ilike ${like} or f.url ilike ${like} or f.site_url ilike ${like} or ${q} <% coalesce(f.title, '')), false)`;
   /** 0 to 1. The title is worth most; a description or URL hit is weaker evidence. */
@@ -305,7 +310,7 @@ async function searchFeeds(x: Exec, q: string, userId: number, limit: number, of
              ${strength} as name_score,
              ${SORT_KEY[sort]} as sort_key
       from feeds f left join feedw a on a.feed_id = f.id left join recent r on r.feed_id = f.id
-      where (a.feed_id is not null or ${named})${net ? sql` and ${feedInNetwork("f.id", net)}` : sql``}
+      where (a.feed_id is not null or ${named}) and ${sinceSql("f.created_at", since)}${net ? sql` and ${feedInNetwork("f.id", net)}` : sql``}
     )
     , scored as (
       select *,
@@ -348,6 +353,23 @@ async function searchFeeds(x: Exec, q: string, userId: number, limit: number, of
 }
 
 /**
+ * The orders a searched Collections list can take. "relevance" is the score
+ * below, and the default because it is the order this list has always had;
+ * "feeds" puts the biggest first, which is how the browse list opens; "newest"
+ * is the newest made. The browse list's own orders are in routes/explore.ts.
+ */
+export const COLLECTION_SORTS = ["relevance", "feeds", "newest"] as const;
+export type CollectionSort = (typeof COLLECTION_SORTS)[number];
+export const DEFAULT_COLLECTION_SORT: CollectionSort = "relevance";
+export const collectionSortFrom = (v: string | null | undefined): CollectionSort =>
+  (COLLECTION_SORTS as readonly string[]).includes(v ?? "") ? (v as CollectionSort) : DEFAULT_COLLECTION_SORT;
+const COLLECTION_ORDER: Record<CollectionSort, SQL> = {
+  relevance: sql`s.score desc, s.name_score desc nulls last, s."feedCount" desc, s.id`,
+  feeds: sql`s."feedCount" desc, s.score desc, s.name_score desc nulls last, s.id`,
+  newest: sql`s.created_at desc, s.id desc`,
+};
+
+/**
  * Collections. The same idea one level up: a collection is worth showing when
  * the feeds inside it are posting about the thing. The share is over *feeds*
  * rather than posts, because "4 of its 12 feeds write about this" is both
@@ -357,7 +379,8 @@ async function searchFeeds(x: Exec, q: string, userId: number, limit: number, of
  * so a friends-only collection shows to a friend. Only a *feed document*, which
  * has no reader, is restricted to what is public to everyone.
  */
-async function searchCollections(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null = null) {
+async function searchCollections(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null = null,
+  sort: CollectionSort = DEFAULT_COLLECTION_SORT, since: string | null = null) {
   const like = likeFor(q);
   const me = viewerId ?? -1;
   const named = sql`coalesce((col.name ilike ${like} or col.description ilike ${like} or ${q} <% col.name), false)`;
@@ -370,7 +393,7 @@ async function searchCollections(x: Exec, q: string, viewerId: number | null, li
   const base = sql`
     with ${feedEvidence(q)}
     , cand as (
-      select col.id, col.name, col.slug, col.description, col.user_id, col.copied_from_id,
+      select col.id, col.name, col.slug, col.description, col.user_id, col.copied_from_id, col.created_at,
              u.handle, u.display_name as "displayName",
              col.feed_count as "feedCount",
              coalesce((select sum(a.matches)::int from collection_feeds cf join feedw a on a.feed_id = cf.feed_id where cf.collection_id = col.id), 0) as matches,
@@ -380,7 +403,7 @@ async function searchCollections(x: Exec, q: string, viewerId: number | null, li
              ${named} as name_match,
              ${strength} as name_score
       from collections col join users u on u.id = col.user_id
-      where ${readable} and (${named} or exists(
+      where ${readable} and ${sinceSql("col.created_at", since)} and (${named} or exists(
         select 1 from collection_feeds cf join feedw a on a.feed_id = cf.feed_id where cf.collection_id = col.id))${net ? sql` and ${ownerInNetwork(net)}` : sql``}
     )
     , scored as (
@@ -403,7 +426,7 @@ async function searchCollections(x: Exec, q: string, viewerId: number | null, li
            exists(select 1 from collections mine where mine.user_id = ${me} and mine.copied_from_id = s.id) as "copiedByMe",
            ${collectionSample(sql`s.id`, 4)} as sample
     from scored s
-    order by s.score desc, s.name_score desc nulls last, s."feedCount" desc, s.id
+    order by ${COLLECTION_ORDER[sort]}
     limit ${limit + 1} offset ${offset}
   `);
   const { page, total, nextOffset } = paged(rows.rows, limit, offset);
@@ -419,8 +442,13 @@ async function searchCollections(x: Exec, q: string, viewerId: number | null, li
  * words matter more than the date. Sorting "San Antonio" purely by date hands
  * you whoever used the phrase most recently, a wire story that named the city
  * once this morning ahead of a decade of KSAT, and that is the case it is for.
+ * With no words there is nothing to be relevant to, so it is read as newest.
+ *
+ * "bookmarked" and "noted" put first what the most people saved, or saved with
+ * a note (see `saves`). Ties go to the newer post, and a post nobody saved isn't
+ * in these lists at all: there is nothing to order it by.
  */
-export const POST_SORTS = ["newest", "relevance"] as const;
+export const POST_SORTS = ["newest", "relevance", "bookmarked", "noted"] as const;
 export type PostSort = (typeof POST_SORTS)[number];
 export const DEFAULT_POST_SORT: PostSort = "newest";
 export const postSortFrom = (v: string | null | undefined): PostSort =>
@@ -452,32 +480,66 @@ const notBlocked = (me: number) => sql`not exists(select 1 from blocks b where b
 const shapePost = (r: any) => ({ ...r, id: Number(r.id), feedId: Number(r.feedId), publishedAt: iso(r.publishedAt) });
 
 /**
- * Posts that mention the words. Both orders read the same bounded sample (the
- * newest HIT_CAP matches), so the total is "4,000" at most for a common word:
- * the same honest cap the feed ranking has always used.
+ * How many people saved each post, keyed by the address a bookmark is saved
+ * under (lib/notes.ts), for the "bookmarked" and "noted" orders. Every bookmark
+ * counts, whoever made it and whoever may see it: only the order is used, and
+ * no count or name ever reaches the page. `item_id` is one post saved at that
+ * address, so a post can be found by its id rather than by its url, which
+ * items has no index on.
+ *
+ * Grouping by address is also what keeps one story carried by two feeds to one
+ * row: it is one address, so it is one group.
  */
-async function searchPosts(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null, sort: PostSort) {
+const saves = (sort: "bookmarked" | "noted") => sql`
+  saves as (
+    select b.url, count(*)::int as n, max(b.item_id) as item_id from bookmarks b
+    ${sort === "noted" ? sql`where b.note is not null` : sql``}
+    group by b.url
+  )`;
+
+/**
+ * Posts that mention the words. Every order reads the same bounded sample (the
+ * newest HIT_CAP matches), so the total is "4,000" at most for a common word:
+ * the same honest cap the feed ranking has always used. The saved orders keep
+ * the matches someone saved, looked up by address against the sample alone.
+ */
+async function searchPosts(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null, sort: PostSort, since: string | null = null) {
   const me = viewerId ?? -1;
   const matched = sql`
     matched as materialized (
-      select i.id, i.published_at from items i
-      where i.search @@ websearch_to_tsquery('english', ${q}) and ${notBlocked(me)}
+      select i.id, i.published_at, i.feed_id, i.url from items i
+      where i.search @@ websearch_to_tsquery('english', ${q}) and ${notBlocked(me)} and ${sinceSql("i.published_at", since)}
         ${net ? sql`and ${feedInNetwork("i.feed_id", net)}` : sql``}
       order by i.published_at desc, i.id desc
       limit ${HIT_CAP}
     )`;
-  // The page is cut from `matched` before any display column is built, so
+  const saved = sort === "bookmarked" || sort === "noted";
+  // One row per address: two feeds' copies of a story both match, and the
+  // newer stands for it. The sample carries each match's url and feed, so its
+  // address is worked out without going back to items; it reads as `i` here
+  // because that is what postAddressSql expects.
+  const ctes = saved
+    ? sql`${matched}, ${saves(sort)}
+      , listed as materialized (
+        select distinct on (p.url) i.id, i.published_at, p.n
+        from matched i join feeds f on f.id = i.feed_id join saves p on p.url = ${postAddressSql}
+        order by p.url, i.published_at desc, i.id desc
+      )`
+    : sql`${matched}, listed as (select m.id, m.published_at from matched m)`;
+  // The page is cut from `listed` before any display column is built, so
   // snippets and lookups run for one page of rows, not for every match.
   const pageOf = sort === "newest"
     ? sql`select m.id, m.published_at, 0::real as score from matched m order by m.published_at desc, m.id desc limit ${limit + 1} offset ${offset}`
-    : sql`select m.id, m.published_at,
+    : saved
+      ? sql`select l.id, l.published_at, l.n::real as score from listed l order by l.n desc, l.published_at desc, l.id desc limit ${limit + 1} offset ${offset}`
+      : sql`select m.id, m.published_at,
                  ts_rank(i.search, websearch_to_tsquery('english', ${q}))
                    * (1 + 1.0 / (1 + extract(epoch from (now() - m.published_at)) / 2592000)) as score
           from matched m join items i on i.id = m.id
           order by score desc, m.published_at desc, m.id desc limit ${limit + 1} offset ${offset}`;
   const rows = await x(sql`
-    with ${matched}, pg as (${pageOf})
-    select (select count(*)::int from matched) as __total, ${postColumns(me, q)}
+    with ${ctes}, pg as (${pageOf})
+    select (select count(*)::int from listed) as __total, ${postColumns(me, q)}
     from pg join items i on i.id = pg.id join feeds f on f.id = i.feed_id
     order by pg.score desc, pg.published_at desc, pg.id desc
   `);
@@ -486,17 +548,18 @@ async function searchPosts(x: Exec, q: string, viewerId: number | null, limit: n
 }
 
 /**
- * The newest posts on the instance, for Posts with nothing typed: what Explore
- * opens on. One walk down items_published_idx, stopping at the page, so it
+ * The newest posts on the instance, for Posts with nothing typed and sorted
+ * newest first: what Explore opens on. One walk down items_published_idx, stopping at the page, so it
  * costs the same however many posts are stored. No total: counting every post
  * to print one number would be the one expensive part.
  *
  * "People I follow" can't take that walk: it would read past everyone else's
  * posts to find theirs, unbounded for someone whose network reads little. So it
  * merges each network feed's own newest page instead, the way the river does
- * (routes/river.ts), which costs one index descent per feed.
+ * (routes/river.ts), which costs one index descent per feed. A "since" window
+ * only stops each walk sooner.
  */
-async function latestPosts(x: Exec, viewerId: number | null, limit: number, offset: number, net: number[] | null) {
+async function latestPosts(x: Exec, viewerId: number | null, limit: number, offset: number, net: number[] | null, since: string | null = null) {
   const me = viewerId ?? -1;
   const want = limit + 1;
   const pageOf = net
@@ -506,14 +569,14 @@ async function latestPosts(x: Exec, viewerId: number | null, limit: number, offs
                     where col.user_id in (${idList(net)}))
         select p.id, p.published_at from nf cross join lateral (
           select i.id, i.published_at from items i
-          where i.feed_id = nf.feed_id and i.published_at <= now() and ${notBlocked(me)}
+          where i.feed_id = nf.feed_id and i.published_at <= now() and ${sinceSql("i.published_at", since)} and ${notBlocked(me)}
           order by i.published_at desc, i.id desc limit ${offset + want}
         ) p
         order by p.published_at desc, p.id desc limit ${want} offset ${offset}`
       : sql`select null::bigint as id, null::timestamptz as published_at where false`
     : sql`
         select i.id, i.published_at from items i
-        where i.published_at <= now() and ${notBlocked(me)}
+        where i.published_at <= now() and ${sinceSql("i.published_at", since)} and ${notBlocked(me)}
         order by i.published_at desc, i.id desc limit ${want} offset ${offset}`;
   const rows = await x(sql`
     select ${postColumns(me, null)}
@@ -524,13 +587,57 @@ async function latestPosts(x: Exec, viewerId: number | null, limit: number, offs
 }
 
 /**
+ * The most saved posts on the instance, for Posts with nothing typed sorted by
+ * bookmarks or notes. Only saved posts are candidates, found by id from
+ * `saves`, so the set is small and the filters are plain predicates on it (no
+ * per-feed walk like latestPosts needs), and its total is cheap to count.
+ * An address no saved post still stands for (the post was pruned) drops out.
+ */
+async function savedPosts(x: Exec, viewerId: number | null, limit: number, offset: number, net: number[] | null, since: string | null, sort: "bookmarked" | "noted") {
+  const me = viewerId ?? -1;
+  const rows = await x(sql`
+    with ${saves(sort)}
+    , listed as materialized (
+      select i.id, i.published_at, p.n from saves p join items i on i.id = p.item_id
+      where i.published_at <= now() and ${notBlocked(me)} and ${sinceSql("i.published_at", since)}
+        ${net ? sql`and ${feedInNetwork("i.feed_id", net)}` : sql``}
+    )
+    , pg as (select l.* from listed l order by l.n desc, l.published_at desc, l.id desc limit ${limit + 1} offset ${offset})
+    select (select count(*)::int from listed) as __total, ${postColumns(me, null)}
+    from pg join items i on i.id = pg.id join feeds f on f.id = i.feed_id
+    order by pg.n desc, pg.published_at desc, pg.id desc
+  `);
+  const { page, total, nextOffset } = paged(rows.rows, limit, offset);
+  return { rows: page.map(shapePost), total, nextOffset };
+}
+
+/**
+ * The orders a searched People list can take: "relevance" (the default, the
+ * order below), "name" (A to Z) and "newest" (newest to join). There is never a
+ * most-followed order: follower counts are kept private (routes/explore.ts).
+ * The browse list's own orders are in routes/explore.ts.
+ */
+export const PEOPLE_SORTS = ["relevance", "name", "newest"] as const;
+export type PeopleSort = (typeof PEOPLE_SORTS)[number];
+export const DEFAULT_PEOPLE_SORT: PeopleSort = "relevance";
+export const peopleSortFrom = (v: string | null | undefined): PeopleSort =>
+  (PEOPLE_SORTS as readonly string[]).includes(v ?? "") ? (v as PeopleSort) : DEFAULT_PEOPLE_SORT;
+const PEOPLE_ORDER: Record<PeopleSort, SQL> = {
+  relevance: sql`c.name_score + 0.4 * ln(1 + c.notes_match + c.marks_match) desc,
+             (c.notes_match + c.marks_match) desc, lower(coalesce(c."displayName", c.handle))`,
+  name: sql`lower(coalesce(c."displayName", c.handle)), c.handle`,
+  newest: sql`c.created_at desc, c.id desc`,
+};
+
+/**
  * People, ranked on what they have written as well as what they are called.
  * Someone with six notes about a thing is a better answer than someone who put
  * the word in their bio — and the audience rules still hold, so a private note
  * never ranks anybody. Signed-in only: this is for following, which is the same
  * rule the Explore users list already carried.
  */
-async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: number, offset: number) {
+async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null = null,
+  sort: PeopleSort = DEFAULT_PEOPLE_SORT, since: string | null = null) {
   if (!viewerId) return { rows: [] as any[], total: 0, nextOffset: null as number | null };
   const like = likeFor(q);
   const named = sql`coalesce((u.handle ilike ${like} or u.display_name ilike ${like} or u.bio ilike ${like} or ${q} <% u.handle), false)`;
@@ -544,7 +651,7 @@ async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: 
     and ${allowsSql("u.bookmarks_visibility", "u.id", viewerId)})`;
   const rows = await x(sql`
     with cand as materialized (
-      select u.id, u.handle, u.display_name as "displayName", u.bio,
+      select u.id, u.handle, u.display_name as "displayName", u.bio, u.created_at, u.collections_visibility,
              greatest(
                ${fuzzy(q, "u.handle")},
                (case when u.handle ilike ${like} or u.display_name ilike ${like} then 0.85 else 0 end)::real,
@@ -552,7 +659,8 @@ async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: 
              ${named} as name_match,
              ${notesSeen} as notes_match, ${marksSeen} as marks_match
       from users u
-      where u.profile_visibility = 'public' and u.id <> ${viewerId}
+      where u.profile_visibility = 'public' and u.id <> ${viewerId} and ${sinceSql("u.created_at", since)}
+        ${net ? sql`and ${userInNetwork("u.id", net)}` : sql``}
         and (${named} or ${notesSeen} > 0 or ${marksSeen} > 0)
     )
     select (select count(*)::int from cand) as __total,
@@ -560,11 +668,13 @@ async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: 
            c.notes_match as "notesMatch", c.marks_match as "marksMatch",
            (select ua.updated_at from user_avatars ua where ua.user_id = c.id) as "avatarUpdatedAt",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = c.id) as feeds,
-           (select count(*)::int from collections col where col.user_id = c.id and col.parent_id is not null and col.visibility = 'public') as collections,
+           -- Public collections only when the person shows their collections at
+           -- all, the same count the browse list gives (routes/explore.ts).
+           (select count(*)::int from collections col where col.user_id = c.id and col.parent_id is not null and col.visibility = 'public'
+              and c.collections_visibility = 'public') as collections,
            exists(select 1 from user_follows uf where uf.follower_id = ${viewerId} and uf.followee_id = c.id) as "isFollowing"
     from cand c
-    order by c.name_score + 0.4 * ln(1 + c.notes_match + c.marks_match) desc,
-             (c.notes_match + c.marks_match) desc, lower(coalesce(c."displayName", c.handle))
+    order by ${PEOPLE_ORDER[sort]}
     limit ${limit + 1} offset ${offset}
   `);
   const { page, total, nextOffset } = paged(rows.rows, limit, offset);
@@ -572,14 +682,19 @@ async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: 
 }
 
 /**
- * GET /api/search?q=&scope=&sort=&network=&offset=&limit=
+ * GET /api/search?q=&scope=&sort=&network=&since=&offset=&limit=
  *
  * Answers with the one list asked for, under its scope's name, e.g.
- * `{ q, scope: "posts", sort, posts: { rows, total, nextOffset } }`.
+ * `{ q, scope: "posts", sort, posts: { rows, total, nextOffset } }`. `sort` is
+ * the order actually used, after an unknown one falls back to the default.
  *
- * Posts with no words is the instance's newest posts (`total` null); any other
- * scope with no words is empty, since its browse list is its own endpoint
- * (/api/feeds, /api/explore/collections, /api/explore/users).
+ * Every scope takes the same two filters: network=1 ("People I follow", see
+ * followSet) and since=24h|week|month|year (see sinceIntervalFrom).
+ *
+ * Posts with no words is the instance's posts: newest first (`total` null), or
+ * most bookmarked or noted first (with a total). "relevance" with no words is
+ * newest. Any other scope with no words is empty, since its browse list is its
+ * own endpoint (/api/feeds, /api/explore/collections, /api/explore/users).
  *
  * If the browser gives up on the request (a new search, another tab), its query
  * is cancelled in Postgres rather than left to run (db/client.ts).
@@ -591,17 +706,29 @@ search.get("/", async (c) => {
   const scope = scopeFrom(c.req.query("scope"));
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 25)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
-  const sort = scope === "feeds" ? feedSortFrom(c.req.query("sort")) : scope === "posts" ? postSortFrom(c.req.query("sort")) : null;
+  const sortParam = c.req.query("sort");
+  const sort =
+    scope === "feeds" ? feedSortFrom(sortParam)
+    : scope === "collections" ? collectionSortFrom(sortParam)
+    : scope === "people" ? peopleSortFrom(sortParam)
+    : !q && postSortFrom(sortParam) === "relevance" ? "newest"
+    : postSortFrom(sortParam);
   const network = c.req.query("network") === "1";
+  const since = sinceIntervalFrom(c.req.query("since"));
 
   const list = await cancellable(c.req.raw.signal, async (x) => {
     if (!q && scope !== "posts") return { rows: [] as any[], total: 0, nextOffset: null as number | null };
     // "People I follow": null = filter off; a (possibly empty) id list = filter on.
     const net = network ? await followSet(x, viewerId) : null;
-    if (scope === "posts") return q ? searchPosts(x, q, viewerId, limit, offset, net, sort as PostSort) : latestPosts(x, viewerId, limit, offset, net);
-    if (scope === "feeds") return searchFeeds(x, q, viewerId ?? -1, limit, offset, net, sort as FeedSort);
-    if (scope === "collections") return searchCollections(x, q, viewerId, limit, offset, net);
-    return searchPeople(x, q, viewerId, limit, offset);
+    if (scope === "posts") {
+      if (q) return searchPosts(x, q, viewerId, limit, offset, net, sort as PostSort, since);
+      return sort === "bookmarked" || sort === "noted"
+        ? savedPosts(x, viewerId, limit, offset, net, since, sort)
+        : latestPosts(x, viewerId, limit, offset, net, since);
+    }
+    if (scope === "feeds") return searchFeeds(x, q, viewerId ?? -1, limit, offset, net, sort as FeedSort, since);
+    if (scope === "collections") return searchCollections(x, q, viewerId, limit, offset, net, sort as CollectionSort, since);
+    return searchPeople(x, q, viewerId, limit, offset, net, sort as PeopleSort, since);
   });
   // The answer depends on who is asking; a shared cache must key on the cookie.
   c.header("vary", "cookie");

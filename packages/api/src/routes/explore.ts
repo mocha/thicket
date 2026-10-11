@@ -1,8 +1,15 @@
 /**
- * What a visitor can see before signing up. Today: a handful of public
- * collections on this instance, for the homepage's "peek inside" strip.
- * Same visibility rules as profiles: public profile, collections shown,
- * collection public, and it has to have something in it.
+ * Explore's browse lists, for when nothing is typed: public collections and
+ * people on this instance (feeds browse at /api/feeds, and anything with words
+ * goes to /api/search). The collections list is also what a visitor can see
+ * before signing up, and starter packs are what a newcomer is handed first.
+ *
+ * Collections follow the same visibility rules as profiles: public profile,
+ * collections shown, collection public, and it has to have something in it.
+ *
+ * Both lists take the filters every Explore list takes: network=1 ("People I
+ * follow") and since=24h|week|month|year (lib/since.ts),
+ * and their own sort=.
  */
 import { Hono } from "hono";
 import { sql, type SQL } from "drizzle-orm";
@@ -10,14 +17,39 @@ import { collectionSample } from "../lib/subtree.js";
 import { db } from "../db/client.js";
 import { getSetting } from "../lib/instance.js";
 import { notARepeatOf } from "../lib/visibility.js";
+import { sinceIntervalFrom, sinceSql } from "../lib/since.js";
 
 export const explore = new Hono();
 
+/**
+ * The orders the collections browse list can take. "feeds" (the biggest first,
+ * newest first among equals) is the default because it is the order this list
+ * has always had; "newest" is the newest made; "name" is A to Z.
+ */
+export const BROWSE_COLLECTION_SORTS = ["feeds", "newest", "name"] as const;
+export type BrowseCollectionSort = (typeof BROWSE_COLLECTION_SORTS)[number];
+export const DEFAULT_BROWSE_COLLECTION_SORT: BrowseCollectionSort = "feeds";
+export const browseCollectionSortFrom = (v: string | null | undefined): BrowseCollectionSort =>
+  (BROWSE_COLLECTION_SORTS as readonly string[]).includes(v ?? "") ? (v as BrowseCollectionSort) : DEFAULT_BROWSE_COLLECTION_SORT;
+const BROWSE_COLLECTION_ORDER: Record<BrowseCollectionSort, SQL> = {
+  feeds: sql`"feedCount" desc, col.created_at desc`,
+  newest: sql`col.created_at desc, col.id desc`,
+  name: sql`lower(col.name), col.id`,
+};
+
+/**
+ * GET /api/explore/collections?q=&network=&since=&sort=&offset=&limit=
+ *
+ * `total` counts what the filters leave; `indexTotal` counts every collection
+ * the list could show, whatever is filtered.
+ */
 explore.get("/collections", async (c) => {
   const viewer = c.get("user");
   const viewerId = viewer?.id ?? -1;
   const q = (c.req.query("q") ?? "").trim();
   const network = c.req.query("network") === "1"; // only collections by people I follow
+  const since = sinceIntervalFrom(c.req.query("since")); // only collections made in the window
+  const sort = browseCollectionSortFrom(c.req.query("sort"));
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 6)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
   const filters = [sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public' and u.collections_visibility = 'public'
@@ -27,6 +59,7 @@ explore.get("/collections", async (c) => {
     filters.push(sql`(col.name ilike ${like} or col.description ilike ${like})`);
   }
   if (network) filters.push(sql`exists(select 1 from user_follows uf where uf.follower_id = ${viewerId} and uf.followee_id = col.user_id)`);
+  if (since) filters.push(sinceSql("col.created_at", since));
   /**
    * What the list shows, as `shown(id)`. Everything that passes the filters,
    * then two things left out:
@@ -55,13 +88,13 @@ explore.get("/collections", async (c) => {
            ${collectionSample(sql`col.id`, 4)} as sample
     from collections col join users u on u.id = col.user_id
     where col.id in (select id from shown)
-    order by "feedCount" desc, col.created_at desc limit ${limit + 1} offset ${offset}
+    order by ${BROWSE_COLLECTION_ORDER[sort]} limit ${limit + 1} offset ${offset}
   `);
   // The answer depends on who is asking, so a shared cache must key on the cookie.
   c.header("vary", "cookie");
   if (!viewer && !q) c.header("cache-control", "public, max-age=120");
   const page = rows.rows.slice(0, limit);
-  return c.json({ collections: page.map((r: any) => ({ ...r, id: Number(r.id) })), total, indexTotal, nextOffset: rows.rows.length > limit ? offset + limit : null });
+  return c.json({ collections: page.map((r: any) => ({ ...r, id: Number(r.id) })), sort, total, indexTotal, nextOffset: rows.rows.length > limit ? offset + limit : null });
 });
 
 /**
@@ -115,14 +148,36 @@ explore.get("/featured", async (c) => {
 });
 
 /**
+ * The orders the people browse list can take. "name" is the default and keeps
+ * the order this list has always had: people you follow first, then A to Z.
+ * "newest" is the newest to join. Never most followed: see below.
+ */
+export const BROWSE_PEOPLE_SORTS = ["name", "newest"] as const;
+export type BrowsePeopleSort = (typeof BROWSE_PEOPLE_SORTS)[number];
+export const DEFAULT_BROWSE_PEOPLE_SORT: BrowsePeopleSort = "name";
+export const browsePeopleSortFrom = (v: string | null | undefined): BrowsePeopleSort =>
+  (BROWSE_PEOPLE_SORTS as readonly string[]).includes(v ?? "") ? (v as BrowsePeopleSort) : DEFAULT_BROWSE_PEOPLE_SORT;
+const BROWSE_PEOPLE_ORDER: Record<BrowsePeopleSort, SQL> = {
+  name: sql`"isFollowing" desc, lower(coalesce(u.display_name, u.handle))`,
+  newest: sql`u.created_at desc, u.id desc`,
+};
+
+/**
+ * GET /api/explore/users?q=&network=&since=&sort=&offset=&limit=
+ *
  * People with public profiles, searchable by handle, name and bio. Signed-in
  * only (this is for following, and a visitor has the homepage). Never the
- * viewer themself. Follower counts are deliberately absent: no vanity metric.
+ * viewer themself. network=1 keeps only people the viewer follows; since= keeps
+ * people who joined in the window. `total` counts what the filters leave.
+ * Follower counts are deliberately absent: no vanity metric.
  */
 explore.get("/users", async (c) => {
   const viewer = c.get("user");
   if (!viewer) return c.json({ error: "sign in required" }, 401);
   const q = (c.req.query("q") ?? "").trim();
+  const network = c.req.query("network") === "1";
+  const since = sinceIntervalFrom(c.req.query("since"));
+  const sort = browsePeopleSortFrom(c.req.query("sort"));
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 30)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
   const where = [sql`u.profile_visibility = 'public' and u.id <> ${viewer.id}`];
@@ -130,6 +185,8 @@ explore.get("/users", async (c) => {
     const like = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
     where.push(sql`(u.handle ilike ${like} or u.display_name ilike ${like} or u.bio ilike ${like})`);
   }
+  if (network) where.push(sql`exists(select 1 from user_follows uf where uf.follower_id = ${viewer.id} and uf.followee_id = u.id)`);
+  if (since) where.push(sinceSql("u.created_at", since));
   const [{ total }] = (await db.execute<{ total: number }>(sql`select count(*)::int as total from users u where ${sql.join(where, sql` and `)}`)).rows;
   const [{ indexTotal }] = (await db.execute<{ indexTotal: number }>(sql`select count(*)::int as "indexTotal" from users u where ${where[0]}`)).rows;
   const rows = await db.execute(sql`
@@ -140,8 +197,8 @@ explore.get("/users", async (c) => {
            case when u.notes_visibility = 'public' then (select count(*)::int from bookmarks n where n.user_id = u.id and n.note is not null) else null end as notes,
            exists(select 1 from user_follows uf where uf.follower_id = ${viewer.id} and uf.followee_id = u.id) as "isFollowing"
     from users u where ${sql.join(where, sql` and `)}
-    order by "isFollowing" desc, lower(coalesce(u.display_name, u.handle)) limit ${limit + 1} offset ${offset}
+    order by ${BROWSE_PEOPLE_ORDER[sort]} limit ${limit + 1} offset ${offset}
   `);
   const page = rows.rows.slice(0, limit);
-  return c.json({ users: page.map((r: any) => ({ ...r, createdAt: new Date(r.createdAt).toISOString() })), total, indexTotal, nextOffset: rows.rows.length > limit ? offset + limit : null });
+  return c.json({ users: page.map((r: any) => ({ ...r, createdAt: new Date(r.createdAt).toISOString() })), sort, total, indexTotal, nextOffset: rows.rows.length > limit ? offset + limit : null });
 });
