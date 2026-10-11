@@ -94,10 +94,6 @@
       <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{relativeTime(item.publishedAt)}</time>
       {#if fresh}<Badge tone="soft" title="Newer than where you last stopped in this list">New</Badge>{/if}
     {/if}
-    <span class="spacer"></span>
-    {#if session.user}
-      <ItemActions {item} noteOpen={editing} onnote={noteButton} via="card" />
-    {/if}
   </header>
   <a class="link" class:compact href={webHref(item.url) ?? webHref(item.siteUrl) ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
     {#if item.imageUrl && !imgFailed}
@@ -106,9 +102,6 @@
     <h3 class="card-title" class:tight={compact}>{noOrphan(item.title ?? item.summary ?? item.url)}</h3>
     {#if item.title && item.summary && item.summary !== item.title}
       <p class="card-summary" class:tight={compact} use:wholeLines={compact}>{item.summary}</p>
-    {/if}
-    {#if item.author}
-      <footer>{item.author}</footer>
     {/if}
   </a>
 
@@ -119,8 +112,20 @@
     <a class="card-extralink tap" class:compact href={webHref(item.linkUrl)} target="_blank" rel="noopener">{item.linkLabel} →</a>
   {/if}
 
-  {#if compact && (myNote || others.length)}
-    <span class="notecount">{(myNote ? 1 : 0) + others.length} {(myNote ? 1 : 0) + others.length === 1 ? 'note' : 'notes'}</span>
+  <!-- The bottom row: who wrote it on the left, what you can do on the right.
+       The same place as the Bookmark card's actions. Outside the body's link,
+       since a button can't go inside a link. -->
+  {#if item.author || session.user || (compact && (myNote || others.length))}
+    <footer class:compact>
+      {#if item.author}<span class="author">{item.author}</span>{/if}
+      <span class="spacer"></span>
+      {#if compact && (myNote || others.length)}
+        <span class="notecount">{(myNote ? 1 : 0) + others.length} {(myNote ? 1 : 0) + others.length === 1 ? 'note' : 'notes'}</span>
+      {/if}
+      {#if session.user}
+        <span class="actions"><ItemActions {item} noteOpen={editing} onnote={noteButton} via="card" /></span>
+      {/if}
+    </footer>
   {/if}
 
   {#if item.repeatOf?.length && !compact}
@@ -153,12 +158,14 @@
   header {
     display: flex; align-items: center; gap: var(--space-2);
     font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2);
-    padding: var(--space-3) var(--space-2) 0 var(--card-pad); min-width: 0;
+    padding: var(--space-3) var(--card-pad) 0; min-width: 0;
   }
   header.compact { padding-top: var(--space-2); }
   time { color: var(--text-2); white-space: nowrap; }
   .spacer { flex: 1; }
   .link { display: block; padding: var(--space-2) var(--card-pad) var(--card-pad); -webkit-tap-highlight-color: transparent; }
+  /* With a bottom row under it, the body hands the room below to the row. */
+  .link:has(+ footer), .link:has(+ .card-extralink + footer) { padding-bottom: var(--space-2); }
   @media (hover: hover) { .link:hover h3 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   /* Edge to edge: wider than the text by the card's inset on each side. The app-wide
      "never wider than your container" rule for pictures would cut it short on the right. */
@@ -166,10 +173,18 @@
     width: calc(100% + var(--card-pad) * 2); max-width: none; margin: 0 calc(var(--card-pad) * -1) var(--space-3); aspect-ratio: 16 / 9; object-fit: cover;
     background: var(--surface-2);
   }
-  footer { margin-top: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  /* The icon buttons' circles run past the glyph, so the row stops short on the right and the glyphs line up with the text's edge. */
+  footer {
+    display: flex; align-items: center; gap: var(--space-2); min-height: 32px;
+    padding: 0 var(--space-2) var(--space-2) var(--card-pad);
+    font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2);
+  }
+  .author { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .actions { display: flex; flex: none; }
   .card-extralink { display: inline-block; margin: calc(-1 * var(--space-2)) var(--card-pad) var(--card-pad); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
   /* Compact cards fill a fixed frame; the link sits at the bottom edge with no negative pull. */
   .card-extralink.compact { margin: 0 var(--card-pad) var(--space-2); }
+  .card-extralink:has(+ footer) { margin-bottom: var(--space-1); }
   @media (hover: hover) { .card-extralink:hover { text-decoration: underline; text-underline-offset: 3px; } }
   .repeat {
     display: flex; gap: var(--space-2); align-items: flex-start; margin: calc(-1 * var(--space-1)) var(--card-pad) var(--space-4); padding: var(--space-2) var(--space-3);
@@ -186,6 +201,6 @@
   h3.tight { grid-column: 1; font-size: calc(var(--text-base) * var(--size-headings)); --title-lines: 2; }
   /* The summary gets whatever room the title leaves, rounded down to whole lines, so a line is never sliced through the middle. */
   p.tight { grid-column: 1; --summary-gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-reading)); --summary-lines: 2; align-self: start; max-height: round(down, 100%, 1lh); }
-  .link.compact footer { grid-column: 1; margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .notecount { position: absolute; right: var(--card-pad); bottom: var(--space-2); font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); }
+  footer.compact { padding-bottom: var(--space-1); }
+  .notecount { flex: none; font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); }
 </style>
