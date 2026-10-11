@@ -753,21 +753,16 @@
   /* Browse: the filters are the list card's header, so the two read as one unit; the rows below are part of the same card. */
   :global(.browse) .filters { margin: 0; padding: var(--space-3) var(--card-pad) var(--space-1); }
   li { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-  /* On a phone a row's button would squeeze the description into a column
-     four words wide, so it drops to its own line and the text gets the row.
-     Every kind of row keeps that button at the right, so they all line up. */
+  /* On a phone a post row's Bookmark would squeeze the snippet into a column
+     four words wide, so it drops to its own line, at the right, where the
+     Feed and Person rows put their Follow. */
   @media (max-width: 560px) {
-    li > :global(.row) { flex-basis: 100%; }
-    li > :global(.follow), li > :global(.save) { margin-left: auto; }
+    li > .row { flex-basis: 100%; }
+    li > :global(.save) { margin-left: auto; }
   }
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* Wraps rather than truncates: every part of it is a fact someone is deciding on.
-     --text-2, not --text-3, because these facts are read, and --text-3 falls short
-     of readable contrast in most themes. The gap sets it apart from the
-     description above now that both share a color. */
-  .sub2 { margin-top: var(--space-1); }
   .desc { font-size: calc(var(--text-sm) * var(--size-app)); /* The 2px and 3px here are optical nudges around the description, not spacing steps. */ color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   /* 1px around a highlighted word is optical: the tint hugs the letters. */
   .desc mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }

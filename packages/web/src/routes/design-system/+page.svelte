@@ -31,11 +31,18 @@
   import Avatar from '$lib/components/Avatar.svelte';
   import Monogram from '$lib/components/Monogram.svelte';
   import Card from '$lib/components/Card.svelte';
+  import FeedRow from '$lib/components/FeedRow.svelte';
+  import PersonRow from '$lib/components/PersonRow.svelte';
+  import CollectionRow from '$lib/components/CollectionRow.svelte';
   import NoteBlock from '$lib/components/NoteBlock.svelte';
   import SettingRow from '$lib/components/SettingRow.svelte';
   import Sheet from '$lib/components/Sheet.svelte';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import { showToast } from '$lib/toast.svelte';
+  /** Made-up rows for the List row entry. */
+  const demoFeed = { id: -1, url: 'https://daringfireball.net/feeds/main', siteUrl: 'https://daringfireball.net', title: 'Daring Fireball', slug: 'daring-fireball', hasIcon: false, description: 'By John Gruber, on Apple, technology, and design.', lastItemAt: new Date(Date.now() - 3 * 3600_000).toISOString(), myCollectionIds: [] };
+  const demoPerson = { handle: 'maya', displayName: 'Maya Chen', bio: 'Design engineer. Collects thoughtful writing about the craft of the web.', avatarUpdatedAt: null };
+  const demoSample = [{ id: -2, title: 'Aeon', hasIcon: false }, { id: -3, title: 'Low Tech Magazine', hasIcon: false }, { id: -4, title: 'Robin Sloan', hasIcon: false }];
 
   // Sample notes for the Note entry, after your own: one by someone with a display name, one by someone without.
   const day = 86_400_000;
@@ -665,22 +672,18 @@
       <p class="section-lede">Every list of rows, on a list card or in a Sheet, is laid out the same way: 12px above and below each row, its text 16px in from the card’s edge, and a thin line between rows but none above the first. A Button on a row is the small size, and sits as far in from the right edge as the text does from the left. There are two kinds of row.</p>
 
       <h4 class="sub">A row for one thing</h4>
-      <p class="section-lede">A feed, a person, a collection, or a post: something you can open. A 40px picture leads (a feed’s icon or a person’s picture; a collection has none), then the name in 16px bold, with the details under it in 14px gray. Used on Explore, a collection’s feeds, Collections, Import, and the people someone follows.</p>
+      <p class="section-lede">A feed, a person, a collection, or a post: something you can open. A 40px picture leads (a feed’s icon, a person’s picture, or for a collection a few of its feeds’ icons, overlapped), then the name in 16px bold, with the details under it in 14px gray. Used on Explore, a collection’s feeds, Collections, and the people someone follows. Import’s review list uses the same spacing and text, without pictures.</p>
       <p class="section-lede">A feed is always the one Feed row, wherever feeds are listed: its name (with a Failing badge when its checks fail) and its site under it in dark, then its description and the facts about it (how often it posts, its latest post, its followers) in gray.</p>
       <p class="section-lede">A person is always the one Person row, the same way: their name with their @handle beside it in gray, as a note names its writer (Priya Nair (@priya)), then their bio and the facts about them (feeds, public collections) in gray, with Follow at the right where the screen offers it.</p>
       <p class="section-lede">A collection is always the one Collection row: its name with any badges after it (Yours, Copied, who can see it, how many new posts) and “by” whose it is under it in dark, then its description and how many feeds it holds in gray, ending in an arrow since the whole row opens it. On a search, the line saying why it was found comes last, in green, the same as on feed and person rows.</p>
       <div class="stack">
+        <!-- The real rows, with made-up data, so this entry can't drift from the app. -->
         <Card kind="list" as="ul" class="list-rows">
-          <li class="demo-thing">
-            <Monogram name="Daring Fireball" size={40} />
-            <span class="demo-meta"><span class="row-name">Daring Fireball</span><span class="row-details">daringfireball.net <Dot /> publishes about 2 posts a day</span></span>
-            <FollowButton onclick={() => {}} />
-          </li>
-          <li class="demo-thing">
-            <Avatar handle="maya" name="Maya Chen" size={40} />
-            <span class="demo-meta"><span class="row-name">Maya Chen</span><span class="row-details">@maya</span></span>
-            <FollowButton following onclick={() => {}} />
-          </li>
+          <FeedRow feed={demoFeed} failing postsLast30d={60} follow={false} />
+          <PersonRow person={demoPerson} feeds={7} collections={2} following onfollow={() => {}} />
+          <CollectionRow href="#list-row" name="Small Web" description="A sample of the Kagi Small Web list." feedCount={32} owner="Christie" sample={demoSample}>
+            {#snippet badges()}<Badge tone="soft">36 new</Badge>{/snippet}
+          </CollectionRow>
         </Card>
       </div>
 
@@ -896,8 +899,6 @@
      short of the top when jumped to, so the jump menu doesn't cover the heading. */
   .group, .entry { scroll-margin-top: calc(var(--space-6) + var(--space-6)); }
   .group { margin: calc(var(--space-6) + var(--space-5)) 0 0; padding-top: var(--space-4); border-top: 2px solid var(--text); }
-  .demo-thing { display: flex; align-items: center; gap: var(--space-3); }
-  .demo-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .demo-strong { color: var(--text); font-weight: 600; }
   .demo-when { float: right; }
   .demo-inline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }

@@ -84,7 +84,7 @@
      under it like a byline. The -2px is optical: it takes back some of the
      empty space above and below each line of text, so the two read as a pair. */
   .origin { margin-top: -2px; color: var(--text); overflow-wrap: anywhere; }
-  .desc { margin-top: var(--space-1); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .desc { margin-top: var(--space-1); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
   .facts { margin-top: var(--space-1); }
   .net { color: var(--accent); font-weight: 600; }
   /* Last, so it wins over the row's own sizing above. On a phone the button would squeeze the description into a column four
