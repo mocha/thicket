@@ -161,10 +161,10 @@
 
       {#if g.keep}
         {#if ok.length}
-          <ul class="feeds">
+          <ul class="feeds list-rows">
             {#each g.open ? ok : ok.slice(0, SHOWN) as f (f.url)}
               <li>
-                <span class="fname">{label(f)}<small>{host(f.url)}</small></span>
+                <span class="fname row-name">{label(f)}<small class="row-details">{host(f.url)}</small></span>
                 {#if f.state === 'pending'}<span class="tag wait">Checking…</span>
                 {:else if f.state === 'unsure'}<span class="tag unsure" title={f.reason ?? ''}>Will retry</span>
                 {:else if f.following}<span class="tag">Already Following</span>
@@ -180,10 +180,10 @@
 
         {#if bad.length}
           <h3>Can’t be added</h3>
-          <ul class="feeds refused">
+          <ul class="feeds list-rows refused">
             {#each bad as f (f.url)}
               <li>
-                <span class="fname">{label(f)}<small>{host(f.url)}</small></span>
+                <span class="fname row-name">{label(f)}<small class="row-details">{host(f.url)}</small></span>
                 <span class="reason">{f.reason}</span>
               </li>
             {/each}
@@ -207,10 +207,10 @@
   <Card kind="section" as="section" class="import-section">
     <h2 class="section-title">Done</h2>
     <p class="section-description">New feeds start arriving over the next few minutes, as thicket fetches each one for the first time.</p>
-    <ul class="feeds">
+    <ul class="feeds list-rows">
       {#each imp.committed as c (c.id)}
         <li>
-          <a class="fname" href="/@{session.user?.handle}/collections/{c.slug}">{c.name}<small>{c.renamedFrom ? `Beside your existing “${c.renamedFrom}”` : 'New collection'}</small></a>
+          <a class="fname row-name" href="/@{session.user?.handle}/collections/{c.slug}">{c.name}<small class="row-details">{c.renamedFrom ? `Beside your existing “${c.renamedFrom}”` : 'New collection'}</small></a>
           <span class="count">{c.added} added</span>
         </li>
       {/each}
@@ -246,12 +246,13 @@
   .name:disabled { border-color: transparent; }
   .gname small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
 
-  .feeds { list-style: none; margin: var(--space-3) 0 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-md); }
-  .feeds li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .feeds li:first-child { border-top: 0; }
+  /* The feeds run edge to edge across the card, between two hairlines, so each
+     row's text starts the card's own inset in, as on every other list of rows. */
+  .feeds { margin: var(--space-3) calc(-1 * var(--card-pad)) 0; border-block: 1px solid var(--line); }
+  .feeds li { display: flex; align-items: center; gap: var(--space-3); }
   .feeds li.why { border-top: 0; padding-top: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .fname { flex: 1; min-width: 0; display: flex; flex-direction: column; font-weight: 600; overflow-wrap: anywhere; color: var(--text); }
-  .fname small { font-weight: 400; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .fname { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+  .fname small { font-weight: 400; }
   /* 2px top and bottom is optical, as on Badge: the pill hugs its word. */
   .tag { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); padding: 2px var(--space-2); border-radius: var(--radius-pill); border: 1px solid var(--line); }
   .tag.good { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }

@@ -31,7 +31,7 @@
   import NoteBlock from './NoteBlock.svelte';
   import NoteEditor from './NoteEditor.svelte';
 
-  let { b, mine = false, author = null, onopen, onnote, action, heading = 'h3' }: {
+  let { b, mine = false, author = null, onopen, onnote, action, heading = 'h3', flat = false }: {
     b: Bookmark | PublicBookmark;
     /** My own list: the note is mine to write, edit and delete. */
     mine?: boolean;
@@ -43,6 +43,13 @@
     action?: { label: string; title?: string; on: boolean; run: () => void; kind: 'remove' | 'save' };
     /** The title's heading level: h3 under a section heading (a profile), h2 straight under the page title. */
     heading?: 'h2' | 'h3';
+    /**
+     * Drawn without a card of its own, as part of a row on a list card (a
+     * mention on Notifications): the same content, edge to edge in the row, so
+     * its text lines up with the rows around it and only the list card has an
+     * edge and a shadow. Its title and summary take the list card's text rules.
+     */
+    flat?: boolean;
   } = $props();
 
   let editing = $state(false);
@@ -112,7 +119,7 @@
 
 {#snippet marked(text: string)}{#each highlight(text) as part}{#if part.hit}<mark>{part.text}</mark>{:else}{part.text}{/if}{/each}{/snippet}
 
-<Card as="li" class="bm" pad={false}>
+{#snippet content()}
   <header class:two={mine && action}>
     {#if marks?.site}
       <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} onsource={openSource}>
@@ -163,9 +170,18 @@
   {#if popover}
     <FeedPopover feedId={b.feedId} hasIcon={b.hasIcon} name={site} onclose={() => (popover = false)} />
   {/if}
-</Card>
+{/snippet}
+
+{#if flat}
+  <div class="bm flat">{@render content()}</div>
+{:else}
+  <Card as="li" class="bm" pad={false}>{@render content()}</Card>
+{/if}
 
 <style>
+  /* Flat: a row's room above is already there, so the source line sits close under the row's own line. */
+  .flat { position: relative; }
+  .flat header { padding-top: var(--space-2); }
   header { padding: var(--card-pad) calc(var(--card-pad) + var(--space-6)) 0 var(--card-pad); }
   .body { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-1) var(--card-pad) var(--card-pad); }
   .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); padding-right: var(--space-6); }

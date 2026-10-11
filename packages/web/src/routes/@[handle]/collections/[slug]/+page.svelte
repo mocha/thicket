@@ -1,19 +1,16 @@
 <script lang="ts">
   import Card from '$lib/components/Card.svelte';
-  import Dot from '$lib/components/Dot.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { api, collectionHref, feedHref, manageCollectionHref, profileHref, profilesApi, type PublicCollection } from '$lib/api';
+  import { api, collectionHref, manageCollectionHref, profileHref, profilesApi, type PublicCollection } from '$lib/api';
   import { openAddFeed } from '$lib/addfeed.svelte';
   import { session } from '$lib/session.svelte';
   import { loadCollections } from '$lib/collections.svelte';
-  import { feedOrigin, hostOf, relativeTime } from '$lib/time';
-  import { feedListName } from '$lib/feedname';
   import { audienceTag } from '$lib/visibility';
-  import SourceIcon from '$lib/components/SourceIcon.svelte';
-  import FollowControl from '$lib/components/FollowControl.svelte';
+  import FeedRow from '$lib/components/FeedRow.svelte';
+  import CollectionRow from '$lib/components/CollectionRow.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
@@ -181,25 +178,15 @@
     </div>
     {#if showFeeds}
     <div id="collection-feeds">
-      <ul class="list">
-        <!-- The name's link stretches over the row, so the icon and the rest of the row open the feed too, as on Explore. -->
+      <ul class="list list-rows">
         {#each col.feeds as f (f.id)}
-          <li class="feed">
-            <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title ?? hostOf(f.url)} size={36} />
-            <div class="meta">
-              <a class="title whole" href={feedHref(f)}>{feedListName(f)}</a>
-              <div class="sub2">{feedOrigin(f)}{#if f.lastItemAt} <Dot /> {relativeTime(f.lastItemAt)}{/if} <Dot /> {f.followerCount} {f.followerCount === 1 ? 'follower' : 'followers'}{#if f.failing} <Dot /> <span class="bad">failing</span>{/if}</div>
-            </div>
-            {#if session.user}
-              <FollowControl feedId={f.id} ids={f.myCollectionIds} name={f.title ?? hostOf(f.url)} compact />
-            {/if}
-          </li>
+          <FeedRow feed={f} failing={f.failing} followers={f.followerCount} follow={!!session.user} />
         {/each}
       </ul>
       {#if col.children.length}
-        <ul class="list children">
+        <ul class="list list-rows">
           {#each col.children as c (c.id)}
-            <li><a href={collectionHref(handle, c.slug)}><span class="name">{c.name}</span><span class="count">{c.feedCount} feeds</span><span class="chev">›</span></a></li>
+            <CollectionRow href={collectionHref(handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} sample={c.sample} />
           {/each}
         </ul>
       {/if}
@@ -222,29 +209,14 @@
   /* The pill sits in a line of text, so it carries its own gap to the separator after it. */
   :global(.feedscard) { margin-bottom: var(--space-4); }
   /* The row that opens the card. As tall open as closed, so the Export button arriving doesn't move anything. */
-  .fc-head { display: flex; align-items: center; gap: var(--space-3); min-height: 52px; padding: var(--space-2) var(--space-4); }
+  .fc-head { display: flex; align-items: center; gap: var(--space-3); min-height: 52px; padding: var(--space-2) var(--card-pad); }
   /* The whole strip to the left of Export opens and closes the list, not just the words. */
   .reveal { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-1); text-align: left; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
   /* 2px of top padding is an optical nudge: the buttons sit on the title's line. */
   /* The link keeps its own padding; pull it back so its words start at the title's left edge. */
   .visitoraction { margin: var(--space-2) 0 0 calc(-1 * var(--space-2)); }
-  .bad { color: var(--danger); }
   /* Inside the card the lists are part of it, not cards of their own: each starts under a hairline. */
-  .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
-  .list li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
-  .list li:first-child { border-top: 0; }
-  .children li { padding: 0; }
-  .children a { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); width: 100%; }
-  .children .name { flex: 1; font-weight: 600; }
-  .meta { flex: 1; min-width: 0; }
-  .title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .list li.feed { position: relative; }
-  .whole::after { content: ''; position: absolute; inset: 0; }
-  li.feed :global(.follow) { position: relative; z-index: 1; }
-  @media (hover: hover) { li.feed:hover .title { text-decoration: underline; text-underline-offset: 3px; } }
-  .sub2 { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .count { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .chev { color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
+  .list { border-top: 1px solid var(--line); }
   .status { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-4)) var(--space-5); color: var(--text-2); }
   .empty h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-app)); margin: 0 0 var(--space-2); }

@@ -99,7 +99,7 @@
     {:else if entries === null}
       <div class="pad"><p class="status">Loading…</p></div>
     {:else}
-      <ul class="acts">
+      <ul class="list-rows">
       {#each visible as e (key(e))}
         <li>
           {#if e.kind === 'feeds'}
@@ -109,7 +109,7 @@
                   <SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title} size={20} />
                 {/each}
               </div>
-              <p class="what">
+              <p class="what row-event">
                 Added {plural(e.payload.count, 'feed')} to
                 <a href={publicCollectionHref(handle, e.payload.collection.slug)}>{e.payload.collection.name}</a>{#if isMe && audienceTag(e.payload.collection.visibility)}<Badge class="aftertext">{audienceTag(e.payload.collection.visibility)}</Badge>{/if}
               </p>
@@ -122,7 +122,7 @@
           {:else if e.kind === 'collection'}
             <div class="row">
               <span class="glyph" aria-hidden="true">{e.payload.copiedFrom ? '⧉' : '✦'}</span>
-              <p class="what">
+              <p class="what row-event">
                 {#if e.payload.copiedFrom}
                   Copied <a href={publicCollectionHref(handle, e.payload.slug)}>{e.payload.name}</a>
                   from <a href="/@{e.payload.copiedFrom.handle}">@{e.payload.copiedFrom.handle}</a>
@@ -135,7 +135,7 @@
           {:else if e.kind === 'bookmark'}
             <div class="row">
               {@render icon(e.payload)}
-              <p class="what">
+              <p class="what row-event">
                 Bookmarked <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(e.payload.url))}>{e.payload.title ?? e.payload.url}</a>
                 {@render site(e.payload)}
               </p>
@@ -144,7 +144,7 @@
           {:else}
             <div class="row">
               {@render icon(e.payload)}
-              <p class="what">
+              <p class="what row-event">
                 Noted on <a href={savedHref(e.payload.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(e.payload.url))}>{e.payload.title ?? e.payload.url}</a>
                 {@render site(e.payload)}
               </p>
@@ -157,7 +157,7 @@
     </ul>
       <!-- A preview (limit) has no Show more: the caller links to the full list. -->
       {#if limit === undefined && (cursor || shown < entries.length)}
-        <div class="foot"><button class="more tap" onclick={more} disabled={busy}>{busy ? 'Loading…' : 'Show more'}</button></div>
+        <button class="row-more tap" onclick={more} disabled={busy}>{busy ? 'Loading…' : 'Show more'}</button>
       {:else if cappedAt}
         <div class="foot"><VisitorMore cap={cappedAt} /></div>
       {/if}
@@ -171,18 +171,15 @@
 
 <style>
   .pad { padding: var(--card-pad); }
-  .foot { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
+  .foot { padding: var(--space-3) var(--card-pad); border-top: 1px solid var(--line); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); margin: 0; }
-  .acts { list-style: none; margin: 0; padding: 0; }
-  li { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
-  li:first-child { border-top: 0; }
   .row { display: flex; align-items: center; gap: var(--space-3); }
   .icons { display: flex; flex: none; }
   /* Overlapped, so a burst of feeds reads as one object rather than a row of them.
      The pull is set against the icon's own width, so it stays a literal. */
   .icons > :global(*:not(:first-child)) { margin-left: -7px; }
   .glyph { flex: none; width: 20px; text-align: center; color: var(--text-3); font-size: calc(var(--text-base) * var(--size-app)); }
-  .what { flex: 1; min-width: 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .what { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .what a { color: var(--text); font-weight: 600; }
   .src { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   /* The same heavier dot as everywhere else (Dot.svelte), drawn here so it can come and go with the source. */
@@ -198,6 +195,4 @@
   blockquote { margin: var(--space-2) 0 0 var(--space-6); padding-left: var(--space-3); border-left: 2px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   /* A pill riding after a link, mid-sentence, needs its own gap. */
   .what :global(.aftertext) { margin-left: var(--space-2); }
-  .more { display: block; width: 100%; text-align: center; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .more:disabled { opacity: 0.6; }
 </style>

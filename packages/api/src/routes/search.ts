@@ -26,6 +26,7 @@
  */
 import { Hono } from "hono";
 import { sql, type SQL } from "drizzle-orm";
+import { collectionSample } from "../lib/subtree.js";
 import { cancellable } from "../db/client.js";
 import { allowsSql, notARepeatOf } from "../lib/visibility.js";
 import { myBookmarkIdSql } from "../lib/notes.js";
@@ -397,11 +398,7 @@ async function searchCollections(x: Exec, q: string, viewerId: number | null, li
            s.matches, s."matchingFeeds", s.last_match as "lastMatchAt", s.name_match as "nameMatch",
            s.user_id = ${me} as "isMine",
            exists(select 1 from collections mine where mine.user_id = ${me} and mine.copied_from_id = s.id) as "copiedByMe",
-           (select coalesce(json_agg(x), '[]'::json) from (
-              select f.id, coalesce(cf.title_override, f.title) as title,
-                     exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon"
-              from collection_feeds cf join feeds f on f.id = cf.feed_id
-              where cf.collection_id = s.id order by f.last_item_at desc nulls last limit 4) x) as sample
+           ${collectionSample(sql`s.id`, 4)} as sample
     from scored s
     order by s.score desc, s.name_score desc nulls last, s."feedCount" desc, s.id
     limit ${limit + 1} offset ${offset}

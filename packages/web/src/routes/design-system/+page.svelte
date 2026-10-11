@@ -31,11 +31,18 @@
   import Avatar from '$lib/components/Avatar.svelte';
   import Monogram from '$lib/components/Monogram.svelte';
   import Card from '$lib/components/Card.svelte';
+  import FeedRow from '$lib/components/FeedRow.svelte';
+  import PersonRow from '$lib/components/PersonRow.svelte';
+  import CollectionRow from '$lib/components/CollectionRow.svelte';
   import NoteBlock from '$lib/components/NoteBlock.svelte';
   import SettingRow from '$lib/components/SettingRow.svelte';
   import Sheet from '$lib/components/Sheet.svelte';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import { showToast } from '$lib/toast.svelte';
+  /** Made-up rows for the List row entry. */
+  const demoFeed = { id: -1, url: 'https://daringfireball.net/feeds/main', siteUrl: 'https://daringfireball.net', title: 'Daring Fireball', slug: 'daring-fireball', hasIcon: false, description: 'By John Gruber, on Apple, technology, and design.', lastItemAt: new Date(Date.now() - 3 * 3600_000).toISOString(), myCollectionIds: [] };
+  const demoPerson = { handle: 'maya', displayName: 'Maya Chen', bio: 'Design engineer. Collects thoughtful writing about the craft of the web.', avatarUpdatedAt: null };
+  const demoSample = [{ id: -2, title: 'Aeon', hasIcon: false }, { id: -3, title: 'Low Tech Magazine', hasIcon: false }, { id: -4, title: 'Robin Sloan', hasIcon: false }];
 
   // Sample notes for the Note entry, after your own: one by someone with a display name, one by someone without.
   const day = 86_400_000;
@@ -220,6 +227,7 @@
         { id: 'follow-button', label: 'Follow button' },
         { id: 'icon-button', label: 'Icon button' },
         { id: 'input', label: 'Input' },
+        { id: 'list-row', label: 'List row' },
         { id: 'monogram', label: 'Monogram' },
         { id: 'note', label: 'Note' },
         { id: 'page-header', label: 'Page header' },
@@ -463,11 +471,13 @@
 
     <section class="entry" id="badge" aria-labelledby="badge-h">
       <h3 class="entry-h" id="badge-h">Badge</h3>
-      <p class="section-lede">A short status word or a count that rides alongside something else. Never something you press.</p>
+      <p class="section-lede">A short status word or a count that rides alongside something else. Never something you press. A gray outline for a label or a count, filled green for an unread count in the menus, soft green for “New” on a post or a collection’s “30 new”, soft red for something wrong, like a feed that’s failing.</p>
       <div class="row">
         <Badge>Private</Badge>
         <Badge>12</Badge>
         <Badge tone="accent">3 new</Badge>
+        <Badge tone="soft">New</Badge>
+        <Badge tone="danger">Failing</Badge>
         <span class="dot-demo">New<Badge variant="dot" title="Something new" /></span>
       </div>
     </section>
@@ -532,12 +542,12 @@
       </div>
 
       <h4 class="sub">List card</h4>
-      <p class="section-lede">Rows, one under another: Activity, a collection’s feeds, Explore’s results, Notifications. The card has no space inside of its own; each row sets itself 16px in from the edge.</p>
+      <p class="section-lede">Rows, one under another: Activity, a collection’s feeds, Explore’s results, Notifications. The card has no space inside of its own; each row sets itself 16px in from the edge. The rows themselves are a <a href="#list-row">List row</a>.</p>
       <div class="stack">
-        <Card kind="list" as="ul">
-          <li class="demo-row">The first row</li>
-          <li class="demo-row">The second row</li>
-          <li class="demo-row">The third row</li>
+        <Card kind="list" as="ul" class="list-rows">
+          <li class="row-event">The first row</li>
+          <li class="row-event">The second row</li>
+          <li class="row-event">The third row</li>
         </Card>
       </div>
 
@@ -610,7 +620,7 @@
 
     <section class="entry" id="follow-button" aria-labelledby="follow-button-h">
       <h3 class="entry-h" id="follow-button-h">Follow button</h3>
-      <p class="section-lede">Follow for a person: one tap, a green outline, tinted green once you follow. It has the same look as a feed’s Follow, which also asks which collection the feed goes in. Signed out, it’s a link that goes to sign in first.</p>
+      <p class="section-lede">Follow for a person: one tap. It’s the small Button, in the plain ghost look until you follow, then the pale green secondary look: green means you have it, as on the bookmark icon. A feed’s Follow and a post’s Bookmark on Explore use the same two looks; a feed’s Follow also asks which collection the feed goes in. Signed out, it’s a link that goes to sign in first.</p>
       <div class="row"><FollowButton onclick={() => {}} /><FollowButton following onclick={() => {}} /></div>
     </section>
 
@@ -655,6 +665,40 @@
           {/snippet}
         </Field>
       </div>
+    </section>
+
+    <section class="entry" id="list-row" aria-labelledby="list-row-h">
+      <h3 class="entry-h" id="list-row-h">List row</h3>
+      <p class="section-lede">Every list of rows, on a list card or in a Sheet, is laid out the same way: 12px above and below each row, its text 16px in from the card’s edge, and a thin line between rows but none above the first. A Button on a row is the small size, and sits as far in from the right edge as the text does from the left. There are two kinds of row.</p>
+
+      <h4 class="sub">A row for one thing</h4>
+      <p class="section-lede">A feed, a person, a collection, or a post: something you can open. A 40px picture leads (a feed’s icon, a person’s picture, or for a collection a few of its feeds’ icons, overlapped), then the name in 16px bold, with the details under it in 14px gray. Used on Explore, a collection’s feeds, Collections, and the people someone follows. Import’s review list uses the same spacing and text, without pictures.</p>
+      <p class="section-lede">A feed is always the one Feed row, wherever feeds are listed: its name (with a Failing badge when its checks fail) and its site under it in dark, then its description and the facts about it (how often it posts, its latest post, its followers) in gray.</p>
+      <p class="section-lede">A person is always the one Person row, the same way: their name with their @handle beside it in gray, as a note names its writer (Priya Nair (@priya)), then their bio and the facts about them (feeds, public collections) in gray, with Follow at the right where the screen offers it.</p>
+      <p class="section-lede">A collection is always the one Collection row: its name with any badges after it (Yours, Copied, who can see it, how many new posts) and “by” whose it is under it in dark, then its description and how many feeds it holds in gray, ending in an arrow since the whole row opens it. On a search, the line saying why it was found comes last, in green, the same as on feed and person rows.</p>
+      <div class="stack">
+        <!-- The real rows, with made-up data, so this entry can't drift from the app. -->
+        <Card kind="list" as="ul" class="list-rows">
+          <FeedRow feed={demoFeed} failing postsLast30d={60} follow={false} />
+          <PersonRow person={demoPerson} feeds={7} collections={2} following onfollow={() => {}} />
+          <CollectionRow href="#list-row" name="Small Web" description="A sample of the Kagi Small Web list." feedCount={32} owner="Christie" sample={demoSample}>
+            {#snippet badges()}<Badge tone="soft">36 new</Badge>{/snippet}
+          </CollectionRow>
+        </Card>
+      </div>
+
+      <h4 class="sub">A row for something that happened</h4>
+      <p class="section-lede">Activity and Notifications: one 14px sentence saying who did what, with the names and titles in bold and when at the end. A long title trails off rather than wrapping. A mention on Notifications also shows the post under its sentence, flat, with no card of its own.</p>
+      <div class="stack">
+        <Card kind="list" as="div">
+          <ul class="list-rows">
+            <li class="row-event"><strong class="demo-strong">@maya</strong> started following you <span class="demo-when">2h</span></li>
+            <li class="row-event">Added 3 feeds to <strong class="demo-strong">Small Web</strong> <span class="demo-when">1d</span></li>
+          </ul>
+          <button class="row-more" onclick={() => {}}>Show more</button>
+        </Card>
+      </div>
+      <p class="section-lede">More rows (Show more, See all 12) is one line of accent words under the last row, spaced like a row.</p>
     </section>
 
     <section class="entry" id="monogram" aria-labelledby="monogram-h">
@@ -855,8 +899,8 @@
      short of the top when jumped to, so the jump menu doesn't cover the heading. */
   .group, .entry { scroll-margin-top: calc(var(--space-6) + var(--space-6)); }
   .group { margin: calc(var(--space-6) + var(--space-5)) 0 0; padding-top: var(--space-4); border-top: 2px solid var(--text); }
-  .demo-row { padding: var(--space-3) var(--card-pad); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .demo-row:first-child { border-top: 0; }
+  .demo-strong { color: var(--text); font-weight: 600; }
+  .demo-when { float: right; }
   .demo-inline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
   .demo-inline :global(.demo-grow) { flex: 1 1 12rem; min-width: 0; }
   .demo-invite { margin-top: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }

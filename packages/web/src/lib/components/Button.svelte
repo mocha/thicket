@@ -20,6 +20,8 @@
     loading?: boolean;
     onclick?: (e: MouseEvent) => void;
     children: Snippet;
+    /** For the screen to place the button (its margins, its layer); never to restyle it. */
+    class?: string;
     [key: string]: unknown;
   }
 
@@ -34,6 +36,7 @@
     loading = false,
     onclick,
     children,
+    class: klass = '',
     ...rest
   }: Props = $props();
 
@@ -43,7 +46,7 @@
 
 {#if href}
   <a
-    class="btn tap {variant} {size}"
+    class="btn tap {variant} {size} {klass}"
     class:loading
     class:solid
     class:link
@@ -56,7 +59,7 @@
     {@render children()}
   </a>
 {:else}
-  <button class="btn tap {variant} {size}" class:loading class:solid class:link {type} disabled={off} {onclick} {...rest}>
+  <button class="btn tap {variant} {size} {klass}" class:loading class:solid class:link {type} disabled={off} {onclick} {...rest}>
     {#if loading}<span class="spin" aria-hidden="true"></span>{/if}
     {@render children()}
   </button>

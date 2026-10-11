@@ -140,7 +140,7 @@
       <h3 class="follows">{name} follows</h3>
       <PeopleList people={following.slice(0, FOLLOWING_SHOWN)} />
       {#if following.length > FOLLOWING_SHOWN}
-        <button type="button" class="seeall tap" aria-haspopup="dialog" onclick={() => (peopleOpen = true)}>See all {following.length}</button>
+        <button type="button" class="row-more tap" aria-haspopup="dialog" onclick={() => (peopleOpen = true)}>See all {following.length}</button>
       {/if}
     </Card>
   {/if}
@@ -159,7 +159,6 @@
   /* The empty profile: a card with the reason, then a card of who they follow. */
   :global(.followscard) { margin-bottom: var(--space-3); }
   .emptynote { margin-bottom: var(--space-3); }
-  .follows { margin: 0; padding: var(--space-3) var(--space-4) var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .seeall { display: block; width: 100%; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); text-align: center; }
+  .follows { margin: 0; padding: var(--space-3) var(--card-pad) var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .saves { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
 </style>

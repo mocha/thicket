@@ -6,6 +6,7 @@
   import { relativeTime, hostOf, webHref } from '$lib/time';
   import { session } from '$lib/session.svelte';
   import Card from './Card.svelte';
+  import Badge from './Badge.svelte';
   import CardMeta from './CardMeta.svelte';
   import FeedPopover from './FeedPopover.svelte';
   import NoteBlock from './NoteBlock.svelte';
@@ -87,11 +88,11 @@
   <header class:compact>
     {#if showSource}
       <CardMeta feedId={item.feedId} hasIcon={item.hasIcon} name={source} when={item.publishedAt} onsource={openSource}>
-        {#if fresh}<span class="fresh" title="Newer than where you last stopped in this list">New</span>{/if}
+        {#if fresh}<Badge tone="soft" title="Newer than where you last stopped in this list">New</Badge>{/if}
       </CardMeta>
     {:else}
       <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{relativeTime(item.publishedAt)}</time>
-      {#if fresh}<span class="fresh" title="Newer than where you last stopped in this list">New</span>{/if}
+      {#if fresh}<Badge tone="soft" title="Newer than where you last stopped in this list">New</Badge>{/if}
     {/if}
     <span class="spacer"></span>
     {#if session.user}
@@ -156,7 +157,6 @@
   }
   header.compact { padding-top: var(--space-2); }
   time { color: var(--text-2); white-space: nowrap; }
-  .fresh { font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
   .spacer { flex: 1; }
   .link { display: block; padding: var(--space-2) var(--card-pad) var(--card-pad); -webkit-tap-highlight-color: transparent; }
   @media (hover: hover) { .link:hover h3 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
