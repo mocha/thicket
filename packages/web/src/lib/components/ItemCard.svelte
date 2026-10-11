@@ -14,12 +14,19 @@
   import ItemActions from './ItemActions.svelte';
   import { openReader, readsInline } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import { highlight, unmarked } from '$lib/words';
 
   /**
    * `compact`: the paged layout's fixed-height card. Thumbnail beside the text, two lines each, notes counted rather than shown.
    * `fresh`: newer than the point where this reader last stopped in this list ("What's new", on for this device). A small mark by the time.
+   * `marks`: on a search's results, the title and the part of the post the search matched, with the matched words fenced (see lib/words.ts). They're highlighted, and the matched part shows in place of the summary.
    */
-  let { item, showSource = true, compact = false, fresh = false }: { item: RiverItem; showSource?: boolean; compact?: boolean; fresh?: boolean } = $props();
+  let { item, showSource = true, compact = false, fresh = false, marks = null }: {
+    item: RiverItem; showSource?: boolean; compact?: boolean; fresh?: boolean;
+    marks?: { title: string | null; summary: string | null } | null;
+  } = $props();
+  /* The matched part is the bit around the match; say so when it starts mid-way. */
+  const cut = $derived(!!marks?.summary && !(item.summary ?? '').trimStart().startsWith(unmarked(marks.summary).slice(0, 24)));
   let imgFailed = $state(false);
   let popover = $state(false);
   let myNote = $state<Note | null>(null);
@@ -78,6 +85,8 @@
   }
 </script>
 
+{#snippet marked(text: string)}{#each highlight(text) as part}{#if part.hit}<mark>{part.text}</mark>{:else}{part.text}{/if}{/each}{/snippet}
+
 <!--
   The card is about the POST. The source line at the top is the one feed-level
   thing on it, and tapping it opens the feed's profile rather than the post.
@@ -99,8 +108,10 @@
     {#if item.imageUrl && !imgFailed}
       <img class="hero" src={item.imageUrl} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror={() => (imgFailed = true)} />
     {/if}
-    <h3 class="card-title" class:tight={compact}>{noOrphan(item.title ?? item.summary ?? item.url)}</h3>
-    {#if item.title && item.summary && item.summary !== item.title}
+    <h3 class="card-title" class:tight={compact}>{#if marks?.title}{@render marked(noOrphan(marks.title))}{:else}{noOrphan(item.title ?? item.summary ?? item.url)}{/if}</h3>
+    {#if marks?.summary}
+      <p class="card-summary found" class:tight={compact} use:wholeLines={compact}>{#if cut}… {/if}{@render marked(marks.summary)}</p>
+    {:else if item.title && item.summary && item.summary !== item.title}
       <p class="card-summary" class:tight={compact} use:wholeLines={compact}>{item.summary}</p>
     {/if}
   </a>
@@ -202,5 +213,9 @@
   /* The summary gets whatever room the title leaves, rounded down to whole lines, so a line is never sliced through the middle. */
   p.tight { grid-column: 1; --summary-gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-reading)); --summary-lines: 2; align-self: start; max-height: round(down, 100%, 1lh); }
   footer.compact { padding-bottom: var(--space-1); }
+  /* The part of the post a search matched gets a third line, so the match is not the bit cut off. */
+  p.found:not(.tight) { --summary-lines: 3; }
+  /* The words a search matched. The same highlight as a searched Bookmark card. */
+  mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
   .notecount { flex: none; font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); }
 </style>

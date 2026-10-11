@@ -29,7 +29,8 @@ import { sql, type SQL } from "drizzle-orm";
 import { collectionSample } from "../lib/subtree.js";
 import { cancellable } from "../db/client.js";
 import { allowsSql, notARepeatOf } from "../lib/visibility.js";
-import { myBookmarkIdSql } from "../lib/notes.js";
+import { myBookmarkIdSql, noteColumns } from "../lib/notes.js";
+import { feedSlugSql } from "../lib/slug.js";
 
 export const search = new Hono();
 
@@ -65,6 +66,8 @@ const HIT_CAP = 4000;
 const MARK_OPEN = "\u0001";
 const MARK_CLOSE = "\u0002";
 const HL = `StartSel=${MARK_OPEN}, StopSel=${MARK_CLOSE}, MaxWords=32, MinWords=14, ShortWord=3, MaxFragments=1`;
+/** The same fences over a whole short text, such as a title, rather than a fragment of it. */
+const HL_ALL = `StartSel=${MARK_OPEN}, StopSel=${MARK_CLOSE}, HighlightAll=true`;
 
 /**
  * Trigram similarity, floored. Below this, a "match" is an accident of shared
@@ -423,16 +426,25 @@ export const DEFAULT_POST_SORT: PostSort = "newest";
 export const postSortFrom = (v: string | null | undefined): PostSort =>
   (POST_SORTS as readonly string[]).includes(v ?? "") ? (v as PostSort) : DEFAULT_POST_SORT;
 
-/** What a post row shows, given `i` (items) and `f` (feeds) joined in. */
+/**
+ * What a post result shows, given `i` (items) and `f` (feeds) joined in: the
+ * same post an article card shows in a feed (routes/river.ts), plus `snippet`,
+ * the part of it a search matched.
+ */
 const postColumns = (me: number, q: string | null) => sql`
   i.id, i.feed_id as "feedId", coalesce((select fs.display_name from feed_settings fs where fs.user_id = ${me} and fs.feed_id = i.feed_id), f.title) as "feedTitle", f.site_url as "siteUrl",
-  i.url, i.title, i.author, i.image_url as "imageUrl", i.published_at as "publishedAt",
+  ${feedSlugSql} as "feedSlug",
+  i.url, i.title, i.author, i.summary, i.link_url as "linkUrl", i.link_label as "linkLabel", i.image_url as "imageUrl", i.published_at as "publishedAt",
   ${q
     ? sql`ts_headline('english', regexp_replace(coalesce(nullif(i.summary, ''), left(coalesce(i.content, ''), 4000), ''), '<[^>]*>', ' ', 'g'),
                        websearch_to_tsquery('english', ${q}), ${HL})`
     : sql`left(i.summary, 400)`} as snippet,
+  ${q
+    ? sql`ts_headline('english', i.title, websearch_to_tsquery('english', ${q}), ${HL_ALL})`
+    : sql`null`} as "titleMarked",
   exists(select 1 from feed_icons fi where fi.feed_id = i.feed_id and not fi.generic) as "hasIcon",
   ${myBookmarkIdSql(me)} as "bookmarkId",
+  ${noteColumns(me)},
   coalesce((select array_agg(cf.collection_id order by cf.collection_id) from collection_feeds cf join collections col on col.id = cf.collection_id and col.user_id = ${me} where cf.feed_id = i.feed_id), '{}') as "myCollectionIds"`;
 
 const notBlocked = (me: number) => sql`not exists(select 1 from blocks b where b.user_id = ${me} and b.feed_id = i.feed_id)`;

@@ -6,14 +6,14 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import {
-    api, bookmarksApi, exploreApi, searchApi, feedHref, collectionHref, profilesApi,
+    api, exploreApi, searchApi, collectionHref, profilesApi,
     type Feed, type ExploreCollection, type ExploreUser,
     type SearchResults, type SearchScope, type SearchFeed, type SearchCollection, type SearchPost, type SearchPerson,
     type FeedSearchSort, DEFAULT_FEED_SORT, feedSortFrom, DEFAULT_SCOPE, scopeFrom,
     type PostSearchSort, DEFAULT_POST_SORT, postSortFrom
   } from '$lib/api';
-  import { hostOf, longAgo, relativeTime, webHref } from '$lib/time';
-  import { highlight, latestShort, mentionRate, plural } from '$lib/words';
+  import { longAgo } from '$lib/time';
+  import { latestShort, mentionRate, plural } from '$lib/words';
   import { session } from '$lib/session.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
@@ -22,8 +22,7 @@
   import Select from '$lib/components/Select.svelte';
   import Sheet from '$lib/components/Sheet.svelte';
   import Icon from '$lib/components/Icon.svelte';
-  import SourceIcon from '$lib/components/SourceIcon.svelte';
-  import FeedPopover from '$lib/components/FeedPopover.svelte';
+  import ItemCard from '$lib/components/ItemCard.svelte';
   import FeedRow from '$lib/components/FeedRow.svelte';
   import PersonRow from '$lib/components/PersonRow.svelte';
   import CollectionRow from '$lib/components/CollectionRow.svelte';
@@ -306,16 +305,6 @@
     } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } finally { followBusy = null; }
   }
 
-  let markBusy = $state<number | null>(null);
-  async function toggleBookmark(p: SearchPost) {
-    if (markBusy) return;
-    markBusy = p.id;
-    try {
-      if (p.bookmarkId) { await bookmarksApi.remove(p.bookmarkId); p.bookmarkId = null; showToast('Removed bookmark'); }
-      else { const b = await bookmarksApi.saveItem(p.id); p.bookmarkId = b.id; api.event('bookmark_saved', { itemId: p.id, via: 'search' }); showToast('Bookmarked'); }
-    } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } finally { markBusy = null; }
-  }
-
   /* ---- shared ---- */
   let loading = $state(false);
   let error = $state<string | null>(null);
@@ -328,13 +317,6 @@
    * while you were away (you followed that feed or person), so it alone is
    * looked up again.
    */
-  /** A post result's feed, its card open from the row's icon or feed name. */
-  let source = $state<{ feedId: number; hasIcon: boolean; name: string } | null>(null);
-  function openSource(p: SearchPost) {
-    api.event('source_opened', { feedId: p.feedId, via: 'explore' });
-    source = { feedId: p.feedId, hasIcon: p.hasIcon, name: p.feedTitle ?? hostOf(p.siteUrl) };
-  }
-
   type Opened = { feed: number } | { person: string };
   let opened: Opened | null = null;
   const back = recall<{
@@ -543,6 +525,13 @@
     {/if}
 {/snippet}
 
+<!-- How many a search found, under the filters. A Posts search counts at most HIT_CAP matches (routes/search.ts), so a full count says "or more". -->
+{#snippet countLine()}
+  {#if searching && total !== null}
+    <p class="count">{total >= 4000 && scope === 'posts' ? '4,000+' : total.toLocaleString()} {total === 1 ? KINDS[scope][0] : KINDS[scope][1]} {scope === 'posts' ? (total === 1 ? 'mentions' : 'mention') : (total === 1 ? 'matches' : 'match')} “{q}”</p>
+  {/if}
+{/snippet}
+
 {#snippet filterBar()}
   <TabBlurb class="blurb" text={SCOPE_BLURB[scope]}>{#snippet icon()}{@render scopeIcon(scope)}{/snippet}</TabBlurb>
   {#if threeFilters}
@@ -596,35 +585,6 @@
   </CollectionRow>
 {/snippet}
 
-<!--
-  A post's title is its link, stretched over the whole row, so the row still
-  opens the post. The feed's icon and name sit above it as buttons that open
-  the feed's card instead: a button can't go inside a link. The icon is for
-  the pointer; the name is the one keyboard stop for it.
--->
-{#snippet postRow(p: SearchPost)}
-  <li class="post">
-    <div class="row">
-      <button class="feedicon" tabindex="-1" onclick={() => openSource(p)} aria-label="About {p.feedTitle ?? hostOf(p.siteUrl)}" title="About {p.feedTitle ?? hostOf(p.siteUrl)}">
-        <SourceIcon feedId={p.feedId} hasIcon={p.hasIcon} name={p.feedTitle ?? ''} size={40} />
-      </button>
-      <div class="meta">
-        <a class="title row-name whole" href={webHref(p.url) ?? feedHref({ id: p.feedId })} target={webHref(p.url) ? '_blank' : undefined} rel={webHref(p.url) ? 'noreferrer' : undefined}>{p.title ?? p.url}</a>
-        <!-- Plenty of feeds set the author to the feed's own name; saying it twice is noise. -->
-        <span class="sub2 row-details byline"><button class="feedname" onclick={() => openSource(p)} title="About {p.feedTitle ?? hostOf(p.siteUrl)}">{p.feedTitle ?? hostOf(p.siteUrl)}</button> <Dot /> {relativeTime(p.publishedAt)}{#if p.author && p.author !== p.feedTitle}<span>{' '}<Dot />{' '}{p.author}</span>{/if}</span>
-        {#if p.snippet}
-          <span class="desc">{#each highlight(p.snippet) as part}{#if part.hit}<mark>{part.text}</mark>{:else}{part.text}{/if}{/each}</span>
-        {/if}
-      </div>
-    </div>
-    {#if session.user}
-      <Button size="sm" variant={p.bookmarkId ? 'secondary' : 'ghost'} class="save" onclick={() => toggleBookmark(p)} disabled={markBusy === p.id} aria-pressed={!!p.bookmarkId}>
-        {p.bookmarkId ? 'Bookmarked' : 'Bookmark'}
-      </Button>
-    {/if}
-  </li>
-{/snippet}
-
 {#snippet personRow(u: ExploreUser | SearchPerson, ev: SearchPerson | null)}
   <PersonRow person={u} feeds={u.feeds} collections={u.collections} following={u.isFollowing} busy={followBusy === u.handle} onfollow={() => toggleFollow(u)} onopen={() => (opened = { person: u.handle })}>
     {#if ev && ev.notesMatch + ev.marksMatch > 0}
@@ -662,26 +622,27 @@
 {#if error}
   <p class="status error" role="alert">Couldn’t load: {error}</p>
 {:else if nothing}
-  <!-- Browsing, the message takes the rows' place inside the list card, so a filter that empties the list
-       leaves the filters where they were. A search's filters always sit above its cards, so its message does too. -->
-  {#if viaSearch}
-    {@render filterBar()}
-    {@render emptyMessage()}
-  {:else}
-    <Card kind="list" as="div" class="browse">{@render filterBar()}{@render emptyMessage()}</Card>
-  {/if}
+  <!-- The message takes the rows' place inside the list card, so a filter that empties the list leaves the filters where they were. -->
+  <Card kind="list" as="div" class="browse">{@render filterBar()}{@render emptyMessage()}</Card>
+{:else if viaSearch && scope === 'posts'}
+  <!-- Posts are article cards, the same as in a feed, so they follow the list card's top instead of sitting in it. -->
+  <Card kind="list" as="div" class="browse">{@render filterBar()}{@render countLine()}</Card>
+  {#if res}<div class="posts">
+    {#each rows as p ((p as SearchPost).id)}
+      {@const post = p as SearchPost}
+      <ItemCard item={post} marks={searching ? { title: post.titleMarked, summary: post.snippet } : null} />
+    {/each}
+  </div>{/if}
 {:else if viaSearch}
-  <!-- Its filters show at once; the list arrives under them. -->
-  {@render filterBar()}
-  {#if res}<section class="group">
-    <h2>{#if searching}{scopeLabel}{#if total !== null} <Badge>{total.toLocaleString()}</Badge>{/if}{:else}Newest posts{/if}</h2>
-    <Card kind="list" as="ul" class="list-rows">
+  <!-- Its filters show at once; the rows arrive under them, in the same card as browsing. -->
+  <Card kind="list" as="div" class="browse">
+    {@render filterBar()}{@render countLine()}
+    {#if res}<ul class="list-rows">
       {#if scope === 'feeds'}{#each rows as f ((f as SearchFeed).id)}{@render feedRow(f as SearchFeed, f as SearchFeed)}{/each}
       {:else if scope === 'collections'}{#each rows as c ((c as SearchCollection).id)}{@render colRow(c as SearchCollection, c as SearchCollection)}{/each}
-      {:else if scope === 'posts'}{#each rows as p ((p as SearchPost).id)}{@render postRow(p as SearchPost)}{/each}
       {:else}{#each rows as u ((u as SearchPerson).handle)}{@render personRow(u as SearchPerson, u as SearchPerson)}{/each}{/if}
-    </Card>
-  </section>{/if}
+    </ul>{/if}
+  </Card>
 {:else if browseAs === 'feeds'}
   <Card kind="list" as="div" class="browse">{@render filterBar()}<ul class="list-rows">{#each feeds as f (f.id)}{@render feedRow(f, null)}{/each}</ul></Card>
 {:else if browseAs === 'collections'}
@@ -701,15 +662,11 @@
   </Sheet>
 {/if}
 
-{#if source}
-  <FeedPopover feedId={source.feedId} hasIcon={source.hasIcon} name={source.name} onclose={() => (source = null)} />
-{/if}
 
 <style>
   .pane { margin-bottom: var(--space-2); }
   .head { margin-bottom: var(--space-5); }
   .pane :global(.scopes) { margin-bottom: var(--space-1); }
-  h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0; display: flex; align-items: baseline; gap: var(--space-2); }
   /* The per-view explainer: the caption above the filters, saying what this
      view is before its controls. A small accent-tinted icon sets it apart from
      the plain text below; the icon's left edge lines up with the filter labels. */
@@ -718,8 +675,10 @@
   /* Browsing, the filters and list are one card; the caption leads it, inset to
      match the card's side padding. */
   :global(.browse) :global(.blurb) { margin: 0; padding: var(--space-5) var(--card-pad) var(--space-2); }
-  .group { margin-bottom: var(--space-5); }
-  .group h2 { margin-bottom: var(--space-2); }
+  /* How many a search found: a quiet line between the filters and the first result. */
+  .count { margin: 0; padding: var(--space-1) var(--card-pad) var(--space-3); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  /* Article cards under the list card's top, spaced as in a feed. */
+  .posts { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); }
   .filters { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; margin-bottom: var(--space-1); }
   /* The note under the filters saying what the chosen order means. */
   .sort-help { margin: 0 0 var(--space-3); padding: 0 var(--card-pad, 0); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; text-wrap: pretty; }
@@ -752,20 +711,6 @@
   .fr-caret { flex: none; display: grid; color: var(--text-2); }
   /* Browse: the filters are the list card's header, so the two read as one unit; the rows below are part of the same card. */
   :global(.browse) .filters { margin: 0; padding: var(--space-3) var(--card-pad) var(--space-1); }
-  li { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-  /* On a phone a post row's Bookmark would squeeze the snippet into a column
-     four words wide, so it drops to its own line, at the right, where the
-     Feed and Person rows put their Follow. */
-  @media (max-width: 560px) {
-    li > .row { flex-basis: 100%; }
-    li > :global(.save) { margin-left: auto; }
-  }
-  .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
-  .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .desc { font-size: calc(var(--text-sm) * var(--size-app)); /* The 2px and 3px here are optical nudges around the description, not spacing steps. */ color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  /* 1px around a highlighted word is optical: the tint hugs the letters. */
-  .desc mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
   /* The line about your search: for a feed, how often it mentions your words
      over the last 30 days; for a collection, how many of its feeds do. The gap
      above keeps it clear of the description; 1px below is an optical nudge. */
@@ -774,19 +719,6 @@
   /* When the line has to wrap, "(latest 13h ago)" moves down whole instead of
      splitting inside the brackets. */
   .nowrap { white-space: nowrap; }
-  /* A post row's byline (its feed and when) sits tight under its title, and
-     the snippet keeps its distance below. The -2px is optical: it takes back
-     some of the empty space above and below each line of text, so the two
-     lines read as a pair. */
-  .sub2.byline { margin-top: -2px; color: var(--text); }
-  .byline + .desc { margin-top: var(--space-2); }
-  /* A post row: the title's link covers the row; the feed's buttons and Bookmark sit over it. */
-  li.post { position: relative; }
-  .whole::after { content: ''; position: absolute; inset: 0; }
-  .feedicon, .feedname, li.post > :global(.save) { position: relative; z-index: 1; }
-  .feedicon { flex: none; display: inline-flex; border-radius: var(--radius-avatar); }
-  .feedname { font-weight: 600; }
-  @media (hover: hover) { .feedname:hover, li.post:has(.whole:hover) .title { text-decoration: underline; text-underline-offset: 3px; } }
   .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
   .status.error { color: var(--danger); }
   .empty { text-align: center; color: var(--text-2); padding: calc(var(--space-6) + var(--space-1)) var(--space-4); font-size: calc(var(--text-base) * var(--size-app)); }

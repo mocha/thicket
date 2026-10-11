@@ -665,12 +665,13 @@ export type SearchFeed = {
 export type SearchCollection = ExploreCollection & {
   isMine: boolean; copiedByMe: boolean; matches: number; matchingFeeds: number; lastMatchAt: string | null; nameMatch: boolean;
 };
-export type SearchPost = {
-  id: number; feedId: number; feedTitle: string | null; siteUrl: string | null; url: string | null;
-  title: string | null; author: string | null; imageUrl: string | null; publishedAt: string;
-  /** Matched words are fenced by … so the page highlights them without rendering feed HTML. */
+/** A post a search found: the same post an article card shows in a feed, plus where the search matched. */
+export type SearchPost = RiverItem & {
+  /** The part of the post that matched (with nothing typed, the start of its summary). Matched words are fenced (see lib/words.ts) so the page highlights them without rendering feed HTML. */
   snippet: string | null;
-  hasIcon: boolean; bookmarkId: number | null; myCollectionIds: number[];
+  /** The title with the matched words fenced the same way; null with nothing typed. */
+  titleMarked: string | null;
+  myCollectionIds: number[];
 };
 export type SearchPerson = {
   handle: string; displayName: string | null; bio: string | null;
