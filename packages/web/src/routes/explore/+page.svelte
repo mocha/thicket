@@ -153,9 +153,19 @@
    */
   let draft = $state('');
   let searchInput = $state<HTMLInputElement | null>(null);
+  /**
+   * Search again with the same words is a retry, not nothing: the last attempt
+   * may have failed ("That took too long, try again"), and the address won't
+   * change to set off a load, so the load is asked for directly. An empty box
+   * submitted over a search clears it, as the X does.
+   */
   function submitSearch(e: SubmitEvent) {
     e.preventDefault();
     const v = draft.trim();
+    if (v === q) {
+      if (v) loadedKey = undefined; // the load effect sees a new key and loads this view afresh
+      return;
+    }
     // Starting or ending a search drops ?sort=: a browse order and a search order are different lists.
     setParams(!!v === searching ? { q: v || null } : { q: v || null, sort: null });
   }
@@ -445,7 +455,7 @@
           onclear={clearSearch}
           placeholder="Search {SCOPES.find((s) => s.id === scope)?.label.toLowerCase()}"
         >
-          {#snippet trailing()}<Button type="submit" variant="primary" disabled={!draft.trim() || draft.trim() === q}>Search</Button>{/snippet}
+          {#snippet trailing()}<Button type="submit" variant="primary" disabled={!draft.trim() && !q}>Search</Button>{/snippet}
         </Input>
       {/snippet}
     </Field>
