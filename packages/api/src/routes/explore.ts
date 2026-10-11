@@ -20,7 +20,7 @@ explore.get("/collections", async (c) => {
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 6)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
   const filters = [sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public' and u.collections_visibility = 'public'
-      and exists(select 1 from collection_feeds cf where cf.collection_id = col.id)`];
+      and col.feed_count > 0`];
   if (q) {
     const like = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
     filters.push(sql`(col.name ilike ${like} or col.description ilike ${like})`);
@@ -50,7 +50,7 @@ explore.get("/collections", async (c) => {
   const rows = await db.execute(sql`
     ${shown(filters)}
     select col.id, col.name, col.slug, col.description, u.handle, u.display_name as "displayName",
-           (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount",
+           col.feed_count as "feedCount",
            (select coalesce(json_agg(x), '[]'::json) from (
               select f.id, coalesce(cf.title_override, f.title) as title,
                      exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon"
@@ -90,7 +90,7 @@ explore.get("/featured", async (c) => {
   const viewerId = viewer?.id ?? -1;
   const handle = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
   const visible = sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public'
-    and u.collections_visibility = 'public' and exists(select 1 from collection_feeds cf where cf.collection_id = col.id)`;
+    and u.collections_visibility = 'public' and col.feed_count > 0`;
   const curated = handle
     ? (await db.execute<{ id: number }>(sql`select id from users where handle = ${handle} and profile_visibility = 'public' and collections_visibility = 'public'`)).rows[0]
     : undefined;
@@ -103,7 +103,7 @@ explore.get("/featured", async (c) => {
   const rows = await db.execute(sql`
     select col.id, col.name, col.slug, col.description, u.handle, u.display_name as "displayName",
            col.user_id = ${viewerId} as "isMine",
-           (select count(*)::int from collection_feeds cf where cf.collection_id = col.id) as "feedCount",
+           col.feed_count as "feedCount",
            (select coalesce(json_agg(x), '[]'::json) from (
               select f.id, coalesce(cf.title_override, f.title) as title,
                      exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon"

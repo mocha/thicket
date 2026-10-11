@@ -11,16 +11,18 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { proxy } from "hono/proxy";
+import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 import { ROUTERS } from "./routes/index.js";
 import { startScheduler } from "./feeds/scheduler.js";
 import { attachUser, pruneSessions } from "./lib/auth.js";
 import { pruneEmailTokens } from "./lib/email-tokens.js";
 import { startRetention } from "./lib/retention.js";
+import { startCounts } from "./lib/counts.js";
 import { startFeedbackRetry } from "./lib/feedback.js";
 import { ensureAdmin, publicStatus } from "./lib/instance.js";
 import { runMigrations } from "./db/migrate.js";
-import { pool } from "./db/client.js";
+import { endPools, isDbBusy } from "./db/client.js";
 import { headForPath } from "./lib/meta.js";
 import { openApiDocument } from "./lib/openapi.js";
 import { EMAIL_REQUIRED, FETCH_CONCURRENCY, PORT, PUBLIC_URL, SCHEDULER, SCHEDULER_TICK_MS, SITE_URL, SMTP_URL, TRACK_ACTIVITY, WEB_DIR } from "./lib/config.js";
@@ -35,7 +37,7 @@ try {
   await runMigrations();
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
-  await pool.end();
+  await endPools();
   process.exit(1);
 }
 await ensureAdmin();
@@ -49,12 +51,32 @@ app.use("/api/*", attachUser);
 
 for (const [base, router] of ROUTERS) app.route(base, router);
 
+/**
+ * The database said no in time: a query ran past its statement timeout, or no
+ * connection came free (db/client.ts). Both mean "busy, try again", which is a
+ * 503, not a crash. A query cancelled because its browser left lands here too;
+ * nobody reads that answer.
+ */
+app.onError((err, c) => {
+  if (err instanceof HTTPException) return err.getResponse();
+  if (isDbBusy(err)) {
+    // A browser that moved on (a new search, another tab) is the normal case and not worth a line.
+    // Otherwise one short line, never the message: drizzle's carries the SQL and its parameters,
+    // which here are what someone searched for, and that is not the log's business.
+    if (!c.req.raw.signal.aborted) console.warn(`[db] ${c.req.method} ${c.req.path}: timed out or no connection free`);
+    return c.json({ error: "That took too long. Please try again in a moment." }, 503);
+  }
+  console.error(err);
+  return c.json({ error: "Internal Server Error" }, 500);
+});
+
 const scheduler = SCHEDULER
   ? startScheduler({ tickMs: SCHEDULER_TICK_MS, concurrency: FETCH_CONCURRENCY, log: (m) => console.log(`[fetch] ${m}`) })
   : null;
 setInterval(() => void pruneSessions().catch(() => {}), 3600_000).unref();
 setInterval(() => void pruneEmailTokens().catch(() => {}), 3600_000).unref();
 startRetention();
+startCounts();
 startFeedbackRetry();
 
 app.get("/api/health", async (c) => c.json({
