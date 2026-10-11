@@ -3,7 +3,7 @@
   import type { Note, RiverItem } from '$lib/api';
   import { api } from '$lib/api';
   import { noteToast } from '$lib/saves';
-  import { relativeTime, hostOf, webHref } from '$lib/time';
+  import { hostOf, webHref } from '$lib/time';
   import { session } from '$lib/session.svelte';
   import Card from './Card.svelte';
   import CardMeta from './CardMeta.svelte';
@@ -16,9 +16,10 @@
 
   /**
    * `compact`: the paged layout's fixed-height card. Thumbnail beside the text, two lines each, notes counted rather than shown.
+   * `linkSource`: the feed name at the top opens the feed's card. Off on the feed's own page, where it is plain text.
    * `fresh`: newer than the point where this reader last stopped in this list ("What's new", on for this device). A small mark by the time.
    */
-  let { item, showSource = true, compact = false, fresh = false }: { item: RiverItem; showSource?: boolean; compact?: boolean; fresh?: boolean } = $props();
+  let { item, linkSource = true, compact = false, fresh = false }: { item: RiverItem; linkSource?: boolean; compact?: boolean; fresh?: boolean } = $props();
   let imgFailed = $state(false);
   let popover = $state(false);
   let myNote = $state<Note | null>(null);
@@ -85,14 +86,10 @@
 -->
 <Card {compact} pad={false}>
   <header class:compact>
-    {#if showSource}
-      <CardMeta feedId={item.feedId} hasIcon={item.hasIcon} name={source} when={item.publishedAt} onsource={openSource}>
-        {#if fresh}<span class="fresh" title="Newer than where you last stopped in this list">New</span>{/if}
-      </CardMeta>
-    {:else}
-      <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{relativeTime(item.publishedAt)}</time>
+    <!-- On the feed's own page the name stays, so a card still says where it's from, but as plain text: it would only open the page you're on. -->
+    <CardMeta feedId={item.feedId} hasIcon={item.hasIcon} name={source} when={item.publishedAt} onsource={linkSource ? openSource : undefined}>
       {#if fresh}<span class="fresh" title="Newer than where you last stopped in this list">New</span>{/if}
-    {/if}
+    </CardMeta>
     <span class="spacer"></span>
     {#if session.user}
       <ItemActions {item} noteOpen={editing} onnote={noteButton} via="card" />
@@ -155,7 +152,6 @@
     padding: var(--space-3) var(--space-2) 0 var(--card-pad); min-width: 0;
   }
   header.compact { padding-top: var(--space-2); }
-  time { color: var(--text-2); white-space: nowrap; }
   .fresh { font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
   .spacer { flex: 1; }
   .link { display: block; padding: var(--space-2) var(--card-pad) var(--card-pad); -webkit-tap-highlight-color: transparent; }
