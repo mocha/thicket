@@ -12,7 +12,7 @@
     DEFAULT_SCOPE, scopeFrom
   } from '$lib/api';
   import { longAgo } from '$lib/time';
-  import { latestShort, mentionRate, plural } from '$lib/words';
+  import { fence, latestShort, mentionRate, plural } from '$lib/words';
   import { session } from '$lib/session.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
@@ -22,6 +22,7 @@
   import Sheet from '$lib/components/Sheet.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import ItemCard from '$lib/components/ItemCard.svelte';
+  import Marked from '$lib/components/Marked.svelte';
   import FeedRow from '$lib/components/FeedRow.svelte';
   import PersonRow from '$lib/components/PersonRow.svelte';
   import CollectionRow from '$lib/components/CollectionRow.svelte';
@@ -532,7 +533,21 @@
 {/snippet}
 
 <!-- Rows. Each kind knows how to show its own evidence; see lib/words.ts. -->
+<!-- The searched words inside a row's facts, highlighted as on a post. -->
+{#snippet searched()}<Marked text={fence(q)} />{/snippet}
+
+<!-- A row's search fact is passed only when there is one: a row given an empty
+     one would draw the dot before it, or lose its own count. -->
 {#snippet feedRow(f: SearchFeed | Feed, ev: SearchFeed | null)}
+  {#snippet why()}
+    {#if ev && ev.matchesLast30d > 0}
+      <span aria-hidden="true">~</span><span class="visually-hidden">about </span>{mentionRate(ev.matchesLast30d)} {@render searched()}{#if ev.lastMatchAt}{' '}<span class="nowrap">({latestShort(ev.lastMatchAt)})</span>{/if}
+    {:else if ev && ev.lastMatchAt}
+      Last mentioned {@render searched()} {longAgo(ev.lastMatchAt)}
+    {:else}
+      Name matches, but no posts mention {@render searched()}
+    {/if}
+  {/snippet}
   <!-- Sorted by newest post, a search row shows the date it is sorted by. -->
   <FeedRow
     feed={f}
@@ -542,42 +557,29 @@
     latest={!ev || sortsFeedsByPost}
     onopen={() => (opened = { feed: f.id })}
     onchange={() => void api.feed(f.id).then((u) => Object.assign(f, u))}
-  >
-    {#if ev && ev.matchesLast30d > 0}
-      <span class="why"><span aria-hidden="true">~</span><span class="visually-hidden">about </span>{mentionRate(ev.matchesLast30d)} “{q}”{#if ev.lastMatchAt}{' '}<span class="nowrap">({latestShort(ev.lastMatchAt)})</span>{/if}</span>
-    {:else if ev && ev.lastMatchAt}
-      <span class="why">Last mentioned “{q}” {longAgo(ev.lastMatchAt)}</span>
-    {:else if ev}
-      <span class="why">Name matches, but no posts mention “{q}”</span>
-    {/if}
-  </FeedRow>
+    children={ev ? why : undefined}
+  />
 {/snippet}
 
 {#snippet colRow(c: ExploreCollection | SearchCollection, ev: SearchCollection | null)}
-  <CollectionRow href={collectionHref(c.handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} owner={c.displayName ?? `@${c.handle}`} sample={c.sample}>
-    <!-- The same pills as a profile's Collections: whose it is shows beside the name, not only in the byline. -->
-    {#snippet badges()}{#if ev?.isMine}<Badge>Yours</Badge>{:else if ev?.copiedByMe}<Badge>Copied</Badge>{/if}{/snippet}
+  {#snippet why()}
     {#if ev && ev.matches > 0}
-      <span class="why">
-        <strong>{plural(ev.matchingFeeds, 'feed')}</strong> in it {ev.matchingFeeds === 1 ? 'has' : 'have'} posted about “{q}”
-        {#if ev.lastMatchAt} <Dot /> most recent {longAgo(ev.lastMatchAt)}{/if}
-      </span>
-    {:else if ev}
-      <span class="why">Matches the name</span>
+      {ev.matchingFeeds.toLocaleString()} of {plural(c.feedCount, 'feed')} {ev.matchingFeeds === 1 ? 'has' : 'have'} posted about {@render searched()}{#if ev.lastMatchAt}{'\u00a0'}<Dot />{' '}most recent {longAgo(ev.lastMatchAt)}{/if}
+    {:else}
+      {plural(c.feedCount, 'feed')}{'\u00a0'}<Dot />{' '}Matches the name
     {/if}
-  </CollectionRow>
+  {/snippet}
+  <!-- The same pills as a profile's Collections: whose it is shows beside the name, not only in the byline. -->
+  {#snippet badges()}{#if ev?.isMine}<Badge>Yours</Badge>{:else if ev?.copiedByMe}<Badge>Copied</Badge>{/if}{/snippet}
+  <CollectionRow href={collectionHref(c.handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} owner={c.displayName ?? `@${c.handle}`} sample={c.sample} {badges} children={ev ? why : undefined} />
 {/snippet}
 
 {#snippet personRow(u: ExploreUser | SearchPerson, ev: SearchPerson | null)}
-  <PersonRow person={u} feeds={u.feeds} collections={u.collections} following={u.isFollowing} busy={followBusy === u.handle} onfollow={() => toggleFollow(u)} onopen={() => (opened = { person: u.handle })}>
-    {#if ev && ev.notesMatch + ev.marksMatch > 0}
-      <span class="why">
-        {#if ev.notesMatch}<strong>{plural(ev.notesMatch, 'note')}</strong> about “{q}”{/if}
-        {#if ev.notesMatch && ev.marksMatch} <Dot /> {/if}
-        {#if ev.marksMatch}<strong>{plural(ev.marksMatch, 'bookmark')}</strong> about “{q}”{/if}
-      </span>
-    {/if}
-  </PersonRow>
+  {#snippet why()}
+    {#if ev?.notesMatch}{plural(ev.notesMatch, 'note')} about {@render searched()}{/if}{#if ev?.notesMatch && ev?.marksMatch}{'\u00a0'}<Dot />{' '}{/if}{#if ev?.marksMatch}{plural(ev.marksMatch, 'bookmark')} about {@render searched()}{/if}
+  {/snippet}
+  <PersonRow person={u} feeds={u.feeds} collections={u.collections} following={u.isFollowing} busy={followBusy === u.handle} onfollow={() => toggleFollow(u)} onopen={() => (opened = { person: u.handle })}
+    children={ev && ev.notesMatch + ev.marksMatch > 0 ? why : undefined} />
 {/snippet}
 
 {#snippet emptyMessage()}
@@ -677,11 +679,6 @@
   /* Each choice stays on one line, so a long summary breaks at the dots, never mid-phrase. */
   .fr-part { white-space: nowrap; }
   .fr-caret { flex: none; display: grid; color: var(--text-2); }
-  /* The line about your search: for a feed, how often it mentions your words
-     over the last 30 days; for a collection, how many of its feeds do. The gap
-     above keeps it clear of the description; 1px below is an optical nudge. */
-  .why { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); margin: var(--space-2) 0 1px; }
-  .why strong { font-weight: 700; }
   /* When the line has to wrap, "(latest 13h ago)" moves down whole instead of
      splitting inside the brackets. */
   .nowrap { white-space: nowrap; }

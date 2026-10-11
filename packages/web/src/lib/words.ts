@@ -55,6 +55,9 @@ export function highlight(snippet: string): { text: string; hit: boolean }[] {
   return out;
 }
 
+/** Text fenced whole, as if a search had matched all of it: the searched words themselves, drawn highlighted. */
+export const fence = (text: string) => `${OPEN}${text}${CLOSE}`;
+
 /** The same text with the fences taken out. */
 export const unmarked = (snippet: string) => snippet.replaceAll(OPEN, '').replaceAll(CLOSE, '');
 

@@ -12,7 +12,7 @@
    * last did (`latest` off where a list is sorted by something else and the
    * date would mislead), its followers, how many people you follow follow it.
    * Anything more a screen wants to say (why a search found it) goes in
-   * `children`, under the facts.
+   * `children`, as one more fact at the end of the facts line.
    */
   import type { Snippet } from 'svelte';
   import { feedHref } from '$lib/api';
@@ -61,12 +61,11 @@
       <span class="named"><span class="title row-name">{feedListName(f)}</span>{#if failing}<Badge tone="danger">Failing</Badge>{/if}</span>
       <span class="row-details origin">{feedOrigin(f)}</span>
       {#if f.description}<span class="row-details desc">{f.description}</span>{/if}
-      {#if facts.length || network}
+      {#if facts.length || network || children}
         <span class="row-details facts">
-          {#each facts as fact, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{i === 0 ? fact[0].toUpperCase() + fact.slice(1) : fact}{/each}{#if network}{#if facts.length}{' '}<Dot />{' '}{/if}<span class="net">{plural(network, 'person', 'people')} you follow</span>{/if}
+          {#each facts as fact, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{i === 0 ? fact[0].toUpperCase() + fact.slice(1) : fact}{/each}{#if network}{#if facts.length}{' '}<Dot />{' '}{/if}<span class="net">{plural(network, 'person', 'people')} you follow</span>{/if}{#if children}{#if facts.length || network}{'\u00a0'}<Dot />{' '}{/if}{@render children()}{/if}
         </span>
       {/if}
-      {@render children?.()}
     </div>
   </a>
   {#if follow}

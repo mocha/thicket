@@ -8,7 +8,8 @@
    * and drops under the text on a phone.
    *
    * Each fact shows only when the screen has it. Anything more a screen wants
-   * to say (why a search found them) goes in `children`, under the facts.
+   * to say (why a search found them) goes in `children`, as one more fact at
+   * the end of the facts line.
    */
   import type { Snippet } from 'svelte';
   import { profileHref } from '$lib/api';
@@ -46,10 +47,9 @@
       <!-- Name and handle as a note heads them: "Priya Nair (@priya)", or just the handle when they gave no name. -->
       <span class="title row-name">{#if u.displayName}{u.displayName} <span class="handle">(@{u.handle})</span>{:else}@{u.handle}{/if}</span>
       {#if u.bio}<span class="row-details bio">{u.bio}</span>{/if}
-      {#if facts.length}
-        <span class="row-details facts">{#each facts as fact, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{fact}{/each}</span>
+      {#if facts.length || children}
+        <span class="row-details facts">{#each facts as fact, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{fact}{/each}{#if children}{#if facts.length}{'\u00a0'}<Dot />{' '}{/if}{@render children()}{/if}</span>
       {/if}
-      {@render children?.()}
     </div>
   </a>
   {#if following !== undefined}

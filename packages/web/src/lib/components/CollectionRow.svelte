@@ -10,7 +10,8 @@
    * A few of its feeds' icons, overlapped, are its picture. A collection
    * inside another steps in one spacing step per level (`depth`), and its
    * name sits quieter, so the tree reads at a glance. Anything more a screen
-   * wants to say (why a search found it) goes in `children`, under the facts.
+   * wants to say (why a search found it) goes in `children`, in place of the
+   * plain feed count on the facts line, so the count isn't said twice.
    */
   import type { Snippet } from 'svelte';
   import type { CollectionSample } from '$lib/api';
@@ -45,8 +46,7 @@
       <span class="named"><span class="title row-name">{name}</span>{@render badges?.()}</span>
       {#if owner}<span class="row-details owner">by {owner}</span>{/if}
       {#if description}<span class="row-details desc">{description}</span>{/if}
-      <span class="row-details facts">{plural(feedCount, 'feed')}</span>
-      {@render children?.()}
+      <span class="row-details facts">{#if children}{@render children()}{:else}{plural(feedCount, 'feed')}{/if}</span>
     </span>
     <span class="chev" aria-hidden="true">›</span>
   </a>
