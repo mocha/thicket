@@ -10,7 +10,7 @@
  * image stands in, exactly as a fresh parse would now decide.
  */
 import { sql } from "drizzle-orm";
-import { db, pool } from "../db/client.js";
+import { db, endPools } from "../db/client.js";
 import { choosePreview } from "../feeds/images.js";
 
 const dry = process.argv.includes("--dry");
@@ -39,4 +39,4 @@ for (;;) {
 }
 console.log(`${dry ? "dry run: " : ""}${seen} posts with a picture; ${changed} changed (${upsized} asked for the large version of the same file, ${swapped} swapped for the body's first image)`);
 console.log("by host:", [...hosts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([h, n]) => `${h} ${n}`).join(", "));
-await pool.end();
+await endPools();

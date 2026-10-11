@@ -11,7 +11,7 @@
  */
 import { readFileSync } from "node:fs";
 import { sql } from "drizzle-orm";
-import { db, pool } from "../db/client.js";
+import { db, endPools } from "../db/client.js";
 import { normalizeFeedUrl } from "../feeds/normalize.js";
 import { otherScheme } from "../feeds/twins.js";
 
@@ -53,4 +53,4 @@ for (const r of rows) {
 }
 
 console.log(`\n${rows.length} of the listed feeds are in the index; ${dropped} ${apply ? "removed" : "would be removed (run with --apply)"}`);
-await pool.end();
+await endPools();
