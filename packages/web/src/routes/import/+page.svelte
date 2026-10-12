@@ -94,7 +94,7 @@
   let draft = $state('');
   let nameBox = $state<HTMLInputElement | null>(null);
   async function startRename(gi: number) {
-    draft = imp.groups[gi].name;
+    draft = finalNames.get(gi) ?? imp.groups[gi].name;
     renaming = gi;
     await tick();
     nameBox?.focus();
@@ -181,17 +181,17 @@
             <form class="rename" onsubmit={(e) => { e.preventDefault(); finishRename(g); }}>
               <Input bind:value={draft} bind:element={nameBox} maxlength={60} clearable={false} aria-label="Collection name" onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') renaming = null; }}>
                 {#snippet trailing()}
-                  <Button type="submit" variant="primary" disabled={!draft.trim() || draft.trim() === g.name.trim()}>Save</Button>
+                  <Button type="submit" variant="primary" disabled={!draft.trim() || draft.trim() === (final ?? g.name.trim())}>Save</Button>
                 {/snippet}
               </Input>
             </form>
           {:else}
-            <h2 class="section-title">{g.name.trim() || 'Untitled'}</h2>
+            <h2 class="section-title">{final ?? (g.name.trim() || 'Untitled')}</h2>
           {/if}
           {#if why}<p class="section-description">{why}</p>
           {:else if on}
             <p class="section-description">
-              {#if renamed}<span class="line">Will be called “{final}”, since you already have a {g.name.trim()}</span>{/if}
+              {#if renamed}<span class="line">A collection named “{g.name.trim()}” already exists.</span>{/if}
               <span class="line counts">{#if !settled(g) && !ok.length}Checking feeds…{:else}Importing {plural(fresh, 'feed')}{/if}{#if following}{' '}<Dot />{' '}{following} you already follow{/if}{#if bad.length}{' '}<Dot />{' '}{plural(bad.length, 'feed')} we can’t import{/if}</span>
             </p>
           {/if}
