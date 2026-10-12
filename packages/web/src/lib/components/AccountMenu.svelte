@@ -115,16 +115,16 @@
     {/if}
     <a role="menuitem" href="/settings" onclick={onclose}>
       <Icon name="gear" size={20} />
-      <span>Settings</span>
+      <span>Reading settings</span>
     </a>
     <a role="menuitem" href="/account" onclick={onclose}>
       <Icon name="key" size={20} />
-      <span>Account</span>
+      <span>Account and data</span>
     </a>
     {#if me.isAdmin}
       <a role="menuitem" href="/admin" onclick={onclose}>
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z" /></svg>
-        <span>Admin</span>
+        <span>Site admin</span>
       </a>
     {/if}
     {#if hosted}
