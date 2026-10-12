@@ -282,8 +282,6 @@
   .rename { margin-bottom: var(--space-3); }
   /* "Will be called…" gets a line of its own above the counts. */
   .line { display: block; }
-  /* The same small step the Feed row puts between its lines, so the two read as separate facts. */
-  .line + .line { margin-top: var(--space-1); }
   .counts { font-variant-numeric: tabular-nums; }
 
   /* The feeds are the card's rows, edge to edge, to the card's bottom edge.
