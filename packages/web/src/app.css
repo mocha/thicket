@@ -401,11 +401,17 @@ img { display: block; max-width: 100%; }
    (`row-details`). A row reporting something that happened (activity,
    notifications) is one sentence (`row-event`). `row-more` is the "Show
    more" or "See all" under the last row. */
-/* The one checkbox and the one option button: 16px everywhere, in the theme's
-   accent, never squeezed by the row they sit in. Screens only place them (a
-   margin to line up with their label); the size and color live here. */
-input[type="checkbox"], input[type="radio"] { width: 16px; height: 16px; flex: none; accent-color: var(--accent); }
-input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The one option button, drawn by thicket rather than the browser so it looks
+   the same everywhere and matches the Checkbox piece: 16px, outlined like a
+   text field, an accent ring and dot once chosen. Screens only place it (a
+   margin to line up with its label). Checkboxes are the Checkbox piece. */
+input[type="radio"] {
+  appearance: none; flex: none; margin: 0; width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid var(--field-line); background: var(--surface); cursor: pointer;
+}
+input[type="radio"]:checked { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 3.5px, var(--surface) 4px); }
+input[type="radio"]:disabled { cursor: not-allowed; opacity: 0.5; }
+input[type="radio"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .list-rows { list-style: none; margin: 0; padding: 0; }
 .list-rows > li { padding: var(--space-3) var(--card-pad, var(--space-4)); }

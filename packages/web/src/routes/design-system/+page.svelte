@@ -33,6 +33,7 @@
   import Card from '$lib/components/Card.svelte';
   import CardMeta from '$lib/components/CardMeta.svelte';
   import CardFooter from '$lib/components/CardFooter.svelte';
+  import Checkbox from '$lib/components/Checkbox.svelte';
   import FeedRow from '$lib/components/FeedRow.svelte';
   import PersonRow from '$lib/components/PersonRow.svelte';
   import CollectionRow from '$lib/components/CollectionRow.svelte';
@@ -596,10 +597,11 @@
 
     <section class="entry" id="checkbox" aria-labelledby="checkbox-h">
       <h3 class="entry-h" id="checkbox-h">Checkbox</h3>
-      <p class="section-lede">The browser’s own checkbox and option button, 16px everywhere and in the theme’s accent color, so a box sits evenly beside a line of text. The size and color are set once for the whole app; a screen only lines one up with its label. Settings, Admin, Manage collection, Manage feed, the Add a feed sheet, Send feedback, and Import all use it.</p>
+      <p class="section-lede">Drawn by thicket, not the browser, so it looks the same in Chrome, Safari, and Firefox: a 16px box with softly rounded corners, outlined like a text field, filled with the accent and a check once ticked. 16px is the height of a line of body text, so a box sits evenly beside its label. It is still a real checkbox underneath, for the keyboard and screen readers. The option button (pick one of a few) is its round partner, drawn the same way, with an accent ring and dot. A screen only lines either one up with its label. Settings, Admin, Manage collection, Manage feed, the Add a feed sheet, Send feedback, and Import use them.</p>
       <div class="stack">
-        <label class="demo-check"><input type="checkbox" checked /> Checked</label>
-        <label class="demo-check"><input type="checkbox" /> Not checked</label>
+        <label class="demo-check"><Checkbox checked /> Checked</label>
+        <label class="demo-check"><Checkbox /> Not checked</label>
+        <label class="demo-check"><Checkbox checked disabled /> Checked, and can’t be changed</label>
         <label class="demo-check"><input type="radio" name="demo-option" checked /> An option button, chosen</label>
         <label class="demo-check"><input type="radio" name="demo-option" /> An option button</label>
       </div>

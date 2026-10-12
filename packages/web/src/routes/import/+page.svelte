@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Checkbox from '$lib/components/Checkbox.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import Card from '$lib/components/Card.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
@@ -168,7 +169,7 @@
       <div class="ghead">
         {#if choosing}
           <!-- A group with nothing that works can't be ticked; the description says why. -->
-          <input type="checkbox" class="keep" checked={on} disabled={!!why} onchange={(e) => (g.keep = e.currentTarget.checked)} aria-label="Create {g.name.trim() || 'this collection'}" />
+          <Checkbox class="keep" checked={on} disabled={!!why} onchange={(e) => (g.keep = e.currentTarget.checked)} aria-label="Create {g.name.trim() || 'this collection'}" />
         {/if}
         <div class="gbody">
           {#if on && renaming === gi}
@@ -269,10 +270,9 @@
 
   .ghead { display: flex; align-items: flex-start; gap: var(--space-3); }
   /* Small beside the 21px heading, so the name leads; level with its first line (21px at 1.25 line height). */
-  .keep { margin: 5px 0 0; cursor: pointer; }
-  .keep:disabled { cursor: not-allowed; }
+  .ghead :global(.keep) { margin-top: 5px; }
   /* Beside the open name field the box sits level with the field's label. */
-  .ghead:has(.rename) .keep { margin-top: 0; }
+  .ghead:has(.rename) :global(.keep) { margin-top: 0; }
   .gbody { flex: 1; min-width: 0; }
   :global(.import-section.off) .section-title { color: var(--text-2); }
   /* Spaced and lined up like the Edit profile form: the buttons at the right, under the field. */

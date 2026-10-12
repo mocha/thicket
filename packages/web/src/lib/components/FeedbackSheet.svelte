@@ -12,6 +12,7 @@
   import { closeFeedback } from '$lib/feedback.svelte';
   import { session } from '$lib/session.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import Checkbox from './Checkbox.svelte';
   import Sheet from './Sheet.svelte';
   import Button from './Button.svelte';
   import Field from './Field.svelte';
@@ -60,7 +61,7 @@
     <!-- Directly under the box. The count is inside the box itself. -->
     <div class="under">
       <label class="handle">
-        <input type="checkbox" bind:checked={includeHandle} disabled={busy} />
+        <Checkbox bind:checked={includeHandle} disabled={busy} />
         <span>Include your handle (@{session.user?.handle}), so we can follow up</span>
       </label>
     </div>
@@ -77,5 +78,4 @@
   .under { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: calc(-1 * var(--space-1)); }
   /* The same tick box as "Create this collection" on the import page. */
   .handle { display: flex; align-items: center; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); cursor: pointer; }
-  .handle input { margin: 0; }
 </style>
