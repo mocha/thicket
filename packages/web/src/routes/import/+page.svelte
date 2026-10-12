@@ -138,7 +138,8 @@
     <p class="fine">Left out, because they’re empty: {imp.preview.emptyFolders.join(', ')}.</p>
   {/if}
 
-  {#if imp.checking || imp.toCheck}
+  <!-- Only while feeds are being checked: it says why the main button is waiting. Once done, the pills say it all. -->
+  {#if imp.checking}
     <!-- The bar says how far along it is to anyone who asks; the count beside it
          ticks up once per feed, which is too much to read out, so only each
          change of stage is announced (the hidden line below). -->
@@ -146,13 +147,11 @@
       <div class="bar" role="progressbar" aria-label="Checking feeds" aria-valuemin={0} aria-valuemax={imp.toCheck || 1} aria-valuenow={imp.toCheck ? imp.checked : 1}><span style="width: {imp.toCheck ? Math.round((imp.checked / imp.toCheck) * 100) : 100}%"></span></div>
       <span class="visually-hidden" role="status">
         {#if imp.retrying}Trying {imp.retrying} {imp.retrying === 1 ? 'feed' : 'feeds'} again that didn’t answer.
-        {:else if imp.checking}Checking {imp.toCheck} {imp.toCheck === 1 ? 'feed' : 'feeds'}.
-        {:else}Checked {imp.toCheck} {imp.toCheck === 1 ? 'feed' : 'feeds'} thicket hadn’t seen before.{/if}
+        {:else}Checking {imp.toCheck} {imp.toCheck === 1 ? 'feed' : 'feeds'}.{/if}
       </span>
       <span aria-hidden="true">
         {#if imp.retrying}Trying {imp.retrying} {imp.retrying === 1 ? 'feed' : 'feeds'} again that didn’t answer… {imp.checked} of {imp.toCheck}
-        {:else if imp.checking}Checking feeds… {imp.checked} of {imp.toCheck}
-        {:else}Checked {imp.toCheck} {imp.toCheck === 1 ? 'feed' : 'feeds'} thicket hadn’t seen before.{/if}
+        {:else}Checking feeds… {imp.checked} of {imp.toCheck}{/if}
       </span>
     </div>
   {/if}
