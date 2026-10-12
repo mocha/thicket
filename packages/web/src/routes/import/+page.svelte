@@ -45,10 +45,12 @@
    * two ways: a group of dead addresses is the old reader's history, but one
    * that is all "couldn't check" usually means the connection here is bad, not
    * the feeds — and the two would otherwise look identical. Null while there
-   * is still something in it that works, or might.
+   * is still something in it that works, or might: that includes the pause
+   * before slow sites are asked again, when their feeds look settled but aren't.
    */
   function blockedReason(g: ImportGroup): string | null {
     if (!settled(g) || canKeep(g)) return null;
+    if (imp.checking && g.feeds.some((f) => f.state === 'unsure' && f.retry)) return null;
     const n = g.feeds.length;
     return refused(g).length === n
       ? `None of ${n === 1 ? 'this feed works' : `these ${n} feeds work`}, so thicket won’t create this collection`
@@ -67,7 +69,7 @@
     const out = new Map<number, string>();
     imp.groups.forEach((g, i) => {
       const base = g.name.trim();
-      if (!g.keep || !base || (settled(g) && !canKeep(g))) return;
+      if (!g.keep || !base || blockedReason(g)) return;
       let name = base;
       for (let n = 1; taken.has(slugify(name)); n++) name = `${base} ${n}`;
       taken.add(slugify(name));
@@ -167,7 +169,8 @@
       <div class="ghead">
         {#if choosing}
           <!-- A group with nothing that works can't be ticked; the description says why. -->
-          <Checkbox class="keep" checked={on} disabled={!!why} onchange={(e) => (g.keep = e.currentTarget.checked)} aria-label="Create {g.name.trim() || 'this collection'}" />
+          <!-- In a label so the tap area can reach 44px on a touchscreen without the box growing. -->
+          <label class="keep tap"><Checkbox checked={on} disabled={!!why} onchange={(e) => (g.keep = e.currentTarget.checked)} aria-label="Create {g.name.trim() || 'this collection'}" /></label>
         {/if}
         <div class="gbody">
           {#if on && renaming === gi}
@@ -202,7 +205,7 @@
         <div class="feeds">
         <ul class="list-rows">
           {#each g.open ? rows : rows.slice(0, SHOWN) as f (f.url)}
-            {@const site = hostOf(f.url)}
+            {@const site = hostOf(f.siteUrl ?? f.url)}
             {@const name = label(f, site)}
             <li class="feedrow" class:refused={f.state === 'failed'}>
               <FeedLine feedId={null} {name} origin={name !== site ? site : null}>
@@ -266,11 +269,13 @@
 
   .ghead { display: flex; align-items: flex-start; gap: var(--space-3); }
   /* Small beside the 21px heading, so the name leads; level with its first line (21px at 1.25 line height). */
-  .ghead :global(.keep) { margin-top: 5px; }
+  .keep { display: inline-flex; margin-top: 5px; }
   /* Beside the open name field the box sits level with the field's label. */
-  .ghead:has(.rename) :global(.keep) { margin-top: 0; }
+  .ghead:has(.rename) .keep { margin-top: 0; }
   .gbody { flex: 1; min-width: 0; }
   :global(.import-section.off) .section-title { color: var(--text-2); }
+  /* An unchecked card is just its name: no room left under it for a description that isn't there. */
+  .gbody > :global(.section-title:last-child) { margin-bottom: 0; }
   /* Spaced and lined up like the Edit profile form: the buttons at the right, under the field. */
   .rename { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-3); }
   .editrow { display: flex; justify-content: flex-end; gap: var(--space-2); }
