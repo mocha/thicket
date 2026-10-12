@@ -252,15 +252,13 @@
           <PersonRow person={{ ...u, bio: null }}>
             <span class="line">{plural(u.following, 'feed')} <Dot /> {plural(u.collections, 'collection')} <Dot /> {plural(u.bookmarks, 'bookmark')}</span>
             <span class="line">Joined {when(u.createdAt)}{#if u.invitedBy}{' '}via @{u.invitedBy}{/if}{#if u.lastSeenAt}{' '}<Dot />{' '}last active {when(u.lastSeenAt)}{/if}</span>
+            {#snippet badges()}
+              {#if u.isAdmin}<Badge>Admin</Badge>{/if}
+              {#if u.profileVisibility === 'private'}<Badge>Private</Badge>{/if}
+              {#if u.id === me?.id}<Badge>You</Badge>{/if}
+            {/snippet}
             {#snippet end()}
-              {#if u.isAdmin || u.profileVisibility === 'private' || u.id === me?.id}
-                <span class="pills">
-                  {#if u.isAdmin}<Badge>Admin</Badge>{/if}
-                  {#if u.profileVisibility === 'private'}<Badge>Private</Badge>{/if}
-                  {#if u.id === me?.id}<Badge>You</Badge>{/if}
-                </span>
-              {/if}
-              {#if u.id !== me?.id}<Button size="sm" link onclick={() => manage(u)} aria-label="Manage @{u.handle}">Manage</Button>{/if}
+              {#if u.id !== me?.id}<Button size="sm" onclick={() => manage(u)} aria-label="Manage @{u.handle}"><Icon name="gear" size={16} />Manage</Button>{/if}
             {/snippet}
           </PersonRow>
         {/each}
@@ -405,7 +403,6 @@
   /* Under the invite form, the same step a card puts before its controls. */
   .rows.below { margin-top: var(--space-3); }
   .line { display: block; }
-  .pills { display: flex; gap: var(--space-1); flex-wrap: wrap; justify-content: flex-end; }
   /* A text box and its button side by side, the field taking the room. */
   .inline { display: flex; gap: var(--space-2); align-items: flex-start; }
   .inline :global(.grow) { flex: 1; min-width: 0; }

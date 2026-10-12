@@ -11,9 +11,11 @@
    * to say (why a search found them) goes in `children`, on a line of its own
    * under the facts, so neither line runs long.
    *
-   * A screen that acts on the person instead of following them (Site admin's
-   * accounts) puts its status pills and its one action in `end`, which sits
-   * where Follow would: at the right, dropping under the text on a phone.
+   * Status pills (Admin, Private, You) go in `badges`, after the name, as on
+   * the Collection and Feed rows. A screen that acts on the person instead of
+   * following them (Site admin's accounts) puts its one action in `end`,
+   * which sits where Follow would: at the right, dropping under the text on a
+   * phone.
    */
   import type { Snippet } from 'svelte';
   import { profileHref } from '$lib/api';
@@ -32,11 +34,13 @@
     onfollow?: () => void;
     onopen?: () => void;
     children?: Snippet;
-    /** Pills and an action at the row's right end, in place of Follow. */
+    /** Status pills after the name. */
+    badges?: Snippet;
+    /** An action at the row's right end, in place of Follow. */
     end?: Snippet;
   }
 
-  let { person: u, feeds, collections, following, busy = false, onfollow, onopen, children, end }: Props = $props();
+  let { person: u, feeds, collections, following, busy = false, onfollow, onopen, children, badges, end }: Props = $props();
 
   const facts = $derived(
     [
@@ -51,7 +55,7 @@
     <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={40} v={u.avatarUpdatedAt} />
     <div class="meta">
       <!-- Name and handle as a note heads them: "Priya Nair (@priya)", or just the handle when they gave no name. -->
-      <span class="title row-name">{#if u.displayName}{u.displayName} <span class="handle">(@{u.handle})</span>{:else}@{u.handle}{/if}</span>
+      <span class="named"><span class="title row-name">{#if u.displayName}{u.displayName} <span class="handle">(@{u.handle})</span>{:else}@{u.handle}{/if}</span>{@render badges?.()}</span>
       {#if u.bio}<span class="row-details bio">{u.bio}</span>{/if}
       {#if facts.length || children}
         <span class="facts">
@@ -72,7 +76,9 @@
   .personrow { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .named { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  .named :global(.badge) { flex: none; }
+  .title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .handle { font-weight: 400; color: var(--text-2); }
   /* Close under the name, so the two read as a pair, as on the Collection row. */
   .bio { margin-top: -2px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
@@ -81,12 +87,10 @@
   /* Last, so it wins over the row's own sizing above. On a phone the button
      would squeeze the bio into a column four words wide, so it drops to its
      own line, at the right, and the text gets the row. */
-  /* Pills over the action, both against the right edge. */
-  .end { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
+  .end { flex: none; }
   @media (max-width: 560px) {
     .row { flex-basis: 100%; }
     .personrow > :global(.follow), .end { margin-left: auto; }
-    .end { flex-direction: row; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
   }
   @media (hover: hover) { .row:hover .title { text-decoration: underline; text-underline-offset: 3px; } }
 </style>
