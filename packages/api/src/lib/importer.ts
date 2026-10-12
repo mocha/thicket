@@ -117,7 +117,7 @@ function reasonForError(err: unknown): Verdict {
   if (err instanceof HostCoolingDown) return { state: "unsure", reason: "The site is busy, so this wasn’t checked. It’s added anyway and will be tried again.", retry: false };
   if (isHttpProtocolError(err)) return { state: "failed", reason: "The site answered with a malformed web response that thicket can’t safely read.", retry: false };
   const msg = String((err as { cause?: { code?: string } })?.cause?.code ?? (err instanceof Error ? err.message : err));
-  if (/ENOTFOUND|EAI_AGAIN/.test(msg)) return { state: "failed", reason: "That site’s address doesn’t exist any more.", retry: false };
+  if (/ENOTFOUND|EAI_AGAIN/.test(msg)) return { state: "failed", reason: "That site’s address doesn’t exist anymore.", retry: false };
   // The one that is usually us, not them: a slow minute on this connection looks exactly like this.
   if (/timeout|TimeoutError|aborted/i.test(msg)) return { state: "unsure", reason: "The site didn’t answer in time. It’s added anyway and will be tried again.", retry: true };
   if (/too large/.test(msg)) return { state: "failed", reason: "The feed is too large to read.", retry: false };

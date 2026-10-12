@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Badge from '$lib/components/Badge.svelte';
   import Card from '$lib/components/Card.svelte';
   import Dot from '$lib/components/Dot.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
@@ -7,7 +8,6 @@
   import { importApi } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import { collectionStore, loadCollections } from '$lib/collections.svelte';
-  import { showToast } from '$lib/toast.svelte';
   import { imp, readImport, commitImport, startOverImport, ready, refused, settled, canKeep, SHOWN, type ImportGroup } from '$lib/importer.svelte';
   import type { ImportFeed } from '$lib/api';
   import ImportHelp from '$lib/components/ImportHelp.svelte';
@@ -17,12 +17,12 @@
   /**
    * Bringing feeds in from another reader (api/src/lib/importer.ts). Three
    * steps on one page: choose a file or paste a link; review what is in it,
-   * folder by folder, while the feeds thicket hasn't seen are checked; then
+   * group by group, while the feeds thicket hasn't seen are checked; then
    * make the collections. The import itself lives in lib/importer, so one
    * started in the first-run setup arrives here already under way.
    *
-   * Each folder becomes its own collection, side by side, never nested
-   * (decided 2026-09-21). The choice offered is which folders to bring and what
+   * Each group becomes its own collection, side by side, never nested
+   * (decided 2026-09-21). The choice offered is which groups to bring and what
    * to call them; individual feeds are sorted out afterwards, inside thicket.
    */
   let link = $state('');
@@ -33,37 +33,27 @@
   // A finished import is over: coming back here starts a new one.
   onMount(() => { if (imp.step === 'done') startOverImport(); });
   $effect(() => { void loadCollections(); });
-  $effect(() => {
-    for (const g of imp.groups) if (g.keep && settled(g) && !canKeep(g)) g.keep = false;
-  });
 
   /**
-   * Turning one back on is refused while nothing in it works, and says which
-   * kind of nothing: a folder of dead addresses is the reader's history, but a
-   * folder that is all "couldn't check" usually means the connection here is
-   * bad, not that the feeds are — and that is worth saying out loud, because
-   * the two look identical on the page.
+   * Why a group can't become a collection, said on the card itself, in one of
+   * two ways: a group of dead addresses is the old reader's history, but one
+   * that is all "couldn't check" usually means the connection here is bad, not
+   * the feeds — and the two would otherwise look identical. Null while there
+   * is still something in it that works, or might.
    */
-  function toggleKeep(g: ImportGroup, e: Event) {
-    const el = e.currentTarget as HTMLInputElement;
-    if (el.checked && !canKeep(g)) {
-      el.checked = false;
-      const name = g.name.trim() || 'this folder';
-      showToast(!settled(g)
-        ? `Still checking the feeds in “${name}” — give it a moment.`
-        : g.feeds.some((f) => f.state === 'unsure')
-          ? `None of the feeds in “${name}” could be checked just now, which usually means the connection here is having trouble rather than the sites.`
-          : `Nothing in “${name}” can be added, so there’s no collection to make.`);
-      return;
-    }
-    g.keep = el.checked;
+  function blockedReason(g: ImportGroup): string | null {
+    if (!settled(g) || canKeep(g)) return null;
+    const n = g.feeds.length;
+    return refused(g).length === n
+      ? `None of ${n === 1 ? 'this feed works' : n === 2 ? 'these 2 feeds work' : `these ${n} feeds work`}, so thicket won’t create this collection`
+      : `Thicket couldn’t check any of ${n === 1 ? 'this feed' : `these ${n} feeds`} just now, so it won’t create this collection. That usually means a connection problem here, not with the sites.`;
   }
 
   /**
    * What each kept group will actually be called. An import always makes new
    * collections, so a name I already have is numbered past rather than merged
    * into: "Videos", "Videos 1", "Videos 2". Worked out here rather than taken
-   * from the server, so renaming a folder says at once what it will become;
+   * from the server, so renaming a group says at once what it will become;
    * the server applies the same rule and has the last word.
    */
   const finalNames = $derived.by(() => {
@@ -71,7 +61,7 @@
     const out = new Map<number, string>();
     imp.groups.forEach((g, i) => {
       const base = g.name.trim();
-      if (!g.keep || !base) return;
+      if (!g.keep || !base || (settled(g) && !canKeep(g))) return;
       let name = base;
       for (let n = 1; taken.has(slugify(name)); n++) name = `${base} ${n}`;
       taken.add(slugify(name));
@@ -81,8 +71,12 @@
   });
 
   const kept = $derived(imp.groups.filter((g) => g.keep && g.name.trim() && canKeep(g)));
-  const keptFeeds = $derived(new Set(kept.flatMap((g) => ready(g).map((f) => f.url))).size);
+  /* Only feeds I don't already follow count as new: one I follow is just filed again. */
+  const newFeeds = (g: ImportGroup) => ready(g).filter((f) => !f.following);
+  const keptNew = $derived(new Set(kept.flatMap((g) => newFeeds(g).map((f) => f.url))).size);
   const totalFeeds = $derived(new Set(imp.groups.flatMap((g) => g.feeds.map((f) => f.url))).size);
+  /* With a single group there is nothing to choose between, so no box to untick. */
+  const choosing = $derived(imp.groups.length > 1);
 
   function startOver() { startOverImport(); link = ''; }
 
@@ -113,8 +107,7 @@
   {#if imp.error}<p class="bad" role="alert">{imp.error}</p>{/if}
 {:else if imp.step === 'review' && imp.preview}
   <p class="lede">
-    {imp.preview.source ? `From ${imp.preview.source}: ` : ''}{imp.groups.length} {imp.groups.length === 1 ? 'folder' : 'folders'}, {totalFeeds} {totalFeeds === 1 ? 'feed' : 'feeds'}.
-    Each folder you keep becomes a collection. You can rename them here, and sort out individual feeds once they’re in.
+    {imp.preview.source ? `From ${imp.preview.source}: ` : ''}{#if choosing}{imp.groups.length} groups, {totalFeeds} {totalFeeds === 1 ? 'feed' : 'feeds'}. Each group becomes a new collection. Untick any you don’t want.{:else}{totalFeeds} {totalFeeds === 1 ? 'feed' : 'feeds'}, which go into a new collection.{/if}
   </p>
   {#if imp.preview.emptyFolders.length}
     <p class="fine">Left out, because they’re empty: {imp.preview.emptyFolders.join(', ')}.</p>
@@ -142,33 +135,46 @@
   {#each imp.groups as g, gi (gi)}
     {@const ok = ready(g)}
     {@const bad = refused(g)}
-    {@const renamed = g.keep && !!g.name.trim() && finalNames.get(gi) !== g.name.trim()}
-    {@const blocked = settled(g) && !canKeep(g)}
-    <Card kind="section" as="section" class="import-section {g.keep ? '' : 'off'}">
+    {@const fresh = newFeeds(g).length}
+    {@const following = ok.length - fresh}
+    {@const final = finalNames.get(gi)}
+    {@const renamed = !!final && final !== g.name.trim()}
+    {@const why = blockedReason(g)}
+    {@const on = g.keep && !why}
+    <Card kind="section" as="section" class="import-section {on ? '' : 'off'}">
       <div class="ghead">
-        <label class="keep">
-          <input type="checkbox" checked={g.keep} onchange={(e) => toggleKeep(g, e)} />
-          <span>Create this collection</span>
-        </label>
+        {#if choosing}
+          <!-- A group with nothing that works can't be ticked; the line below says why. -->
+          <input type="checkbox" class="keep" checked={on} disabled={!!why} onchange={(e) => (g.keep = e.currentTarget.checked)} aria-label="Create {g.name.trim() || 'this collection'}" />
+        {/if}
         <div class="gname">
-          <input class="name" bind:value={g.name} disabled={!g.keep} aria-label="Collection name" />
-          <small>
-            {#if blocked}{g.feeds.some((f) => f.state === 'unsure') ? 'None of these could be checked' : 'Nothing here can be added'}{:else if renamed}Created as <strong>{finalNames.get(gi)}</strong>, beside the <strong>{g.name.trim()}</strong> you already have{:else}New collection{/if}
-            <Dot /> {ok.length} to add{#if bad.length}{' '}<Dot />{' '}{bad.length} can’t be added{/if}
-          </small>
+          {#if on}
+            <Input bind:value={g.name} clearable={false} invalid={!g.name.trim()} aria-label="Collection name" />
+          {:else}
+            <span class="offname">{g.name.trim() || 'Untitled'}</span>
+          {/if}
+          {#if why}<p class="note">{why}</p>
+          {:else if on}
+            {#if !g.name.trim()}<p class="note">Give this collection a name</p>
+            {:else if renamed}<p class="note">Will be called “{final}”, since you already have a {g.name.trim()}</p>{/if}
+            <p class="note counts">
+              {#if !settled(g) && !ok.length}Checking feeds…{:else}{fresh} new{/if}{#if following}{' '}<Dot />{' '}{following} you already follow{/if}{#if bad.length}{' '}<Dot />{' '}{bad.length} we can’t import{/if}
+            </p>
+          {/if}
         </div>
       </div>
 
-      {#if g.keep}
+      {#if on || !choosing}
         {#if ok.length}
+          <h3>Feeds</h3>
           <ul class="feeds list-rows">
             {#each g.open ? ok : ok.slice(0, SHOWN) as f (f.url)}
               <li>
                 <span class="fname row-name">{label(f)}<small class="row-details">{host(f.url)}</small></span>
-                {#if f.state === 'pending'}<span class="tag wait">Checking…</span>
-                {:else if f.state === 'unsure'}<span class="tag unsure" title={f.reason ?? ''}>Will retry</span>
-                {:else if f.following}<span class="tag">Already Following</span>
-                {:else}<span class="tag good">Ready</span>{/if}
+                {#if f.state === 'pending'}<Badge>Checking…</Badge>
+                {:else if f.state === 'unsure'}<Badge>Will retry</Badge>
+                {:else if f.following}<Badge>Already following</Badge>
+                {:else}<Badge tone="soft">Ready</Badge>{/if}
               </li>
               {#if f.state === 'unsure' && f.reason}<li class="why">{f.reason}</li>{/if}
             {/each}
@@ -177,18 +183,17 @@
             <button class="more tap" onclick={() => (g.open = true)}>Show all {ok.length}</button>
           {/if}
         {/if}
+      {/if}
 
-        {#if bad.length}
-          <h3>Can’t be added</h3>
-          <ul class="feeds list-rows refused">
-            {#each bad as f (f.url)}
-              <li>
-                <span class="fname row-name">{label(f)}<small class="row-details">{host(f.url)}</small></span>
-                <span class="reason">{f.reason}</span>
-              </li>
-            {/each}
-          </ul>
-        {/if}
+      {#if bad.length && (on || why || !choosing)}
+        <h3>Feeds we can’t import</h3>
+        <ul class="feeds list-rows refused">
+          {#each bad as f (f.url)}
+            <li>
+              <span class="fname row-name">{label(f)}<small class="row-details">{host(f.url)}</small><small class="reason">{f.reason}</small></span>
+            </li>
+          {/each}
+        </ul>
       {/if}
     </Card>
   {/each}
@@ -197,10 +202,10 @@
 
   <div class="footer">
     <Button onclick={startOver} disabled={imp.busy}>Choose a different file</Button>
-    <Button variant="primary" onclick={() => commitImport(kept)} disabled={imp.busy || imp.checking || !kept.length || !keptFeeds}>
+    <Button variant="primary" onclick={() => commitImport(kept)} disabled={imp.busy || imp.checking || !kept.length}>
       {#if imp.busy}Bringing them in…
       {:else if imp.checking}Checking feeds…
-      {:else}Bring in {kept.length} {kept.length === 1 ? 'collection' : 'collections'}, {keptFeeds} {keptFeeds === 1 ? 'feed' : 'feeds'}{/if}
+      {:else}Bring in {kept.length} {kept.length === 1 ? 'collection' : 'collections'}{#if keptNew}, {keptNew} new {keptNew === 1 ? 'feed' : 'feeds'}{/if}{/if}
     </Button>
   </div>
 {:else if imp.step === 'done'}
@@ -228,39 +233,33 @@
   .row { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
   .linkrow { display: flex; align-items: center; gap: var(--space-2); }
   .linkrow :global(.link) { flex: 1; min-width: 0; }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .bad { color: var(--danger); margin: 0 0 var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); }
 
   .progress { display: flex; flex-direction: column; gap: var(--space-2); margin: 0 0 var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .bar { height: 6px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
   .bar span { display: block; height: 100%; background: var(--accent); transition: width 200ms ease; }
 
-  :global(.import-section.off) { opacity: 0.6; }
-  .ghead { display: flex; flex-direction: column; gap: var(--space-3); }
-  .keep { display: flex; align-items: center; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); cursor: pointer; }
-  .keep input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
+  .ghead { display: flex; align-items: flex-start; gap: var(--space-3); }
+  /* The box sits level with the middle of the name field beside it. */
+  .keep { width: 20px; height: 20px; margin: 10px 0 0; flex: none; accent-color: var(--accent); cursor: pointer; }
+  .keep:disabled { cursor: not-allowed; }
+  .keep:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .gname { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
-  /* Pulled left by its own inset, so the name lines up with the text above it. */
-  .name { font-size: calc(var(--text-base) * var(--size-app)); font-weight: 700; padding: var(--space-1) var(--space-2); margin-left: calc(-1 * var(--space-2)); border-radius: var(--radius-sm); border: 1px solid var(--field-line); background: transparent; color: var(--text); font-family: inherit; width: 100%; }
-  /* A folder that's switched off isn't being named, so its box goes back to plain text. */
-  .name:disabled { border-color: transparent; }
-  .gname small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  /* A group that's switched off isn't being named, so its name is plain text, level with the box. */
+  .offname { font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; line-height: 40px; color: var(--text-2); }
+  .note { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .counts { font-variant-numeric: tabular-nums; }
 
   /* The feeds run edge to edge across the card, between two hairlines, so each
      row's text starts the card's own inset in, as on every other list of rows. */
-  .feeds { margin: var(--space-3) calc(-1 * var(--card-pad)) 0; border-block: 1px solid var(--line); }
+  .feeds { margin: 0 calc(-1 * var(--card-pad)); border-block: 1px solid var(--line); }
   .feeds li { display: flex; align-items: center; gap: var(--space-3); }
   .feeds li.why { border-top: 0; padding-top: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .fname { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
   .fname small { font-weight: 400; }
-  /* 2px top and bottom is optical, as on Badge: the pill hugs its word. */
-  .tag { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); padding: 2px var(--space-2); border-radius: var(--radius-pill); border: 1px solid var(--line); }
-  .tag.good { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
-  .tag.unsure { color: var(--text-2); border-style: dashed; }
-  .tag.wait { border-color: transparent; }
-  .refused { border-color: color-mix(in srgb, var(--danger) 30%, var(--line)); }
-  .refused li { align-items: flex-start; }
-  .reason { flex: 1.2; min-width: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  /* Feeds that won't come in are quieter than the ones that will: lighter name, reason beneath. */
+  .refused .fname { font-weight: 400; color: var(--text-2); }
+  .reason { margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .count { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .more { margin-top: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
 
@@ -274,7 +273,6 @@
   }
   @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) { .footer { bottom: 0; padding-bottom: calc(var(--space-3) + var(--safe-b, 0px)); } }
   @media (max-width: 520px) {
-    .refused li { flex-direction: column; gap: var(--space-1); }
     /* Two long labels don't fit side by side on a phone: stack them, main action on top. */
     .footer { flex-direction: column-reverse; }
   }
