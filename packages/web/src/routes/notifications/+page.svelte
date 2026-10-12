@@ -32,7 +32,7 @@
   import Dot from '$lib/components/Dot.svelte';
   import { clearNotifs, loadNotifs } from '$lib/notifications.svelte';
   import { session } from '$lib/session.svelte';
-  import { dayKey, dayLabel, relativeTime } from '$lib/time';
+  import { dayKey, dayLabel, longAgo, relativeTime } from '$lib/time';
   import { plural } from '$lib/words';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import Button from '$lib/components/Button.svelte';
@@ -171,9 +171,9 @@
         <BookmarkCard b={n.bookmark} author={n.person} saver fresh={n.isNew} onopen={() => api.event('bookmark_opened', { via: 'notifications' })} />
       {:else if n.kind === 'collection'}
         <li><Card kind="list" as="ul" class="list-rows">
-          <CollectionRow href={collectionHref(n.person.handle, n.collection.slug)} name={n.collection.name} description={n.collection.description} feedCount={n.collection.feedCount} owner={n.person.displayName ?? `@${n.person.handle}`}>
+          <CollectionRow href={collectionHref(n.person.handle, n.collection.slug)} name={n.collection.name} description={n.collection.description} feedCount={n.collection.feedCount}>
             {#snippet badges()}{@render fresh(n)}{/snippet}
-            {plural(n.collection.feedCount, 'feed')} <Dot /> made {@render when(n.at)}
+            @{n.person.handle} created this collection <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{longAgo(n.at)}</time> <Dot /> {plural(n.collection.feedCount, 'feed')}
           </CollectionRow>
         </Card></li>
       {:else if (n.kind === 'follow' || n.kind === 'invite') && n.person}
