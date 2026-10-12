@@ -137,6 +137,8 @@ auth.patch("/me", async (c) => {
     activityVisibility: ShareLevel;
     notesFrom: "none" | "following" | "everyone";
     hideShortsByDefault: boolean;
+    notifyFollows: boolean; notifyBookmarks: boolean; notifyNotes: boolean; notifyCollections: boolean; notifyInvites: boolean; notifyReplies: boolean;
+    mentionsFrom: "none" | "following" | "everyone";
   }>;
   const body = await c.req.json<Patch>().catch(() => ({} as Patch));
   const patch: Partial<typeof schema.users.$inferInsert> = {};
@@ -159,6 +161,10 @@ auth.patch("/me", async (c) => {
   if (body.notesFrom === "none" || body.notesFrom === "following" || body.notesFrom === "everyone") patch.notesFrom = body.notesFrom;
   if ("trackActivity" in body && (body.trackActivity === null || typeof body.trackActivity === "boolean")) patch.trackActivity = body.trackActivity;
   if (typeof body.hideShortsByDefault === "boolean") patch.hideShortsByDefault = body.hideShortsByDefault;
+  for (const k of ["notifyFollows", "notifyBookmarks", "notifyNotes", "notifyCollections", "notifyInvites", "notifyReplies"] as const) {
+    if (typeof body[k] === "boolean") patch[k] = body[k];
+  }
+  if (body.mentionsFrom === "none" || body.mentionsFrom === "following" || body.mentionsFrom === "everyone") patch.mentionsFrom = body.mentionsFrom;
   if (Object.keys(patch).length) await db.update(schema.users).set(patch).where(eq(schema.users.id, user.id));
   return c.json(await me(user.id));
 });

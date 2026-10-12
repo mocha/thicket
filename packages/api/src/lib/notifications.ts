@@ -5,6 +5,15 @@
  *   bookmark  someone I follow bookmarked a post
  *   note      someone I follow wrote a note on a post
  *   mention   someone @mentioned me in a note (lib/mentions.ts)
+ *   collection  someone I follow made a collection (issue #274)
+ *   invite    someone signed up with an invite I made
+ *   reply     someone noted a post I bookmarked or noted
+ *
+ * **Mine to tune** (issue #274): each kind has a switch on my account
+ * (Prefs), and mentions take "from everyone / people I follow / no one". The
+ * switches are applied before supersession, so turning one kind off never
+ * hides another kind I kept: a note that mentions me still shows as a note
+ * when I've turned mentions off.
  *
  * **Derived, not stored**, like activity (lib/activity.ts): there is no
  * notifications table. Each one is read off the row it is about, so an
@@ -37,15 +46,25 @@
  *     one act, shown once, as the note, when I may read notes; as the bookmark
  *     otherwise.
  *   - A mention shows when their profile is public and their notes are shared
- *     with me, whether or not I follow them: being named is the point. It
- *     supersedes the plain "noted" line for the same note.
+ *     with me, whether or not I follow them: being named is the point.
+ *   - A note on a post I saved shows under the same test as a mention: it's
+ *     one I could read on their profile. Only notes written after I saved the
+ *     post.
+ *   - One note is shown once, as the strongest kind I've left on: a mention,
+ *     then a note on my post, then the plain "noted" line.
+ *   - A new collection by someone I follow shows when their profile is
+ *     public, their collections are shared with me, and that collection is
+ *     too: what their profile would list. Only collections made after I
+ *     followed them, and never the hidden root every account has.
+ *   - A sign-up with my invite always shows, but names the new person only
+ *     when their profile is public, the same rule as a follow.
  *   - Nothing I did myself.
  */
 import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { mentionsHandleSql } from "./mentions.js";
-import { noteJson } from "./notes.js";
-import { allows, type Audience, type ShareLevel } from "./visibility.js";
+import { matchesPost, noteJson } from "./notes.js";
+import { allows, allowsSql, type Audience, type ShareLevel } from "./visibility.js";
 
 /** How far back the list goes. */
 export const WINDOW_DAYS = 30;
@@ -54,8 +73,17 @@ export const CAP = 100;
 
 /** How far back `since` may reach when a script asks for a range. The list still holds at most CAP. */
 export const MAX_DAYS = 365;
-export const KINDS = ["follow", "bookmark", "note", "mention"] as const;
+export const KINDS = ["follow", "bookmark", "note", "mention", "collection", "invite", "reply"] as const;
 export type Kind = (typeof KINDS)[number];
+
+/** Whose mentions notify me. The same values as "Notes from other people", a separate setting. */
+export type MentionsFrom = "none" | "following" | "everyone";
+
+/** Which kinds I get (users.notify_*, users.mentions_from). */
+export type Prefs = { [K in Exclude<Kind, "mention">]: boolean } & { mentionsFrom: MentionsFrom };
+
+/** What a new account starts with, the same as the database defaults. */
+export const DEFAULT_PREFS: Prefs = { follow: true, bookmark: true, note: true, collection: true, invite: true, reply: false, mentionsFrom: "everyone" };
 
 /**
  * The part of the list a caller asked for: after `since`, up to and including
@@ -113,8 +141,11 @@ type Author = Person & {
   bookmarksVisibility: ShareLevel;
   notesVisibility: ShareLevel;
   activityVisibility: ShareLevel;
+  collectionsVisibility: ShareLevel;
   /** They follow me, so "friends" includes me. */
   followsMe: boolean;
+  /** I follow them, for mentions "from people I follow". */
+  iFollow: boolean;
 };
 
 /** Someone following me. */
@@ -133,7 +164,19 @@ export type SaveRow = { id: number; author: Author; post: PostRef; savedAt: stri
  */
 export type MentionRow = { id: number; author: Author; at: string; bookmark: Record<string, unknown> };
 
-export type Candidates = { follows: FollowRow[]; saves: SaveRow[]; mentions: MentionRow[] };
+/** A note on a post I saved, in the same shape as a mention, timed by when it was written. */
+export type ReplyRow = MentionRow;
+
+/** A collection, as a notification names it. */
+export type CollectionRef = { name: string; slug: string; description: string | null; feedCount: number };
+
+/** A collection by someone I follow, its own audience, and when I started following them. */
+export type CollectionRow = { at: string; author: Author; visibility: ShareLevel; followedAt: string; collection: CollectionRef };
+
+/** Someone who signed up with an invite I made. */
+export type InviteRow = FollowRow;
+
+export type Candidates = { follows: FollowRow[]; saves: SaveRow[]; mentions: MentionRow[]; replies: ReplyRow[]; collections: CollectionRow[]; invites: InviteRow[] };
 
 type Who = Omit<Person, "id">;
 const who = (p: Person): Who => ({ handle: p.handle, displayName: p.displayName, avatarUpdatedAt: p.avatarUpdatedAt });
@@ -141,7 +184,10 @@ const who = (p: Person): Who => ({ handle: p.handle, displayName: p.displayName,
 export type Notification =
   | { kind: "follow"; key: string; at: string; isNew: boolean; person: Who }
   | { kind: "bookmark" | "note"; key: string; at: string; isNew: boolean; person: Who; post: PostRef }
-  | { kind: "mention"; key: string; at: string; isNew: boolean; person: Who; bookmark: Record<string, unknown> };
+  | { kind: "mention" | "reply"; key: string; at: string; isNew: boolean; person: Who; bookmark: Record<string, unknown> }
+  | { kind: "collection"; key: string; at: string; isNew: boolean; person: Who; collection: CollectionRef }
+  /** `person` is null when their profile is private: someone joined, unnamed. */
+  | { kind: "invite"; key: string; at: string; isNew: boolean; person: Who | null };
 
 /** A notification before it is judged new or not. */
 type Draft = Notification extends infer N ? (N extends unknown ? Omit<N, "isNew"> : never) : never;
@@ -149,43 +195,68 @@ type Draft = Notification extends infer N ? (N extends unknown ? Omit<N, "isNew"
 const audience = (a: Author): Audience => ({ isMe: false, isFriend: a.followsMe });
 
 /**
- * Turn candidates into the list I see, newest first: visibility applied,
- * supersession applied, my own acts left out, and each marked new or not
- * against `seenAt`. Only what happened after `since` and up to `until`, of
- * `kinds` when given. `truncated` says the list stopped at CAP with more in
- * range: ask again with an earlier `until`. Pure.
+ * Turn candidates into the list I see, newest first: my switches applied,
+ * then visibility and supersession, my own acts left out, and each marked new
+ * or not against `seenAt`. Only what happened after `since` and up to
+ * `until`, of `kinds` when given (a script's narrowing, applied last, so a
+ * mention stays a mention when asking for notes). `truncated` says the list
+ * stopped at CAP with more in range: ask again with an earlier `until`. Pure.
  */
-export function assemble(meId: number, c: Candidates, opts: { seenAt: string; since: string; until?: string; kinds?: Kind[] | null }): { items: Notification[]; count: number; more: boolean; truncated: boolean } {
+export function assemble(meId: number, c: Candidates, opts: { seenAt: string; since: string; until?: string; kinds?: Kind[] | null; prefs?: Prefs }): { items: Notification[]; count: number; more: boolean; truncated: boolean } {
+  const p = opts.prefs ?? DEFAULT_PREFS;
   const since = Date.parse(opts.since);
   const seen = Date.parse(opts.seenAt);
   const until = opts.until ? Date.parse(opts.until) : Infinity;
   const inWindow = (at: string | null) => !!at && Date.parse(at) > since && Date.parse(at) <= until;
+  /** Their notes are ones I could read on their profile. */
+  const readable = (a: Author) => a.profileVisibility === "public" && allows(a.notesVisibility, audience(a));
   const out: Draft[] = [];
 
-  for (const f of c.follows) {
+  if (p.follow) for (const f of c.follows) {
     if (f.person.id === meId || f.person.profileVisibility !== "public" || !inWindow(f.at)) continue;
     out.push({ kind: "follow", key: `follow:${f.person.handle}`, at: f.at, person: who(f.person) });
   }
 
-  const mentioned = new Set<number>();
+  if (p.invite) for (const i of c.invites) {
+    if (i.person.id === meId || !inWindow(i.at)) continue;
+    const named = i.person.profileVisibility === "public";
+    out.push({ kind: "invite", key: named ? `invite:${i.person.handle}` : `invite:${i.at}`, at: i.at, person: named ? who(i.person) : null });
+  }
+
+  if (p.collection) for (const k of c.collections) {
+    const a = k.author;
+    if (a.id === meId || a.profileVisibility !== "public" || !allows(a.collectionsVisibility, audience(a)) || !allows(k.visibility, audience(a))) continue;
+    if (!inWindow(k.at) || Date.parse(k.at) <= Date.parse(k.followedAt)) continue;
+    out.push({ kind: "collection", key: `collection:${a.handle}/${k.collection.slug}`, at: k.at, person: who(a), collection: k.collection });
+  }
+
+  // One note, shown once, as the strongest kind I've left on.
+  const shown = new Set<number>();
+  const mentionsOn = (a: Author) => p.mentionsFrom === "everyone" || (p.mentionsFrom === "following" && a.iFollow);
   for (const m of c.mentions) {
     const a = m.author;
-    if (a.id === meId || a.profileVisibility !== "public" || !allows(a.notesVisibility, audience(a)) || !inWindow(m.at)) continue;
-    mentioned.add(m.id);
+    if (a.id === meId || !mentionsOn(a) || !readable(a) || !inWindow(m.at)) continue;
+    shown.add(m.id);
     out.push({ kind: "mention", key: `mention:${m.id}`, at: m.at, person: who(a), bookmark: m.bookmark });
+  }
+  if (p.reply) for (const r of c.replies) {
+    const a = r.author;
+    if (a.id === meId || shown.has(r.id) || !readable(a) || !inWindow(r.at)) continue;
+    shown.add(r.id);
+    out.push({ kind: "reply", key: `reply:${r.id}`, at: r.at, person: who(a), bookmark: r.bookmark });
   }
 
   for (const s of c.saves) {
     const a = s.author;
     const followed = Date.parse(s.followedAt);
     const fresh = (at: string | null) => inWindow(at) && Date.parse(at!) > followed;
-    if (a.id === meId || a.profileVisibility !== "public" || !allows(a.activityVisibility, audience(a))) continue;
-    const notes = allows(a.notesVisibility, audience(a));
-    const marks = allows(a.bookmarksVisibility, audience(a));
-    if (s.noteCreatedAt && notes) {
-      // A note I was mentioned in is already here, in full.
-      if (!mentioned.has(s.id) && fresh(s.noteCreatedAt)) out.push({ kind: "note", key: `note:${s.id}`, at: s.noteCreatedAt, person: who(a), post: s.post });
-    } else if (marks && fresh(s.savedAt)) {
+    if (a.id === meId || shown.has(s.id) || a.profileVisibility !== "public" || !allows(a.activityVisibility, audience(a))) continue;
+    if (p.note && s.noteCreatedAt && allows(a.notesVisibility, audience(a))) {
+      if (fresh(s.noteCreatedAt)) out.push({ kind: "note", key: `note:${s.id}`, at: s.noteCreatedAt, person: who(a), post: s.post });
+      // A noted post is one act: the note stands for it even outside the range.
+      continue;
+    }
+    if (p.bookmark && allows(a.bookmarksVisibility, audience(a)) && fresh(s.savedAt)) {
       out.push({ kind: "bookmark", key: `bookmark:${s.id}`, at: s.savedAt, person: who(a), post: s.post });
     }
   }
@@ -204,35 +275,69 @@ const authorCols = (meId: number) => sql`
   u.id as "authorId", u.handle, u.display_name as "displayName", ua.updated_at as "avatarUpdatedAt",
   u.profile_visibility as "profileVisibility", u.bookmarks_visibility as "bookmarksVisibility",
   u.notes_visibility as "notesVisibility", u.activity_visibility as "activityVisibility",
-  exists(select 1 from user_follows fm where fm.follower_id = u.id and fm.followee_id = ${meId}) as "followsMe"`;
+  u.collections_visibility as "collectionsVisibility",
+  exists(select 1 from user_follows fm where fm.follower_id = u.id and fm.followee_id = ${meId}) as "followsMe",
+  exists(select 1 from user_follows fi where fi.follower_id = ${meId} and fi.followee_id = u.id) as "iFollow"`;
 
 type AuthorDbRow = {
   authorId: number; handle: string; displayName: string | null; avatarUpdatedAt: Date | null;
-  profileVisibility: "public" | "private"; bookmarksVisibility: ShareLevel; notesVisibility: ShareLevel; activityVisibility: ShareLevel; followsMe: boolean;
+  profileVisibility: "public" | "private"; bookmarksVisibility: ShareLevel; notesVisibility: ShareLevel; activityVisibility: ShareLevel;
+  collectionsVisibility: ShareLevel; followsMe: boolean; iFollow: boolean;
 };
 const authorOf = (r: AuthorDbRow): Author => ({
   id: Number(r.authorId), handle: r.handle, displayName: r.displayName, avatarUpdatedAt: iso(r.avatarUpdatedAt),
   profileVisibility: r.profileVisibility, bookmarksVisibility: r.bookmarksVisibility, notesVisibility: r.notesVisibility,
-  activityVisibility: r.activityVisibility, followsMe: r.followsMe,
+  activityVisibility: r.activityVisibility, collectionsVisibility: r.collectionsVisibility, followsMe: r.followsMe, iFollow: r.iFollow,
 });
+
+/** Author `u`'s notes are ones I could read on their profile. The same test as `assemble`, so the caps below only count real candidates. */
+const readableSql = (meId: number) => sql`u.profile_visibility = 'public' and ${allowsSql("u.notes_visibility", "u.id", meId)}`;
+
+/** Bookmark `b` whole, in the shape a profile's bookmarks list sends, note included. */
+const bookmarkJson = (meId: number) => sql`jsonb_build_object(
+  'id', b.id, 'itemId', b.item_id, 'feedId', b.feed_id, 'url', b.url, 'title', b.title, 'summary', b.summary,
+  'imageUrl', b.image_url, 'siteTitle', b.site_title, 'author', b.author, 'publishedAt', b.published_at,
+  'savedAt', b.saved_at, 'activeAt', greatest(b.saved_at, b.note_updated_at), 'note', ${noteJson("b")},
+  'hasIcon', ${ICON},
+  'myBookmarkId', (select mb.id from bookmarks mb where mb.user_id = ${meId} and mb.url = b.url limit 1),
+  'linkUrl', i.link_url, 'linkLabel', i.link_label
+)`;
+
+type PersonDbRow = { at: Date; id: number; handle: string; displayName: string | null; avatarUpdatedAt: Date | null; profileVisibility: "public" | "private" };
+const personRow = (r: PersonDbRow) => ({ at: iso(r.at)!, person: { id: Number(r.id), handle: r.handle, displayName: r.displayName, avatarUpdatedAt: iso(r.avatarUpdatedAt), profileVisibility: r.profileVisibility } });
 
 /**
  * Everything that could be a notification for me in the window, straight from
- * the tables. Three bounded reads: my followers by the followee index, the
- * bookmarks of the people I follow by (user, saved_at), and notes written or
- * edited lately by the partial index on note_updated_at.
+ * the tables, for the kinds I have on. Each read is bounded by an index that
+ * starts from me: my followers, the bookmarks and collections of the people I
+ * follow, my invites, notes on posts I saved, and notes written or edited
+ * lately (for mentions). Visibility is checked here as well as in `assemble`,
+ * so hidden rows never take a place under a cap.
  */
-export async function candidatesFor(me: { id: number; handle: string }, since: string, until: string): Promise<Candidates> {
-  const follows = await db.execute<{ at: Date; id: number; handle: string; displayName: string | null; avatarUpdatedAt: Date | null; profileVisibility: "public" | "private" }>(sql`
+export async function candidatesFor(me: { id: number; handle: string }, since: string, until: string, prefs: Prefs = DEFAULT_PREFS): Promise<Candidates> {
+  const none = { rows: [] };
+  const inRange = (col: string) => sql`${sql.raw(col)} > ${since}::timestamptz and ${sql.raw(col)} <= ${until}::timestamptz`;
+
+  const follows = prefs.follow ? await db.execute<PersonDbRow>(sql`
     select uf.created_at as at, fu.id, fu.handle, fu.display_name as "displayName", ua.updated_at as "avatarUpdatedAt", fu.profile_visibility as "profileVisibility"
     from user_follows uf join users fu on fu.id = uf.follower_id
     left join user_avatars ua on ua.user_id = fu.id
-    where uf.followee_id = ${me.id} and uf.created_at > ${since}::timestamptz and uf.created_at <= ${until}::timestamptz
+    where uf.followee_id = ${me.id} and ${inRange("uf.created_at")} and fu.profile_visibility = 'public'
     order by uf.created_at desc limit ${CAP}
-  `);
+  `) : none;
+
+  // Named or not, every sign-up counts, so the profile isn't filtered here.
+  const invites = prefs.invite ? await db.execute<PersonDbRow>(sql`
+    select i.used_at as at, nu.id, nu.handle, nu.display_name as "displayName", ua.updated_at as "avatarUpdatedAt", nu.profile_visibility as "profileVisibility"
+    from invites i join users nu on nu.id = i.used_by
+    left join user_avatars ua on ua.user_id = nu.id
+    where i.created_by = ${me.id} and ${inRange("i.used_at")}
+    order by i.used_at desc limit ${CAP}
+  `) : none;
 
   // A note written today on a post saved last year counts too, by when the note was written.
-  const saves = await db.execute<AuthorDbRow & { id: number; url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean; savedAt: Date; noteCreatedAt: Date | null; followedAt: Date }>(sql`
+  // With bookmarks off, only noted posts can be anything.
+  const saves = prefs.bookmark || prefs.note ? await db.execute<AuthorDbRow & { id: number; url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean; savedAt: Date; noteCreatedAt: Date | null; followedAt: Date }>(sql`
     select b.id, b.url, b.title, b.site_title as "siteTitle", b.feed_id as "feedId", ${ICON} as "hasIcon",
            b.saved_at as "savedAt", case when b.note is null then null else b.note_created_at end as "noteCreatedAt",
            mine.created_at as "followedAt",
@@ -242,41 +347,75 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
     join users u on u.id = b.user_id
     left join user_avatars ua on ua.user_id = u.id
     where mine.follower_id = ${me.id} and b.user_id <> ${me.id}
-      and ((b.saved_at > ${since}::timestamptz and b.saved_at <= ${until}::timestamptz)
-        or (b.note_created_at > ${since}::timestamptz and b.note_created_at <= ${until}::timestamptz))
+      and (${inRange("b.saved_at")} or ${inRange("b.note_created_at")})
       and (b.saved_at > mine.created_at or b.note_created_at > mine.created_at)
+      and u.profile_visibility = 'public' and ${allowsSql("u.activity_visibility", "u.id", me.id)}
+      ${prefs.bookmark ? sql`` : sql`and b.note is not null`}
     order by greatest(b.saved_at, coalesce(b.note_created_at, b.saved_at)) desc limit ${CAP * 3}
-  `);
+  `) : none;
+
+  // The hidden root every account has is never one (parent_id is null).
+  const collections = prefs.collection ? await db.execute<AuthorDbRow & { at: Date; visibility: ShareLevel; followedAt: Date; name: string; slug: string; description: string | null; feedCount: number }>(sql`
+    select col.created_at as at, col.visibility, mine.created_at as "followedAt",
+           col.name, col.slug, col.description, col.feed_count as "feedCount",
+           ${authorCols(me.id)}
+    from user_follows mine
+    join collections col on col.user_id = mine.followee_id and col.parent_id is not null
+    join users u on u.id = col.user_id
+    left join user_avatars ua on ua.user_id = u.id
+    where mine.follower_id = ${me.id} and ${inRange("col.created_at")} and col.created_at > mine.created_at
+      and u.profile_visibility = 'public' and ${allowsSql("u.collections_visibility", "u.id", me.id)} and ${allowsSql("col.visibility", "u.id", me.id)}
+    order by col.created_at desc limit ${CAP}
+  `) : none;
 
   // Timed by the last edit, so a mention added to a note after it was first written still arrives.
-  const mentions = await db.execute<AuthorDbRow & { id: number; at: Date; bookmark: Record<string, unknown> }>(sql`
-    select b.id, b.note_updated_at as at, ${authorCols(me.id)},
-           jsonb_build_object(
-             'id', b.id, 'itemId', b.item_id, 'feedId', b.feed_id, 'url', b.url, 'title', b.title, 'summary', b.summary,
-             'imageUrl', b.image_url, 'siteTitle', b.site_title, 'author', b.author, 'publishedAt', b.published_at,
-             'savedAt', b.saved_at, 'activeAt', greatest(b.saved_at, b.note_updated_at), 'note', ${noteJson("b")},
-             'hasIcon', ${ICON},
-             'myBookmarkId', (select mb.id from bookmarks mb where mb.user_id = ${me.id} and mb.url = b.url limit 1),
-             'linkUrl', i.link_url, 'linkLabel', i.link_label
-           ) as bookmark
+  const mentions = prefs.mentionsFrom !== "none" ? await db.execute<AuthorDbRow & { id: number; at: Date; bookmark: Record<string, unknown> }>(sql`
+    select b.id, b.note_updated_at as at, ${authorCols(me.id)}, ${bookmarkJson(me.id)} as bookmark
     from bookmarks b
     join users u on u.id = b.user_id
     left join user_avatars ua on ua.user_id = u.id
     left join items i on i.id = b.item_id
-    where b.note is not null and b.note_updated_at > ${since}::timestamptz and b.note_updated_at <= ${until}::timestamptz and b.user_id <> ${me.id}
-      and ${mentionsHandleSql(sql`b.note`, me.handle)}
+    where b.note is not null and ${inRange("b.note_updated_at")} and b.user_id <> ${me.id}
+      and ${mentionsHandleSql(sql`b.note`, me.handle)} and ${readableSql(me.id)}
+      ${prefs.mentionsFrom === "following" ? sql`and exists(select 1 from user_follows fi where fi.follower_id = ${me.id} and fi.followee_id = u.id)` : sql``}
     order by b.note_updated_at desc limit ${CAP}
-  `);
+  `) : none;
+
+  // Starts from my own bookmarks, never from every note: a post's notes are found by its address,
+  // and each note matches at most one of my bookmarks (one per address).
+  // Only notes written after I saved the post, timed by when they were written.
+  const replies = prefs.reply ? await db.execute<AuthorDbRow & { id: number; at: Date; bookmark: Record<string, unknown> }>(sql`
+    select b.id, b.note_created_at as at, ${authorCols(me.id)}, ${bookmarkJson(me.id)} as bookmark
+    from bookmarks mine
+    join bookmarks b on ${matchesPost("b", sql`mine.url`, sql`mine.item_id`)} and b.note is not null
+    join users u on u.id = b.user_id
+    left join user_avatars ua on ua.user_id = u.id
+    left join items i on i.id = b.item_id
+    where mine.user_id = ${me.id} and b.user_id <> ${me.id}
+      and ${inRange("b.note_created_at")} and b.note_created_at > mine.saved_at and ${readableSql(me.id)}
+    order by b.note_created_at desc limit ${CAP}
+  `) : none;
 
   return {
-    follows: follows.rows.map((r) => ({ at: iso(r.at)!, person: { id: Number(r.id), handle: r.handle, displayName: r.displayName, avatarUpdatedAt: iso(r.avatarUpdatedAt), profileVisibility: r.profileVisibility } })),
+    follows: follows.rows.map(personRow),
+    invites: invites.rows.map(personRow),
     saves: saves.rows.map((r) => ({
       id: Number(r.id), author: authorOf(r), savedAt: iso(r.savedAt)!, noteCreatedAt: iso(r.noteCreatedAt), followedAt: iso(r.followedAt)!,
       post: { url: r.url, title: r.title, siteTitle: r.siteTitle, feedId: r.feedId === null ? null : Number(r.feedId), hasIcon: r.hasIcon },
     })),
+    collections: collections.rows.map((r) => ({
+      at: iso(r.at)!, author: authorOf(r), visibility: r.visibility, followedAt: iso(r.followedAt)!,
+      collection: { name: r.name, slug: r.slug, description: r.description, feedCount: Number(r.feedCount) },
+    })),
     mentions: mentions.rows.map((r) => ({ id: Number(r.id), author: authorOf(r), at: iso(r.at)!, bookmark: r.bookmark })),
+    replies: replies.rows.map((r) => ({ id: Number(r.id), author: authorOf(r), at: iso(r.at)!, bookmark: r.bookmark })),
   };
 }
+
+type PrefsDbRow = { follow: boolean; bookmark: boolean; note: boolean; collection: boolean; invite: boolean; reply: boolean; mentionsFrom: MentionsFrom };
+const PREFS_COLS = sql`notify_follows as follow, notify_bookmarks as bookmark, notify_notes as note, notify_collections as collection,
+  notify_invites as invite, notify_replies as reply, mentions_from as "mentionsFrom"`;
+const prefsOf = (r: PrefsDbRow): Prefs => ({ follow: r.follow, bookmark: r.bookmark, note: r.note, collection: r.collection, invite: r.invite, reply: r.reply, mentionsFrom: r.mentionsFrom });
 
 /**
  * My notifications, as of now: the list, how many are new, and the moment it
@@ -284,13 +423,14 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
  * or the `range` a caller asked for (parseRange).
  */
 export async function notificationsFor(me: { id: number; handle: string }, range?: Range) {
-  const [row] = (await db.execute<{ seenAt: Date; now: Date }>(sql`
-    select notifications_seen_at as "seenAt", now() as now from users where id = ${me.id}
+  const [row] = (await db.execute<{ seenAt: Date; now: Date } & PrefsDbRow>(sql`
+    select notifications_seen_at as "seenAt", now() as now, ${PREFS_COLS} from users where id = ${me.id}
   `)).rows;
+  const prefs = prefsOf(row);
   const asOf = iso(row.now)!;
   const since = range?.since ?? new Date(Date.parse(asOf) - WINDOW_DAYS * DAY).toISOString();
   const until = range?.until ?? asOf;
   const seenAt = iso(row.seenAt)!;
-  const c = await candidatesFor(me, since, until);
-  return { ...assemble(me.id, c, { seenAt, since, until, kinds: range?.kinds }), seenAt, asOf, since, until };
+  const c = await candidatesFor(me, since, until, prefs);
+  return { ...assemble(me.id, c, { seenAt, since, until, kinds: range?.kinds, prefs }), seenAt, asOf, since, until };
 }
