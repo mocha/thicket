@@ -274,7 +274,7 @@ export type NotificationPost = { url: string; title: string | null; siteTitle: s
  * happened after I last looked. `key` is stable across loads.
  *   follow    `person` started following me
  *   bookmark  `person` (someone I follow) bookmarked `post`
- *   note      `person` (someone I follow) wrote a note on `post`
+ *   note      `person` (someone I follow) wrote a note on `post`; the whole thing is `bookmark`
  *   mention   `person` @mentioned me in the note on `bookmark`
  *   reply     `person` noted a post I saved; the note is on `bookmark`
  *   collection  `person` (someone I follow) made `collection`
@@ -284,7 +284,9 @@ export type NotificationPost = { url: string; title: string | null; siteTitle: s
 export type Notification =
   /** `following`: I already follow them back. */
   | { kind: 'follow'; key: string; at: string; isNew: boolean; person: NotificationPerson; following: boolean }
-  | { kind: 'bookmark' | 'note'; key: string; at: string; isNew: boolean; person: NotificationPerson; post: NotificationPost }
+  | { kind: 'bookmark'; key: string; at: string; isNew: boolean; person: NotificationPerson; post: NotificationPost }
+  /** `bookmark`: the post with the note on it, shown as a Bookmark card. */
+  | { kind: 'note'; key: string; at: string; isNew: boolean; person: NotificationPerson; post: NotificationPost; bookmark: PublicBookmark }
   | { kind: 'mention'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark }
   | { kind: 'reply'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark }
   | { kind: 'collection'; key: string; at: string; isNew: boolean; person: NotificationPerson; collection: { name: string; slug: string; description: string | null; feedCount: number } }

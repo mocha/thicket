@@ -12,7 +12,7 @@
    * linking to the post. What was written to me or on my posts comes in full,
    * as the same Bookmark card a profile shows, drawn flat inside its row; my
    * own @name stands out in the note (NoteBlock). Each row offers its next
-   * step: Follow back, Read note, or the collection itself.
+   * step: Follow back, Follow, or the collection itself.
    *
    * Opening the page marks everything seen, so the bubble in the sidebar
    * clears. What was new stays highlighted for this visit, so you can still
@@ -174,9 +174,9 @@
   <h2 class={g.key === todayKey ? 'visually-hidden' : 'dayhead'}>{g.label}</h2>
   <Card kind="list" as="ul" class="list-rows">
     {#each g.items as n (n.key)}
-      <li class:new={n.isNew} class:rich={n.kind === 'mention' || n.kind === 'reply' || n.kind === 'collection'}>
+      <li class:new={n.isNew} class:rich={n.kind === 'mention' || n.kind === 'reply' || n.kind === 'note' || n.kind === 'collection'}>
         {#if n.isNew}<span class="visually-hidden">New: </span>{/if}
-        {#if n.kind === 'mention' || n.kind === 'reply'}
+        {#if n.kind === 'mention' || n.kind === 'reply' || n.kind === 'note'}
           <!-- The same Bookmark card as anywhere else; in the note, your own @name is highlighted. -->
           <BookmarkCard flat b={n.bookmark} author={n.person} onopen={() => api.event('bookmark_opened', { via: 'notifications' })} />
         {:else if n.kind === 'collection'}
@@ -193,13 +193,12 @@
         {:else}
           <p class="line row-event">
             {@render who(n.person)}
-            <span class="verb">{n.kind === 'note' ? 'noted' : 'bookmarked'}</span>
+            <span class="verb">bookmarked</span>
             <button class="source tap" onclick={() => openSource(n.post.feedId, n.post.hasIcon, n.post.siteTitle ?? hostOf(n.post.url))} aria-label="About {n.post.siteTitle ?? hostOf(n.post.url)}" title="About {n.post.siteTitle ?? hostOf(n.post.url)}">
               <SourceIcon feedId={n.post.feedId} hasIcon={n.post.hasIcon} name={n.post.siteTitle ?? hostOf(n.post.url)} size={16} />
             </button>
             <a class="post" href={savedHref(n.post.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(n.post.url))} title={n.post.siteTitle ?? hostOf(n.post.url)}>{n.post.title ?? n.post.url}</a>
-            {#if n.kind === 'note'}<span class="act"><Button size="sm" href="{profileHref(n.person.handle)}/bookmarks?notes=1">Read note</Button></span>{/if}
-            {@render when(n.at)}
+              {@render when(n.at)}
           </p>
         {/if}
       </li>
@@ -255,8 +254,6 @@
   /* On a phone it drops under the line, lined up with the name, as Follow does on a person's row. */
   @media (max-width: 560px) {
     .line:has(.act) { flex-wrap: wrap; row-gap: var(--space-2); }
-    /* The post title still shares the first line with who did it, trailing off as before. */
-    .line:has(.act) .post { flex-basis: 0; }
     .act { order: 1; flex-basis: 100%; margin-left: calc(24px + var(--space-2)); }
     .act + time { margin-left: auto; }
   }

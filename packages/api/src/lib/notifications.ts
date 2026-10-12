@@ -155,7 +155,8 @@ export type FollowRow = { at: string; person: Person & { profileVisibility: "pub
 export type PostRef = { url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean };
 
 /** A bookmark by someone I follow, noted or not, and when I started following them. */
-export type SaveRow = { id: number; author: Author; post: PostRef; savedAt: string; noteCreatedAt: string | null; followedAt: string };
+/** `bookmark`: the whole bookmark, note included, when it has a note, so a "noted" notification can show it as a Bookmark card. */
+export type SaveRow = { id: number; author: Author; post: PostRef; savedAt: string; noteCreatedAt: string | null; followedAt: string; bookmark?: Record<string, unknown> | null };
 
 /**
  * A note that mentions me. `bookmark` is the whole bookmark in the shape a
@@ -184,7 +185,9 @@ const who = (p: Person): Who => ({ handle: p.handle, displayName: p.displayName,
 export type Notification =
   /** `following`: I already follow them, so the row needs no Follow back. */
   | { kind: "follow"; key: string; at: string; isNew: boolean; person: Who; following: boolean }
-  | { kind: "bookmark" | "note"; key: string; at: string; isNew: boolean; person: Who; post: PostRef }
+  | { kind: "bookmark"; key: string; at: string; isNew: boolean; person: Who; post: PostRef }
+  /** A note shows whole, as the Bookmark card it lives on; `post` names it in one line for a script. */
+  | { kind: "note"; key: string; at: string; isNew: boolean; person: Who; post: PostRef; bookmark: Record<string, unknown> }
   | { kind: "mention" | "reply"; key: string; at: string; isNew: boolean; person: Who; bookmark: Record<string, unknown> }
   | { kind: "collection"; key: string; at: string; isNew: boolean; person: Who; collection: CollectionRef }
   /** `person` is null when their profile is private: someone joined, unnamed. */
@@ -253,7 +256,7 @@ export function assemble(meId: number, c: Candidates, opts: { seenAt: string; si
     const fresh = (at: string | null) => inWindow(at) && Date.parse(at!) > followed;
     if (a.id === meId || shown.has(s.id) || a.profileVisibility !== "public" || !allows(a.activityVisibility, audience(a))) continue;
     if (p.note && s.noteCreatedAt && allows(a.notesVisibility, audience(a))) {
-      if (fresh(s.noteCreatedAt)) out.push({ kind: "note", key: `note:${s.id}`, at: s.noteCreatedAt, person: who(a), post: s.post });
+      if (fresh(s.noteCreatedAt)) out.push({ kind: "note", key: `note:${s.id}`, at: s.noteCreatedAt, person: who(a), post: s.post, bookmark: s.bookmark ?? {} });
       // A noted post is one act: the note stands for it even outside the range.
       continue;
     }
@@ -340,15 +343,17 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
 
   // A note written today on a post saved last year counts too, by when the note was written.
   // With bookmarks off, only noted posts can be anything.
-  const savesQ = prefs.bookmark || prefs.note ? db.execute<AuthorDbRow & { id: number; url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean; savedAt: Date; noteCreatedAt: Date | null; followedAt: Date }>(sql`
+  const savesQ = prefs.bookmark || prefs.note ? db.execute<AuthorDbRow & { id: number; url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean; savedAt: Date; noteCreatedAt: Date | null; followedAt: Date; bookmark: Record<string, unknown> | null }>(sql`
     select b.id, b.url, b.title, b.site_title as "siteTitle", b.feed_id as "feedId", ${ICON} as "hasIcon",
            b.saved_at as "savedAt", case when b.note is null then null else b.note_created_at end as "noteCreatedAt",
            mine.created_at as "followedAt",
+           case when b.note is null then null else ${bookmarkJson(me.id)} end as bookmark,
            ${authorCols(me.id)}
     from user_follows mine
     join bookmarks b on b.user_id = mine.followee_id
     join users u on u.id = b.user_id
     left join user_avatars ua on ua.user_id = u.id
+    left join items i on i.id = b.item_id
     where mine.follower_id = ${me.id} and b.user_id <> ${me.id}
       and (${inRange("b.saved_at")} or ${inRange("b.note_created_at")})
       and (b.saved_at > mine.created_at or b.note_created_at > mine.created_at)
@@ -406,7 +411,7 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
     follows: follows.rows.map(personRow),
     invites: invites.rows.map(personRow),
     saves: saves.rows.map((r) => ({
-      id: Number(r.id), author: authorOf(r), savedAt: iso(r.savedAt)!, noteCreatedAt: iso(r.noteCreatedAt), followedAt: iso(r.followedAt)!,
+      id: Number(r.id), author: authorOf(r), savedAt: iso(r.savedAt)!, noteCreatedAt: iso(r.noteCreatedAt), followedAt: iso(r.followedAt)!, bookmark: r.bookmark,
       post: { url: r.url, title: r.title, siteTitle: r.siteTitle, feedId: r.feedId === null ? null : Number(r.feedId), hasIcon: r.hasIcon },
     })),
     collections: collections.rows.map((r) => ({
