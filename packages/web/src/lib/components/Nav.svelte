@@ -223,11 +223,6 @@
         <button type="button" class="tab" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}><span class="mono ic"><Avatar handle={me.handle} name={me.displayName ?? me.handle} size={24} v={me.avatarUpdatedAt} />{#if notifs.count}<Badge variant="dot" class="pin" aria-label="New notifications" />{/if}</span><span class="shortl">You</span></button>
       </li>
     {/if}
-    {#if me?.isAdmin}
-      <li class="admin">
-        <a href="/admin" aria-current={current('/admin') ? 'page' : undefined}>{@render icon(icons.admin)}<span class="long">Admin</span><span class="shortl">Admin</span></a>
-      </li>
-    {/if}
   </ul>
 
   {#if me}
@@ -277,7 +272,7 @@
     background: var(--surface);
     border-top: 1px solid var(--line);
   }
-  .brand, .addfeed, .account, .long, li.admin, li.collections, li.notifs, .resize { display: none; }
+  .brand, .addfeed, .account, .long, li.collections, li.notifs, .resize { display: none; }
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
   /* Each tab is as wide as its label plus an even share of the spare room, so
      "Collections" gets more than "You" and none of them touch. Never narrower
@@ -334,7 +329,6 @@
     nav:not(.paged) li { flex: none; }
     nav:not(.paged) li > a { flex-direction: row; justify-content: flex-start; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); white-space: normal; }
     nav:not(.paged) li > a[aria-current='page'] { background: var(--surface-2); color: var(--text); font-weight: 600; }
-    nav:not(.paged) li.admin { display: block; margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 
     nav:not(.paged) li.collections { display: block; }
     nav:not(.paged) li.notifs { display: block; }

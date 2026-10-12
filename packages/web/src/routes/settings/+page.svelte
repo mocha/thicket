@@ -148,13 +148,6 @@
 {/if}
 
 
-{#if me.isAdmin}
-  <Card kind="section" as="section" class="settings-section">
-    <h2 class="section-title">Admin</h2>
-    <p class="section-description">You’re an admin of this instance. Sign ups, invites, and accounts live on the <a href="/admin">Admin page</a>.</p>
-  </Card>
-{/if}
-
 <style>
   /* The page has no element of its own around its sections, so the room between them is set on the cards' own class. */
   :global(.settings-section) { margin-bottom: var(--space-4); }
