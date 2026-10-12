@@ -22,12 +22,15 @@
    * read, never later, so nothing arriving in between is marked seen unshown.
    */
   import { onMount } from 'svelte';
-  import { api, collectionHref, notificationsApi, profileHref, profilesApi, type Notification } from '$lib/api';
+  import { api, authApi, collectionHref, notificationsApi, profileHref, profilesApi, type Me, type Notification } from '$lib/api';
+  import { setMe } from '$lib/session.svelte';
+  import FiltersBox from '$lib/components/FiltersBox.svelte';
+  import Sheet from '$lib/components/Sheet.svelte';
   import { showToast } from '$lib/toast.svelte';
   import CollectionRow from '$lib/components/CollectionRow.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
   import Icon from '$lib/components/Icon.svelte';
-  import { clearNotifs } from '$lib/notifications.svelte';
+  import { clearNotifs, loadNotifs } from '$lib/notifications.svelte';
   import { session } from '$lib/session.svelte';
   import { dayKey, dayLabel, hostOf, relativeTime, savedHref, ugcRel } from '$lib/time';
   import Avatar from '$lib/components/Avatar.svelte';
@@ -45,19 +48,67 @@
     source = { feedId, hasIcon, name };
   }
 
+  /** What was new when the page opened. It stays highlighted through this visit, even when a filter change reads the list again. */
+  const wasNew = new Set<string>();
+  async function load(first: boolean) {
+    const r = await notificationsApi.list();
+    for (const n of r.items) if (n.isNew) wasNew.add(n.key);
+    items = r.items.map((n) => ({ ...n, isNew: wasNew.has(n.key) }));
+    if (first) api.event('notifications_view', { shown: r.items.length, new: r.count });
+    if (r.count) {
+      await notificationsApi.seen(r.asOf);
+      clearNotifs();
+    }
+  }
+
   onMount(async () => {
     try {
-      const r = await notificationsApi.list();
-      items = r.items;
-      api.event('notifications_view', { shown: r.items.length, new: r.count });
-      if (r.count) {
-        await notificationsApi.seen(r.asOf);
-        clearNotifs();
-      }
+      await load(true);
     } catch (e) {
       failed = e instanceof Error ? e.message : String(e);
     }
   });
+
+  /*
+   * Filters (issue #274): which kinds I get, kept on my account, so they're
+   * the same on every device. A change saves at once, then the list and the
+   * bubble in the left menu are read again, so what I turned off is gone from
+   * both right away.
+   */
+  type Pref = 'notifyFollows' | 'notifyInvites' | 'notifyBookmarks' | 'notifyNotes' | 'notifyCollections' | 'notifyReplies';
+  const me = $derived(session.user);
+  const KIND_PREFS = $derived<{ key: Pref; label: string; hint?: string }[]>([
+    { key: 'notifyFollows', label: 'New followers' },
+    // Only admins can make invites, so only they are asked.
+    ...(me?.isAdmin ? [{ key: 'notifyInvites' as const, label: 'People who sign up with your invite' }] : []),
+    { key: 'notifyBookmarks', label: 'Bookmarks by people you follow' },
+    { key: 'notifyNotes', label: 'Notes by people you follow' },
+    { key: 'notifyCollections', label: 'New collections by people you follow' },
+    { key: 'notifyReplies', label: 'Notes on posts you saved', hint: 'Starts off, since a popular post can draw a lot of notes' }
+  ]);
+  const MENTIONS: { value: Me['mentionsFrom']; label: string; hint?: string; summary: string }[] = [
+    { value: 'none', label: 'No one', summary: 'No mentions' },
+    { value: 'following', label: 'People I follow', summary: 'Mentions from people I follow' },
+    { value: 'everyone', label: 'Everyone', hint: 'The default. Anyone who can see your profile can mention you.', summary: 'Mentions from everyone' }
+  ];
+  const filterSummary = $derived.by(() => {
+    if (!me) return [];
+    const off = KIND_PREFS.filter((k) => !me[k.key]);
+    const kinds = off.length === 0 ? 'Every kind' : off.length === 1 ? `All but ${off[0].label.toLowerCase()}` : `${KIND_PREFS.length - off.length} of ${KIND_PREFS.length} kinds`;
+    return [kinds, MENTIONS.find((m) => m.value === me.mentionsFrom)?.summary ?? ''];
+  });
+  let filtersDialog = $state<HTMLDialogElement | null>(null);
+  let saving = $state(false);
+  async function setPref(patch: Parameters<typeof authApi.update>[0]) {
+    saving = true;
+    try {
+      setMe(await authApi.update(patch));
+      api.event('notification_filters_changed', { keys: Object.keys(patch) });
+      await Promise.all([load(false), loadNotifs(true)]);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    } finally { saving = false; }
+  }
 
   const name = (p: { handle: string }) => `@${p.handle}`;
 
@@ -103,6 +154,8 @@
   <FollowButton following={n.following} label={label} busy={followBusy === n.person?.handle} onclick={() => toggleFollow(n)} />
 {/snippet}
 
+{#if me}<FiltersBox summary={filterSummary} onclick={() => filtersDialog?.showModal()} />{/if}
+
 {#if failed}
   <p class="status">{failed}</p>
 {:else if items === null}
@@ -110,7 +163,7 @@
 {:else if items.length === 0}
   <div class="empty">
     <h2>Nothing yet</h2>
-    <p>When someone follows you, it shows up here. So does every post the people you follow bookmark or write a note on, and any note that mentions you as @{session.user?.handle ?? 'yourhandle'}.</p>
+    <p>When someone follows you, it shows up here. So does every post the people you follow bookmark or write a note on, and any note that mentions you as @{session.user?.handle ?? 'yourhandle'}.{#if filterSummary[0] !== 'Every kind' || me?.mentionsFrom !== 'everyone'} Some of these are turned off in Filters.{/if}</p>
     <div class="ctas"><Button href="/explore?scope=people">Find people to follow</Button></div>
   </div>
 {:else}
@@ -153,6 +206,29 @@
   </Card>
   </section>
   {/each}
+{/if}
+
+{#if me}
+  <Sheet title="Filters" lede="Choose what shows up in Notifications." bind:dialog={filtersDialog}>
+    <fieldset disabled={saving}>
+      <legend class="visually-hidden">Kinds of notification</legend>
+      {#each KIND_PREFS as k (k.key)}
+        <label class="switch">
+          <input type="checkbox" checked={me[k.key]} onchange={(e) => setPref({ [k.key]: e.currentTarget.checked })} />
+          <span><strong>{k.label}</strong>{#if k.hint}<small>{k.hint}</small>{/if}</span>
+        </label>
+      {/each}
+    </fieldset>
+    <fieldset disabled={saving}>
+      <legend class="legend">Mentions from</legend>
+      {#each MENTIONS as m (m.value)}
+        <label class="radio">
+          <input type="radio" name="mentionsFrom" value={m.value} checked={me.mentionsFrom === m.value} onchange={() => setPref({ mentionsFrom: m.value })} />
+          <span><strong>{m.label}</strong>{#if m.hint}<small>{m.hint}</small>{/if}</span>
+        </label>
+      {/each}
+    </fieldset>
+  </Sheet>
 {/if}
 
 {#if source}
@@ -198,6 +274,16 @@
   /* The title takes what room is left and trails off; the time stays whole at the end. */
   .post { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
   time { flex: none; margin-left: auto; padding-left: var(--space-2); color: var(--text-2); }
+
+  /* The Sheet's choices: the same tick boxes and dials as Settings. */
+  fieldset { border: 0; padding: 0; margin: var(--space-3) 0 var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  fieldset:last-of-type { margin-bottom: 0; }
+  .legend { padding: 0; margin-bottom: var(--space-1); font-weight: 600; color: var(--text); }
+  .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
+  .radio input, .switch input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .radio input:focus-visible, .switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
+  .radio small, .switch small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
 
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-2)) var(--space-5); color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-2); }
