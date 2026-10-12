@@ -53,9 +53,9 @@
 
 </script>
 
-<svelte:head><title>Settings · thicket</title></svelte:head>
+<svelte:head><title>Reading settings · thicket</title></svelte:head>
 
-<PageHeader name="Settings">
+<PageHeader name="Reading settings">
   {#snippet description()}How thicket looks and how reading in it works.{/snippet}
 </PageHeader>
 

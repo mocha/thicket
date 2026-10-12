@@ -158,10 +158,10 @@
   }
 </script>
 
-<svelte:head><title>Admin · thicket</title></svelte:head>
+<svelte:head><title>Site admin · thicket</title></svelte:head>
 
 {#snippet site()}{instance?.name} <Dot /> <code>{instance?.url}</code>{/snippet}
-<PageHeader name="Admin" description={instance ? site : undefined} />
+<PageHeader name="Site admin" description={instance ? site : undefined} />
 
 {#if instance}
   <Card kind="section" as="section" class="admin-section">

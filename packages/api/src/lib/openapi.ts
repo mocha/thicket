@@ -182,8 +182,8 @@ export function openApiDocument(serverUrl: string) {
     paths,
     components: {
       securitySchemes: {
-        readOnlyToken: { type: "http", scheme: "bearer", bearerFormat: "thk_ro_…", description: "A read-only access token from the Account page. Reads only." },
-        fullAccessToken: { type: "http", scheme: "bearer", bearerFormat: "thk_rw_…", description: "A full access token from the Account page. Reads and writes." },
+        readOnlyToken: { type: "http", scheme: "bearer", bearerFormat: "thk_ro_…", description: "A read-only access token from the Account and data page. Reads only." },
+        fullAccessToken: { type: "http", scheme: "bearer", bearerFormat: "thk_rw_…", description: "A full access token from the Account and data page. Reads and writes." },
       },
       schemas: {
         Error: { type: "object", required: ["error"], properties: { error: { type: "string", description: "What went wrong, in a sentence." }, retryAfterS: { type: "integer", description: "On a 429: seconds to wait." } } },
