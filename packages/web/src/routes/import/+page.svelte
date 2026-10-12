@@ -14,6 +14,8 @@
   import type { ImportFeed } from '$lib/api';
   import ImportHelp from '$lib/components/ImportHelp.svelte';
   import Input from '$lib/components/Input.svelte';
+  import Field from '$lib/components/Field.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import Button from '$lib/components/Button.svelte';
 
   /**
@@ -83,9 +85,9 @@
   const label = (f: ImportFeed) => { const t = f.title?.trim(); return t && !/^https?:\/\//i.test(t) ? t : host(f.url); };
 
   /**
-   * Renaming is one card at a time: Rename swaps the heading for the same
-   * name field Manage collection uses, with Save inside it. Save (or Enter)
-   * keeps the new name; Escape keeps the old one.
+   * Renaming is one card at a time, the way Edit profile works: Edit name
+   * swaps the heading for a labeled field with Cancel and Save under it.
+   * Save (or Enter) keeps the new name; Cancel or Escape keeps the old one.
    */
   let renaming = $state<number | null>(null);
   let draft = $state('');
@@ -172,13 +174,17 @@
         {/if}
         <div class="gbody">
           {#if on && renaming === gi}
-            <!-- The rename field used on Manage collection and Manage feed: Save inside the box, awake once the name changed. -->
+            <!-- Edit in place, as Edit profile does: the name becomes a labeled field with Cancel and Save under it. -->
             <form class="rename" onsubmit={(e) => { e.preventDefault(); finishRename(g); }}>
-              <Input bind:value={draft} bind:element={nameBox} maxlength={60} clearable={false} aria-label="Collection name" onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') renaming = null; }}>
-                {#snippet trailing()}
-                  <Button type="submit" variant="primary" disabled={!draft.trim() || draft.trim() === (final ?? g.name.trim())}>Save</Button>
+              <Field label="Name">
+                {#snippet children({ id, describedBy, invalid })}
+                  <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={draft} bind:element={nameBox} maxlength={60} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') renaming = null; }} />
                 {/snippet}
-              </Input>
+              </Field>
+              <div class="editrow">
+                <Button onclick={() => (renaming = null)}>Cancel</Button>
+                <Button type="submit" variant="primary" disabled={!draft.trim() || draft.trim() === (final ?? g.name.trim())}>Save</Button>
+              </div>
             </form>
           {:else}
             <h2 class="section-title">{final ?? (g.name.trim() || 'Untitled')}</h2>
@@ -191,7 +197,7 @@
             </p>
           {/if}
         </div>
-        {#if on && renaming !== gi}<Button onclick={() => startRename(gi)}>Rename</Button>{/if}
+        {#if on && renaming !== gi}<Button size="sm" onclick={() => startRename(gi)}><Icon name="pencil" size={16} />Edit name</Button>{/if}
       </div>
 
       {#if on || why || !choosing}
@@ -267,12 +273,14 @@
   /* The box sits level with the heading's first line (21px at 1.25 line height). */
   .keep { width: 20px; height: 20px; margin: 3px 0 0; flex: none; accent-color: var(--accent); cursor: pointer; }
   .keep:disabled { cursor: not-allowed; }
-  /* Beside the open name field the box centers on the 48px field instead. */
-  .ghead:has(.rename) .keep { margin-top: 14px; }
+  /* Beside the open name field the box sits level with the field's label. */
+  .ghead:has(.rename) .keep { margin-top: 0; }
   .keep:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .gbody { flex: 1; min-width: 0; }
   :global(.import-section.off) .section-title { color: var(--text-2); }
-  .rename { margin-bottom: var(--space-3); }
+  /* Spaced and lined up like the Edit profile form: the buttons at the right, under the field. */
+  .rename { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-3); }
+  .editrow { display: flex; justify-content: flex-end; gap: var(--space-2); }
   /* "Will be called…" gets a line of its own above the counts. */
   .line { display: block; }
   .counts { font-variant-numeric: tabular-nums; }
