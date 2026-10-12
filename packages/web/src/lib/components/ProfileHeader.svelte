@@ -220,9 +220,9 @@
           <Button size="sm" onclick={startEdit}><Icon name="pencil" size={16} />Edit profile</Button>
       {/if}
     {:else if session.user}
-      <FollowButton small following={profile.people.isFollowing} label="Follow @{profile.handle}" busy={followBusy} onclick={toggleFollow} />
+      <FollowButton following={profile.people.isFollowing} label="Follow @{profile.handle}" busy={followBusy} onclick={toggleFollow} />
     {:else}
-      <FollowButton small label="Follow @{profile.handle}" href="/login?next={encodeURIComponent(page.url.pathname)}" />
+      <FollowButton label="Follow @{profile.handle}" href="/login?next={encodeURIComponent(page.url.pathname)}" />
     {/if}
   {/snippet}
 </PageHeader>

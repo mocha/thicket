@@ -21,9 +21,11 @@
   import { loadCollections } from '$lib/collections.svelte';
   import SourceIcon from './SourceIcon.svelte';
   import Card from './Card.svelte';
+  import CardMeta from './CardMeta.svelte';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
   import { copyNext } from '$lib/copyintent.svelte';
+  import { plural } from '$lib/words';
 
   let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false }:
     { heading?: string; lede?: string; compact?: boolean } = $props();
@@ -65,16 +67,15 @@
     {#if lede}<p class="lede">{lede}</p>{/if}
     <ul>
       {#each packs as c (c.id)}
-        <Card as="li" class="pack">
-          <!-- Laid out like an article card: a small line on top (here, the
-               sites inside and how many), then the title, then
-               the summary. -->
-          <div class="meta">
-            <span class="icons" aria-hidden="true">
-              {#each c.sample as f (f.id)}<SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title} size={20} />{/each}
-            </span>
-            <span class="count">{c.feedCount} {c.feedCount === 1 ? 'site' : 'sites'}{#if !from}{' '}<Dot />{' '}{c.displayName ?? `@${c.handle}`}{/if}</span>
-          </div>
+        <Card as="li" class="pack" pad={false}>
+          <!-- Laid out like an article card, with the same source line on top:
+               here the sites inside, whose it is, and how many. When the
+               instance names one account for all of them, that's said once
+               under the list instead, so the line just counts the sites. -->
+          <CardMeta feedId={null} name={from ? plural(c.feedCount, 'site') : (c.displayName ?? `@${c.handle}`)}>
+            {#snippet icon()}<span class="icons" aria-hidden="true">{#each c.sample as f (f.id)}<SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title} size={20} />{/each}</span>{/snippet}
+            {#if !from}<Dot /><span class="count">{plural(c.feedCount, 'site')}</span>{/if}
+          </CardMeta>
           <!-- The name is the link, stretched over the whole card, so the card
                still opens the collection while the button below stays its own control. -->
           <h3 class="card-title"><a class="name" href={collectionHref(c.handle, c.slug)}>{c.name}</a></h3>
@@ -110,19 +111,21 @@
      the list really has, not the window, so the sidebar can't squeeze three
      cards into room for two. */
   ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(17rem * var(--size-app))), 1fr)); }
-  ul :global(.pack) { display: flex; flex-direction: column; }
+  /* An article card's insets. Its source line is a button with 4px of room
+     around it, so its icons sit 16px from the top and its title 12px below;
+     this line has no button, so the card's own padding says the same. */
+  ul :global(.pack) { display: flex; flex-direction: column; padding: var(--card-pad); }
   /* Pressing the button presses the button, not the card: the card's own
      press shrink is for opening the collection. */
   ul :global(.pack:has(.take:active)) { transform: none; }
-  /* The same small line an article card opens with: 14px, secondary ink. */
-  .meta { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   /* Side by side, not stacked: site icons are rounded squares, and overlapping
      them clips their letters. */
   .icons { display: flex; flex: none; gap: var(--space-1); }
   /* One line, like an article card's: a long name trails off rather than wrapping. */
   .count { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* Written as "after the small line" so it outranks the shared card title's own zero margin. */
-  .meta + .card-title { margin-top: var(--space-2); }
+  /* As far under the source line as an article card's title. Written this
+     specifically so it outranks the shared title's own zero margin. */
+  .packs ul .card-title { margin-top: var(--space-3); }
   .name { color: inherit; text-decoration: none; }
   /* The article card's cue that the card opens something: the title underlines
      softly while the pointer is anywhere on the card but the button. */

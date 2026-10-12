@@ -13,7 +13,7 @@
  */
 import { Hono, type Context } from "hono";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { subtreeFeedCount } from "../lib/subtree.js";
+import { collectionSample, subtreeFeedCount } from "../lib/subtree.js";
 import { db, schema } from "../db/client.js";
 import { currentUser, normalizeHandle, FIRST_COLLECTION_SLUG } from "../lib/auth.js";
 import { exportCollectionOpml } from "../lib/opml.js";
@@ -54,12 +54,13 @@ async function avatarTime(userId: number): Promise<string | null> {
 /**
  * Visible, named collections of an owner: non-root, and shared with this viewer
  * (all of them, for the owner). `copiedByMe`: the viewer has a copy of it, so
- * the profile can say so (issue #176).
+ * the profile can say so (issue #176). `sample`: a few of its feeds, for the
+ * icons at the front of its row, as on Explore.
  */
 function collectionRows(u: Owner, who: Audience, viewerId: number | undefined) {
-  return db.execute<{ id: number; parentId: number; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null; copiedByMe: boolean }>(sql`
+  return db.execute<{ id: number; parentId: number; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null; copiedByMe: boolean; sample: { id: number; title: string | null; hasIcon: boolean }[] }>(sql`
     select col.id, col.parent_id as "parentId", col.name, col.slug, col.description, col.visibility, col.copied_from_id as "copiedFromId",
-           ${subtreeFeedCount(sql`col.id`)} as "feedCount",
+           ${subtreeFeedCount(sql`col.id`)} as "feedCount", ${collectionSample(sql`col.id`)} as sample,
            (${!who.isMe && viewerId !== undefined} and exists(select 1 from collections mine where mine.user_id = ${viewerId ?? -1} and mine.copied_from_id = col.id)) as "copiedByMe"
     from collections col
     where col.user_id = ${u.id} and col.parent_id is not null and ${allowedLevelsSql("col.visibility", who)}
@@ -268,7 +269,7 @@ profiles.get("/:handle/collections/:slug", async (c) => {
     where cf.collection_id = ${r.col.id} order by lower(coalesce(cf.title_override, f.title, f.url))
   `);
   const children = await db.execute(sql`
-    select col.id, col.name, col.slug, col.description, ${subtreeFeedCount(sql`col.id`)} as "feedCount"
+    select col.id, col.name, col.slug, col.description, ${subtreeFeedCount(sql`col.id`)} as "feedCount", ${collectionSample(sql`col.id`)} as sample
     from collections col where col.parent_id = ${r.col.id} and ${allowedLevelsSql("col.visibility", r.who)} order by lower(col.name)
   `);
   // Does this signed-in reader already have a copy of this collection? Every

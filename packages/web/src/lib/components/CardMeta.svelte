@@ -18,6 +18,9 @@
    * `label` draws the name some other way than as plain text: with the words
    * a search matched highlighted, say. The plain `name` is still what the
    * icon and the tooltip use.
+   *
+   * `icon` draws something in place of the one site's icon: a starter pack's
+   * row of its sites' icons, say. Everything else on the line stays the same.
    */
   interface Props {
     feedId: number | null;
@@ -25,6 +28,8 @@
     name: string | null;
     /** Drawn in place of the name's plain text, when given. */
     label?: Snippet;
+    /** Drawn in place of the site's icon, when given. */
+    icon?: Snippet;
     /** When the post went up. Left off when there is no date to show. */
     when?: string | null;
     /** Given, the source name becomes a button. */
@@ -34,7 +39,7 @@
     [key: string]: unknown;
   }
 
-  let { feedId, hasIcon = false, name, label, when = null, onsource, children, class: klass = '', ...rest }: Props = $props();
+  let { feedId, hasIcon = false, name, label, icon, when = null, onsource, children, class: klass = '', ...rest }: Props = $props();
 
   /** One icon size on every card. */
   const ICON = 20;
@@ -43,11 +48,11 @@
 <div class="meta {klass}" {...rest}>
   {#if onsource}
     <button class="source tap" onclick={onsource} title="About {name}">
-      <SourceIcon {feedId} {hasIcon} {name} size={ICON} />
+      {#if icon}{@render icon()}{:else}<SourceIcon {feedId} {hasIcon} {name} size={ICON} />{/if}
       <span class="name">{#if label}{@render label()}{:else}{name}{/if}</span>
     </button>
   {:else}
-    <SourceIcon {feedId} {hasIcon} {name} size={ICON} />
+    {#if icon}{@render icon()}{:else}<SourceIcon {feedId} {hasIcon} {name} size={ICON} />{/if}
     <span class="name">{#if label}{@render label()}{:else}{name}{/if}</span>
   {/if}
   {#if when}
@@ -71,7 +76,10 @@
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
-    padding: var(--space-1) var(--space-2) var(--space-1) 0;
+    /* Room on the right for the hover background, taken back with the
+       margin so the gap after the name matches the gap after the dot. */
+    padding: var(--space-1) var(--space-1) var(--space-1) 0;
+    margin-right: calc(-1 * var(--space-1));
     border-radius: var(--radius-sm);
     text-align: left;
   }

@@ -8,12 +8,13 @@ import { resetCollections } from './collections.svelte';
 import { resetMarks } from './marks.svelte';
 import { resetNotifs } from './notifications.svelte';
 import { closeAddFeed } from './addfeed.svelte';
+import { startOverImport } from './importer.svelte';
 
 export const session = $state<{ user: Me | null; loaded: boolean; unreachable: string | null }>({ user: null, loaded: false, unreachable: null });
 
 /**
  * The one place the user changes. Every per-user cache in the app (the
- * collections list, an open add-feed sheet) is module state that outlives a
+ * collections list, an open add-feed sheet, an import in progress) is module state that outlives a
  * log-out inside the single-page app, so a different user is the signal to
  * drop it all. Same user (a profile edit) keeps the caches.
  */
@@ -23,6 +24,8 @@ function applyUser(me: Me | null) {
     resetMarks(me?.id ?? null);
     resetNotifs();
     closeAddFeed();
+    // An import in progress is someone's file and their following: never the next account's.
+    startOverImport();
   }
   session.user = me;
 }
