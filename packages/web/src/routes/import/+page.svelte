@@ -2,7 +2,8 @@
   import Checkbox from '$lib/components/Checkbox.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import Card from '$lib/components/Card.svelte';
-  import SourceIcon from '$lib/components/SourceIcon.svelte';
+  import FeedLine from '$lib/components/FeedLine.svelte';
+  import { hostOf } from '$lib/time';
   import { plural } from '$lib/words';
   import Dot from '$lib/components/Dot.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
@@ -32,8 +33,8 @@
    */
   let link = $state('');
 
+  /* The server's rule for a collection's address (api/src/lib/slug.ts), copied so a clash shows before saving. Keep the two the same. */
   const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'untitled';
-  const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
 
   // A finished import is over: coming back here starts a new one.
   onMount(() => { if (imp.step === 'done') startOverImport(); });
@@ -50,7 +51,7 @@
     if (!settled(g) || canKeep(g)) return null;
     const n = g.feeds.length;
     return refused(g).length === n
-      ? `None of ${n === 1 ? 'this feed works' : n === 2 ? 'these 2 feeds work' : `these ${n} feeds work`}, so thicket won’t create this collection`
+      ? `None of ${n === 1 ? 'this feed works' : `these ${n} feeds work`}, so thicket won’t create this collection`
       : `Thicket couldn’t check any of ${n === 1 ? 'this feed' : `these ${n} feeds`} just now, so it won’t create this collection. That usually means a connection problem here, not with the sites.`;
   }
 
@@ -75,14 +76,18 @@
     return out;
   });
 
-  const kept = $derived(imp.groups.filter((g) => g.keep && g.name.trim() && canKeep(g)));
+  /* The groups that will become collections: exactly the ones given a final name above. */
+  const kept = $derived(imp.groups.filter((_, i) => finalNames.has(i)));
   /* With a single group there is nothing to choose between, so no box to untick. */
   const choosing = $derived(imp.groups.length > 1);
 
   function startOver() { startOverImport(); link = ''; }
 
   /* A file often gives the address itself as a feed's name; the site's name says it better. */
-  const label = (f: ImportFeed) => { const t = f.title?.trim(); return t && !/^https?:\/\//i.test(t) ? t : host(f.url); };
+  const label = (f: ImportFeed, site: string) => { const t = f.title?.trim(); return t && !/^https?:\/\//i.test(t) ? t : site; };
+
+  /* What the checking bar says, read out once per stage and shown with a running count. */
+  const stage = $derived(imp.retrying ? `Trying ${plural(imp.retrying, 'feed')} again that didn’t answer` : `Checking ${plural(imp.toCheck, 'feed')}`);
 
   /**
    * Renaming is one card at a time, the way Edit profile works: Edit name
@@ -103,6 +108,7 @@
     if (draft.trim()) g.name = draft.trim();
     renaming = null;
   }
+  const cancelRename = () => (renaming = null);
 </script>
 
 <svelte:head><title>Import · thicket</title></svelte:head>
@@ -130,9 +136,7 @@
 {:else if imp.step === 'review' && imp.preview}
   <!-- With one group the card below already says it all, so the line only explains the checkboxes. -->
   {#if choosing}
-    <p class="lede">
-      Uncheck any you don’t want. Each group becomes a new collection.
-    </p>
+    <p class="lede">Uncheck any you don’t want. Each group becomes a new collection.</p>
   {/if}
   {#if imp.preview.emptyFolders.length}
     <p class="fine">Left out, because they’re empty: {imp.preview.emptyFolders.join(', ')}.</p>
@@ -145,14 +149,8 @@
          change of stage is announced (the hidden line below). -->
     <div class="progress">
       <div class="bar" role="progressbar" aria-label="Checking feeds" aria-valuemin={0} aria-valuemax={imp.toCheck || 1} aria-valuenow={imp.toCheck ? imp.checked : 1}><span style="width: {imp.toCheck ? Math.round((imp.checked / imp.toCheck) * 100) : 100}%"></span></div>
-      <span class="visually-hidden" role="status">
-        {#if imp.retrying}Trying {imp.retrying} {imp.retrying === 1 ? 'feed' : 'feeds'} again that didn’t answer.
-        {:else}Checking {imp.toCheck} {imp.toCheck === 1 ? 'feed' : 'feeds'}.{/if}
-      </span>
-      <span aria-hidden="true">
-        {#if imp.retrying}Trying {imp.retrying} {imp.retrying === 1 ? 'feed' : 'feeds'} again that didn’t answer… {imp.checked} of {imp.toCheck}
-        {:else}Checking feeds… {imp.checked} of {imp.toCheck}{/if}
-      </span>
+      <span class="visually-hidden" role="status">{stage}.</span>
+      <span aria-hidden="true">{imp.retrying ? stage : 'Checking feeds'}… {imp.checked} of {imp.toCheck}</span>
     </div>
   {/if}
 
@@ -165,7 +163,7 @@
     {@const on = g.keep && !why}
     <Card kind="section" as="section" class="import-section {on ? '' : 'off'}">
       <!-- A section card: the shared heading and description, with the checkbox before them
-           and Rename after. The feeds are the card's rows, laid out like the shared Feed row. -->
+           and Edit name after. The feeds are the card's rows, laid out like the shared Feed row. -->
       <div class="ghead">
         {#if choosing}
           <!-- A group with nothing that works can't be ticked; the description says why. -->
@@ -177,11 +175,11 @@
             <form class="rename" onsubmit={(e) => { e.preventDefault(); finishRename(g); }}>
               <Field label="Name">
                 {#snippet children({ id, describedBy, invalid })}
-                  <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={draft} bind:element={nameBox} maxlength={60} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') renaming = null; }} />
+                  <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={draft} bind:element={nameBox} maxlength={60} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') cancelRename(); }} />
                 {/snippet}
               </Field>
               <div class="editrow">
-                <Button onclick={() => (renaming = null)}>Cancel</Button>
+                <Button onclick={cancelRename}>Cancel</Button>
                 <Button type="submit" variant="primary" disabled={!draft.trim() || draft.trim() === (final ?? g.name.trim())}>Save</Button>
               </div>
             </form>
@@ -199,19 +197,17 @@
         {#if on && renaming !== gi}<Button size="sm" onclick={() => startRename(gi)}><Icon name="pencil" size={16} />Edit name</Button>{/if}
       </div>
 
-      {#if on || why || !choosing}
+      {#if g.keep || why}
         {@const rows = [...ok, ...bad]}
         <div class="feeds">
         <ul class="list-rows">
           {#each g.open ? rows : rows.slice(0, SHOWN) as f (f.url)}
-            {@const name = label(f)}
+            {@const site = hostOf(f.url)}
+            {@const name = label(f, site)}
             <li class="feedrow" class:refused={f.state === 'failed'}>
-              <SourceIcon feedId={null} {name} size={40} />
-              <span class="meta">
-                <span class="row-name title">{name}</span>
-                {#if name !== host(f.url)}<span class="row-details origin">{host(f.url)}</span>{/if}
+              <FeedLine feedId={null} {name} origin={name !== site ? site : null}>
                 {#if f.reason && (f.state === 'failed' || f.state === 'unsure')}<span class="row-details reason">{f.reason}</span>{/if}
-              </span>
+              </FeedLine>
               <!-- The status sits at the row's right end, level with the middle of the row. -->
               {#if f.state === 'pending'}<Badge>Checking…</Badge>
               {:else if f.state === 'failed'}<Badge tone="danger">Can’t import</Badge>
@@ -278,22 +274,18 @@
   /* Spaced and lined up like the Edit profile form: the buttons at the right, under the field. */
   .rename { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-3); }
   .editrow { display: flex; justify-content: flex-end; gap: var(--space-2); }
-  /* "Will be called…" gets a line of its own above the counts. */
+  /* "A collection named … already exists." gets a line of its own above the counts. */
   .line { display: block; }
   .counts { font-variant-numeric: tabular-nums; }
 
   /* The feeds are the card's rows, edge to edge, to the card's bottom edge.
-     Each is laid out like the shared Feed row: the site's icon, the name, the
-     site tight under it, any reason in gray, and the status at the right end. */
+     Each is the shared FeedLine (icon, name, site, any reason in gray) with
+     its status at the right end. */
   .feeds { margin: 0 calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)); }
   .feedrow { display: flex; align-items: center; gap: var(--space-3); }
-  .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* -2px is optical, as on the Feed row: the site reads as a byline to the name. */
-  .origin { margin-top: -2px; color: var(--text); overflow-wrap: anywhere; }
   .reason { margin-top: var(--space-1); }
   /* A feed we can't import is quieter than the ones that will come in. */
-  .refused .title, .refused .origin { color: var(--text-2); font-weight: 400; }
+  .feedrow.refused :global(.title), .feedrow.refused :global(.origin) { color: var(--text-2); font-weight: 400; }
   .count { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
 
   /* Pinned to the bottom while a long review scrolls, so the main action is always in reach. On a

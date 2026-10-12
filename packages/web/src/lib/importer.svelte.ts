@@ -11,7 +11,7 @@ import { loadCollections } from './collections.svelte';
 export type ImportStep = 'choose' | 'review' | 'done';
 export type ImportGroup = { name: string; keep: boolean; open: boolean; feeds: ImportFeed[] };
 
-/** Folders at or under this size start opened out on the review. */
+/** Groups at or under this size start opened out on the review. */
 export const SHOWN = 12;
 
 export const imp = $state({
@@ -30,6 +30,8 @@ export const imp = $state({
 
 /** Which reading the checks belong to, so starting over stops the old ones landing on the new list. */
 let run = 0;
+/** Which import this is: moves only when one is thrown away, so reading or saving the old one can't land on the next. */
+let generation = 0;
 
 export const ready = (g: ImportGroup) => g.feeds.filter((f) => f.state !== 'failed');
 export const refused = (g: ImportGroup) => g.feeds.filter((f) => f.state === 'failed');
@@ -37,7 +39,7 @@ export const refused = (g: ImportGroup) => g.feeds.filter((f) => f.state === 'fa
  * A collection is only worth making if something in it is known to work: a
  * feed that checked out, or one I already follow. Feeds that couldn't be
  * checked ride along with the ones that did, but they can't be the whole
- * reason for a collection — that is how a folder of dead addresses used to
+ * reason for a collection — that is how a group of dead addresses used to
  * become an empty collection.
  */
 export const good = (g: ImportGroup) => g.feeds.filter((f) => f.state === 'ok');
@@ -49,11 +51,11 @@ export const canKeep = (g: ImportGroup) => good(g).length > 0;
 export async function readImport(get: () => Promise<ImportPreview>, via: string): Promise<boolean> {
   if (imp.busy) return false;
   imp.busy = true; imp.error = null;
-  const mine = run;
+  const mine = generation;
   try {
     const p = await get();
     /* Started over while the file was being read (the account changed, say): this reading is no one's now. */
-    if (mine !== run) return false;
+    if (mine !== generation) return false;
     imp.preview = p;
     imp.groups = p.groups.map((g) => ({ name: g.name, keep: true, open: g.feeds.length <= SHOWN, feeds: g.feeds }));
     imp.step = 'review';
@@ -61,14 +63,14 @@ export async function readImport(get: () => Promise<ImportPreview>, via: string)
     void checkAll();
     return true;
   } catch (e) {
-    if (mine === run) imp.error = e instanceof Error ? e.message : String(e);
+    if (mine === generation) imp.error = e instanceof Error ? e.message : String(e);
     return false;
   } finally {
-    imp.busy = false;
+    if (mine === generation) imp.busy = false;
   }
 }
 
-/** Apply one result everywhere the feed appears: a feed in two folders is one check. */
+/** Apply one result everywhere the feed appears: a feed in two groups is one check. */
 function apply(url: string, patch: Partial<ImportFeed>) {
   for (const g of imp.groups) for (const f of g.feeds) if (f.url === url) Object.assign(f, patch);
 }
@@ -100,7 +102,7 @@ async function pass(urls: string[], mine: number) {
 
 /**
  * Trouble that passes on its own gets another go before the review settles.
- * Worth doing here and not only in the scheduler, because a folder is only
+ * Worth doing here and not only in the scheduler, because a group is only
  * creatable once something in it is known to work: a connection that stumbles
  * for ten seconds would otherwise block the whole import behind feeds that
  * are perfectly fine. Only verdicts the server marked `retry` come back —
@@ -118,7 +120,7 @@ async function retryPass(mine: number, wait: number) {
   imp.retrying = again.length;
   await new Promise((r) => setTimeout(r, wait));
   if (mine !== run) return false;
-  // Back to "checking" while they are in flight, so a folder doesn't settle —
+  // Back to "checking" while they are in flight, so a group doesn't settle —
   // and turn its own checkbox off — on a verdict we are in the middle of redoing.
   for (const url of again) apply(url, { state: 'pending', reason: null });
   await pass(again, mine);
@@ -153,20 +155,24 @@ async function checkAll() {
 export async function commitImport(kept: ImportGroup[]) {
   if (imp.busy || imp.checking || !kept.length) return;
   imp.busy = true; imp.error = null;
+  const mine = generation;
   try {
     const res = await importApi.commit(kept.map((g) => ({ name: g.name.trim(), feeds: ready(g).map((f) => ({ url: f.url, title: f.title })) })));
+    /* Started over while saving (the account changed, say): the collections exist, but this screen is someone else's now. */
+    if (mine !== generation) return;
     imp.committed = res.collections;
     imp.step = 'done';
     api.event('import_committed', { source: imp.preview?.source ?? null, collections: res.collections.length, feeds: res.collections.reduce((n, c) => n + c.added, 0) });
     void loadCollections(true);
   } catch (e) {
-    imp.error = e instanceof Error ? e.message : String(e);
+    if (mine === generation) imp.error = e instanceof Error ? e.message : String(e);
   } finally {
-    imp.busy = false;
+    if (mine === generation) imp.busy = false;
   }
 }
 
+/** Throw away the import in progress. Anything still under way for it finds it has moved on and leaves the new one alone. */
 export function startOverImport() {
-  run++;
-  Object.assign(imp, { step: 'choose', preview: null, groups: [], error: null, committed: [], checking: false, retrying: 0, toCheck: 0, checked: 0 });
+  run++; generation++;
+  Object.assign(imp, { step: 'choose', busy: false, preview: null, groups: [], error: null, committed: [], checking: false, retrying: 0, toCheck: 0, checked: 0 });
 }

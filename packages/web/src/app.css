@@ -389,18 +389,6 @@ img { display: block; max-width: 100%; }
   :where(.tap) { position: relative; }
   :where(.tap)::after { content: ''; position: absolute; inset: min(0px, calc((100% - 44px) / 2)); }
 }
-/* List rows: the one way a list of rows is laid out, on a list card or in a
-   Sheet (see the List row entry on /design-system). The list takes
-   `list-rows`; each row is an `li` inset by the card's edge inset, with a
-   hairline between rows and none above the first. A row that is one link
-   end to end puts `row-link` on the link, which then carries the inset so
-   the whole row is the target.
-
-   Two kinds of row. A row for one thing (a feed, person, collection, post)
-   leads with a 40px picture, then its name (`row-name`) over its details
-   (`row-details`). A row reporting something that happened (activity,
-   notifications) is one sentence (`row-event`). `row-more` is the "Show
-   more" or "See all" under the last row. */
 /* The one option button, drawn by thicket rather than the browser so it looks
    the same everywhere and matches the Checkbox piece: 16px, outlined like a
    text field, an accent ring and dot once chosen. Screens only place it (a
@@ -413,6 +401,18 @@ input[type="radio"]:checked { border-color: var(--accent); background: radial-gr
 input[type="radio"]:disabled { cursor: not-allowed; opacity: 0.5; }
 input[type="radio"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* List rows: the one way a list of rows is laid out, on a list card or in a
+   Sheet (see the List row entry on /design-system). The list takes
+   `list-rows`; each row is an `li` inset by the card's edge inset, with a
+   hairline between rows and none above the first. A row that is one link
+   end to end puts `row-link` on the link, which then carries the inset so
+   the whole row is the target.
+
+   Two kinds of row. A row for one thing (a feed, person, collection, post)
+   leads with a 40px picture, then its name (`row-name`) over its details
+   (`row-details`). A row reporting something that happened (activity,
+   notifications) is one sentence (`row-event`). `row-more` is the "Show
+   more" or "See all" under the last row. */
 .list-rows { list-style: none; margin: 0; padding: 0; }
 .list-rows > li { padding: var(--space-3) var(--card-pad, var(--space-4)); }
 .list-rows > li + li { border-top: 1px solid var(--line); }
