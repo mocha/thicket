@@ -87,7 +87,8 @@
      under it like a byline. The -2px is optical: it takes back some of the
      empty space above and below each line of text, so the two read as a pair. */
   .origin { margin-top: -2px; color: var(--text); overflow-wrap: anywhere; }
-  .desc { margin-top: var(--space-1); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  /* Close under the name, so the two read as a pair, as on the Person and Collection rows. */
+  .desc { margin-top: -2px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
   /* A step more room above the facts than between the other lines, so the description and the numbers read as two groups. */
   .facts { margin-top: var(--space-2); display: flex; flex-direction: column; }
   /* A long line breaks at a dot, never inside a fact ("latest 5 / hours ago"). */

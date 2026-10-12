@@ -19,11 +19,12 @@
    * opens the feed's card rather than the post.
    */
   import type { Bookmark, Note, PublicBookmark, PublicUser, SavedNote } from '$lib/api';
-  import { api, itemsApi } from '$lib/api';
+  import { api, itemsApi, profileHref } from '$lib/api';
   import { hostOf, relativeTime, savedHref, ugcRel, webHref } from '$lib/time';
   import { openReader, readsInline } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { startsMidway } from '$lib/words';
+  import Badge from './Badge.svelte';
   import Card from './Card.svelte';
   import CardMeta from './CardMeta.svelte';
   import CardFooter from './CardFooter.svelte';
@@ -33,7 +34,12 @@
   import NoteBlock from './NoteBlock.svelte';
   import NoteEditor from './NoteEditor.svelte';
 
-  let { b, mine = false, author = null, onopen, onnote, action, heading = 'h3', flat = false }: {
+  /*
+   * `fresh`: new since I last looked, the same small New as on an article card.
+   * `saver`: say whose bookmark it is in the bottom row ("Bookmarked by Priya
+   * Nair"), for a list where it isn't plain from the page (Notifications).
+   */
+  let { b, mine = false, author = null, onopen, onnote, action, heading = 'h3', flat = false, fresh = false, saver = false }: {
     b: Bookmark | PublicBookmark;
     /** My own list: the note is mine to write, edit and delete. */
     mine?: boolean;
@@ -52,6 +58,8 @@
      * edge and a shadow. Its title and summary take the list card's text rules.
      */
     flat?: boolean;
+    fresh?: boolean;
+    saver?: boolean;
   } = $props();
 
   let editing = $state(false);
@@ -126,7 +134,9 @@
         {#snippet label()}<Marked text={marks.site ?? ''} />{/snippet}
       </CardMeta>
     {:else}
-      <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} onsource={openSource} />
+      <CardMeta feedId={b.feedId} hasIcon={b.hasIcon} name={site} when={b.publishedAt} onsource={openSource}>
+        {#if fresh}<Badge tone="soft" title="New since you last looked">New</Badge>{/if}
+      </CardMeta>
     {/if}
   </header>
   <a class="body" href={savedHref(b.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(b.url))} onclick={opened} onauxclick={opened}>
@@ -143,7 +153,7 @@
   {/if}
   <!-- The bottom row: when it was saved on the left, what you can do on the right. -->
   <CardFooter>
-    <span class="saved">Bookmarked <time datetime={b.savedAt} title={new Date(b.savedAt).toLocaleString()}>{relativeTime(b.savedAt)}</time></span>
+    <span class="saved">Bookmarked {#if saver && author}by <a class="saver" href={profileHref(author.handle)}>{author.displayName ?? `@${author.handle}`}</a>{' '}{/if}<time datetime={b.savedAt} title={new Date(b.savedAt).toLocaleString()}>{relativeTime(b.savedAt)}</time></span>
     {#snippet actions()}
       <span class="buttons">
         {#if mine}
@@ -184,6 +194,9 @@
 {/if}
 
 <style>
+  /* Whose bookmark: their name, dark like a byline, linking to their profile. */
+  .saver { color: var(--text); font-weight: 600; }
+  @media (hover: hover) { .saver:hover { text-decoration: underline; text-underline-offset: 3px; } }
   /* Flat: a row's room above is already there, so the source line sits close under the row's own line. */
   .flat header { padding-top: var(--space-2); }
   /* Inside a row the picture can't run to the list card's edges, so it keeps to the text's edges, with rounded corners. */

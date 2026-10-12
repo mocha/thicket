@@ -21,6 +21,7 @@
   import Select from '$lib/components/Select.svelte';
   import Sheet from '$lib/components/Sheet.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import FiltersBox from '$lib/components/FiltersBox.svelte';
   import ItemCard from '$lib/components/ItemCard.svelte';
   import Marked from '$lib/components/Marked.svelte';
   import FeedRow from '$lib/components/FeedRow.svelte';
@@ -525,11 +526,7 @@
 
 {#snippet filterBar()}
   <TabBlurb class="blurb" text={SCOPE_BLURB[scope]}>{#snippet icon()}{@render scopeIcon(scope)}{/snippet}</TabBlurb>
-  <button type="button" class="filters-row" onclick={() => filtersDialog?.showModal()} aria-haspopup="dialog">
-    <svg class="fr-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>
-    <span class="fr-text"><span class="fr-name">Filters</span><span class="fr-now">{#each filterSummary as part, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}<span class="fr-part">{part}</span>{/each}</span></span>
-    <span class="fr-caret"><Icon name="caret" dir="down" size={20} /></span>
-  </button>
+  <FiltersBox class="filters-row" summary={filterSummary} onclick={() => filtersDialog?.showModal()} />
 {/snippet}
 
 <!-- Rows. Each kind knows how to show its own evidence; see lib/words.ts. -->
@@ -668,23 +665,8 @@
   .count { margin: 0; padding: var(--space-1) var(--card-pad) var(--space-3); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   /* Article cards under the list card's top, spaced as in a feed. */
   .posts { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); }
-  /* The folded row. Drawn as a box with the dropdown's own outline, corner and
-     caret, so it reads as something to press rather than a line of text: an
-     icon, what it is, and what's chosen now. */
-  .filters-row {
-    display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 52px; text-align: left;
-    padding: var(--space-2) var(--space-3); margin-bottom: var(--space-2);
-    border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface);
-  }
-  /* Inside the list card it keeps the card's side padding around it. */
-  :global(.browse) .filters-row { width: calc(100% - var(--card-pad) * 2); margin: var(--space-3) var(--card-pad) var(--space-2); }
-  .fr-icon { flex: none; color: var(--accent); }
-  .fr-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-  .fr-name { font-weight: 600; color: var(--text); line-height: 1.25; }
-  .fr-now { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
-  /* Each choice stays on one line, so a long summary breaks at the dots, never mid-phrase. */
-  .fr-part { white-space: nowrap; }
-  .fr-caret { flex: none; display: grid; color: var(--text-2); }
+  /* Inside the list card the filters box keeps the card's side padding around it. Two classes, so it wins over the box's own margin whatever order the styles load in. */
+  :global(.browse .filters-box.filters-row) { width: calc(100% - var(--card-pad) * 2); margin: var(--space-3) var(--card-pad) var(--space-2); }
   /* When the line has to wrap, "(latest 13h ago)" moves down whole instead of
      splitting inside the brackets. */
   .nowrap { white-space: nowrap; }

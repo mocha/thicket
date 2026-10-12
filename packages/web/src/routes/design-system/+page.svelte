@@ -12,6 +12,7 @@
   import { onMount } from 'svelte';
   import Button from '$lib/components/Button.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import FiltersBox from '$lib/components/FiltersBox.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import Banner from '$lib/components/Banner.svelte';
@@ -228,6 +229,7 @@
         { id: 'dot', label: 'Dot' },
         { id: 'empty-note', label: 'Empty note' },
         { id: 'field', label: 'Field' },
+        { id: 'filters-box', label: 'Filters box' },
         { id: 'follow-button', label: 'Follow button' },
         { id: 'icon-button', label: 'Icon button' },
         { id: 'input', label: 'Input' },
@@ -542,7 +544,8 @@
         <li><strong>Source line.</strong> The site’s icon, its name, and when the post went up: the shared source line, the same on every card. A starter pack shows a row of its sites’ icons in place of one, then whose it is and how many sites.</li>
         <li><strong>Picture.</strong> Wide, across the top of the card from edge to edge, on the article card and the Bookmark card alike. On the Pages layout, where every card is one height, it’s a small picture at the right of the title instead.</li>
         <li><strong>Title, then summary.</strong> The title in the headings face; the summary in the reading face, stopping after a few lines. The words sit 16px in.</li>
-        <li><strong>Bottom row.</strong> Who wrote it, or when you bookmarked it, on the left; what you can do on the right, as icon buttons (Add a note, Bookmark, or Remove): the shared card footer. A starter pack’s Copy button sits here too. Nothing floats in a corner or sits in the top line.</li>
+        <li><strong>Bottom row.</strong> Who wrote it, or when it was bookmarked, on the left (“Bookmarked by Priya Nair 3h” where whose it is isn’t plain from the page, as in Notifications); what you can do on the right, as icon buttons (Add a note, Bookmark, or Remove): the shared card footer. A starter pack’s Copy button sits here too. Nothing floats in a corner or sits in the top line.</li>
+        <li><strong>New.</strong> A small New beside the site name for something you haven’t seen yet: an unread post in New posts, a new notification.</li>
         <li><strong>Searched words.</strong> On a search’s results, the words that matched are tinted in the title and the summary, the same way on every card.</li>
       </ul>
       <div class="stack">
@@ -640,6 +643,12 @@
       </div>
     </section>
 
+    <section class="entry" id="filters-box" aria-labelledby="filters-box-h">
+      <h3 class="entry-h" id="filters-box-h">Filters box</h3>
+      <p class="section-lede">A list’s filters, folded into one box that says what’s chosen and opens the choices in a Sheet, so they never push the list down. It wears the dropdown’s outline and caret so it reads as something to press. What’s chosen is short phrases joined by dots; a long summary breaks at the dots. Explore uses it as Filters for its dropdowns; Notifications names it Notification settings, for which kinds you get.</p>
+      <FiltersBox summary={['Every kind', 'Mentions from everyone']} onclick={() => {}} />
+    </section>
+
     <section class="entry" id="follow-button" aria-labelledby="follow-button-h">
       <h3 class="entry-h" id="follow-button-h">Follow button</h3>
       <p class="section-lede">Follow for a person: one tap. It’s the small Button, in the plain ghost look until you follow, then the pale green secondary look: green means you have it, as on the bookmark icon. A feed’s Follow and a post’s Bookmark on Explore use the same two looks; a feed’s Follow also asks which collection the feed goes in. Signed out, it’s a link that goes to sign in first.</p>
@@ -695,9 +704,9 @@
 
       <h4 class="sub">A row for one thing</h4>
       <p class="section-lede">A feed, a person, a collection, or a post: something you can open. A 40px picture leads (a feed’s icon, a person’s picture, or for a collection a few of its feeds’ icons, overlapped), then the name in 16px bold, with the details under it in 14px gray. Used on Explore, a collection’s feeds, Collections, and the people someone follows. Import’s review list uses the same spacing and text, without pictures.</p>
-      <p class="section-lede">A feed is always the one Feed row, wherever feeds are listed: its name (with a Failing badge when its checks fail) and its site under it in dark, then its description and the facts about it (how often it posts, its latest post, its followers) in gray.</p>
-      <p class="section-lede">A person is always the one Person row, the same way: their name with their @handle beside it in gray, as a note names its writer (Priya Nair (@priya)), then their bio and the facts about them (feeds, public collections) in gray, with Follow at the right where the screen offers it.</p>
-      <p class="section-lede">A collection is always the one Collection row: its name with any badges after it (Yours, Copied, who can see it, how many new posts) and “by” whose it is under it in dark, then its description and how many feeds it holds in gray, ending in an arrow since the whole row opens it. On a search, the line saying why it was found comes last, in green, the same as on feed and person rows.</p>
+      <p class="section-lede">A feed is always the one Feed row, wherever feeds are listed: its name (with a Failing badge when its checks fail) and its site under it in dark, then its description, close under the site, and the facts about it (how often it posts, its latest post, its followers) in gray.</p>
+      <p class="section-lede">A person is always the one Person row, the same way: their name with their @handle beside it in gray, as a note names its writer (Priya Nair (@priya)), then their bio, close under the name, and the facts about them (feeds, public collections) in gray, with Follow at the right where the screen offers it.</p>
+      <p class="section-lede">A collection is always the one Collection row: its name with any badges after it (Yours, Copied, who can see it, how many new posts) and “by” whose it is under it in dark, then its description, close under the name, and how many feeds it holds in gray, ending in an arrow since the whole row opens it. On a search, the line saying why it was found comes last, in green, the same as on feed and person rows.</p>
       <div class="stack">
         <!-- The real rows, with made-up data, so this entry can't drift from the app. -->
         <Card kind="list" as="ul" class="list-rows">
@@ -735,7 +744,7 @@
 
     <section class="entry" id="note" aria-labelledby="note-h">
       <h3 class="entry-h" id="note-h">Note</h3>
-      <p class="section-lede">A note sits under its post, on whatever the post sits on. A band in the line color runs down the left of the notes, and the line above each note runs from the band and stops short of the card’s right side. It opens with the writer’s picture, name and handle, which go to their profile, and the date underneath. Someone with no display name shows their handle once. Your own note looks the same, with Edit note at the right. Three lines show, then Show more.</p>
+      <p class="section-lede">A note sits under its post, on whatever the post sits on. A band in the line color runs down the left of the notes, and the line above each note runs from the band and stops short of the card’s right side. It opens with the writer’s picture, name and handle, which go to their profile, and the date underneath. Someone with no display name shows their handle once. Your own note looks the same, with Edit note at the right. Three lines show, then Show more. Where a note mentions you, your @name is highlighted, the same as a search match.</p>
       <Card as="div" pad={false}>
         <p class="demo-post">The post’s title and summary sit up here.</p>
         <NoteBlock note={{ id: -3, body: 'Worth a second read for the ending.', createdAt: ago(1), updatedAt: ago(1), author: { handle: 'alan', displayName: 'Alan Turing', avatarUpdatedAt: null } }} mine onedit={() => showToast('Edit opens the note’s editor')} />
