@@ -127,9 +127,12 @@
 
   {#if imp.error}<p class="bad" role="alert">{imp.error}</p>{/if}
 {:else if imp.step === 'review' && imp.preview}
-  <p class="lede">
-    {imp.preview.source ? `From ${imp.preview.source}: ` : ''}{#if choosing}{imp.groups.length} groups, {totalFeeds} {totalFeeds === 1 ? 'feed' : 'feeds'}. Each group becomes a new collection. Untick any you don’t want.{:else}{totalFeeds} {totalFeeds === 1 ? 'feed' : 'feeds'}, which go into a new collection.{/if}
-  </p>
+  <!-- With one group the card below already says it all, so the line only explains the checkboxes. -->
+  {#if choosing}
+    <p class="lede">
+      {imp.preview.source ? `From ${imp.preview.source}: ` : ''}{imp.groups.length} groups, {totalFeeds} {totalFeeds === 1 ? 'feed' : 'feeds'}. Each group becomes a new collection. Untick any you don’t want.
+    </p>
+  {/if}
   {#if imp.preview.emptyFolders.length}
     <p class="fine">Left out, because they’re empty: {imp.preview.emptyFolders.join(', ')}.</p>
   {/if}
