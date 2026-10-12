@@ -166,28 +166,29 @@
     {@const why = blockedReason(g)}
     {@const on = g.keep && !why}
     <Card kind="section" as="section" class="import-section {on ? '' : 'off'}">
+      <!-- Name and notes stack in one column, so the notes sit right under the name; the box and Rename sit either side. -->
       <div class="ghead">
         {#if choosing}
           <!-- A group with nothing that works can't be ticked; the line below says why. -->
           <input type="checkbox" class="keep" checked={on} disabled={!!why} onchange={(e) => (g.keep = e.currentTarget.checked)} aria-label="Create {g.name.trim() || 'this collection'}" />
         {/if}
-        {#if on && renaming === gi}
-          <form class="rename" onsubmit={(e) => { e.preventDefault(); finishRename(g); }}>
-            <Input bind:value={g.name} bind:element={nameBox} clearable={false} aria-label="Collection name" onblur={() => finishRename(g)} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') { g.name = before; finishRename(g); } }} />
-          </form>
-        {:else}
-          <h2 class="section-title gtitle">{g.name.trim() || 'Untitled'}</h2>
-          {#if on}<Button size="sm" onclick={() => startRename(gi)}>Rename</Button>{/if}
-        {/if}
-      </div>
-      <div class="notes">
-        {#if why}<p class="note">{why}</p>
-        {:else if on}
-          {#if renamed}<p class="note">Will be called “{final}”, since you already have a {g.name.trim()}</p>{/if}
-          <p class="note counts">
-            {#if !settled(g) && !ok.length}Checking feeds…{:else}{fresh} new{/if}{#if following}{' '}<Dot />{' '}{following} you already follow{/if}{#if bad.length}{' '}<Dot />{' '}{bad.length} we can’t import{/if}
-          </p>
-        {/if}
+        <div class="gbody">
+          {#if on && renaming === gi}
+            <form onsubmit={(e) => { e.preventDefault(); finishRename(g); }}>
+              <Input bind:value={g.name} bind:element={nameBox} clearable={false} aria-label="Collection name" onblur={() => finishRename(g)} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') { g.name = before; finishRename(g); } }} />
+            </form>
+          {:else}
+            <h2 class="section-title gtitle">{g.name.trim() || 'Untitled'}</h2>
+          {/if}
+          {#if why}<p class="note">{why}</p>
+          {:else if on}
+            {#if renamed}<p class="note">Will be called “{final}”, since you already have a {g.name.trim()}</p>{/if}
+            <p class="note counts">
+              {#if !settled(g) && !ok.length}Checking feeds…{:else}{fresh} new{/if}{#if following}{' '}<Dot />{' '}{following} you already follow{/if}{#if bad.length}{' '}<Dot />{' '}{bad.length} we can’t import{/if}
+            </p>
+          {/if}
+        </div>
+        {#if on && renaming !== gi}<Button size="sm" onclick={() => startRename(gi)}>Rename</Button>{/if}
       </div>
 
       {#if on || why || !choosing}
@@ -258,17 +259,15 @@
   .bar { height: 6px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
   .bar span { display: block; height: 100%; background: var(--accent); transition: width 200ms ease; }
 
-  .ghead { display: flex; align-items: center; gap: var(--space-3); min-height: 40px; }
-  .keep { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); cursor: pointer; }
+  .ghead { display: flex; align-items: flex-start; gap: var(--space-3); }
+  /* The box sits level with the name's first line (20px name at 1.25 line height). */
+  .keep { width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: var(--accent); cursor: pointer; }
   .keep:disabled { cursor: not-allowed; }
   .keep:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .gbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
   /* The card's own title, without the room it usually leaves below: the notes sit tight under it. */
-  .ghead :global(.gtitle) { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+  .gbody :global(.gtitle) { margin: 0; overflow-wrap: anywhere; }
   :global(.import-section.off) .gtitle { color: var(--text-2); }
-  .rename { flex: 1; min-width: 0; }
-  /* The notes line up with the title's first letter, past the checkbox when there is one. */
-  .notes { display: flex; flex-direction: column; gap: var(--space-1); margin-top: var(--space-1); }
-  .ghead:has(.keep) + .notes { padding-left: calc(20px + var(--space-3)); }
   .note { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .counts { font-variant-numeric: tabular-nums; }
 
