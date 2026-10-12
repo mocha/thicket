@@ -285,7 +285,8 @@ export type Notification =
   /** `following`: I already follow them back. */
   | { kind: 'follow'; key: string; at: string; isNew: boolean; person: NotificationPerson; following: boolean }
   | { kind: 'bookmark' | 'note'; key: string; at: string; isNew: boolean; person: NotificationPerson; post: NotificationPost }
-  | { kind: 'mention' | 'reply'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark }
+  | { kind: 'mention'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark }
+  | { kind: 'reply'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark }
   | { kind: 'collection'; key: string; at: string; isNew: boolean; person: NotificationPerson; collection: { name: string; slug: string; description: string | null; feedCount: number } }
   | { kind: 'invite'; key: string; at: string; isNew: boolean; person: NotificationPerson | null; following: boolean };
 

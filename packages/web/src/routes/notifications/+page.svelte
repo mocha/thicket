@@ -3,13 +3,18 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   /**
    * Notifications (issue #184): the last 30 days of what concerns me, newest
-   * first. Someone followed me; someone I follow bookmarked a post or wrote a
-   * note on one; someone mentioned me in a note.
+   * first. Someone followed me or signed up with my invite; someone I follow
+   * bookmarked a post, wrote a note on one, or made a collection; someone
+   * mentioned me in a note or noted a post I saved. Which of these I get is
+   * mine to choose in Settings (issue #274).
    *
    * Most of it is one terse line to skim: who, what, and the post's title
-   * linking to the post. A mention is the exception: it was written to me, so
-   * it comes in full, the post with the note on it, the same content a
-   * profile's Bookmark cards show, drawn flat inside its row.
+   * linking to the post. What was written to me or about my posts comes in
+   * full, the post with the note on it, the same content a profile's Bookmark
+   * cards show, drawn flat inside its row. A mention also carries a note mark
+   * on the writer's picture, so it stands out without a second tint (the tint
+   * means "new"). Each row offers its next step: Follow back, Read note, or
+   * the collection itself.
    *
    * Opening the page marks everything seen, so the bubble in the sidebar
    * clears. What was new stays highlighted for this visit, so you can still
@@ -17,7 +22,11 @@
    * read, never later, so nothing arriving in between is marked seen unshown.
    */
   import { onMount } from 'svelte';
-  import { api, notificationsApi, profileHref, type Notification } from '$lib/api';
+  import { api, collectionHref, notificationsApi, profileHref, profilesApi, type Notification } from '$lib/api';
+  import { showToast } from '$lib/toast.svelte';
+  import CollectionRow from '$lib/components/CollectionRow.svelte';
+  import FollowButton from '$lib/components/FollowButton.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import { clearNotifs } from '$lib/notifications.svelte';
   import { session } from '$lib/session.svelte';
   import { dayKey, dayLabel, hostOf, relativeTime, savedHref, ugcRel } from '$lib/time';
@@ -52,6 +61,20 @@
 
   const name = (p: { handle: string }) => `@${p.handle}`;
 
+  /** Follow back from a follower's or invitee's row. Every row about that person changes with it. */
+  let followBusy = $state<string | null>(null);
+  async function toggleFollow(n: Extract<Notification, { kind: 'follow' | 'invite' }>) {
+    const p = n.person;
+    if (!p || followBusy) return;
+    followBusy = p.handle;
+    try {
+      const r = n.following ? await profilesApi.unfollow(p.handle) : await profilesApi.follow(p.handle);
+      for (const m of items ?? []) if ((m.kind === 'follow' || m.kind === 'invite') && m.person?.handle === p.handle) m.following = r.isFollowing;
+      api.event(r.isFollowing ? 'user_followed' : 'user_unfollowed', { handle: p.handle, via: 'notifications' });
+      showToast(r.isFollowing ? `Following ${p.displayName ?? name(p)}` : `Unfollowed ${p.displayName ?? name(p)}`);
+    } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } finally { followBusy = null; }
+  }
+
   /** Notifications by day, newest first, labeled like New posts' days: "Yesterday", "Monday, October 5". */
   const todayKey = $derived(dayKey(new Date()));
   const groups = $derived.by(() => {
@@ -72,8 +95,12 @@
   {#snippet description()}Followers, mentions, and what the people you follow save.{/snippet}
 </PageHeader>
 
-{#snippet who(p: Notification['person'])}
-  <a class="who" href={profileHref(p.handle)} title={p.displayName ?? undefined}><Avatar handle={p.handle} name={p.displayName ?? p.handle} size={24} v={p.avatarUpdatedAt} /><span>{name(p)}</span></a>
+{#snippet who(p: NonNullable<Notification['person']>, mark = false)}
+  <a class="who" href={profileHref(p.handle)} title={p.displayName ?? undefined}><span class="pic"><Avatar handle={p.handle} name={p.displayName ?? p.handle} size={24} v={p.avatarUpdatedAt} />{#if mark}<span class="mark" aria-hidden="true"><Icon name="note" size={10} stroke={2.5} fill /></span>{/if}</span><span>{name(p)}</span></a>
+{/snippet}
+{#snippet when(at: string)}<time datetime={at} title={new Date(at).toLocaleString()}>{relativeTime(at)}</time>{/snippet}
+{#snippet follow(n: Extract<Notification, { kind: 'follow' | 'invite' }>, label: string)}
+  <FollowButton following={n.following} label={label} busy={followBusy === n.person?.handle} onclick={() => toggleFollow(n)} />
 {/snippet}
 
 {#if failed}
@@ -93,13 +120,22 @@
   <h2 class={g.key === todayKey ? 'visually-hidden' : 'dayhead'}>{g.label}</h2>
   <Card kind="list" as="ul" class="list-rows">
     {#each g.items as n (n.key)}
-      <li class:new={n.isNew} class:rich={n.kind === 'mention'}>
+      <li class:new={n.isNew} class:rich={n.kind === 'mention' || n.kind === 'reply' || n.kind === 'collection'} class:mention={n.kind === 'mention'}>
         {#if n.isNew}<span class="visually-hidden">New: </span>{/if}
-        {#if n.kind === 'mention'}
-          <p class="line row-event">{@render who(n.person)} <span class="verb">mentioned you in a note</span> <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time></p>
+        {#if n.kind === 'mention' || n.kind === 'reply'}
+          <p class="line row-event">{@render who(n.person, n.kind === 'mention')} <span class="verb">{n.kind === 'mention' ? 'mentioned you' : 'noted a post you saved'}</span> {@render when(n.at)}</p>
           <BookmarkCard flat b={n.bookmark} author={n.person} onopen={() => api.event('bookmark_opened', { via: 'notifications' })} />
+        {:else if n.kind === 'collection'}
+          <p class="line row-event">{@render who(n.person)} <span class="verb">made a collection</span> {@render when(n.at)}</p>
+          <ul class="nested-list"><CollectionRow href={collectionHref(n.person.handle, n.collection.slug)} name={n.collection.name} description={n.collection.description} feedCount={n.collection.feedCount} /></ul>
         {:else if n.kind === 'follow'}
-          <p class="line row-event">{@render who(n.person)} <span class="verb">started following you</span> <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time></p>
+          <p class="line row-event">{@render who(n.person)} <span class="verb">started following you</span> {#if !n.following}<span class="act">{@render follow(n, 'Follow back')}</span>{/if}{@render when(n.at)}</p>
+        {:else if n.kind === 'invite'}
+          {#if n.person}
+            <p class="line row-event">{@render who(n.person)} <span class="verb">signed up with your invite</span> {#if !n.following}<span class="act">{@render follow(n, 'Follow')}</span>{/if}{@render when(n.at)}</p>
+          {:else}
+            <p class="line row-event"><span class="verb">Someone signed up with your invite</span> {@render when(n.at)}</p>
+          {/if}
         {:else}
           <p class="line row-event">
             {@render who(n.person)}
@@ -108,7 +144,8 @@
               <SourceIcon feedId={n.post.feedId} hasIcon={n.post.hasIcon} name={n.post.siteTitle ?? hostOf(n.post.url)} size={16} />
             </button>
             <a class="post" href={savedHref(n.post.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(n.post.url))} title={n.post.siteTitle ?? hostOf(n.post.url)}>{n.post.title ?? n.post.url}</a>
-            <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time>
+            {#if n.kind === 'note'}<span class="act"><Button size="sm" href="{profileHref(n.person.handle)}/bookmarks?notes=1">Read note</Button></span>{/if}
+            {@render when(n.at)}
           </p>
         {/if}
       </li>
@@ -133,6 +170,24 @@
   /* A mention runs edge to edge: its line keeps the row's inset, and the post under it brings its own, the same as on its card. */
   .day li.rich { padding-left: 0; padding-right: 0; padding-bottom: 0; }
   .rich .line { padding: 0 var(--card-pad); }
+  /* The collection keeps its own row, inset like any row, under the line that says who made it. */
+  .nested-list { list-style: none; margin: 0; padding: 0; }
+  /* A mention: the writer's picture carries a note mark, so it reads as written to me even once it's no longer new. */
+  .pic { position: relative; display: inline-flex; flex: none; }
+  /* The same corner mark as the edit badge on a profile picture. */
+  .mark { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 14px; height: 14px; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 2px var(--surface); }
+  .mention .verb { color: var(--accent); font-weight: 600; }
+  /* The next step sits at the end of the line, before the time, like Follow on a person's row. */
+  .act { flex: none; margin-left: auto; }
+  .act + time { margin-left: 0; }
+  /* On a phone it drops under the line, lined up with the name, as Follow does on a person's row. */
+  @media (max-width: 560px) {
+    .line:has(.act) { flex-wrap: wrap; row-gap: var(--space-2); }
+    /* The post title still shares the first line with who did it, trailing off as before. */
+    .line:has(.act) .post { flex-basis: 0; }
+    .act { order: 1; flex-basis: 100%; margin-left: calc(24px + var(--space-2)); }
+    .act + time { margin-left: auto; }
+  }
   /* New since last time: a tint and an accent edge, so it reads in grayscale too (the edge), not by color alone. */
   .day li.new { background: color-mix(in srgb, var(--accent) 9%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
   .line { display: flex; align-items: center; gap: var(--space-2); margin: 0; min-width: 0; }
