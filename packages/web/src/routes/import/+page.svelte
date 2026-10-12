@@ -1,6 +1,8 @@
 <script lang="ts">
   import Badge from '$lib/components/Badge.svelte';
   import Card from '$lib/components/Card.svelte';
+  import SourceIcon from '$lib/components/SourceIcon.svelte';
+  import { plural } from '$lib/words';
   import Dot from '$lib/components/Dot.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { onMount, tick } from 'svelte';
@@ -84,22 +86,22 @@
   const label = (f: ImportFeed) => { const t = f.title?.trim(); return t && !/^https?:\/\//i.test(t) ? t : host(f.url); };
 
   /**
-   * Renaming is one card at a time: Rename swaps the title for the shared text
-   * box, and pressing Enter, Escape or leaving the box puts the title back.
-   * Escape, or leaving it empty, keeps the name it had.
+   * Renaming is one card at a time: Rename swaps the heading for the same
+   * name field Manage collection uses, with Save inside it. Save (or Enter)
+   * keeps the new name; Escape keeps the old one.
    */
   let renaming = $state<number | null>(null);
-  let before = '';
+  let draft = $state('');
   let nameBox = $state<HTMLInputElement | null>(null);
   async function startRename(gi: number) {
-    before = imp.groups[gi].name;
+    draft = imp.groups[gi].name;
     renaming = gi;
     await tick();
     nameBox?.focus();
     nameBox?.select();
   }
   function finishRename(g: ImportGroup) {
-    if (!g.name.trim()) g.name = before;
+    if (draft.trim()) g.name = draft.trim();
     renaming = null;
   }
 </script>
@@ -166,29 +168,35 @@
     {@const why = blockedReason(g)}
     {@const on = g.keep && !why}
     <Card kind="section" as="section" class="import-section {on ? '' : 'off'}">
-      <!-- Name and notes stack in one column, so the notes sit right under the name; the box and Rename sit either side. -->
+      <!-- A section card: the shared heading and description, with the checkbox before them
+           and Rename after. The feeds are the card's rows, laid out like the shared Feed row. -->
       <div class="ghead">
         {#if choosing}
-          <!-- A group with nothing that works can't be ticked; the line below says why. -->
+          <!-- A group with nothing that works can't be ticked; the description says why. -->
           <input type="checkbox" class="keep" checked={on} disabled={!!why} onchange={(e) => (g.keep = e.currentTarget.checked)} aria-label="Create {g.name.trim() || 'this collection'}" />
         {/if}
         <div class="gbody">
           {#if on && renaming === gi}
-            <form onsubmit={(e) => { e.preventDefault(); finishRename(g); }}>
-              <Input bind:value={g.name} bind:element={nameBox} clearable={false} aria-label="Collection name" onblur={() => finishRename(g)} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') { g.name = before; finishRename(g); } }} />
+            <!-- The rename field used on Manage collection and Manage feed: Save inside the box, awake once the name changed. -->
+            <form class="rename" onsubmit={(e) => { e.preventDefault(); finishRename(g); }}>
+              <Input bind:value={draft} bind:element={nameBox} maxlength={60} clearable={false} aria-label="Collection name" onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') renaming = null; }}>
+                {#snippet trailing()}
+                  <Button type="submit" variant="primary" disabled={!draft.trim() || draft.trim() === g.name.trim()}>Save</Button>
+                {/snippet}
+              </Input>
             </form>
           {:else}
-            <h2 class="section-title gtitle">{g.name.trim() || 'Untitled'}</h2>
+            <h2 class="section-title">{g.name.trim() || 'Untitled'}</h2>
           {/if}
-          {#if why}<p class="note">{why}</p>
+          {#if why}<p class="section-description">{why}</p>
           {:else if on}
-            {#if renamed}<p class="note">Will be called “{final}”, since you already have a {g.name.trim()}</p>{/if}
-            <p class="note counts">
-              {#if !settled(g) && !ok.length}Checking feeds…{:else}{fresh} new{/if}{#if following}{' '}<Dot />{' '}{following} you already follow{/if}{#if bad.length}{' '}<Dot />{' '}{bad.length} we can’t import{/if}
+            <p class="section-description">
+              {#if renamed}<span class="line">Will be called “{final}”, since you already have a {g.name.trim()}</span>{/if}
+              <span class="line counts">{#if !settled(g) && !ok.length}Checking feeds…{:else}Importing {plural(fresh, 'feed')}{/if}{#if following}{' '}<Dot />{' '}{following} you already follow{/if}{#if bad.length}{' '}<Dot />{' '}{plural(bad.length, 'feed')} we can’t import{/if}</span>
             </p>
           {/if}
         </div>
-        {#if on && renaming !== gi}<Button size="sm" onclick={() => startRename(gi)}>Rename</Button>{/if}
+        {#if on && renaming !== gi}<Button onclick={() => startRename(gi)}>Rename</Button>{/if}
       </div>
 
       {#if on || why || !choosing}
@@ -197,17 +205,20 @@
         <ul class="list-rows">
           {#each g.open ? rows : rows.slice(0, SHOWN) as f (f.url)}
             {@const name = label(f)}
-            <li class:refused={f.state === 'failed'}>
-              <span class="fname">
-                <span class="row-name">{name}</span>
-                {#if name !== host(f.url)}<small class="row-details">{host(f.url)}</small>{/if}
-                {#if f.reason && (f.state === 'failed' || f.state === 'unsure')}<small class="row-details reason">{f.reason}</small>{/if}
+            <li class="feedrow" class:refused={f.state === 'failed'}>
+              <SourceIcon feedId={null} {name} size={40} />
+              <span class="meta">
+                <span class="named">
+                  <span class="row-name title">{name}</span>
+                  {#if f.state === 'pending'}<Badge>Checking…</Badge>
+                  {:else if f.state === 'failed'}<Badge tone="danger">Can’t import</Badge>
+                  {:else if f.state === 'unsure'}<Badge>Will retry</Badge>
+                  {:else if f.following}<Badge>Already following</Badge>
+                  {:else}<Badge tone="soft">Ready</Badge>{/if}
+                </span>
+                {#if name !== host(f.url)}<span class="row-details origin">{host(f.url)}</span>{/if}
+                {#if f.reason && (f.state === 'failed' || f.state === 'unsure')}<span class="row-details reason">{f.reason}</span>{/if}
               </span>
-              {#if f.state === 'pending'}<Badge>Checking…</Badge>
-              {:else if f.state === 'failed'}<Badge tone="danger">Can’t import</Badge>
-              {:else if f.state === 'unsure'}<Badge>Will retry</Badge>
-              {:else if f.following}<Badge>Already following</Badge>
-              {:else}<Badge tone="soft">Ready</Badge>{/if}
             </li>
           {/each}
         </ul>
@@ -260,26 +271,32 @@
   .bar span { display: block; height: 100%; background: var(--accent); transition: width 200ms ease; }
 
   .ghead { display: flex; align-items: flex-start; gap: var(--space-3); }
-  /* The box sits level with the name's first line (20px name at 1.25 line height). */
-  .keep { width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: var(--accent); cursor: pointer; }
+  /* The box sits level with the heading's first line (21px at 1.25 line height). */
+  .keep { width: 20px; height: 20px; margin: 3px 0 0; flex: none; accent-color: var(--accent); cursor: pointer; }
   .keep:disabled { cursor: not-allowed; }
+  /* Beside the open name field the box centers on the 48px field instead. */
+  .ghead:has(.rename) .keep { margin-top: 14px; }
   .keep:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .gbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
-  /* The card's own title, without the room it usually leaves below: the notes sit tight under it. */
-  .gbody :global(.gtitle) { margin: 0; overflow-wrap: anywhere; }
-  :global(.import-section.off) .gtitle { color: var(--text-2); }
-  .note { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .gbody { flex: 1; min-width: 0; }
+  :global(.import-section.off) .section-title { color: var(--text-2); }
+  .rename { margin-bottom: var(--space-3); }
+  /* "Will be called…" gets a line of its own above the counts. */
+  .line { display: block; }
   .counts { font-variant-numeric: tabular-nums; }
 
-  /* The feeds run edge to edge across the card, so each row's text starts the
-     card's own inset in, as on every other list of rows. Lines only between rows;
-     the list runs to the card's bottom edge. */
-  .feeds { margin: var(--space-3) calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)); }
-  .feeds li { display: flex; align-items: center; gap: var(--space-3); }
-  .fname { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
-  /* A feed we can't import is quieter than the ones that will come in. */
-  .refused .row-name { font-weight: 400; color: var(--text-2); }
+  /* The feeds are the card's rows, edge to edge, to the card's bottom edge.
+     Each is laid out like the shared Feed row: the site's icon, the name with
+     its status beside it, the site tight under it, then any reason in gray. */
+  .feeds { margin: 0 calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)); }
+  .feedrow { display: flex; align-items: center; gap: var(--space-3); }
+  .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .named { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* -2px is optical, as on the Feed row: the site reads as a byline to the name. */
+  .origin { margin-top: -2px; color: var(--text); overflow-wrap: anywhere; }
   .reason { margin-top: var(--space-1); }
+  /* A feed we can't import is quieter than the ones that will come in. */
+  .refused .title, .refused .origin { color: var(--text-2); font-weight: 400; }
   .count { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
 
   /* Pinned to the bottom while a long review scrolls, so the main action is always in reach. On a
