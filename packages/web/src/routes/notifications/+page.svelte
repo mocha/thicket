@@ -32,7 +32,7 @@
   import Dot from '$lib/components/Dot.svelte';
   import { clearNotifs, loadNotifs } from '$lib/notifications.svelte';
   import { session } from '$lib/session.svelte';
-  import { dayKey, dayLabel, longAgo, relativeTime } from '$lib/time';
+  import { dayKey, dayLabel, longAgo } from '$lib/time';
   import { plural } from '$lib/words';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import Button from '$lib/components/Button.svelte';
@@ -142,7 +142,7 @@
   {#snippet description()}Followers, mentions, and what the people you follow save.{/snippet}
 </PageHeader>
 
-{#snippet when(at: string)}<time datetime={at} title={new Date(at).toLocaleString()}>{relativeTime(at)}</time>{/snippet}
+{#snippet when(at: string)}<time datetime={at} title={new Date(at).toLocaleString()}>{longAgo(at)}</time>{/snippet}
 {#snippet fresh(n: Notification)}{#if n.isNew}{' '}<Badge tone="soft" title="New since you last looked">New</Badge>{/if}{/snippet}
 
 {#if me}<FiltersBox summary={filterSummary} onclick={() => filtersDialog?.showModal()} />{/if}
@@ -173,7 +173,7 @@
         <li><Card kind="list" as="ul" class="list-rows">
           <CollectionRow href={collectionHref(n.person.handle, n.collection.slug)} name={n.collection.name} description={n.collection.description} feedCount={n.collection.feedCount}>
             {#snippet badges()}{@render fresh(n)}{/snippet}
-            @{n.person.handle} created this collection <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{longAgo(n.at)}</time> <Dot /> {plural(n.collection.feedCount, 'feed')}
+            @{n.person.handle} created this collection {@render when(n.at)} <Dot /> {plural(n.collection.feedCount, 'feed')}
           </CollectionRow>
         </Card></li>
       {:else if (n.kind === 'follow' || n.kind === 'invite') && n.person}
