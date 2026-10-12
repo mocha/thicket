@@ -341,7 +341,11 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
   `) : none;
 
   // A note written today on a post saved last year counts too, by when the note was written.
-  // With bookmarks off, only noted posts can be anything.
+  // Only rows that will become a notification are fetched, so the cap counts real ones: the same
+  // rule as `assemble`. A note I may read, with notes enabled, is the note (or nothing, when it's
+  // outside the range or from before I followed them); otherwise the bookmark, when bookmarks are
+  // enabled and shared with me. A disabled kind never takes a place.
+  const noteOk = prefs.note ? sql`(b.note is not null and ${allowsSql("u.notes_visibility", "u.id", me.id)})` : sql`false`;
   const savesQ = prefs.bookmark || prefs.note ? db.execute<AuthorDbRow & { id: number; url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean; savedAt: Date; noteCreatedAt: Date | null; followedAt: Date; bookmark: Record<string, unknown> | null }>(sql`
     select b.id, b.url, b.title, b.site_title as "siteTitle", b.feed_id as "feedId", ${ICON} as "hasIcon",
            b.saved_at as "savedAt", case when b.note is null then null else b.note_created_at end as "noteCreatedAt",
@@ -355,10 +359,12 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
     left join items i on i.id = b.item_id
     where mine.follower_id = ${me.id} and b.user_id <> ${me.id}
       and (${inRange("b.saved_at")} or ${inRange("b.note_created_at")})
-      and (b.saved_at > mine.created_at or b.note_created_at > mine.created_at)
       and u.profile_visibility = 'public' and ${allowsSql("u.activity_visibility", "u.id", me.id)}
-      ${prefs.bookmark ? sql`` : sql`and b.note is not null`}
-    order by greatest(b.saved_at, coalesce(b.note_created_at, b.saved_at)) desc limit ${CAP * 3}
+      and case when ${noteOk}
+        then ${inRange("b.note_created_at")} and b.note_created_at > mine.created_at
+        else ${prefs.bookmark ? sql`${allowsSql("u.bookmarks_visibility", "u.id", me.id)} and ${inRange("b.saved_at")} and b.saved_at > mine.created_at` : sql`false`}
+      end
+    order by case when ${noteOk} then b.note_created_at else b.saved_at end desc limit ${CAP * 3}
   `) : none;
 
   // The hidden root every account has is never one (parent_id is null).
