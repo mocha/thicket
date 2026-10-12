@@ -233,9 +233,9 @@
   <div class="footer">
     <Button onclick={startOver} disabled={imp.busy}>Choose a different file</Button>
     <Button variant="primary" onclick={() => commitImport(kept)} disabled={imp.busy || imp.checking || !kept.length}>
-      {#if imp.busy}Bringing them in…
+      {#if imp.busy}Importing…
       {:else if imp.checking}Checking feeds…
-      {:else}Bring in {kept.length} {kept.length === 1 ? 'collection' : 'collections'}{/if}
+      {:else}{kept.length === 1 ? 'Import collection' : `Import ${kept.length} collections`}{/if}
     </Button>
   </div>
 {:else if imp.step === 'done'}
