@@ -115,7 +115,7 @@
     <footer>
       <ReadOnSiteLink {href} label={isVideo ? 'Watch on ' + hostOf(href).replace(/^www\./, '') : undefined} onclick={outbound} />
       {#if !session.user}
-        <p class="note">People with an account on {site.status?.name ?? 'this site'} can read posts right here. <a href="/login">Log in</a> to read this one without leaving, or follow {source} to get what they publish next.</p>
+        <p class="note">People with an account on {site.status?.name ?? 'this site'} can read posts right here. <a href="/login">Sign into your account</a> to read this one without leaving, or follow {source} to get what they publish next.</p>
       {/if}
     </footer>
 
@@ -146,7 +146,7 @@
   /* No card here, so the note and its editor run the page's width. */
   .notes :global(.note), .notes :global(.editor) { margin-left: 0; margin-right: 0; }
 
-  .byline { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .byline { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
   .hero { width: 100%; border-radius: var(--radius-sm); margin-top: 0; background: var(--surface-2); }
   .summary { font-family: var(--font-reading); font-size: calc(var(--text-reading) * var(--size-reading)); line-height: 1.6; color: var(--text-2); margin: 0; overflow-wrap: anywhere; }
 
