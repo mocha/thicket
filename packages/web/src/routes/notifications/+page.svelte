@@ -104,25 +104,29 @@
     try {
       setMe(await authApi.update(patch));
       api.event('notification_filters_changed', { keys: Object.keys(patch) });
-      await Promise.all([load(false), loadNotifs(true)]);
+      // Reading the list marks it seen and clears the bubble; counting after it means the bubble can't come back stale.
+      await load(false);
+      await loadNotifs(true);
     } catch (e) {
+      // Put the boxes back to what's saved: the one pressed already shows the change that failed.
+      if (session.user) setMe({ ...session.user });
       showToast(e instanceof Error ? e.message : String(e));
     } finally { saving = false; }
   }
 
   const name = (p: { handle: string }) => `@${p.handle}`;
 
-  /** Follow back from a follower's or invitee's row. Every row about that person changes with it. */
+  /** Follow back from a follower's or invitee's row. The button leaves every row about that person once it's done. */
   let followBusy = $state<string | null>(null);
-  async function toggleFollow(n: Extract<Notification, { kind: 'follow' | 'invite' }>) {
+  async function followBack(n: Extract<Notification, { kind: 'follow' | 'invite' }>) {
     const p = n.person;
     if (!p || followBusy) return;
     followBusy = p.handle;
     try {
-      const r = n.following ? await profilesApi.unfollow(p.handle) : await profilesApi.follow(p.handle);
+      const r = await profilesApi.follow(p.handle);
       for (const m of items ?? []) if ((m.kind === 'follow' || m.kind === 'invite') && m.person?.handle === p.handle) m.following = r.isFollowing;
-      api.event(r.isFollowing ? 'user_followed' : 'user_unfollowed', { handle: p.handle, via: 'notifications' });
-      showToast(r.isFollowing ? `Following ${p.displayName ?? name(p)}` : `Unfollowed ${p.displayName ?? name(p)}`);
+      api.event('user_followed', { handle: p.handle, via: 'notifications' });
+      showToast(`Following ${p.displayName ?? name(p)}`);
     } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } finally { followBusy = null; }
   }
 
@@ -151,7 +155,7 @@
 {/snippet}
 {#snippet when(at: string)}<time datetime={at} title={new Date(at).toLocaleString()}>{relativeTime(at)}</time>{/snippet}
 {#snippet follow(n: Extract<Notification, { kind: 'follow' | 'invite' }>, label: string)}
-  <FollowButton following={n.following} label={label} busy={followBusy === n.person?.handle} onclick={() => toggleFollow(n)} />
+  <FollowButton following={n.following} label={label} busy={followBusy === n.person?.handle} onclick={() => followBack(n)} />
 {/snippet}
 
 {#if me}<FiltersBox summary={filterSummary} onclick={() => filtersDialog?.showModal()} />{/if}

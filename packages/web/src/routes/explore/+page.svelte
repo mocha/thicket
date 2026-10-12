@@ -665,8 +665,8 @@
   .count { margin: 0; padding: var(--space-1) var(--card-pad) var(--space-3); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   /* Article cards under the list card's top, spaced as in a feed. */
   .posts { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); }
-  /* Inside the list card the filters box keeps the card's side padding around it. */
-  :global(.browse .filters-row) { width: calc(100% - var(--card-pad) * 2); margin: var(--space-3) var(--card-pad) var(--space-2); }
+  /* Inside the list card the filters box keeps the card's side padding around it. Two classes, so it wins over the box's own margin whatever order the styles load in. */
+  :global(.browse .filters-box.filters-row) { width: calc(100% - var(--card-pad) * 2); margin: var(--space-3) var(--card-pad) var(--space-2); }
   /* When the line has to wrap, "(latest 13h ago)" moves down whole instead of
      splitting inside the brackets. */
   .nowrap { white-space: nowrap; }

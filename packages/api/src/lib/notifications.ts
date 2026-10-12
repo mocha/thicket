@@ -148,7 +148,6 @@ type Author = Person & {
   iFollow: boolean;
 };
 
-/** Someone following me. */
 /** Someone following me, and whether I follow them back (for Follow back on the row). */
 export type FollowRow = { at: string; person: Person & { profileVisibility: "public" | "private" }; following?: boolean };
 
