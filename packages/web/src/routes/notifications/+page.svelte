@@ -62,31 +62,37 @@
   });
 
   /*
-   * Filters (issue #274): which kinds I get, kept on my account, so they're
+   * Notification settings (issue #274), in the Filters box: which kinds I get, kept on my account, so they're
    * the same on every device. A change saves at once, then the list and the
    * bubble in the left menu are read again, so what I turned off is gone from
    * both right away.
    */
   type Pref = 'notifyFollows' | 'notifyInvites' | 'notifyBookmarks' | 'notifyNotes' | 'notifyCollections' | 'notifyReplies';
   const me = $derived(session.user);
-  const KIND_PREFS = $derived<{ key: Pref; label: string; hint?: string }[]>([
-    { key: 'notifyFollows', label: 'New followers' },
+  /* `short`: the kind's name in the settings box's summary line. */
+  const KIND_PREFS = $derived<{ key: Pref; label: string; short: string; hint?: string }[]>([
+    { key: 'notifyFollows', label: 'New followers', short: 'followers' },
     // Only admins can make invites, so only they are asked, or anyone with an invite sign-up to hear about (an admin no longer).
-    ...(me?.isAdmin || !me?.notifyInvites || items?.some((n) => n.kind === 'invite') ? [{ key: 'notifyInvites' as const, label: 'People who sign up with your invite' }] : []),
-    { key: 'notifyBookmarks', label: 'Bookmarks by people you follow' },
-    { key: 'notifyNotes', label: 'Notes by people you follow' },
-    { key: 'notifyCollections', label: 'New collections by people you follow' },
-    { key: 'notifyReplies', label: 'Notes on posts you saved', hint: 'Starts off, since a popular post can draw a lot of notes' }
+    ...(me?.isAdmin || !me?.notifyInvites || items?.some((n) => n.kind === 'invite') ? [{ key: 'notifyInvites' as const, label: 'People who sign up with your invite', short: 'invites' }] : []),
+    { key: 'notifyBookmarks', label: 'Bookmarks by people you follow', short: 'bookmarks' },
+    { key: 'notifyNotes', label: 'Notes by people you follow', short: 'notes' },
+    { key: 'notifyCollections', label: 'New collections by people you follow', short: 'collections' },
+    { key: 'notifyReplies', label: 'Notes on posts you saved', short: 'notes on your saved posts', hint: 'Starts off, since a popular post can draw a lot of notes' }
   ]);
   const MENTIONS: { value: Me['mentionsFrom']; label: string; hint?: string; summary: string }[] = [
     { value: 'none', label: 'No one', summary: 'No mentions' },
     { value: 'following', label: 'People I follow', summary: 'Mentions from people I follow' },
     { value: 'everyone', label: 'Everyone', hint: 'The default. Anyone who can see your profile can mention you.', summary: 'Mentions from everyone' }
   ];
+  const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+  /** "a", "a and b", "a, b, and c". */
+  const list = (xs: string[]) => (xs.length < 3 ? xs.join(' and ') : `${xs.slice(0, -1).join(', ')}, and ${xs[xs.length - 1]}`);
   const filterSummary = $derived.by(() => {
     if (!me) return [];
-    const off = KIND_PREFS.filter((k) => !me[k.key]);
-    const kinds = off.length === 0 ? 'Every kind' : off.length === 1 ? `All but ${off[0].label.toLowerCase()}` : `${KIND_PREFS.length - off.length} of ${KIND_PREFS.length} kinds`;
+    // Say whichever list is shorter: what's off ("Bookmarks and collections off"), or, past two, what's left on ("Only followers and notes").
+    const off = KIND_PREFS.filter((k) => !me[k.key]).map((k) => k.short);
+    const on = KIND_PREFS.filter((k) => me[k.key]).map((k) => k.short);
+    const kinds = off.length === 0 ? 'Everything on' : on.length === 0 ? 'Everything off' : off.length <= 2 ? cap(`${list(off)} off`) : `Only ${list(on)}`;
     return [kinds, MENTIONS.find((m) => m.value === me.mentionsFrom)?.summary ?? ''];
   });
   let filtersDialog = $state<HTMLDialogElement | null>(null);
@@ -145,7 +151,7 @@
 {#snippet when(at: string)}<time datetime={at} title={new Date(at).toLocaleString()}>{longAgo(at)}</time>{/snippet}
 {#snippet fresh(n: Notification)}{#if n.isNew}{' '}<Badge tone="soft" title="New since you last looked">New</Badge>{/if}{/snippet}
 
-{#if me}<FiltersBox summary={filterSummary} onclick={() => filtersDialog?.showModal()} />{/if}
+{#if me}<FiltersBox name="Notification settings" summary={filterSummary} onclick={() => filtersDialog?.showModal()} />{/if}
 
 {#if failed}
   <p class="status">{failed}</p>
@@ -154,7 +160,7 @@
 {:else if items.length === 0}
   <div class="empty">
     <h2>Nothing yet</h2>
-    <p>When someone follows you, it shows up here. So does every post the people you follow bookmark or write a note on, and any note that mentions you as @{session.user?.handle ?? 'yourhandle'}.{#if filterSummary[0] !== 'Every kind' || me?.mentionsFrom !== 'everyone'} Some of these are turned off in Filters.{/if}</p>
+    <p>When someone follows you, it shows up here. So does every post the people you follow bookmark or write a note on, and any note that mentions you as @{session.user?.handle ?? 'yourhandle'}.{#if filterSummary[0] !== 'Everything on' || me?.mentionsFrom !== 'everyone'} Some of these are turned off in Notification settings.{/if}</p>
     <div class="ctas"><Button href="/explore?scope=people">Find people to follow</Button></div>
   </div>
 {:else}
@@ -192,7 +198,7 @@
 {/if}
 
 {#if me}
-  <Sheet title="Filters" lede="Choose what shows up in Notifications." bind:dialog={filtersDialog}>
+  <Sheet title="Notification settings" lede="Choose what shows up in Notifications." bind:dialog={filtersDialog}>
     <fieldset disabled={saving}>
       <legend class="visually-hidden">Kinds of notification</legend>
       {#each KIND_PREFS as k (k.key)}

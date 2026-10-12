@@ -645,7 +645,7 @@
 
     <section class="entry" id="filters-box" aria-labelledby="filters-box-h">
       <h3 class="entry-h" id="filters-box-h">Filters box</h3>
-      <p class="section-lede">A list’s filters, folded into one box that says what’s chosen and opens the choices in a Sheet, so they never push the list down. It wears the dropdown’s outline and caret so it reads as something to press. What’s chosen is short phrases joined by dots; a long summary breaks at the dots. Explore uses it for its dropdowns, Notifications for which kinds you get.</p>
+      <p class="section-lede">A list’s filters, folded into one box that says what’s chosen and opens the choices in a Sheet, so they never push the list down. It wears the dropdown’s outline and caret so it reads as something to press. What’s chosen is short phrases joined by dots; a long summary breaks at the dots. Explore uses it as Filters for its dropdowns; Notifications names it Notification settings, for which kinds you get.</p>
       <FiltersBox summary={['Every kind', 'Mentions from everyone']} onclick={() => {}} />
     </section>
 
