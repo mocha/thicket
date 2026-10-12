@@ -79,8 +79,8 @@
   const me = $derived(session.user);
   const KIND_PREFS = $derived<{ key: Pref; label: string; hint?: string }[]>([
     { key: 'notifyFollows', label: 'New followers' },
-    // Only admins can make invites, so only they are asked.
-    ...(me?.isAdmin ? [{ key: 'notifyInvites' as const, label: 'People who sign up with your invite' }] : []),
+    // Only admins can make invites, so only they are asked, or anyone with an invite sign-up to hear about (an admin no longer).
+    ...(me?.isAdmin || !me?.notifyInvites || items?.some((n) => n.kind === 'invite') ? [{ key: 'notifyInvites' as const, label: 'People who sign up with your invite' }] : []),
     { key: 'notifyBookmarks', label: 'Bookmarks by people you follow' },
     { key: 'notifyNotes', label: 'Notes by people you follow' },
     { key: 'notifyCollections', label: 'New collections by people you follow' },

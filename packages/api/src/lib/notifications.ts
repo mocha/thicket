@@ -316,31 +316,31 @@ const personRow = (r: PersonDbRow) => ({ at: iso(r.at)!, person: { id: Number(r.
  * so hidden rows never take a place under a cap.
  */
 export async function candidatesFor(me: { id: number; handle: string }, since: string, until: string, prefs: Prefs = DEFAULT_PREFS): Promise<Candidates> {
-  const none = { rows: [] };
+  const none = Promise.resolve({ rows: [] as never[] });
   const inRange = (col: string) => sql`${sql.raw(col)} > ${since}::timestamptz and ${sql.raw(col)} <= ${until}::timestamptz`;
 
-  const follows = prefs.follow ? await db.execute<PersonDbRow>(sql`
+  const followsQ = prefs.follow ? db.execute<PersonDbRow>(sql`
     select uf.created_at as at, fu.id, fu.handle, fu.display_name as "displayName", ua.updated_at as "avatarUpdatedAt", fu.profile_visibility as "profileVisibility",
            exists(select 1 from user_follows fb where fb.follower_id = ${me.id} and fb.followee_id = fu.id) as following
     from user_follows uf join users fu on fu.id = uf.follower_id
     left join user_avatars ua on ua.user_id = fu.id
     where uf.followee_id = ${me.id} and ${inRange("uf.created_at")} and fu.profile_visibility = 'public'
-    order by uf.created_at desc limit ${CAP}
+    order by uf.created_at desc limit ${CAP + 1}
   `) : none;
 
   // Named or not, every sign-up counts, so the profile isn't filtered here.
-  const invites = prefs.invite ? await db.execute<PersonDbRow>(sql`
+  const invitesQ = prefs.invite ? db.execute<PersonDbRow>(sql`
     select i.used_at as at, nu.id, nu.handle, nu.display_name as "displayName", ua.updated_at as "avatarUpdatedAt", nu.profile_visibility as "profileVisibility",
            exists(select 1 from user_follows fb where fb.follower_id = ${me.id} and fb.followee_id = nu.id) as following
     from invites i join users nu on nu.id = i.used_by
     left join user_avatars ua on ua.user_id = nu.id
     where i.created_by = ${me.id} and ${inRange("i.used_at")}
-    order by i.used_at desc limit ${CAP}
+    order by i.used_at desc limit ${CAP + 1}
   `) : none;
 
   // A note written today on a post saved last year counts too, by when the note was written.
   // With bookmarks off, only noted posts can be anything.
-  const saves = prefs.bookmark || prefs.note ? await db.execute<AuthorDbRow & { id: number; url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean; savedAt: Date; noteCreatedAt: Date | null; followedAt: Date }>(sql`
+  const savesQ = prefs.bookmark || prefs.note ? db.execute<AuthorDbRow & { id: number; url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean; savedAt: Date; noteCreatedAt: Date | null; followedAt: Date }>(sql`
     select b.id, b.url, b.title, b.site_title as "siteTitle", b.feed_id as "feedId", ${ICON} as "hasIcon",
            b.saved_at as "savedAt", case when b.note is null then null else b.note_created_at end as "noteCreatedAt",
            mine.created_at as "followedAt",
@@ -358,7 +358,7 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
   `) : none;
 
   // The hidden root every account has is never one (parent_id is null).
-  const collections = prefs.collection ? await db.execute<AuthorDbRow & { at: Date; visibility: ShareLevel; followedAt: Date; name: string; slug: string; description: string | null; feedCount: number }>(sql`
+  const collectionsQ = prefs.collection ? db.execute<AuthorDbRow & { at: Date; visibility: ShareLevel; followedAt: Date; name: string; slug: string; description: string | null; feedCount: number }>(sql`
     select col.created_at as at, col.visibility, mine.created_at as "followedAt",
            col.name, col.slug, col.description, col.feed_count as "feedCount",
            ${authorCols(me.id)}
@@ -368,11 +368,11 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
     left join user_avatars ua on ua.user_id = u.id
     where mine.follower_id = ${me.id} and ${inRange("col.created_at")} and col.created_at > mine.created_at
       and u.profile_visibility = 'public' and ${allowsSql("u.collections_visibility", "u.id", me.id)} and ${allowsSql("col.visibility", "u.id", me.id)}
-    order by col.created_at desc limit ${CAP}
+    order by col.created_at desc limit ${CAP + 1}
   `) : none;
 
   // Timed by the last edit, so a mention added to a note after it was first written still arrives.
-  const mentions = prefs.mentionsFrom !== "none" ? await db.execute<AuthorDbRow & { id: number; at: Date; bookmark: Record<string, unknown> }>(sql`
+  const mentionsQ = prefs.mentionsFrom !== "none" ? db.execute<AuthorDbRow & { id: number; at: Date; bookmark: Record<string, unknown> }>(sql`
     select b.id, b.note_updated_at as at, ${authorCols(me.id)}, ${bookmarkJson(me.id)} as bookmark
     from bookmarks b
     join users u on u.id = b.user_id
@@ -381,13 +381,13 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
     where b.note is not null and ${inRange("b.note_updated_at")} and b.user_id <> ${me.id}
       and ${mentionsHandleSql(sql`b.note`, me.handle)} and ${readableSql(me.id)}
       ${prefs.mentionsFrom === "following" ? sql`and exists(select 1 from user_follows fi where fi.follower_id = ${me.id} and fi.followee_id = u.id)` : sql``}
-    order by b.note_updated_at desc limit ${CAP}
+    order by b.note_updated_at desc limit ${CAP + 1}
   `) : none;
 
   // Starts from my own bookmarks, never from every note: a post's notes are found by its address,
   // and each note matches at most one of my bookmarks (one per address).
   // Only notes written after I saved the post, timed by when they were written.
-  const replies = prefs.reply ? await db.execute<AuthorDbRow & { id: number; at: Date; bookmark: Record<string, unknown> }>(sql`
+  const repliesQ = prefs.reply ? db.execute<AuthorDbRow & { id: number; at: Date; bookmark: Record<string, unknown> }>(sql`
     select b.id, b.note_created_at as at, ${authorCols(me.id)}, ${bookmarkJson(me.id)} as bookmark
     from bookmarks mine
     join bookmarks b on ${matchesPost("b", sql`mine.url`, sql`mine.item_id`)} and b.note is not null
@@ -396,8 +396,11 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
     left join items i on i.id = b.item_id
     where mine.user_id = ${me.id} and b.user_id <> ${me.id}
       and ${inRange("b.note_created_at")} and b.note_created_at > mine.saved_at and ${readableSql(me.id)}
-    order by b.note_created_at desc limit ${CAP}
+    order by b.note_created_at desc limit ${CAP + 1}
   `) : none;
+
+  // Independent reads, so they run side by side: the bubble asks for all of them too.
+  const [follows, invites, saves, collections, mentions, replies] = await Promise.all([followsQ, invitesQ, savesQ, collectionsQ, mentionsQ, repliesQ]);
 
   return {
     follows: follows.rows.map(personRow),
