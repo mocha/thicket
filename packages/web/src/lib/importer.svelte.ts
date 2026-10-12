@@ -49,8 +49,11 @@ export const canKeep = (g: ImportGroup) => good(g).length > 0;
 export async function readImport(get: () => Promise<ImportPreview>, via: string): Promise<boolean> {
   if (imp.busy) return false;
   imp.busy = true; imp.error = null;
+  const mine = run;
   try {
     const p = await get();
+    /* Started over while the file was being read (the account changed, say): this reading is no one's now. */
+    if (mine !== run) return false;
     imp.preview = p;
     imp.groups = p.groups.map((g) => ({ name: g.name, keep: true, open: g.feeds.length <= SHOWN, feeds: g.feeds }));
     imp.step = 'review';
@@ -58,7 +61,7 @@ export async function readImport(get: () => Promise<ImportPreview>, via: string)
     void checkAll();
     return true;
   } catch (e) {
-    imp.error = e instanceof Error ? e.message : String(e);
+    if (mine === run) imp.error = e instanceof Error ? e.message : String(e);
     return false;
   } finally {
     imp.busy = false;
