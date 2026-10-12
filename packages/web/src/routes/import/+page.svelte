@@ -98,6 +98,8 @@
    */
   let renaming = $state<number | null>(null);
   let draft = $state('');
+  /* A rename belongs to the import it was opened on: a new file, starting over, or another account closes it. */
+  $effect(() => { void imp.preview; renaming = null; draft = ''; });
   let nameBox = $state<HTMLInputElement | null>(null);
   async function startRename(gi: number) {
     draft = finalNames.get(gi) ?? imp.groups[gi].name;
@@ -241,10 +243,10 @@
   <Card kind="section" as="section" class="import-section">
     <h2 class="section-title">Done</h2>
     <p class="section-description">New feeds start arriving over the next few minutes, as thicket fetches each one for the first time.</p>
-    <ul class="feeds list-rows">
+    <ul class="made list-rows">
       {#each imp.committed as c (c.id)}
         <li>
-          <a class="fname row-name" href="/@{session.user?.handle}/collections/{c.slug}">{c.name}<small class="row-details">{c.renamedFrom ? `Beside your existing “${c.renamedFrom}”` : 'New collection'}</small></a>
+          <a class="made-name row-name" href="/@{session.user?.handle}/collections/{c.slug}">{c.name}<small class="row-details">{c.renamedFrom ? `Beside your existing “${c.renamedFrom}”` : 'New collection'}</small></a>
           <span class="count">{c.added} added</span>
         </li>
       {/each}
@@ -291,6 +293,11 @@
   .reason { margin-top: var(--space-1); }
   /* A feed we can't import is quieter than the ones that will come in. */
   .feedrow.refused :global(.title), .feedrow.refused :global(.origin) { color: var(--text-2); font-weight: 400; }
+  /* The finished screen: one row per collection made, its name linking to it, the count at the right. */
+  .made { margin: var(--space-3) calc(-1 * var(--card-pad)) 0; border-block: 1px solid var(--line); }
+  .made li { display: flex; align-items: center; gap: var(--space-3); }
+  .made-name { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+  .made-name small { font-weight: 400; }
   .count { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
 
   /* Pinned to the bottom while a long review scrolls, so the main action is always in reach. On a
