@@ -203,7 +203,7 @@ export const collectionsApi = {
 /** The import page (api/src/lib/importer.ts). `unsure`: couldn't be checked just now; it is added and retried. */
 export type ImportFeedState = 'ok' | 'failed' | 'unsure' | 'pending';
 /** `retry`: this verdict could change if we ask again shortly — a timeout or a brief 5xx, never a 429 or a paused host. */
-export type ImportFeed = { url: string; title: string | null; siteUrl: string | null; state: ImportFeedState; reason: string | null; following: boolean; retry: boolean };
+export type ImportFeed = { url: string; title: string | null; siteUrl: string | null; state: ImportFeedState; reason: string | null; retry: boolean };
 export type ImportGroup = { name: string; feeds: ImportFeed[]; existing: { id: number; name: string; slug: string } | null };
 export type ImportPreview = { title: string | null; source: string | null; groups: ImportGroup[]; emptyFolders: string[]; duplicates: number };
 export type ImportCheck = { url: string; state: ImportFeedState; reason: string | null; title: string | null; finalUrl: string | null; retry: boolean };

@@ -34,6 +34,7 @@
   import Card from '$lib/components/Card.svelte';
   import CardMeta from '$lib/components/CardMeta.svelte';
   import CardFooter from '$lib/components/CardFooter.svelte';
+  import Checkbox from '$lib/components/Checkbox.svelte';
   import FeedRow from '$lib/components/FeedRow.svelte';
   import PersonRow from '$lib/components/PersonRow.svelte';
   import CollectionRow from '$lib/components/CollectionRow.svelte';
@@ -225,6 +226,7 @@
         { id: 'breadcrumb', label: 'Breadcrumb' },
         { id: 'button', label: 'Button' },
         { id: 'card', label: 'Card' },
+        { id: 'checkbox', label: 'Checkbox' },
         { id: 'choice-group', label: 'Choice group' },
         { id: 'dot', label: 'Dot' },
         { id: 'empty-note', label: 'Empty note' },
@@ -596,6 +598,18 @@
       </div>
     </section>
 
+    <section class="entry" id="checkbox" aria-labelledby="checkbox-h">
+      <h3 class="entry-h" id="checkbox-h">Checkbox</h3>
+      <p class="section-lede">Drawn by thicket, not the browser, so it looks the same in Chrome, Safari, and Firefox: a 16px box with softly rounded corners, outlined like a text field, filled with the accent and a check once ticked. 16px is the height of a line of body text, so a box sits evenly beside its label. It is still a real checkbox underneath, for the keyboard and screen readers. The option button (pick one of a few) is its round partner, drawn the same way, with an accent ring and dot. A screen only lines either one up with its label. Settings, Admin, Manage collection, Manage feed, the Add a feed sheet, Send feedback, and Import use them.</p>
+      <div class="stack">
+        <label class="demo-check"><Checkbox checked /> Checked</label>
+        <label class="demo-check"><Checkbox /> Not checked</label>
+        <label class="demo-check"><Checkbox checked disabled /> Checked, and can’t be changed</label>
+        <label class="demo-check"><input type="radio" name="demo-option" checked /> An option button, chosen</label>
+        <label class="demo-check"><input type="radio" name="demo-option" /> An option button</label>
+      </div>
+    </section>
+
     <section class="entry" id="choice-group" aria-labelledby="choice-group-h">
       <h3 class="entry-h" id="choice-group-h">Choice group</h3>
       <p class="section-lede">Pick one, and it takes effect at once — a setting, not a tab. Nothing else on the page moves. When the options can’t sit on one line in the space they have (a small phone, large text), the group becomes a dropdown with the same choices. It never wraps and never slides sideways. Every option is outlined in the accent color so the row reads as something to press; the chosen one gets an accent wash, accent words, and an outline twice as thick.</p>
@@ -703,8 +717,8 @@
       <p class="section-lede">Every list of rows, on a list card or in a Sheet, is laid out the same way: 12px above and below each row, its text 16px in from the card’s edge, and a thin line between rows but none above the first. A Button on a row is the small size, and sits as far in from the right edge as the text does from the left. There are two kinds of row.</p>
 
       <h4 class="sub">A row for one thing</h4>
-      <p class="section-lede">A feed, a person, a collection, or a post: something you can open. A 40px picture leads (a feed’s icon, a person’s picture, or for a collection a few of its feeds’ icons, overlapped), then the name in 16px bold, with the details under it in 14px gray. Used on Explore, a collection’s feeds, Collections, and the people someone follows. Import’s review list uses the same spacing and text, without pictures.</p>
-      <p class="section-lede">A feed is always the one Feed row, wherever feeds are listed: its name (with a Failing badge when its checks fail) and its site under it in dark, then its description, close under the site, and the facts about it (how often it posts, its latest post, its followers) in gray.</p>
+      <p class="section-lede">A feed, a person, a collection, or a post: something you can open. A 40px picture leads (a feed’s icon, a person’s picture, or for a collection a few of its feeds’ icons, overlapped), then the name in 16px bold, with the details under it in 14px gray. Used on Explore, a collection’s feeds, Collections, and the people someone follows. Import’s review list uses the same spacing and text, with each feed’s icon (its initial, for a feed thicket hasn’t saved).</p>
+      <p class="section-lede">A feed is always the one Feed row, wherever feeds are listed: its name (with a Failing badge when its checks fail) and its site under it in dark, then its description, close under the site, and the facts about it (how often it posts, its latest post, its followers) in gray. Its icon, name, and site are their own piece, FeedLine, which the Import review uses for feeds thicket hasn’t saved yet, with their status at the right end instead of Follow.</p>
       <p class="section-lede">A person is always the one Person row, the same way: their name with their @handle beside it in gray, as a note names its writer (Priya Nair (@priya)), then their bio, close under the name, and the facts about them (feeds, public collections) in gray, with Follow at the right where the screen offers it.</p>
       <p class="section-lede">A collection is always the one Collection row: its name with any badges after it (Yours, Copied, who can see it, how many new posts) and “by” whose it is under it in dark, then its description, close under the name, and how many feeds it holds in gray, ending in an arrow since the whole row opens it. On a search, the line saying why it was found comes last, in green, the same as on feed and person rows.</p>
       <div class="stack">
@@ -1038,4 +1052,5 @@
   .ds-foot a { color: var(--accent); font-weight: 600; }
   .ds-foot a:hover { text-decoration: underline; }
   .setting-rows { max-width: 520px; }
+  .demo-check { display: flex; align-items: center; gap: var(--space-2); }
 </style>

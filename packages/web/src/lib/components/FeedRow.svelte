@@ -6,7 +6,8 @@
    * under the name; what it says about itself; then the facts about how it
    * behaves, run together with dots. The name and site are the feed itself
    * and read dark; the description and facts are about it and read gray.
-   * Follow sits at the right, and drops under the text on a phone.
+   * Follow sits at the right, and drops under the text on a phone. The icon,
+   * name and site are the shared FeedLine, which the Import review uses too.
    *
    * Each fact shows only when the screen has it: how often it posts, when it
    * last did (`latest` off where a list is sorted by something else and the
@@ -20,7 +21,7 @@
   import { feedOrigin, hostOf, longAgo, postRate } from '$lib/time';
   import { feedListName } from '$lib/feedname';
   import { plural } from '$lib/words';
-  import SourceIcon from './SourceIcon.svelte';
+  import FeedLine from './FeedLine.svelte';
   import Badge from './Badge.svelte';
   import Dot from './Dot.svelte';
   import FollowControl from './FollowControl.svelte';
@@ -57,10 +58,8 @@
 
 <li class="feedrow">
   <a class="row tap" href={feedHref(f)} onclick={() => onopen?.()}>
-    <SourceIcon feedId={f.id} hasIcon={f.hasIcon} {name} size={40} />
-    <div class="meta">
-      <span class="named"><span class="title row-name">{feedListName(f)}</span>{#if failing}<Badge tone="danger">Failing</Badge>{/if}</span>
-      <span class="row-details origin">{feedOrigin(f)}</span>
+    <FeedLine feedId={f.id} hasIcon={f.hasIcon} {name} label={feedListName(f)} origin={feedOrigin(f)}>
+      {#snippet badge()}{#if failing}<Badge tone="danger">Failing</Badge>{/if}{/snippet}
       {#if f.description}<span class="row-details desc">{f.description}</span>{/if}
       {#if facts.length || network || children}
         <span class="facts">
@@ -70,7 +69,7 @@
           {#if children}<span class="row-details">{@render children()}</span>{/if}
         </span>
       {/if}
-    </div>
+    </FeedLine>
   </a>
   {#if follow}
     <FollowControl feedId={f.id} ids={f.myCollectionIds} {name} small {onchange} />
@@ -80,13 +79,6 @@
 <style>
   .feedrow { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
-  .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .named { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
-  .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* The site is part of who the feed is, so it reads dark with the name, tight
-     under it like a byline. The -2px is optical: it takes back some of the
-     empty space above and below each line of text, so the two read as a pair. */
-  .origin { margin-top: -2px; color: var(--text); overflow-wrap: anywhere; }
   /* Close under the name, so the two read as a pair, as on the Person and Collection rows. */
   .desc { margin-top: -2px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
   /* A step more room above the facts than between the other lines, so the description and the numbers read as two groups. */
@@ -101,5 +93,5 @@
     .row { flex-basis: 100%; }
     .feedrow > :global(.follow) { margin-left: auto; }
   }
-  @media (hover: hover) { .row:hover .title { text-decoration: underline; text-underline-offset: 3px; } }
+  @media (hover: hover) { .row:hover :global(.title) { text-decoration: underline; text-underline-offset: 3px; } }
 </style>

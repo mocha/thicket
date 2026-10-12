@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Checkbox from '$lib/components/Checkbox.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import Card from '$lib/components/Card.svelte';
   import { api, authApi } from '$lib/api';
@@ -60,7 +61,7 @@
 
 <Card kind="section" as="section" class="settings-section">
   <label class="switch">
-    <input type="checkbox" checked={isSource()} disabled={savingDisplay} onchange={toggleSource} />
+    <Checkbox checked={isSource()} disabled={savingDisplay} onchange={toggleSource} />
     <span>
       <strong>Use these settings on new devices</strong>
       <small>New devices you sign into will offer the display settings below, kept up to date as you change them here. Each device keeps its own settings.</small>
@@ -137,7 +138,7 @@
   <Card kind="section" as="section" class="settings-section">
     <h2 class="section-title">Privacy</h2>
     <label class="switch">
-      <input type="checkbox" checked={tracking} onchange={(e) => set({ trackActivity: e.currentTarget.checked }, e.currentTarget.checked ? 'Usage tracking on' : 'Usage tracking off')} />
+      <Checkbox checked={tracking} onchange={(e) => set({ trackActivity: e.currentTarget.checked }, e.currentTarget.checked ? 'Usage tracking on' : 'Usage tracking off')} />
       <span>
         <strong>Help improve thicket by sharing anonymous usage data</strong>
         <small>Which screens and buttons you use — never what you read. There’s no record of which posts you open.</small>
@@ -159,11 +160,10 @@
   :global(.settings-section) { margin-bottom: var(--space-4); }
   fieldset { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
-  .radio input, .switch input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .radio input, .switch :global(.checkbox) { margin-top: 3px; }
   /* The ring these used to borrow from the password boxes, now said outright.
      A tick box or a dial isn't typed into, so the browser only calls it
      keyboard focus when you tabbed to it — no special handling needed. */
-  .radio input:focus-visible, .switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
   .radio small, .switch small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }

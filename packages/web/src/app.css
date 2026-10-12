@@ -389,6 +389,18 @@ img { display: block; max-width: 100%; }
   :where(.tap) { position: relative; }
   :where(.tap)::after { content: ''; position: absolute; inset: min(0px, calc((100% - 44px) / 2)); }
 }
+/* The one option button, drawn by thicket rather than the browser so it looks
+   the same everywhere and matches the Checkbox piece: 16px, outlined like a
+   text field, an accent ring and dot once chosen. Screens only place it (a
+   margin to line up with its label). Checkboxes are the Checkbox piece. */
+input[type="radio"] {
+  appearance: none; flex: none; margin: 0; width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid var(--field-line); background: var(--surface); cursor: pointer;
+}
+input[type="radio"]:checked { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 3.5px, var(--surface) 4px); }
+input[type="radio"]:disabled { cursor: not-allowed; opacity: 0.5; }
+input[type="radio"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* List rows: the one way a list of rows is laid out, on a list card or in a
    Sheet (see the List row entry on /design-system). The list takes
    `list-rows`; each row is an `li` inset by the card's edge inset, with a
