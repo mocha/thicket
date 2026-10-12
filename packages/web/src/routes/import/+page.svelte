@@ -75,7 +75,6 @@
   });
 
   const kept = $derived(imp.groups.filter((g) => g.keep && g.name.trim() && canKeep(g)));
-  const totalFeeds = $derived(new Set(imp.groups.flatMap((g) => g.feeds.map((f) => f.url))).size);
   /* With a single group there is nothing to choose between, so no box to untick. */
   const choosing = $derived(imp.groups.length > 1);
 
@@ -131,7 +130,7 @@
   <!-- With one group the card below already says it all, so the line only explains the checkboxes. -->
   {#if choosing}
     <p class="lede">
-      {imp.preview.source ? `From ${imp.preview.source}: ` : ''}{imp.groups.length} groups, {totalFeeds} {totalFeeds === 1 ? 'feed' : 'feeds'}. Each group becomes a new collection. Untick any you don’t want.
+      Uncheck any you don’t want. Each group becomes a new collection.
     </p>
   {/if}
   {#if imp.preview.emptyFolders.length}
@@ -269,8 +268,8 @@
   .bar span { display: block; height: 100%; background: var(--accent); transition: width 200ms ease; }
 
   .ghead { display: flex; align-items: flex-start; gap: var(--space-3); }
-  /* The box sits level with the heading's first line (21px at 1.25 line height). */
-  .keep { width: 20px; height: 20px; margin: 3px 0 0; flex: none; accent-color: var(--accent); cursor: pointer; }
+  /* Settings' checkbox size, level with the heading's first line (21px at 1.25 line height). */
+  .keep { width: 18px; height: 18px; margin: 4px 0 0; flex: none; accent-color: var(--accent); cursor: pointer; }
   .keep:disabled { cursor: not-allowed; }
   /* Beside the open name field the box sits level with the field's label. */
   .ghead:has(.rename) .keep { margin-top: 0; }
