@@ -187,7 +187,7 @@
   .checks label { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-1); border-bottom: 1px solid var(--line); cursor: pointer; }
   .checks li:last-child label { border-bottom: 0; }
   /* No browser margin, so the box and the + in the last row share one column. */
-  .checks input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
+  .checks input { margin: 0; }
   .name { flex: 1; font-weight: 500; }
   .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); transition: color 300ms; }
   .count.flash { color: var(--accent); font-weight: 700; animation: pop 1.2s ease-out; }

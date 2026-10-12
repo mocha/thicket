@@ -269,11 +269,10 @@
 
   .ghead { display: flex; align-items: flex-start; gap: var(--space-3); }
   /* Small beside the 21px heading, so the name leads; level with its first line (21px at 1.25 line height). */
-  .keep { width: 16px; height: 16px; margin: 5px 0 0; flex: none; accent-color: var(--accent); cursor: pointer; }
+  .keep { margin: 5px 0 0; cursor: pointer; }
   .keep:disabled { cursor: not-allowed; }
   /* Beside the open name field the box sits level with the field's label. */
   .ghead:has(.rename) .keep { margin-top: 0; }
-  .keep:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .gbody { flex: 1; min-width: 0; }
   :global(.import-section.off) .section-title { color: var(--text-2); }
   /* Spaced and lined up like the Edit profile form: the buttons at the right, under the field. */

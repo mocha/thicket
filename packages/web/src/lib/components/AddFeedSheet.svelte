@@ -240,7 +240,7 @@
   .candidates { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
   /* The same tick box and spacing as the collection rows below. */
   .candidates label { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); cursor: pointer; }
-  .candidates input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
+  .candidates input { margin: 0; }
   .which { display: flex; flex-direction: column; /* 2px is an optical gap between a name and its address. */ gap: 2px; min-width: 0; }
   .which strong { color: var(--text); }
   .which span { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }

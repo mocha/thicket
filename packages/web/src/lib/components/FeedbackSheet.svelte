@@ -77,6 +77,5 @@
   .under { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: calc(-1 * var(--space-1)); }
   /* The same tick box as "Create this collection" on the import page. */
   .handle { display: flex; align-items: center; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); cursor: pointer; }
-  .handle input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
-  .handle input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .handle input { margin: 0; }
 </style>

@@ -224,6 +224,7 @@
         { id: 'breadcrumb', label: 'Breadcrumb' },
         { id: 'button', label: 'Button' },
         { id: 'card', label: 'Card' },
+        { id: 'checkbox', label: 'Checkbox' },
         { id: 'choice-group', label: 'Choice group' },
         { id: 'dot', label: 'Dot' },
         { id: 'empty-note', label: 'Empty note' },
@@ -590,6 +591,17 @@
             <Button variant="danger" size="sm">Revoke</Button>
           </div>
         </Card>
+      </div>
+    </section>
+
+    <section class="entry" id="checkbox" aria-labelledby="checkbox-h">
+      <h3 class="entry-h" id="checkbox-h">Checkbox</h3>
+      <p class="section-lede">The browser’s own checkbox and option button, 16px everywhere and in the theme’s accent color, so a box sits evenly beside a line of text. The size and color are set once for the whole app; a screen only lines one up with its label. Settings, Admin, Manage collection, Manage feed, the Add a feed sheet, Send feedback, and Import all use it.</p>
+      <div class="stack">
+        <label class="demo-check"><input type="checkbox" checked /> Checked</label>
+        <label class="demo-check"><input type="checkbox" /> Not checked</label>
+        <label class="demo-check"><input type="radio" name="demo-option" checked /> An option button, chosen</label>
+        <label class="demo-check"><input type="radio" name="demo-option" /> An option button</label>
       </div>
     </section>
 
@@ -1029,4 +1041,5 @@
   .ds-foot a { color: var(--accent); font-weight: 600; }
   .ds-foot a:hover { text-decoration: underline; }
   .setting-rows { max-width: 520px; }
+  .demo-check { display: flex; align-items: center; gap: var(--space-2); }
 </style>
