@@ -258,7 +258,7 @@
               {#if u.id === me?.id}<Badge>You</Badge>{/if}
             {/snippet}
             {#snippet end()}
-              {#if u.id !== me?.id}<Button size="sm" onclick={() => manage(u)} aria-label="Manage @{u.handle}"><Icon name="gear" size={16} />Manage</Button>{/if}
+              {#if u.id !== me?.id}<Button size="sm" onclick={() => manage(u)} aria-label="Manage @{u.handle}’s account"><Icon name="gear" size={16} />Manage account</Button>{/if}
             {/snippet}
           </PersonRow>
         {/each}
