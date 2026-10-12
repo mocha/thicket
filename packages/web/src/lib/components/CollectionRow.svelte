@@ -10,7 +10,8 @@
    * A few of its feeds' icons, overlapped, are its picture. A collection
    * inside another steps in one spacing step per level (`depth`), and its
    * name sits quieter, so the tree reads at a glance. Anything more a screen
-   * wants to say (why a search found it) goes in `children`, under the facts.
+   * wants to say (why a search found it) goes in `children`, in place of the
+   * plain feed count on the facts line, so the count isn't said twice.
    */
   import type { Snippet } from 'svelte';
   import type { CollectionSample } from '$lib/api';
@@ -45,8 +46,7 @@
       <span class="named"><span class="title row-name">{name}</span>{@render badges?.()}</span>
       {#if owner}<span class="row-details owner">by {owner}</span>{/if}
       {#if description}<span class="row-details desc">{description}</span>{/if}
-      <span class="row-details facts">{plural(feedCount, 'feed')}</span>
-      {@render children?.()}
+      <span class="row-details facts">{#if children}{@render children()}{:else}{plural(feedCount, 'feed')}{/if}</span>
     </span>
     <span class="chev" aria-hidden="true">›</span>
   </a>
@@ -64,7 +64,8 @@
      each line of text, so the two read as a pair. */
   .owner { margin-top: -2px; color: var(--text); }
   .desc { margin-top: var(--space-1); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-  .facts { margin-top: var(--space-1); }
+  /* A step more room above the facts than between the other lines, so the description and the numbers read as two groups. */
+  .facts { margin-top: var(--space-2); }
   .chev { flex: none; color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
   @media (hover: hover) { .row-link:hover .title { text-decoration: underline; text-underline-offset: 3px; } }
   .stack { display: inline-flex; flex: none; width: 40px; height: 40px; position: relative; }

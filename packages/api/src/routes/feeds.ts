@@ -17,6 +17,7 @@ import { refreshIcon } from "../feeds/icons.js";
 import { isYouTubeUrl, YOUTUBE_FEED_PATTERN } from "../feeds/youtube.js";
 import { feedSlugSql } from "../lib/slug.js";
 import { PUBLIC_URL } from "../lib/config.js";
+import { sinceIntervalFrom, sinceSql } from "../lib/since.js";
 
 export const feeds = new Hono();
 
@@ -76,8 +77,8 @@ feeds.get("/", async (c) => {
     where.push(sql`(f.title ilike ${like} or f.description ilike ${like} or f.url ilike ${like} or f.site_url ilike ${like}
       or exists(select 1 from feed_settings fs where fs.user_id = ${user.id} and fs.feed_id = f.id and fs.display_name ilike ${like}))`);
   }
-  const sinceInterval = since === "24h" ? "1 day" : since === "week" ? "7 days" : since === "month" ? "30 days" : since === "year" ? "365 days" : null;
-  if (sinceInterval) where.push(sql`f.created_at > now() - ${sinceInterval}::interval`);
+  const sinceInterval = sinceIntervalFrom(since);
+  if (sinceInterval) where.push(sinceSql("f.created_at", sinceInterval));
   const followedBy = sql`exists(select 1 from collection_feeds cf join collections col on col.id = cf.collection_id and col.user_id = ${user.id} where cf.feed_id = f.id)`;
   if (following === "1") where.push(followedBy);
   if (following === "0") where.push(sql`not ${followedBy}`);

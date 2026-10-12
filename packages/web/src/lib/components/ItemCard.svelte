@@ -8,18 +8,27 @@
   import Card from './Card.svelte';
   import Badge from './Badge.svelte';
   import CardMeta from './CardMeta.svelte';
+  import CardFooter from './CardFooter.svelte';
+  import Marked from './Marked.svelte';
   import FeedPopover from './FeedPopover.svelte';
   import NoteBlock from './NoteBlock.svelte';
   import NoteEditor from './NoteEditor.svelte';
   import ItemActions from './ItemActions.svelte';
   import { openReader, readsInline } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import { startsMidway } from '$lib/words';
 
   /**
    * `compact`: the paged layout's fixed-height card. Thumbnail beside the text, two lines each, notes counted rather than shown.
    * `fresh`: newer than the point where this reader last stopped in this list ("What's new", on for this device). A small mark by the time.
+   * `marks`: on a search's results, the title and the part of the post the search matched, with the matched words fenced (see lib/words.ts). They're highlighted, and the matched part shows in place of the summary.
    */
-  let { item, showSource = true, compact = false, fresh = false }: { item: RiverItem; showSource?: boolean; compact?: boolean; fresh?: boolean } = $props();
+  let { item, showSource = true, compact = false, fresh = false, marks = null }: {
+    item: RiverItem; showSource?: boolean; compact?: boolean; fresh?: boolean;
+    marks?: { title: string | null; summary: string | null } | null;
+  } = $props();
+  /* The matched part is the bit around the match; say so when it starts mid-way. */
+  const cut = $derived(!!marks?.summary && startsMidway(item.summary, marks.summary));
   let imgFailed = $state(false);
   let popover = $state(false);
   let myNote = $state<Note | null>(null);
@@ -27,6 +36,11 @@
   $effect(() => { myNote = item.myNote ?? null; });
   const source = $derived(item.feedTitle ?? hostOf(item.siteUrl ?? item.url));
   const others = $derived(item.notes ?? []);
+  const noteCount = $derived((myNote ? 1 : 0) + others.length);
+  /** A compact card counts its notes in the bottom row, since it has no room to show them. */
+  const countNotes = $derived(compact && noteCount > 0);
+  /** Whether there's a bottom row: something to say on the left, or something to put on the right. */
+  const hasFooter = $derived(!!item.author || !!session.user || countNotes);
 
   /** The body is a real link to the post. In-app readers intercept a plain click; middle-click and long-press still get the tab. */
   function opened(e: MouseEvent) {
@@ -94,21 +108,16 @@
       <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{relativeTime(item.publishedAt)}</time>
       {#if fresh}<Badge tone="soft" title="Newer than where you last stopped in this list">New</Badge>{/if}
     {/if}
-    <span class="spacer"></span>
-    {#if session.user}
-      <ItemActions {item} noteOpen={editing} onnote={noteButton} via="card" />
-    {/if}
   </header>
-  <a class="link" class:compact href={webHref(item.url) ?? webHref(item.siteUrl) ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
+  <a class="link" class:compact class:above-row={hasFooter} href={webHref(item.url) ?? webHref(item.siteUrl) ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
     {#if item.imageUrl && !imgFailed}
       <img class="hero" src={item.imageUrl} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror={() => (imgFailed = true)} />
     {/if}
-    <h3 class="card-title" class:tight={compact}>{noOrphan(item.title ?? item.summary ?? item.url)}</h3>
-    {#if item.title && item.summary && item.summary !== item.title}
+    <h3 class="card-title" class:tight={compact}>{#if marks?.title}<Marked text={noOrphan(marks.title)} />{:else}{noOrphan(item.title ?? item.summary ?? item.url)}{/if}</h3>
+    {#if marks?.summary}
+      <p class="card-summary found" class:tight={compact} use:wholeLines={compact}>{#if cut}… {/if}<Marked text={marks.summary} /></p>
+    {:else if item.title && item.summary && item.summary !== item.title}
       <p class="card-summary" class:tight={compact} use:wholeLines={compact}>{item.summary}</p>
-    {/if}
-    {#if item.author}
-      <footer>{item.author}</footer>
     {/if}
   </a>
 
@@ -116,11 +125,18 @@
     <!-- The feed's whole description was a link elsewhere (e.g. Hacker News's
          discussion thread). It lives outside the body's link, since a link can't
          nest inside another. -->
-    <a class="card-extralink tap" class:compact href={webHref(item.linkUrl)} target="_blank" rel="noopener">{item.linkLabel} →</a>
+    <a class="card-extralink tap" class:compact class:above-row={hasFooter} href={webHref(item.linkUrl)} target="_blank" rel="noopener">{item.linkLabel} →</a>
   {/if}
 
-  {#if compact && (myNote || others.length)}
-    <span class="notecount">{(myNote ? 1 : 0) + others.length} {(myNote ? 1 : 0) + others.length === 1 ? 'note' : 'notes'}</span>
+  <!-- The bottom row: who wrote it on the left, what you can do on the right. -->
+  {#if hasFooter}
+    <CardFooter {compact}>
+      {#if item.author}<span class="author">{item.author}</span>{/if}
+      {#snippet actions()}
+        {#if countNotes}<span class="notecount">{noteCount} {noteCount === 1 ? 'note' : 'notes'}</span>{/if}
+        {#if session.user}<ItemActions {item} noteOpen={editing} onnote={noteButton} via="card" />{/if}
+      {/snippet}
+    </CardFooter>
   {/if}
 
   {#if item.repeatOf?.length && !compact}
@@ -153,12 +169,13 @@
   header {
     display: flex; align-items: center; gap: var(--space-2);
     font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2);
-    padding: var(--space-3) var(--space-2) 0 var(--card-pad); min-width: 0;
+    padding: var(--space-3) var(--card-pad) 0; min-width: 0;
   }
   header.compact { padding-top: var(--space-2); }
   time { color: var(--text-2); white-space: nowrap; }
-  .spacer { flex: 1; }
   .link { display: block; padding: var(--space-2) var(--card-pad) var(--card-pad); -webkit-tap-highlight-color: transparent; }
+  /* With a bottom row under it, the body hands the room below to the row. */
+  .link.above-row { padding-bottom: var(--space-2); }
   @media (hover: hover) { .link:hover h3 { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   /* Edge to edge: wider than the text by the card's inset on each side. The app-wide
      "never wider than your container" rule for pictures would cut it short on the right. */
@@ -166,8 +183,9 @@
     width: calc(100% + var(--card-pad) * 2); max-width: none; margin: 0 calc(var(--card-pad) * -1) var(--space-3); aspect-ratio: 16 / 9; object-fit: cover;
     background: var(--surface-2);
   }
-  footer { margin-top: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .author { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card-extralink { display: inline-block; margin: calc(-1 * var(--space-2)) var(--card-pad) var(--card-pad); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
+  .card-extralink.above-row { margin-bottom: var(--space-1); }
   /* Compact cards fill a fixed frame; the link sits at the bottom edge with no negative pull. */
   .card-extralink.compact { margin: 0 var(--card-pad) var(--space-2); }
   @media (hover: hover) { .card-extralink:hover { text-decoration: underline; text-underline-offset: 3px; } }
@@ -186,6 +204,8 @@
   h3.tight { grid-column: 1; font-size: calc(var(--text-base) * var(--size-headings)); --title-lines: 2; }
   /* The summary gets whatever room the title leaves, rounded down to whole lines, so a line is never sliced through the middle. */
   p.tight { grid-column: 1; --summary-gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-reading)); --summary-lines: 2; align-self: start; max-height: round(down, 100%, 1lh); }
-  .link.compact footer { grid-column: 1; margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .notecount { position: absolute; right: var(--card-pad); bottom: var(--space-2); font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); }
+  /* The part of the post a search matched gets a third line, so the match is not the bit cut off. */
+  p.found:not(.tight) { --summary-lines: 3; }
+  /* The gap the row would put between it and the buttons, which share a group. */
+  .notecount { flex: none; margin-right: var(--space-2); font-size: calc(var(--text-xs) * var(--size-app)); font-weight: 600; color: var(--accent); }
 </style>

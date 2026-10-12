@@ -596,22 +596,31 @@ export type ExploreUser = {
   feeds: number; collections: number; notes: number | null; isFollowing: boolean; avatarUpdatedAt: string | null;
 };
 export const exploreApi = {
-  /** Public collections by other people. No options = the homepage's handful. */
-  collections: (opts: { q?: string; network?: boolean; limit?: number; offset?: number } | number = {}) => {
+  /**
+   * Public collections by other people. No options = the homepage's handful.
+   * `since` and `sort` are Explore's filters: a window on when the collection was made, and `feeds` (default), `newest` or `name`.
+   */
+  collections: (opts: { q?: string; network?: boolean; since?: string | null; sort?: string | null; limit?: number; offset?: number } | number = {}) => {
     const o = typeof opts === 'number' ? { limit: opts } : opts;
     const q = new URLSearchParams();
     if (o.q) q.set('q', o.q);
     if (o.network) q.set('network', '1');
+    if (o.since) q.set('since', o.since);
+    if (o.sort) q.set('sort', o.sort);
     if (o.limit) q.set('limit', String(o.limit));
     if (o.offset) q.set('offset', String(o.offset));
-    return j<{ collections: ExploreCollection[]; total: number; indexTotal: number; nextOffset: number | null }>(`/api/explore/collections?${q}`);
+    return j<{ collections: ExploreCollection[]; total: number; nextOffset: number | null }>(`/api/explore/collections?${q}`);
   },
-  users: (opts: { q?: string; limit?: number; offset?: number } = {}) => {
+  /** `network`: only people I follow. `since`: a window on when they joined. `sort`: `name` (default: people I follow first, then A to Z) or `newest`. */
+  users: (opts: { q?: string; network?: boolean; since?: string | null; sort?: string | null; limit?: number; offset?: number } = {}) => {
     const q = new URLSearchParams();
     if (opts.q) q.set('q', opts.q);
+    if (opts.network) q.set('network', '1');
+    if (opts.since) q.set('since', opts.since);
+    if (opts.sort) q.set('sort', opts.sort);
     if (opts.limit) q.set('limit', String(opts.limit));
     if (opts.offset) q.set('offset', String(opts.offset));
-    return j<{ users: ExploreUser[]; total: number; indexTotal: number; nextOffset: number | null }>(`/api/explore/users?${q}`);
+    return j<{ users: ExploreUser[]; total: number; nextOffset: number | null }>(`/api/explore/users?${q}`);
   },
   /** The instance's starter packs: one account's public collections. `from` is that handle, or null when falling back. */
   featured: () => j<{ from: string | null; collections: (ExploreCollection & { isMine: boolean })[] }>('/api/explore/featured')
@@ -632,28 +641,6 @@ export const SEARCH_SCOPES: SearchScope[] = ['posts', 'feeds', 'collections', 'p
 export const DEFAULT_SCOPE: SearchScope = 'posts';
 export const scopeFrom = (v: string | null | undefined): SearchScope =>
   SEARCH_SCOPES.includes(v as SearchScope) ? (v as SearchScope) : DEFAULT_SCOPE;
-/**
- * How a Posts search is ordered; the API's PostSort. Newest first by default,
- * the same order Posts has with nothing typed. `relevance` is the old order:
- * the best matches, tilted toward recent ones.
- */
-export type PostSearchSort = 'newest' | 'relevance';
-export const POST_SEARCH_SORTS: PostSearchSort[] = ['newest', 'relevance'];
-export const DEFAULT_POST_SORT: PostSearchSort = 'newest';
-export const postSortFrom = (v: string | null | undefined): PostSearchSort =>
-  POST_SEARCH_SORTS.includes(v as PostSearchSort) ? (v as PostSearchSort) : DEFAULT_POST_SORT;
-/**
- * How the Feeds list of a search is ordered (issue 182); the API's FeedSort.
- * `about` is the default, the nearest to the relevance order the list had
- * before there was a choice. To change the default, change this and
- * DEFAULT_FEED_SORT in the API's routes/search.ts together.
- */
-export type FeedSearchSort = 'mentioned' | 'posted' | 'about' | 'active';
-export const FEED_SEARCH_SORTS: FeedSearchSort[] = ['mentioned', 'posted', 'about', 'active'];
-export const DEFAULT_FEED_SORT: FeedSearchSort = 'about';
-/** Anything that isn't one of the four, including nothing, is the default. */
-export const feedSortFrom = (v: string | null | undefined): FeedSearchSort =>
-  FEED_SEARCH_SORTS.includes(v as FeedSearchSort) ? (v as FeedSearchSort) : DEFAULT_FEED_SORT;
 export type SearchFeed = {
   id: number; url: string; siteUrl: string | null; title: string | null; description: string | null; slug: string;
   lastItemAt: string | null; consecutiveFailures: number; postsLast30d: number; hasIcon: boolean; myCollectionIds: number[];
@@ -665,26 +652,30 @@ export type SearchFeed = {
 export type SearchCollection = ExploreCollection & {
   isMine: boolean; copiedByMe: boolean; matches: number; matchingFeeds: number; lastMatchAt: string | null; nameMatch: boolean;
 };
-export type SearchPost = {
-  id: number; feedId: number; feedTitle: string | null; siteUrl: string | null; url: string | null;
-  title: string | null; author: string | null; imageUrl: string | null; publishedAt: string;
-  /** Matched words are fenced by … so the page highlights them without rendering feed HTML. */
+/** A post a search found: the same post an article card shows in a feed, plus where the search matched. */
+export type SearchPost = RiverItem & {
+  /** The part of the post that matched (with nothing typed, the start of its summary). Matched words are fenced (see lib/words.ts) so the page highlights them without rendering feed HTML. */
   snippet: string | null;
-  hasIcon: boolean; bookmarkId: number | null; myCollectionIds: number[];
+  /** The title with the matched words fenced the same way; null with nothing typed. */
+  titleMarked: string | null;
+  myCollectionIds: number[];
 };
 export type SearchPerson = {
   handle: string; displayName: string | null; bio: string | null;
   nameMatch: boolean; notesMatch: number; marksMatch: number;
   feeds: number; collections: number; isFollowing: boolean; avatarUpdatedAt: string | null;
 };
-/** `total` is null for the newest posts with nothing typed: the API doesn't count every post to print one number. */
-export type SearchGroup<T> = { rows: T[]; total: number | null; nextOffset: number | null };
+/**
+ * `total` is null for the newest posts with nothing typed: the API doesn't count every post to print one number.
+ * `capped`: a Posts search's count reached the API's cap, so there are more matches than `total` says.
+ */
+export type SearchGroup<T> = { rows: T[]; total: number | null; nextOffset: number | null; capped?: boolean };
 type SearchRows = { feeds: SearchFeed; collections: SearchCollection; posts: SearchPost; people: SearchPerson };
 /** The one list asked for, under its scope's name: `{ q, scope: 'posts', posts: { rows, total, nextOffset } }`. */
 export type SearchResults<S extends SearchScope = SearchScope> = {
   q: string; scope: S;
-  /** The order the list came back in, for feeds and posts. */
-  sort: FeedSearchSort | PostSearchSort | null;
+  /** The order the list came back in. */
+  sort: string | null;
 } & { [K in S]: SearchGroup<SearchRows[K]> };
 
 export const searchApi = {
@@ -692,13 +683,13 @@ export const searchApi = {
    * `signal` cancels the request, and the API then cancels its query in the
    * database, so a search nobody is waiting for stops costing anything.
    */
-  run: <S extends SearchScope>(opts: { q: string; scope: S; limit?: number; offset?: number; network?: string | null; sort?: FeedSearchSort | PostSearchSort }, signal?: AbortSignal) => {
+  run: <S extends SearchScope>(opts: { q: string; scope: S; limit?: number; offset?: number; network?: string | null; since?: string | null; sort?: string | null }, signal?: AbortSignal) => {
     const p = new URLSearchParams({ q: opts.q, scope: opts.scope });
     if (opts.limit) p.set('limit', String(opts.limit));
     if (opts.offset) p.set('offset', String(opts.offset));
     if (opts.network) p.set('network', opts.network);
-    // Feeds and Posts take an order; the API ignores it anywhere else.
-    if (opts.sort && (opts.scope === 'feeds' || opts.scope === 'posts')) p.set('sort', opts.sort);
+    if (opts.since) p.set('since', opts.since);
+    if (opts.sort) p.set('sort', opts.sort);
     return j<SearchResults<S>>(`/api/search?${p}`, { signal });
   }
 };

@@ -6,14 +6,13 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import {
-    api, bookmarksApi, exploreApi, searchApi, feedHref, collectionHref, profilesApi,
+    api, exploreApi, searchApi, collectionHref, profilesApi,
     type Feed, type ExploreCollection, type ExploreUser,
     type SearchResults, type SearchScope, type SearchFeed, type SearchCollection, type SearchPost, type SearchPerson,
-    type FeedSearchSort, DEFAULT_FEED_SORT, feedSortFrom, DEFAULT_SCOPE, scopeFrom,
-    type PostSearchSort, DEFAULT_POST_SORT, postSortFrom
+    DEFAULT_SCOPE, scopeFrom
   } from '$lib/api';
-  import { hostOf, longAgo, relativeTime, webHref } from '$lib/time';
-  import { highlight, latestShort, mentionRate, plural } from '$lib/words';
+  import { longAgo } from '$lib/time';
+  import { fence, latestShort, mentionRate, plural } from '$lib/words';
   import { session } from '$lib/session.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
@@ -22,8 +21,8 @@
   import Select from '$lib/components/Select.svelte';
   import Sheet from '$lib/components/Sheet.svelte';
   import Icon from '$lib/components/Icon.svelte';
-  import SourceIcon from '$lib/components/SourceIcon.svelte';
-  import FeedPopover from '$lib/components/FeedPopover.svelte';
+  import ItemCard from '$lib/components/ItemCard.svelte';
+  import Marked from '$lib/components/Marked.svelte';
   import FeedRow from '$lib/components/FeedRow.svelte';
   import PersonRow from '$lib/components/PersonRow.svelte';
   import CollectionRow from '$lib/components/CollectionRow.svelte';
@@ -66,7 +65,7 @@
   const SCOPE_BLURB: Record<SearchScope, string> = {
     feeds: 'Sites that publish a feed. Follow one and you’ll see every new post it publishes.',
     collections: 'Topical sets of feeds people share, so you can follow along.',
-    posts: 'Individual posts from across every feed on thicket, newest first.',
+    posts: 'Individual posts from across every feed on thicket.',
     people: 'Public profiles you can browse and follow.'
   };
   const q = $derived((page.url.searchParams.get('q') ?? '').trim());
@@ -80,57 +79,71 @@
   const browseAs = $derived(scope === 'collections' ? 'collections' : scope === 'people' ? 'users' : 'feeds');
 
   /**
-   * One filter, off by default: absent shows the whole index, 'following'
-   * narrows to what the people you follow read.
+   * Every tab offers the same three filters, searching or not: Show (everyone,
+   * or what the people you follow read), a time window, and an order. A tab
+   * leaves a choice out only when it can't mean anything: "Best match" needs
+   * words to match.
    */
   const narrowToNetwork = $derived(page.url.searchParams.get('by') === 'following');
   const since = $derived(page.url.searchParams.get('since'));
-  /** `summary` is how the folded Filters box names the order, after "Show everyone · Added any time". */
-  const sorts = [
-    { id: 'popular', label: 'Popular', summary: 'Most popular' },
-    { id: 'recent', label: 'Recent posts', summary: 'Most recent posts' },
-    { id: 'posts', label: 'Most active', summary: 'Most active' },
-    { id: 'title', label: 'A–Z', summary: 'A to Z' },
-    { id: 'added', label: 'Newest here', summary: 'Newest here' }
-  ];
-  // 'followers' is the old name for 'popular'; saved links still land on it. ?sort= is also a
-  // search's feed order (below), so a value that isn't a browse order is read as the default.
-  const sort = $derived(((s) => (s === 'followers' ? 'popular' : sorts.some((x) => x.id === s) ? s : 'popular'))(page.url.searchParams.get('sort') ?? 'popular'));
+  /** What the time window is a window on, per tab: when a post was published, a feed or collection added, a person joined. */
+  const WHEN: Record<SearchScope, string> = { posts: 'Posted', feeds: 'Added', collections: 'Added', people: 'Joined' };
+  const ADDED: Record<string, string> = { '': 'Any time', '24h': 'Past 24 hours', week: 'Past week', month: 'Past month', year: 'Past year' };
 
-  /**
-   * The order of a search's Feeds list (issue 182). Searching, ?sort= means
-   * this; anything it doesn't know is the default. Only the Feeds tab offers
-   * it: Everything's short preview of feeds keeps the default.
-   */
-  const feedSort = $derived(feedSortFrom(page.url.searchParams.get('sort')));
   /** A long search would stretch the dropdown, which is as wide as its longest choice. */
   const term = $derived(q.length > 18 ? 'this search' : `“${q}”`);
-  const feedSorts = $derived<{ id: FeedSearchSort; label: string; help: string }[]>([
-    { id: 'about', label: `most mentions of ${term}`, help: `Feeds with the most posts mentioning “${q}” in the last 90 days come first. Feeds that only match by name come last.` },
-    { id: 'mentioned', label: `most recent mention of ${term}`, help: `Feeds that mentioned “${q}” most recently come first. Feeds that only match by name come last.` },
-    { id: 'active', label: 'number of posts (last 90d)', help: 'Feeds that posted the most in the last 90 days, about anything, come first.' },
-    { id: 'posted', label: 'most recent post', help: 'Feeds with the newest posts, about anything, come first.' }
-  ]);
-  const feedSortHelp = $derived(feedSorts.find((s) => s.id === feedSort)?.help ?? '');
-  const sortsFeeds = $derived(searching && scope === 'feeds');
-
-  /** A Posts search's order. Newest first unless asked; with nothing typed it is always newest. */
-  const postSort = $derived(postSortFrom(page.url.searchParams.get('sort')));
-  const sortsPosts = $derived(searching && scope === 'posts');
-  const postSorts: { id: PostSearchSort; label: string }[] = [
-    { id: 'newest', label: 'Newest first' },
-    { id: 'relevance', label: 'Best match' }
-  ];
-  function setPostSort(v: string) {
-    const s = postSortFrom(v);
-    setParams({ sort: s === DEFAULT_POST_SORT ? null : s });
-    api.event('explore_post_sort', { sort: s });
+  type Order = { id: string; label: string };
+  /**
+   * The orders on offer for this tab, searching or not; the first is the
+   * default. The ids are the API's (routes/search.ts, routes/explore.ts,
+   * routes/feeds.ts). Nothing sorts people by followers: who follows whom is
+   * private (issue #191).
+   */
+  const orders = $derived.by<Order[]>(() => {
+    if (scope === 'posts') return [
+      { id: 'newest', label: 'Newest first' },
+      ...(searching ? [{ id: 'relevance', label: 'Best match' }] : []),
+      { id: 'bookmarked', label: 'Most bookmarked' },
+      { id: 'noted', label: 'Most noted' }
+    ];
+    if (scope === 'feeds') return searching ? [
+      { id: 'about', label: `Most mentions of ${term}` },
+      { id: 'mentioned', label: `Most recent mention of ${term}` },
+      { id: 'active', label: 'Number of posts (last 90d)' },
+      { id: 'posted', label: 'Most recent post' }
+    ] : [
+      { id: 'popular', label: 'Most popular' },
+      { id: 'recent', label: 'Most recent posts' },
+      { id: 'posts', label: 'Most active' },
+      { id: 'title', label: 'A to Z' },
+      { id: 'added', label: 'Newest here' }
+    ];
+    if (scope === 'collections') return [
+      ...(searching ? [{ id: 'relevance', label: 'Best match' }] : []),
+      { id: 'feeds', label: 'Most feeds' },
+      { id: 'newest', label: 'Newest here' },
+      ...(searching ? [] : [{ id: 'name', label: 'A to Z' }])
+    ];
+    return [
+      ...(searching ? [{ id: 'relevance', label: 'Best match' }] : []),
+      { id: 'name', label: 'A to Z' },
+      { id: 'newest', label: 'Newest to join' }
+    ];
+  });
+  /**
+   * The order chosen, from ?sort=; anything this tab doesn't offer is its
+   * default. 'followers' is the old name for Feeds' 'popular'; saved links still land on it.
+   */
+  const sortId = $derived(((v) => (orders.some((o) => o.id === v) ? v! : orders[0].id))(
+    page.url.searchParams.get('sort') === 'followers' ? 'popular' : page.url.searchParams.get('sort')
+  ));
+  const order = $derived(orders.find((o) => o.id === sortId) ?? orders[0]);
+  function setSort(v: string) {
+    setParams({ sort: v === orders[0].id ? null : v });
+    api.event('explore_sort', { scope, sort: v, searching });
   }
-  function setFeedSort(v: string) {
-    const s = feedSortFrom(v);
-    setParams({ sort: s === DEFAULT_FEED_SORT ? null : s });
-    api.event('explore_feed_sort', { sort: s });
-  }
+  /** A Feeds search sorted by newest post: its rows show the date they're sorted by. */
+  const sortsFeedsByPost = $derived(searching && scope === 'feeds' && sortId === 'posted');
   let followsAnyone = $state<boolean | null>(null);
   const feedsNetwork = $derived(narrowToNetwork ? '1' : null);
 
@@ -139,9 +152,13 @@
     for (const [k, v] of Object.entries(patch)) v ? p.set(k, v) : p.delete(k);
     void goto(`/explore${p.size ? `?${p}` : ''}`, { replaceState: true, keepFocus: true });
   }
-  /** A search in place goes with you: the new tab loads it straight away (the load effect below). */
+  /**
+   * A search in place goes with you: the new tab loads it straight away (the
+   * load effect below). So do Show and the time window, which every tab has;
+   * the order resets, since each tab has its own.
+   */
   function setScope(s: SearchScope) {
-    setParams({ scope: s === DEFAULT_SCOPE ? null : s, since: null, sort: null });
+    setParams({ scope: s === DEFAULT_SCOPE ? null : s, sort: null });
     api.event('explore_scope', { scope: s, searching });
   }
 
@@ -188,6 +205,8 @@
   const rows = $derived(moreScope === scope ? more : []);
   /** How long the current tab's list is: null for the newest posts, which aren't counted. */
   const total = $derived<number | null>(res && moreScope === scope ? ((res as Record<string, any>)[scope]?.total ?? null) : null);
+  /** The count stopped at the search's cap (only ever Posts), so there are more than it says. */
+  const capped = $derived<boolean>(res && moreScope === scope ? ((res as Record<string, any>)[scope]?.capped ?? false) : false);
   /* No counts on the tabs: only the tab you are on has been searched. */
   const scopeTabs = $derived(SCOPES.map((s) => ({ value: s.id, label: s.label })));
 
@@ -237,9 +256,8 @@
 
   function loadSearch(reset = false) {
     const s = scope;
-    const sort = s === 'feeds' ? feedSort : s === 'posts' ? postSort : undefined;
     return load(reset, moreNext !== null,
-      (signal) => searchApi.run({ q, scope: s, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork, sort }, signal),
+      (signal) => searchApi.run({ q, scope: s, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork, since, sort: sortId }, signal),
       (r) => {
         const got = (r as Record<string, any>)[s] as { rows: any[]; nextOffset: number | null };
         res = r;
@@ -259,7 +277,7 @@
   let feedsNext = $state<number | null>(null);
   function loadFeeds(reset = false) {
     return load(reset, feedsNext !== null,
-      () => api.feeds({ network: feedsNetwork, since, sort, limit: 50, offset: reset ? 0 : feedsNext ?? 0 }),
+      () => api.feeds({ network: feedsNetwork, since, sort: sortId, limit: 50, offset: reset ? 0 : feedsNext ?? 0 }),
       (r) => {
         feeds = reset ? r.feeds : [...feeds, ...r.feeds];
         feedsTotal = r.total; feedsAll = r.indexTotal; feedsNext = r.nextOffset;
@@ -272,7 +290,7 @@
   let colsNext = $state<number | null>(null);
   function loadCols(reset = false) {
     return load(reset, colsNext !== null,
-      () => exploreApi.collections({ network: narrowToNetwork, limit: 30, offset: reset ? 0 : colsNext ?? 0 }),
+      () => exploreApi.collections({ network: narrowToNetwork, since, sort: sortId, limit: 30, offset: reset ? 0 : colsNext ?? 0 }),
       (r) => {
         cols = reset ? r.collections : [...cols, ...r.collections];
         colsTotal = r.total; colsNext = r.nextOffset;
@@ -285,7 +303,7 @@
   let usersNext = $state<number | null>(null);
   function loadUsers(reset = false) {
     return load(reset, usersNext !== null,
-      () => exploreApi.users({ limit: 30, offset: reset ? 0 : usersNext ?? 0 }),
+      () => exploreApi.users({ network: narrowToNetwork, since, sort: sortId, limit: 30, offset: reset ? 0 : usersNext ?? 0 }),
       (r) => {
         users = reset ? r.users : [...users, ...r.users];
         usersTotal = r.total; usersNext = r.nextOffset;
@@ -306,16 +324,6 @@
     } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } finally { followBusy = null; }
   }
 
-  let markBusy = $state<number | null>(null);
-  async function toggleBookmark(p: SearchPost) {
-    if (markBusy) return;
-    markBusy = p.id;
-    try {
-      if (p.bookmarkId) { await bookmarksApi.remove(p.bookmarkId); p.bookmarkId = null; showToast('Removed bookmark'); }
-      else { const b = await bookmarksApi.saveItem(p.id); p.bookmarkId = b.id; api.event('bookmark_saved', { itemId: p.id, via: 'search' }); showToast('Bookmarked'); }
-    } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } finally { markBusy = null; }
-  }
-
   /* ---- shared ---- */
   let loading = $state(false);
   let error = $state<string | null>(null);
@@ -328,13 +336,6 @@
    * while you were away (you followed that feed or person), so it alone is
    * looked up again.
    */
-  /** A post result's feed, its card open from the row's icon or feed name. */
-  let source = $state<{ feedId: number; hasIcon: boolean; name: string } | null>(null);
-  function openSource(p: SearchPost) {
-    api.event('source_opened', { feedId: p.feedId, via: 'explore' });
-    source = { feedId: p.feedId, hasIcon: p.hasIcon, name: p.feedTitle ?? hostOf(p.siteUrl) };
-  }
-
   type Opened = { feed: number } | { person: string };
   let opened: Opened | null = null;
   const back = recall<{
@@ -383,7 +384,7 @@
 
   $effect(() => {
     if (followsAnyone === null) return; // wait until we know the default
-    const key = `${q}|${scope}|${feedsNetwork}|${since}|${sort}|${sortsFeeds ? feedSort : ''}|${sortsPosts ? postSort : ''}`;
+    const key = `${q}|${scope}|${feedsNetwork}|${since}|${sortId}`;
     if (loadedKey === key) return;
     loadedKey = key;
     if (viaSearch) { res = null; more = []; moreNext = null; void loadSearch(true); }
@@ -406,16 +407,14 @@
   );
   const scopeLabel = $derived(SCOPES.find((s) => s.id === scope)?.label ?? '');
 
-  /* Browsing feeds has three filters. Laid out, they push the list down or
-     crowd the card, so at every width they fold into one box that names
-     what's chosen and opens the same three dropdowns in a Sheet. */
-  const ADDED: Record<string, string> = { '': 'Any time', '24h': 'Past 24 hours', week: 'Past week', month: 'Past month', year: 'Past year' };
-  const threeFilters = $derived(!viaSearch && browseAs === 'feeds');
-  /* Each part reads as a phrase on its own: "Show everyone · Added any time · Most popular". */
+  /* Three filters laid out push the list down or crowd the card, so on every
+     tab, at every width, they fold into one box that names what's chosen and
+     opens the dropdowns in a Sheet. Each part reads as a phrase on its own:
+     "Show everyone · Added any time · Most popular". */
   const filterSummary = $derived([
     narrowToNetwork ? 'Show people I follow' : 'Show everyone',
-    `Added ${(ADDED[since ?? ''] ?? 'Any time').toLowerCase()}`,
-    sorts.find((x) => x.id === sort)?.summary ?? 'Most popular'
+    `${WHEN[scope]} ${(ADDED[since ?? ''] ?? 'Any time').toLowerCase()}`,
+    order.label
   ]);
   let filtersDialog = $state<HTMLDialogElement | null>(null);
 
@@ -493,164 +492,116 @@
       size="sm"
       title={followsAnyone === false ? 'Follow someone first' : ''}
       value={narrowToNetwork ? 'following' : ''}
-      disabled={browseAs === 'users'}
       options={[
         { value: '', label: 'Everyone' },
         { value: 'following', label: 'People I follow', disabled: followsAnyone === false }
       ]}
       onchange={(e) => setParams({ by: e.currentTarget.value === 'following' ? 'following' : null })}
     />
-    {#if !viaSearch && browseAs === 'feeds'}
-      <Select
-        class="filter"
-        label="Added"
-        size="sm"
-        value={since ?? ''}
-        options={[
-          ...Object.entries(ADDED).map(([value, label]) => ({ value, label }))
-        ]}
-        onchange={(e) => setParams({ since: e.currentTarget.value || null })}
-      />
-      <Select
-        class="filter"
-        label="Sort"
-        size="sm"
-        value={sort}
-        options={sorts.map((s) => ({ value: s.id, label: s.label }))}
-        onchange={(e) => setParams({ sort: e.currentTarget.value === 'popular' ? null : e.currentTarget.value })}
-      />
-    {/if}
-    {#if sortsFeeds}
-      <Select
-        class="filter"
-        label="Sort by"
-        size="sm"
-        value={feedSort}
-        options={feedSorts.map((s) => ({ value: s.id, label: s.label }))}
-        aria-describedby="feed-sort-help"
-        onchange={(e) => setFeedSort(e.currentTarget.value)}
-      />
-    {/if}
-    {#if sortsPosts}
-      <Select
-        class="filter"
-        label="Sort by"
-        size="sm"
-        value={postSort}
-        options={postSorts.map((s) => ({ value: s.id, label: s.label }))}
-        onchange={(e) => setPostSort(e.currentTarget.value)}
-      />
-    {/if}
+    <Select
+      class="filter"
+      label={WHEN[scope]}
+      size="sm"
+      value={since ?? ''}
+      options={Object.entries(ADDED).map(([value, label]) => ({ value, label }))}
+      onchange={(e) => setParams({ since: e.currentTarget.value || null })}
+    />
+    <Select
+      class="filter"
+      label="Sort"
+      size="sm"
+      value={sortId}
+      options={orders.map((o) => ({ value: o.id, label: o.label }))}
+      onchange={(e) => setSort(e.currentTarget.value)}
+    />
+{/snippet}
+
+<!-- How many a search found, under the filters. A Posts search stops counting at a cap (HIT_CAP in routes/search.ts), and a count that reached it says "or more": "4,000+". -->
+{#snippet countLine()}
+  {#if searching && total !== null}
+    <p class="count">{total.toLocaleString()}{capped ? '+' : ''} {total === 1 ? KINDS[scope][0] : KINDS[scope][1]} {scope === 'posts' ? (total === 1 ? 'mentions' : 'mention') : (total === 1 ? 'matches' : 'match')} “{q}”</p>
+  {/if}
 {/snippet}
 
 {#snippet filterBar()}
   <TabBlurb class="blurb" text={SCOPE_BLURB[scope]}>{#snippet icon()}{@render scopeIcon(scope)}{/snippet}</TabBlurb>
-  {#if threeFilters}
-    <button type="button" class="filters-row" onclick={() => filtersDialog?.showModal()} aria-haspopup="dialog">
-      <svg class="fr-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>
-      <span class="fr-text"><span class="fr-name">Filters</span><span class="fr-now">{#each filterSummary as part, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}<span class="fr-part">{part}</span>{/each}</span></span>
-      <span class="fr-caret"><Icon name="caret" dir="down" size={20} /></span>
-    </button>
-  {:else}
-    <div class="filters">{@render filterFields()}</div>
-  {/if}
-  <!-- What the chosen order means, said under the row rather than inside it so
-       the filters stay one line. The dropdown points at it, so it is read out too. -->
-  {#if sortsFeeds}<p class="sort-help" id="feed-sort-help">{feedSortHelp}</p>{/if}
+  <button type="button" class="filters-row" onclick={() => filtersDialog?.showModal()} aria-haspopup="dialog">
+    <svg class="fr-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>
+    <span class="fr-text"><span class="fr-name">Filters</span><span class="fr-now">{#each filterSummary as part, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}<span class="fr-part">{part}</span>{/each}</span></span>
+    <span class="fr-caret"><Icon name="caret" dir="down" size={20} /></span>
+  </button>
 {/snippet}
 
 <!-- Rows. Each kind knows how to show its own evidence; see lib/words.ts. -->
+<!-- The searched words inside a row's facts, highlighted as on a post. -->
+{#snippet searched()}<Marked text={fence(q)} />{/snippet}
+
+<!-- A row's search fact is passed only when there is one: a row given an empty
+     one would draw the dot before it, or lose its own count. -->
 {#snippet feedRow(f: SearchFeed | Feed, ev: SearchFeed | null)}
-  <!-- Sorted by newest post, a search row shows the date it is sorted by. -->
+  {#snippet why()}
+    {#if ev && ev.matchesLast30d > 0}
+      <span aria-hidden="true">~</span><span class="visually-hidden">about </span>{mentionRate(ev.matchesLast30d)} {@render searched()}{#if ev.lastMatchAt}{' '}<span class="nowrap">({latestShort(ev.lastMatchAt)})</span>{/if}
+    {:else if ev && ev.lastMatchAt}
+      Last mentioned {@render searched()} {longAgo(ev.lastMatchAt)}
+    {:else}
+      Name matches, but no posts mention {@render searched()}
+    {/if}
+  {/snippet}
+  <!-- A search row shows what the search found, and the fact its order is
+       sorted by when that's something else: how much it posts, or its newest post. -->
   <FeedRow
     feed={f}
     failing={f.consecutiveFailures >= 3}
-    postsLast30d={f.postsLast30d}
+    postsLast30d={!ev || sortId === 'active' ? f.postsLast30d : undefined}
     network={!ev && feedsNetwork ? ((f as Feed).networkFollowers ?? 0) : 0}
-    latest={!ev || (sortsFeeds && feedSort === 'posted')}
+    latest={!ev || sortsFeedsByPost}
     onopen={() => (opened = { feed: f.id })}
     onchange={() => void api.feed(f.id).then((u) => Object.assign(f, u))}
-  >
-    {#if ev && ev.matchesLast30d > 0}
-      <span class="why"><span aria-hidden="true">~</span><span class="visually-hidden">about </span>{mentionRate(ev.matchesLast30d)} “{q}”{#if ev.lastMatchAt}{' '}<span class="nowrap">({latestShort(ev.lastMatchAt)})</span>{/if}</span>
-    {:else if ev && ev.lastMatchAt}
-      <span class="why">Last mentioned “{q}” {longAgo(ev.lastMatchAt)}</span>
-    {:else if ev}
-      <span class="why">Name matches, but no posts mention “{q}”</span>
-    {/if}
-  </FeedRow>
+    children={ev ? why : undefined}
+  />
 {/snippet}
 
 {#snippet colRow(c: ExploreCollection | SearchCollection, ev: SearchCollection | null)}
-  <CollectionRow href={collectionHref(c.handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} owner={c.displayName ?? `@${c.handle}`} sample={c.sample}>
-    <!-- The same pills as a profile's Collections: whose it is shows beside the name, not only in the byline. -->
-    {#snippet badges()}{#if ev?.isMine}<Badge>Yours</Badge>{:else if ev?.copiedByMe}<Badge>Copied</Badge>{/if}{/snippet}
+  {#snippet why()}
     {#if ev && ev.matches > 0}
-      <span class="why">
-        <strong>{plural(ev.matchingFeeds, 'feed')}</strong> in it {ev.matchingFeeds === 1 ? 'has' : 'have'} posted about “{q}”
-        {#if ev.lastMatchAt} <Dot /> most recent {longAgo(ev.lastMatchAt)}{/if}
-      </span>
-    {:else if ev}
-      <span class="why">Matches the name</span>
+      {ev.matchingFeeds.toLocaleString()} of {plural(c.feedCount, 'feed')} {ev.matchingFeeds === 1 ? 'has' : 'have'} posted about {@render searched()}{#if ev.lastMatchAt}{'\u00a0'}<Dot />{' '}most recent {longAgo(ev.lastMatchAt)}{/if}
+    {:else}
+      {plural(c.feedCount, 'feed')}{'\u00a0'}<Dot />{' '}Matches the name
     {/if}
-  </CollectionRow>
-{/snippet}
-
-<!--
-  A post's title is its link, stretched over the whole row, so the row still
-  opens the post. The feed's icon and name sit above it as buttons that open
-  the feed's card instead: a button can't go inside a link. The icon is for
-  the pointer; the name is the one keyboard stop for it.
--->
-{#snippet postRow(p: SearchPost)}
-  <li class="post">
-    <div class="row">
-      <button class="feedicon" tabindex="-1" onclick={() => openSource(p)} aria-label="About {p.feedTitle ?? hostOf(p.siteUrl)}" title="About {p.feedTitle ?? hostOf(p.siteUrl)}">
-        <SourceIcon feedId={p.feedId} hasIcon={p.hasIcon} name={p.feedTitle ?? ''} size={40} />
-      </button>
-      <div class="meta">
-        <a class="title row-name whole" href={webHref(p.url) ?? feedHref({ id: p.feedId })} target={webHref(p.url) ? '_blank' : undefined} rel={webHref(p.url) ? 'noreferrer' : undefined}>{p.title ?? p.url}</a>
-        <!-- Plenty of feeds set the author to the feed's own name; saying it twice is noise. -->
-        <span class="sub2 row-details byline"><button class="feedname" onclick={() => openSource(p)} title="About {p.feedTitle ?? hostOf(p.siteUrl)}">{p.feedTitle ?? hostOf(p.siteUrl)}</button> <Dot /> {relativeTime(p.publishedAt)}{#if p.author && p.author !== p.feedTitle}<span>{' '}<Dot />{' '}{p.author}</span>{/if}</span>
-        {#if p.snippet}
-          <span class="desc">{#each highlight(p.snippet) as part}{#if part.hit}<mark>{part.text}</mark>{:else}{part.text}{/if}{/each}</span>
-        {/if}
-      </div>
-    </div>
-    {#if session.user}
-      <Button size="sm" variant={p.bookmarkId ? 'secondary' : 'ghost'} class="save" onclick={() => toggleBookmark(p)} disabled={markBusy === p.id} aria-pressed={!!p.bookmarkId}>
-        {p.bookmarkId ? 'Bookmarked' : 'Bookmark'}
-      </Button>
-    {/if}
-  </li>
+  {/snippet}
+  <!-- The same pills as a profile's Collections: whose it is shows beside the name, not only in the byline. -->
+  {#snippet badges()}{#if ev?.isMine}<Badge>Yours</Badge>{:else if ev?.copiedByMe}<Badge>Copied</Badge>{/if}{/snippet}
+  <CollectionRow href={collectionHref(c.handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} owner={c.displayName ?? `@${c.handle}`} sample={c.sample} {badges} children={ev ? why : undefined} />
 {/snippet}
 
 {#snippet personRow(u: ExploreUser | SearchPerson, ev: SearchPerson | null)}
-  <PersonRow person={u} feeds={u.feeds} collections={u.collections} following={u.isFollowing} busy={followBusy === u.handle} onfollow={() => toggleFollow(u)} onopen={() => (opened = { person: u.handle })}>
-    {#if ev && ev.notesMatch + ev.marksMatch > 0}
-      <span class="why">
-        {#if ev.notesMatch}<strong>{plural(ev.notesMatch, 'note')}</strong> about “{q}”{/if}
-        {#if ev.notesMatch && ev.marksMatch} <Dot /> {/if}
-        {#if ev.marksMatch}<strong>{plural(ev.marksMatch, 'bookmark')}</strong> about “{q}”{/if}
-      </span>
-    {/if}
-  </PersonRow>
+  {#snippet why()}
+    {#if ev?.notesMatch}{plural(ev.notesMatch, 'note')} about {@render searched()}{/if}{#if ev?.notesMatch && ev?.marksMatch}{'\u00a0'}<Dot />{' '}{/if}{#if ev?.marksMatch}{plural(ev.marksMatch, 'bookmark')} about {@render searched()}{/if}
+  {/snippet}
+  <PersonRow person={u} feeds={u.feeds} collections={u.collections} following={u.isFollowing} busy={followBusy === u.handle} onfollow={() => toggleFollow(u)} onopen={() => (opened = { person: u.handle })}
+    children={ev && ev.notesMatch + ev.marksMatch > 0 ? why : undefined} />
 {/snippet}
 
 {#snippet emptyMessage()}
   <div class="empty">
-    {#if searching}
+    {#if since}
+      <!-- A time window can empty any list, searched or not, so it says so before anything else. -->
+      <p>Nothing {scope === 'posts' ? 'was posted' : scope === 'people' ? 'joined' : 'was added'}{searching ? ` that matches “${q}”` : ''} in that time. <button class="link" onclick={() => setParams({ since: null })}>Show any time</button>.</p>
+    {:else if searching}
       <p>No {scopeLabel.toLowerCase()} match “{q}”. {#if scope !== 'posts'}<button class="link" onclick={() => setScope('posts')}>Search posts instead</button>, or try{:else}Try{/if} another tab above.</p>
     {:else if scope === 'posts'}
       {#if feedsNetwork}<p>Nothing new from the feeds the people you follow read. <button class="link" onclick={() => setParams({ by: null })}>Show everyone’s</button>.</p>
+      {:else if sortId === 'bookmarked' || sortId === 'noted'}<p>Nobody has {sortId === 'noted' ? 'written a note on' : 'bookmarked'} a post yet. <button class="link" onclick={() => setSort('newest')}>Show the newest posts</button>.</p>
       {:else}<p>No posts yet. Follow a feed and its posts will turn up here.</p>{/if}
     {:else if browseAs === 'feeds'}
       {#if feedsNetwork}<p>The people you follow haven’t followed anything you don’t already. <button class="link" onclick={() => setParams({ by: null })}>Show the whole index</button>.</p>
-      {:else if since}<p>Nothing was added in that time.</p>
       {:else}<p>Nobody has added a feed yet. Be the first: press <strong>Add a new feed</strong> and paste a site’s address.</p>{/if}
     {:else if browseAs === 'collections'}
       {#if narrowToNetwork}<p>The people you follow haven’t shared any collections yet. <button class="link" onclick={() => setParams({ by: null })}>Show everyone’s</button>.</p>
       {:else}<p>No one has shared a public collection yet. Yours could be first: open a collection, Manage, and set it to Public.</p>{/if}
+    {:else if narrowToNetwork}
+      <p>You don’t follow anyone yet. <button class="link" onclick={() => setParams({ by: null })}>Show everyone</button>.</p>
     {:else}
       <p>No other public profiles here yet.</p>
     {/if}
@@ -662,26 +613,27 @@
 {#if error}
   <p class="status error" role="alert">Couldn’t load: {error}</p>
 {:else if nothing}
-  <!-- Browsing, the message takes the rows' place inside the list card, so a filter that empties the list
-       leaves the filters where they were. A search's filters always sit above its cards, so its message does too. -->
-  {#if viaSearch}
-    {@render filterBar()}
-    {@render emptyMessage()}
-  {:else}
-    <Card kind="list" as="div" class="browse">{@render filterBar()}{@render emptyMessage()}</Card>
-  {/if}
+  <!-- The message takes the rows' place inside the list card, so a filter that empties the list leaves the filters where they were. -->
+  <Card kind="list" as="div" class="browse">{@render filterBar()}{@render emptyMessage()}</Card>
+{:else if viaSearch && scope === 'posts'}
+  <!-- Posts are article cards, the same as in a feed, so they follow the list card's top instead of sitting in it. -->
+  <Card kind="list" as="div" class="browse">{@render filterBar()}{@render countLine()}</Card>
+  {#if res}<div class="posts">
+    {#each rows as p ((p as SearchPost).id)}
+      {@const post = p as SearchPost}
+      <ItemCard item={post} marks={searching ? { title: post.titleMarked, summary: post.snippet } : null} />
+    {/each}
+  </div>{/if}
 {:else if viaSearch}
-  <!-- Its filters show at once; the list arrives under them. -->
-  {@render filterBar()}
-  {#if res}<section class="group">
-    <h2>{#if searching}{scopeLabel}{#if total !== null} <Badge>{total.toLocaleString()}</Badge>{/if}{:else}Newest posts{/if}</h2>
-    <Card kind="list" as="ul" class="list-rows">
+  <!-- Its filters show at once; the rows arrive under them, in the same card as browsing. -->
+  <Card kind="list" as="div" class="browse">
+    {@render filterBar()}{@render countLine()}
+    {#if res}<ul class="list-rows">
       {#if scope === 'feeds'}{#each rows as f ((f as SearchFeed).id)}{@render feedRow(f as SearchFeed, f as SearchFeed)}{/each}
       {:else if scope === 'collections'}{#each rows as c ((c as SearchCollection).id)}{@render colRow(c as SearchCollection, c as SearchCollection)}{/each}
-      {:else if scope === 'posts'}{#each rows as p ((p as SearchPost).id)}{@render postRow(p as SearchPost)}{/each}
       {:else}{#each rows as u ((u as SearchPerson).handle)}{@render personRow(u as SearchPerson, u as SearchPerson)}{/each}{/if}
-    </Card>
-  </section>{/if}
+    </ul>{/if}
+  </Card>
 {:else if browseAs === 'feeds'}
   <Card kind="list" as="div" class="browse">{@render filterBar()}<ul class="list-rows">{#each feeds as f (f.id)}{@render feedRow(f, null)}{/each}</ul></Card>
 {:else if browseAs === 'collections'}
@@ -695,21 +647,15 @@
 {#if loading}<p class="status">Loading…</p>{/if}
 <div bind:this={sentinel} aria-hidden="true"></div>
 
-{#if threeFilters}
-  <Sheet title="Filters" lede="Choose what this list shows and in what order." bind:dialog={filtersDialog}>
-    <div class="sheet-rows">{@render filterFields()}</div>
-  </Sheet>
-{/if}
+<Sheet title="Filters" lede="Choose what this list shows and in what order." bind:dialog={filtersDialog}>
+  <div class="sheet-rows">{@render filterFields()}</div>
+</Sheet>
 
-{#if source}
-  <FeedPopover feedId={source.feedId} hasIcon={source.hasIcon} name={source.name} onclose={() => (source = null)} />
-{/if}
 
 <style>
   .pane { margin-bottom: var(--space-2); }
   .head { margin-bottom: var(--space-5); }
   .pane :global(.scopes) { margin-bottom: var(--space-1); }
-  h2 { font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0; display: flex; align-items: baseline; gap: var(--space-2); }
   /* The per-view explainer: the caption above the filters, saying what this
      view is before its controls. A small accent-tinted icon sets it apart from
      the plain text below; the icon's left edge lines up with the filter labels. */
@@ -718,21 +664,10 @@
   /* Browsing, the filters and list are one card; the caption leads it, inset to
      match the card's side padding. */
   :global(.browse) :global(.blurb) { margin: 0; padding: var(--space-5) var(--card-pad) var(--space-2); }
-  .group { margin-bottom: var(--space-5); }
-  .group h2 { margin-bottom: var(--space-2); }
-  .filters { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; margin-bottom: var(--space-1); }
-  /* The note under the filters saying what the chosen order means. */
-  .sort-help { margin: 0 0 var(--space-3); padding: 0 var(--card-pad, 0); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; text-wrap: pretty; }
-  /* Each filter reads as one line — its name, then the dropdown beside it —
-     instead of the stack a labelled field normally makes. */
-  .filters :global(.filter) { flex-direction: row; align-items: center; gap: var(--space-1); }
-  .filters :global(.filter) > :global(label) { white-space: nowrap; font-weight: 400; }
-  /* Narrow screens: the filters stack full-width into a tidy little form
-     instead of wrapping into an orphaned control. */
-  @media (max-width: 600px) {
-    .filters { flex-direction: column; align-items: stretch; }
-    .filters :global(.filter) { flex-direction: column; align-items: stretch; }
-  }
+  /* How many a search found: a quiet line between the filters and the first result. */
+  .count { margin: 0; padding: var(--space-1) var(--card-pad) var(--space-3); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  /* Article cards under the list card's top, spaced as in a feed. */
+  .posts { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); }
   /* The folded row. Drawn as a box with the dropdown's own outline, corner and
      caret, so it reads as something to press rather than a line of text: an
      icon, what it is, and what's chosen now. */
@@ -750,43 +685,9 @@
   /* Each choice stays on one line, so a long summary breaks at the dots, never mid-phrase. */
   .fr-part { white-space: nowrap; }
   .fr-caret { flex: none; display: grid; color: var(--text-2); }
-  /* Browse: the filters are the list card's header, so the two read as one unit; the rows below are part of the same card. */
-  :global(.browse) .filters { margin: 0; padding: var(--space-3) var(--card-pad) var(--space-1); }
-  li { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-  /* On a phone a post row's Bookmark would squeeze the snippet into a column
-     four words wide, so it drops to its own line, at the right, where the
-     Feed and Person rows put their Follow. */
-  @media (max-width: 560px) {
-    li > .row { flex-basis: 100%; }
-    li > :global(.save) { margin-left: auto; }
-  }
-  .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
-  .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .desc { font-size: calc(var(--text-sm) * var(--size-app)); /* The 2px and 3px here are optical nudges around the description, not spacing steps. */ color: var(--text-2); margin: 2px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  /* 1px around a highlighted word is optical: the tint hugs the letters. */
-  .desc mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
-  /* The line about your search: for a feed, how often it mentions your words
-     over the last 30 days; for a collection, how many of its feeds do. The gap
-     above keeps it clear of the description; 1px below is an optical nudge. */
-  .why { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); margin: var(--space-2) 0 1px; }
-  .why strong { font-weight: 700; }
   /* When the line has to wrap, "(latest 13h ago)" moves down whole instead of
      splitting inside the brackets. */
   .nowrap { white-space: nowrap; }
-  /* A post row's byline (its feed and when) sits tight under its title, and
-     the snippet keeps its distance below. The -2px is optical: it takes back
-     some of the empty space above and below each line of text, so the two
-     lines read as a pair. */
-  .sub2.byline { margin-top: -2px; color: var(--text); }
-  .byline + .desc { margin-top: var(--space-2); }
-  /* A post row: the title's link covers the row; the feed's buttons and Bookmark sit over it. */
-  li.post { position: relative; }
-  .whole::after { content: ''; position: absolute; inset: 0; }
-  .feedicon, .feedname, li.post > :global(.save) { position: relative; z-index: 1; }
-  .feedicon { flex: none; display: inline-flex; border-radius: var(--radius-avatar); }
-  .feedname { font-weight: 600; }
-  @media (hover: hover) { .feedname:hover, li.post:has(.whole:hover) .title { text-decoration: underline; text-underline-offset: 3px; } }
   .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; margin: 0; }
   .status.error { color: var(--danger); }
   .empty { text-align: center; color: var(--text-2); padding: calc(var(--space-6) + var(--space-1)) var(--space-4); font-size: calc(var(--text-base) * var(--size-app)); }
