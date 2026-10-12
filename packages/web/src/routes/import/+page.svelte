@@ -268,8 +268,8 @@
   .bar span { display: block; height: 100%; background: var(--accent); transition: width 200ms ease; }
 
   .ghead { display: flex; align-items: flex-start; gap: var(--space-3); }
-  /* Settings' checkbox size, level with the heading's first line (21px at 1.25 line height). */
-  .keep { width: 18px; height: 18px; margin: 4px 0 0; flex: none; accent-color: var(--accent); cursor: pointer; }
+  /* Small beside the 21px heading, so the name leads; level with its first line (21px at 1.25 line height). */
+  .keep { width: 16px; height: 16px; margin: 5px 0 0; flex: none; accent-color: var(--accent); cursor: pointer; }
   .keep:disabled { cursor: not-allowed; }
   /* Beside the open name field the box sits level with the field's label. */
   .ghead:has(.rename) .keep { margin-top: 0; }
