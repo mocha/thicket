@@ -192,7 +192,6 @@
 
       {#if on || why || !choosing}
         {@const rows = [...ok, ...bad]}
-        <h3>Feeds</h3>
         <div class="feeds">
         <ul class="list-rows">
           {#each g.open ? rows : rows.slice(0, SHOWN) as f (f.url)}
@@ -248,7 +247,6 @@
 <style>
   /* The room between sections is set on the cards' own class, since the cards are drawn by the shared Card. */
   :global(.import-section) { margin-bottom: var(--space-4); }
-  h3 { font-size: calc(var(--text-sm) * var(--size-app)); margin: var(--space-4) 0 var(--space-2); color: var(--text-2); }
   .lede { margin: 0 0 var(--space-3); color: var(--text-2); line-height: 1.45; max-width: 66ch; }
   .fine { margin: 0 0 var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .row { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
@@ -277,7 +275,7 @@
   /* The feeds run edge to edge across the card, so each row's text starts the
      card's own inset in, as on every other list of rows. Lines only between rows;
      the list runs to the card's bottom edge. */
-  .feeds { margin: 0 calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)); }
+  .feeds { margin: var(--space-3) calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)); }
   .feeds li { display: flex; align-items: center; gap: var(--space-3); }
   .fname { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
   /* A feed we can't import is quieter than the ones that will come in. */
