@@ -359,7 +359,7 @@
           {#if issued}
             <div class="secret"><SecretValue value={issued} label="Temporary password" /><Button size="sm" onclick={copyIssued}><Icon name="copy" size={16} />Copy</Button></div>
           {:else}
-            <div><Button size="sm" disabled={busy} onclick={() => resetDialog?.showModal()}>Reset password</Button></div>
+            <div><Button disabled={busy} onclick={() => resetDialog?.showModal()}><Icon name="key" size={16} />Reset password</Button></div>
           {/if}
         </div>
       </div>
