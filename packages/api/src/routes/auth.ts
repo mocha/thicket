@@ -126,6 +126,8 @@ auth.get("/me", async (c) => {
 });
 
 const MAX = { displayName: 60, bio: 500, homepageUrl: 300 };
+/** One of no one / people I follow / everyone: "Notes from other people", and whose mentions notify me. */
+const isNotesFrom = (v: unknown): v is "none" | "following" | "everyone" => v === "none" || v === "following" || v === "everyone";
 
 /** Profile fields and visibility toggles. Partial; only sent keys change. */
 auth.patch("/me", async (c) => {
@@ -137,6 +139,8 @@ auth.patch("/me", async (c) => {
     activityVisibility: ShareLevel;
     notesFrom: "none" | "following" | "everyone";
     hideShortsByDefault: boolean;
+    notifyFollows: boolean; notifyBookmarks: boolean; notifyNotes: boolean; notifyCollections: boolean; notifyInvites: boolean; notifyReplies: boolean;
+    mentionsFrom: "none" | "following" | "everyone";
   }>;
   const body = await c.req.json<Patch>().catch(() => ({} as Patch));
   const patch: Partial<typeof schema.users.$inferInsert> = {};
@@ -156,9 +160,13 @@ auth.patch("/me", async (c) => {
   if (isShareLevel(body.bookmarksVisibility)) patch.bookmarksVisibility = body.bookmarksVisibility;
   if (isShareLevel(body.notesVisibility)) patch.notesVisibility = body.notesVisibility;
   if (isShareLevel(body.activityVisibility)) patch.activityVisibility = body.activityVisibility;
-  if (body.notesFrom === "none" || body.notesFrom === "following" || body.notesFrom === "everyone") patch.notesFrom = body.notesFrom;
+  if (isNotesFrom(body.notesFrom)) patch.notesFrom = body.notesFrom;
   if ("trackActivity" in body && (body.trackActivity === null || typeof body.trackActivity === "boolean")) patch.trackActivity = body.trackActivity;
   if (typeof body.hideShortsByDefault === "boolean") patch.hideShortsByDefault = body.hideShortsByDefault;
+  for (const k of ["notifyFollows", "notifyBookmarks", "notifyNotes", "notifyCollections", "notifyInvites", "notifyReplies"] as const) {
+    if (typeof body[k] === "boolean") patch[k] = body[k];
+  }
+  if (isNotesFrom(body.mentionsFrom)) patch.mentionsFrom = body.mentionsFrom;
   if (Object.keys(patch).length) await db.update(schema.users).set(patch).where(eq(schema.users.id, user.id));
   return c.json(await me(user.id));
 });

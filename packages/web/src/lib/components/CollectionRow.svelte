@@ -63,7 +63,8 @@
      -2px is optical: it takes back some of the empty space above and below
      each line of text, so the two read as a pair. */
   .owner { margin-top: -2px; color: var(--text); }
-  .desc { margin-top: var(--space-1); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  /* Close under the name, so the two read as one: the same optical pull-up as the owner line. */
+  .desc { margin-top: -2px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
   /* A step more room above the facts than between the other lines, so the description and the numbers read as two groups. */
   .facts { margin-top: var(--space-2); }
   .chev { flex: none; color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }

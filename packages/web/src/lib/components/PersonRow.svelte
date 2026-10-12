@@ -66,7 +66,8 @@
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .handle { font-weight: 400; color: var(--text-2); }
-  .bio { margin-top: var(--space-1); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  /* Close under the name, so the two read as a pair, as on the Collection row. */
+  .bio { margin-top: -2px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
   /* A step more room above the facts than between the other lines, so the description and the numbers read as two groups. */
   .facts { margin-top: var(--space-2); display: flex; flex-direction: column; }
   /* Last, so it wins over the row's own sizing above. On a phone the button

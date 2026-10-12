@@ -3,13 +3,17 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   /**
    * Notifications (issue #184): the last 30 days of what concerns me, newest
-   * first. Someone followed me; someone I follow bookmarked a post or wrote a
-   * note on one; someone mentioned me in a note.
+   * first. Someone followed me or signed up with my invite; someone I follow
+   * bookmarked a post, wrote a note on one, or made a collection; someone
+   * mentioned me in a note or noted a post I saved. Which of these I get is
+   * mine to choose in Settings (issue #274).
    *
-   * Most of it is one terse line to skim: who, what, and the post's title
-   * linking to the post. A mention is the exception: it was written to me, so
-   * it comes in full, the post with the note on it, the same content a
-   * profile's Bookmark cards show, drawn flat inside its row.
+   * One card per notification, each the piece that kind of thing is
+   * everywhere else (issue #274): a post bookmarked or noted is the Bookmark
+   * card, saying whose it is; a person is the Person row with Follow; a
+   * collection is the Collection row. A mention is the note's Bookmark card,
+   * with my own @name highlighted in it. What's new since I last looked
+   * carries the same New as an unread post.
    *
    * Opening the page marks everything seen, so the bubble in the sidebar
    * clears. What was new stays highlighted for this visit, so you can still
@@ -17,40 +21,112 @@
    * read, never later, so nothing arriving in between is marked seen unshown.
    */
   import { onMount } from 'svelte';
-  import { api, notificationsApi, profileHref, type Notification } from '$lib/api';
-  import { clearNotifs } from '$lib/notifications.svelte';
+  import { api, authApi, collectionHref, notificationsApi, profilesApi, type Me, type Notification } from '$lib/api';
+  import { setMe } from '$lib/session.svelte';
+  import FiltersBox from '$lib/components/FiltersBox.svelte';
+  import Sheet from '$lib/components/Sheet.svelte';
+  import { showToast } from '$lib/toast.svelte';
+  import CollectionRow from '$lib/components/CollectionRow.svelte';
+  import PersonRow from '$lib/components/PersonRow.svelte';
+  import Badge from '$lib/components/Badge.svelte';
+  import Dot from '$lib/components/Dot.svelte';
+  import { clearNotifs, loadNotifs } from '$lib/notifications.svelte';
   import { session } from '$lib/session.svelte';
-  import { dayKey, dayLabel, hostOf, relativeTime, savedHref, ugcRel } from '$lib/time';
-  import Avatar from '$lib/components/Avatar.svelte';
+  import { dayKey, dayLabel, longAgo } from '$lib/time';
+  import { plural } from '$lib/words';
   import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import Button from '$lib/components/Button.svelte';
-  import SourceIcon from '$lib/components/SourceIcon.svelte';
-  import FeedPopover from '$lib/components/FeedPopover.svelte';
 
   let items = $state<Notification[] | null>(null);
   let failed = $state<string | null>(null);
-  /** The feed whose card is open, from a post line's icon. */
-  let source = $state<{ feedId: number | null; hasIcon: boolean; name: string } | null>(null);
-  function openSource(feedId: number | null, hasIcon: boolean, name: string) {
-    api.event('source_opened', { feedId, via: 'notifications' });
-    source = { feedId, hasIcon, name };
+
+  /** What was new when the page opened. It stays highlighted through this visit, even when a filter change reads the list again. */
+  const wasNew = new Set<string>();
+  async function load(first: boolean) {
+    const r = await notificationsApi.list();
+    for (const n of r.items) if (n.isNew) wasNew.add(n.key);
+    items = r.items.map((n) => ({ ...n, isNew: wasNew.has(n.key) }));
+    if (first) api.event('notifications_view', { shown: r.items.length, new: r.count });
+    if (r.count) {
+      await notificationsApi.seen(r.asOf);
+      clearNotifs();
+    }
   }
 
   onMount(async () => {
     try {
-      const r = await notificationsApi.list();
-      items = r.items;
-      api.event('notifications_view', { shown: r.items.length, new: r.count });
-      if (r.count) {
-        await notificationsApi.seen(r.asOf);
-        clearNotifs();
-      }
+      await load(true);
     } catch (e) {
       failed = e instanceof Error ? e.message : String(e);
     }
   });
 
+  /*
+   * Notification settings (issue #274), in the Filters box: which kinds I get, kept on my account, so they're
+   * the same on every device. A change saves at once, then the list and the
+   * bubble in the left menu are read again, so what I turned off is gone from
+   * both right away.
+   */
+  type Pref = 'notifyFollows' | 'notifyInvites' | 'notifyBookmarks' | 'notifyNotes' | 'notifyCollections' | 'notifyReplies';
+  const me = $derived(session.user);
+  /* `short`: the kind's name in the settings box's summary line. */
+  const KIND_PREFS = $derived<{ key: Pref; label: string; short: string; hint?: string }[]>([
+    { key: 'notifyFollows', label: 'New followers', short: 'followers' },
+    // Only admins can make invites, so only they are asked, or anyone with an invite sign-up to hear about (an admin no longer).
+    ...(me?.isAdmin || !me?.notifyInvites || items?.some((n) => n.kind === 'invite') ? [{ key: 'notifyInvites' as const, label: 'People who sign up with your invite', short: 'invites' }] : []),
+    { key: 'notifyBookmarks', label: 'Bookmarks by people you follow', short: 'bookmarks' },
+    { key: 'notifyNotes', label: 'Notes by people you follow', short: 'notes' },
+    { key: 'notifyCollections', label: 'New collections by people you follow', short: 'collections' },
+    { key: 'notifyReplies', label: 'Notes on posts you saved', short: 'notes on your saved posts', hint: 'Starts disabled, since a popular post can draw a lot of notes' }
+  ]);
+  const MENTIONS: { value: Me['mentionsFrom']; label: string; hint?: string; summary: string }[] = [
+    { value: 'none', label: 'No one', summary: 'No mentions' },
+    { value: 'following', label: 'People I follow', summary: 'Mentions from people I follow' },
+    { value: 'everyone', label: 'Everyone', hint: 'The default. Anyone who can see your profile can mention you.', summary: 'Mentions from everyone' }
+  ];
+  const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+  /** "a", "a and b", "a, b, and c". */
+  const list = (xs: string[]) => (xs.length < 3 ? xs.join(' and ') : `${xs.slice(0, -1).join(', ')}, and ${xs[xs.length - 1]}`);
+  const filterSummary = $derived.by(() => {
+    if (!me) return [];
+    // Say whichever list is shorter: what's off ("Bookmarks and collections disabled"), or, past two, what's left enabled ("Only followers and notes").
+    const off = KIND_PREFS.filter((k) => !me[k.key]).map((k) => k.short);
+    const on = KIND_PREFS.filter((k) => me[k.key]).map((k) => k.short);
+    const kinds = off.length === 0 ? 'Everything enabled' : on.length === 0 ? 'Everything disabled' : off.length <= 2 ? cap(`${list(off)} disabled`) : `Only ${list(on)}`;
+    return [kinds, MENTIONS.find((m) => m.value === me.mentionsFrom)?.summary ?? ''];
+  });
+  let filtersDialog = $state<HTMLDialogElement | null>(null);
+  let saving = $state(false);
+  async function setPref(patch: Parameters<typeof authApi.update>[0]) {
+    saving = true;
+    try {
+      setMe(await authApi.update(patch));
+      api.event('notification_filters_changed', { keys: Object.keys(patch) });
+      // Reading the list marks it seen and clears the bubble; counting after it means the bubble can't come back stale.
+      await load(false);
+      await loadNotifs(true);
+    } catch (e) {
+      // Put the boxes back to what's saved: the one pressed already shows the change that failed.
+      if (session.user) setMe({ ...session.user });
+      showToast(e instanceof Error ? e.message : String(e));
+    } finally { saving = false; }
+  }
+
   const name = (p: { handle: string }) => `@${p.handle}`;
+
+  /** Follow from a follower's or invitee's row, as on Explore. Every row about that person changes with it. */
+  let followBusy = $state<string | null>(null);
+  async function toggleFollow(n: Extract<Notification, { kind: 'follow' | 'invite' }>) {
+    const p = n.person;
+    if (!p || followBusy) return;
+    followBusy = p.handle;
+    try {
+      const r = n.following ? await profilesApi.unfollow(p.handle) : await profilesApi.follow(p.handle);
+      for (const m of items ?? []) if ((m.kind === 'follow' || m.kind === 'invite') && m.person?.handle === p.handle) m.following = r.isFollowing;
+      api.event(r.isFollowing ? 'user_followed' : 'user_unfollowed', { handle: p.handle, via: 'notifications' });
+      showToast(r.isFollowing ? `Following ${p.displayName ?? name(p)}` : `Unfollowed ${p.displayName ?? name(p)}`);
+    } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } finally { followBusy = null; }
+  }
 
   /** Notifications by day, newest first, labeled like New posts' days: "Yesterday", "Monday, October 5". */
   const todayKey = $derived(dayKey(new Date()));
@@ -72,9 +148,10 @@
   {#snippet description()}Followers, mentions, and what the people you follow save.{/snippet}
 </PageHeader>
 
-{#snippet who(p: Notification['person'])}
-  <a class="who" href={profileHref(p.handle)} title={p.displayName ?? undefined}><Avatar handle={p.handle} name={p.displayName ?? p.handle} size={24} v={p.avatarUpdatedAt} /><span>{name(p)}</span></a>
-{/snippet}
+{#snippet when(at: string)}<time datetime={at} title={new Date(at).toLocaleString()}>{longAgo(at)}</time>{/snippet}
+{#snippet fresh(n: Notification)}{#if n.isNew}{' '}<Badge tone="soft" title="New since you last looked">New</Badge>{/if}{/snippet}
+
+{#if me}<FiltersBox name="Notification settings" summary={filterSummary} onclick={() => filtersDialog?.showModal()} />{/if}
 
 {#if failed}
   <p class="status">{failed}</p>
@@ -83,66 +160,85 @@
 {:else if items.length === 0}
   <div class="empty">
     <h2>Nothing yet</h2>
-    <p>When someone follows you, it shows up here. So does every post the people you follow bookmark or write a note on, and any note that mentions you as @{session.user?.handle ?? 'yourhandle'}.</p>
+    <p>When someone follows you, it shows up here. So does every post the people you follow bookmark or write a note on, and any note that mentions you as @{session.user?.handle ?? 'yourhandle'}.{#if filterSummary[0] !== 'Everything enabled' || me?.mentionsFrom !== 'everyone'} Some of these are disabled in Notification settings.{/if}</p>
     <div class="ctas"><Button href="/explore?scope=people">Find people to follow</Button></div>
   </div>
 {:else}
-  <!-- Grouped by day, under the same headings as New posts; today's needs none to look at, but keeps one to be read out. -->
+  <!-- One card each, under New posts' day headings; today's needs none to look at, but keeps one to be read out.
+       Each kind is the piece it is everywhere else: a post is the Bookmark card, a person the Person row, a collection the Collection row. -->
   {#each groups as g (g.key)}
   <section class="day">
-  <h2 class={g.key === todayKey ? 'visually-hidden' : 'dayhead'}>{g.label}</h2>
-  <Card kind="list" as="ul" class="list-rows">
+    <h2 class={g.key === todayKey ? 'visually-hidden' : 'dayhead'}>{g.label}</h2>
+    <!-- A list of cards: a Bookmark card is its own item; a row's card sits in one. -->
+    <ul class="cards">
     {#each g.items as n (n.key)}
-      <li class:new={n.isNew} class:rich={n.kind === 'mention'}>
-        {#if n.isNew}<span class="visually-hidden">New: </span>{/if}
-        {#if n.kind === 'mention'}
-          <p class="line row-event">{@render who(n.person)} <span class="verb">mentioned you in a note</span> <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time></p>
-          <BookmarkCard flat b={n.bookmark} author={n.person} onopen={() => api.event('bookmark_opened', { via: 'notifications' })} />
-        {:else if n.kind === 'follow'}
-          <p class="line row-event">{@render who(n.person)} <span class="verb">started following you</span> <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time></p>
-        {:else}
-          <p class="line row-event">
-            {@render who(n.person)}
-            <span class="verb">{n.kind === 'note' ? 'noted' : 'bookmarked'}</span>
-            <button class="source tap" onclick={() => openSource(n.post.feedId, n.post.hasIcon, n.post.siteTitle ?? hostOf(n.post.url))} aria-label="About {n.post.siteTitle ?? hostOf(n.post.url)}" title="About {n.post.siteTitle ?? hostOf(n.post.url)}">
-              <SourceIcon feedId={n.post.feedId} hasIcon={n.post.hasIcon} name={n.post.siteTitle ?? hostOf(n.post.url)} size={16} />
-            </button>
-            <a class="post" href={savedHref(n.post.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(n.post.url))} title={n.post.siteTitle ?? hostOf(n.post.url)}>{n.post.title ?? n.post.url}</a>
-            <time datetime={n.at} title={new Date(n.at).toLocaleString()}>{relativeTime(n.at)}</time>
-          </p>
-        {/if}
-      </li>
+      {#if n.kind === 'mention' || n.kind === 'reply' || n.kind === 'note' || n.kind === 'bookmark'}
+        <!-- Whose it is, in the bottom row; in a note, your own @name is highlighted. -->
+        <BookmarkCard b={n.bookmark} author={n.person} saver fresh={n.isNew} onopen={() => api.event('bookmark_opened', { via: 'notifications' })} />
+      {:else if n.kind === 'collection'}
+        <li><Card kind="list" as="ul" class="list-rows">
+          <CollectionRow href={collectionHref(n.person.handle, n.collection.slug)} name={n.collection.name} description={n.collection.description} feedCount={n.collection.feedCount}>
+            {#snippet badges()}{@render fresh(n)}{/snippet}
+            @{n.person.handle} created this collection {@render when(n.at)} <Dot /> {plural(n.collection.feedCount, 'feed')}
+          </CollectionRow>
+        </Card></li>
+      {:else if (n.kind === 'follow' || n.kind === 'invite') && n.person}
+        <li><Card kind="list" as="ul" class="list-rows">
+          <PersonRow person={n.person} following={n.following} busy={followBusy === n.person.handle} onfollow={() => toggleFollow(n)}>
+            {n.kind === 'follow' ? 'Started following you' : 'Signed up with your invite'} {@render when(n.at)}{@render fresh(n)}
+          </PersonRow>
+        </Card></li>
+      {:else if n.kind === 'invite'}
+        <li><Card kind="list" as="ul" class="list-rows"><li class="row-details">Someone signed up with your invite {@render when(n.at)}{@render fresh(n)}</li></Card></li>
+      {/if}
     {/each}
-  </Card>
+    </ul>
   </section>
   {/each}
 {/if}
 
-{#if source}
-  <FeedPopover feedId={source.feedId} hasIcon={source.hasIcon} name={source.name} onclose={() => (source = null)} />
+{#if me}
+  <Sheet title="Notification settings" lede="Choose what shows up in Notifications." bind:dialog={filtersDialog}>
+    <fieldset disabled={saving}>
+      <legend class="visually-hidden">Kinds of notification</legend>
+      {#each KIND_PREFS as k (k.key)}
+        <label class="switch">
+          <input type="checkbox" checked={me[k.key]} onchange={(e) => setPref({ [k.key]: e.currentTarget.checked })} />
+          <span><strong>{k.label}</strong>{#if k.hint}<small>{k.hint}</small>{/if}</span>
+        </label>
+      {/each}
+    </fieldset>
+    <fieldset disabled={saving}>
+      <legend class="legend">Mentions from</legend>
+      {#each MENTIONS as m (m.value)}
+        <label class="radio">
+          <input type="radio" name="mentionsFrom" value={m.value} checked={me.mentionsFrom === m.value} onchange={() => setPref({ mentionsFrom: m.value })} />
+          <span><strong>{m.label}</strong>{#if m.hint}<small>{m.hint}</small>{/if}</span>
+        </label>
+      {/each}
+    </fieldset>
+  </Sheet>
 {/if}
+
 
 <style>
   .status { text-align: center; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-4) 0; }
 
-  /* One card of rows, like Recent activity on a profile: skimmable, one line each. */
-  .day { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); }
+  /* One card per notification, spaced like posts in New posts. */
+  .day { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-5); }
   /* The same day heading as New posts, without the sticking. */
+  .cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
   .dayhead { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-  .day li { position: relative; }
-  /* A mention runs edge to edge: its line keeps the row's inset, and the post under it brings its own, the same as on its card. */
-  .day li.rich { padding-left: 0; padding-right: 0; padding-bottom: 0; }
-  .rich .line { padding: 0 var(--card-pad); }
-  /* New since last time: a tint and an accent edge, so it reads in grayscale too (the edge), not by color alone. */
-  .day li.new { background: color-mix(in srgb, var(--accent) 9%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
-  .line { display: flex; align-items: center; gap: var(--space-2); margin: 0; min-width: 0; }
-  .who { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text); font-weight: 600; }
-  @media (hover: hover) { .who:hover span, .post:hover { text-decoration: underline; text-underline-offset: 3px; } }
-  .verb { flex: none; }
-  .source { flex: none; display: inline-flex; }
-  /* The title takes what room is left and trails off; the time stays whole at the end. */
-  .post { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
-  time { flex: none; margin-left: auto; padding-left: var(--space-2); color: var(--text-2); }
+
+  /* The Sheet's choices: the same tick boxes and dials as Settings. */
+  fieldset { border: 0; padding: 0; margin: var(--space-3) 0 var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  fieldset:last-of-type { margin-bottom: 0; }
+  .legend { padding: 0; margin-bottom: var(--space-1); font-weight: 600; color: var(--text); }
+  .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
+  .radio input, .switch input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .radio input:focus-visible, .switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
+  .radio small, .switch small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
 
   .empty { text-align: center; padding: calc(var(--space-6) + var(--space-2)) var(--space-5); color: var(--text-2); }
   .empty h2 { font-family: var(--font-headings); color: var(--text); font-size: calc(var(--text-xl) * var(--size-headings)); margin: 0 0 var(--space-2); }

@@ -25,8 +25,17 @@ export function resetNotifs() {
   notifs.at = 0;
 }
 
+/**
+ * Bumped whenever the count is cleared. A count asked for before the clear
+ * (opening Notifications sends one as the page changes, at the same moment
+ * the page marks everything seen) is out of date when it lands, so it's
+ * dropped instead of putting the old number back.
+ */
+let cleared = 0;
+
 /** Notifications was just opened and marked seen: nothing is new any more. */
 export function clearNotifs() {
+  cleared++;
   notifs.count = 0;
   notifs.more = false;
   notifs.at = Date.now();
@@ -38,8 +47,9 @@ let inflight: Promise<void> | null = null;
 export function loadNotifs(force = false): Promise<void> {
   if (!force && Date.now() - notifs.at < STALE_MS) return Promise.resolve();
   if (inflight) return inflight;
+  const asked = cleared;
   inflight = notificationsApi.count()
-    .then((r) => { notifs.count = r.count; notifs.more = r.more; notifs.at = Date.now(); })
+    .then((r) => { if (asked === cleared) { notifs.count = r.count; notifs.more = r.more; notifs.at = Date.now(); } })
     .catch(() => { /* no bubble this time; the next move asks again */ })
     .finally(() => { inflight = null; });
   return inflight;

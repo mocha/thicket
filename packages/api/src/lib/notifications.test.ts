@@ -31,7 +31,7 @@ function author(over: Partial<SaveRow["author"]> = {}): SaveRow["author"] {
   return {
     id, handle: `u${id}`, displayName: null, avatarUpdatedAt: null,
     profileVisibility: "public", bookmarksVisibility: "public", notesVisibility: "public", activityVisibility: "public",
-    followsMe: false, ...over,
+    collectionsVisibility: "public", followsMe: false, iFollow: false, ...over,
   };
 }
 const post = { url: "https://example.com/a", title: "A post", siteTitle: "Example", feedId: 1, hasIcon: false };
@@ -41,13 +41,13 @@ function save(over: Partial<SaveRow> = {}): SaveRow {
 function mention(over: Partial<MentionRow> = {}): MentionRow {
   return { id: nextId++, author: author(), at: ago(1), bookmark: { id: 1 }, ...over };
 }
-const none: Candidates = { follows: [], saves: [], mentions: [] };
+const none: Candidates = { follows: [], saves: [], mentions: [], replies: [], collections: [], invites: [] };
 const kinds = (r: ReturnType<typeof assemble>) => r.items.map((n) => n.kind);
 
 test("a new follower is a notification, named by handle", () => {
   const r = assemble(ME, { ...none, follows: [{ at: ago(1), person: { id: 3, handle: "ana", displayName: "Ana", avatarUpdatedAt: null, profileVisibility: "public" } }] }, opts);
   assert.deepEqual(kinds(r), ["follow"]);
-  assert.equal(r.items[0].person.handle, "ana");
+  assert.equal(r.items[0].person?.handle, "ana");
   assert.equal(r.items[0].isNew, true);
   assert.equal(r.count, 1);
 });
@@ -112,6 +112,8 @@ test("nothing I did myself", () => {
     follows: [{ at: ago(1), person: { id: ME, handle: "me", displayName: null, avatarUpdatedAt: null, profileVisibility: "public" } }],
     saves: [save({ author: mine }), save({ author: mine, noteCreatedAt: ago(1) })],
     mentions: [mention({ author: mine })],
+    replies: [mention({ author: mine })],
+    collections: [], invites: [],
   }, opts);
   assert.deepEqual(r.items, []);
 });
@@ -226,4 +228,98 @@ test("a mention from before I followed them still arrives", () => {
   const n = save({ author: ana, followedAt: ago(1), noteCreatedAt: ago(5) });
   const r = assemble(ME, { ...none, saves: [n], mentions: [mention({ id: n.id, author: ana, at: ago(5) })] }, opts);
   assert.deepEqual(kinds(r), ["mention"]);
+});
+
+// ---- Issue #274: switches, mention sources, and the three new kinds.
+
+const { DEFAULT_PREFS } = await import("./notifications.js");
+type Prefs = import("./notifications.js").Prefs;
+type CollectionRow = Candidates["collections"][number];
+const prefs = (over: Partial<Prefs>) => ({ ...opts, prefs: { ...DEFAULT_PREFS, ...over } });
+function collection(over: Partial<CollectionRow> = {}): CollectionRow {
+  const slug = `c${nextId++}`;
+  return { at: ago(1), author: author(), visibility: "public", followedAt: ago(365 * 24), collection: { name: "Birds", slug, description: null, feedCount: 3 }, ...over };
+}
+const joiner = (profileVisibility: "public" | "private", at = ago(1)) => ({ at, person: { id: nextId++, handle: `new${nextId}`, displayName: null, avatarUpdatedAt: null, profileVisibility } });
+
+test("a new account's switches: everything on except notes on posts I saved, mentions from everyone", () => {
+  assert.deepEqual(DEFAULT_PREFS, { follow: true, bookmark: true, note: true, collection: true, invite: true, reply: false, mentionsFrom: "everyone" });
+  // So a note on a post I saved shows nothing by default.
+  assert.deepEqual(kinds(assemble(ME, { ...none, replies: [mention()] }, opts)), []);
+});
+
+test("each kind can be turned off, and off means gone from the list and the count", () => {
+  const c: Candidates = {
+    follows: [joiner("public")], saves: [save(), save({ savedAt: ago(40 * 24), noteCreatedAt: ago(1) })], mentions: [mention()],
+    replies: [mention()], collections: [collection()], invites: [joiner("public")],
+  };
+  const all = { follow: true, bookmark: true, note: true, collection: true, invite: true, reply: true, mentionsFrom: "everyone" } as const;
+  assert.deepEqual(new Set(kinds(assemble(ME, c, prefs(all)))), new Set(["follow", "bookmark", "note", "mention", "reply", "collection", "invite"]));
+  for (const k of ["follow", "bookmark", "note", "collection", "invite", "reply"] as const) {
+    const r = assemble(ME, c, prefs({ ...all, [k]: false }));
+    assert.ok(!kinds(r).includes(k), k);
+    assert.equal(r.count, 6, k);
+  }
+  const quiet = assemble(ME, c, prefs({ ...all, mentionsFrom: "none" }));
+  assert.ok(!kinds(quiet).includes("mention"));
+  assert.equal(quiet.count, 6);
+});
+
+test("mentions from people I follow, or from no one", () => {
+  const followed = mention({ author: author({ iFollow: true }) });
+  const stranger = mention();
+  const c = { ...none, mentions: [followed, stranger] };
+  assert.equal(assemble(ME, c, prefs({ mentionsFrom: "everyone" })).items.length, 2);
+  assert.deepEqual(assemble(ME, c, prefs({ mentionsFrom: "following" })).items.map((n) => n.key), [`mention:${followed.id}`]);
+  assert.deepEqual(assemble(ME, c, prefs({ mentionsFrom: "none" })).items, []);
+});
+
+test("turning mentions off leaves the note itself: it shows as the next kind I kept", () => {
+  const a = author();
+  const n = save({ author: a, noteCreatedAt: ago(1) });
+  const c = { ...none, saves: [n], mentions: [mention({ id: n.id, author: a })], replies: [mention({ id: n.id, author: a })] };
+  assert.deepEqual(kinds(assemble(ME, c, prefs({ reply: true }))), ["mention"]);
+  assert.deepEqual(kinds(assemble(ME, c, prefs({ reply: true, mentionsFrom: "none" }))), ["reply"]);
+  assert.deepEqual(kinds(assemble(ME, c, prefs({ reply: false, mentionsFrom: "none" }))), ["note"]);
+  // Notes off too: the post they noted shows as the bookmark, when bookmarks are on.
+  assert.deepEqual(kinds(assemble(ME, c, prefs({ reply: false, mentionsFrom: "none", note: false }))), ["bookmark"]);
+  assert.deepEqual(kinds(assemble(ME, c, prefs({ reply: false, mentionsFrom: "none", note: false, bookmark: false }))), []);
+});
+
+test("a note on a post I saved shows only when I could read it on their profile", () => {
+  const on = prefs({ reply: true });
+  assert.deepEqual(kinds(assemble(ME, { ...none, replies: [mention()] }, on)), ["reply"]);
+  assert.deepEqual(kinds(assemble(ME, { ...none, replies: [mention({ author: author({ profileVisibility: "private" }) })] }, on)), []);
+  assert.deepEqual(kinds(assemble(ME, { ...none, replies: [mention({ author: author({ notesVisibility: "private" }) })] }, on)), []);
+  assert.deepEqual(kinds(assemble(ME, { ...none, replies: [mention({ author: author({ notesVisibility: "friends" }) })] }, on)), []);
+  assert.deepEqual(kinds(assemble(ME, { ...none, replies: [mention({ author: author({ notesVisibility: "friends", followsMe: true }) })] }, on)), ["reply"]);
+});
+
+test("a new collection by someone I follow shows only when their profile would list it", () => {
+  assert.deepEqual(kinds(assemble(ME, { ...none, collections: [collection()] }, opts)), ["collection"]);
+  const hidden = [
+    collection({ author: author({ profileVisibility: "private" }) }),
+    collection({ author: author({ collectionsVisibility: "private" }) }),
+    collection({ author: author({ collectionsVisibility: "friends" }) }),
+    collection({ visibility: "private" }),
+    collection({ visibility: "friends" }),
+    // Their collections are shared with friends but this one is private: still hidden from a friend.
+    collection({ author: author({ followsMe: true }), visibility: "private" }),
+  ];
+  for (const k of hidden) assert.deepEqual(kinds(assemble(ME, { ...none, collections: [k] }, opts)), [], JSON.stringify(k.author));
+  const friend = author({ followsMe: true, collectionsVisibility: "friends" });
+  assert.deepEqual(kinds(assemble(ME, { ...none, collections: [collection({ author: friend, visibility: "friends" })] }, opts)), ["collection"]);
+});
+
+test("only collections made after I followed them", () => {
+  const r = assemble(ME, { ...none, collections: [collection({ followedAt: ago(5), at: ago(10) }), collection({ followedAt: ago(5), at: ago(1) })] }, opts);
+  assert.deepEqual(r.items.map((n) => n.at), [ago(1)]);
+});
+
+test("a sign-up with my invite always shows, named only with a public profile", () => {
+  const r = assemble(ME, { ...none, invites: [joiner("public", ago(1)), joiner("private", ago(2))] }, opts);
+  assert.deepEqual(kinds(r), ["invite", "invite"]);
+  assert.match(r.items[0].person!.handle, /^new/);
+  assert.equal(r.items[1].person, null);
+  assert.ok(!JSON.stringify(r.items[1]).includes("new"), "nothing about a private joiner leaks, key included");
 });
