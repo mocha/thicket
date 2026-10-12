@@ -743,7 +743,7 @@
 
     <section class="entry" id="note" aria-labelledby="note-h">
       <h3 class="entry-h" id="note-h">Note</h3>
-      <p class="section-lede">A note sits under its post, on whatever the post sits on. A band in the line color runs down the left of the notes, and the line above each note runs from the band and stops short of the card’s right side. It opens with the writer’s picture, name and handle, which go to their profile, and the date underneath. Someone with no display name shows their handle once. Your own note looks the same, with Edit note at the right. Three lines show, then Show more.</p>
+      <p class="section-lede">A note sits under its post, on whatever the post sits on. A band in the line color runs down the left of the notes, and the line above each note runs from the band and stops short of the card’s right side. It opens with the writer’s picture, name and handle, which go to their profile, and the date underneath. Someone with no display name shows their handle once. Your own note looks the same, with Edit note at the right. Three lines show, then Show more. In Notifications a note leads its row instead: no band and no line above, and what the writer did follows their name (“mentioned you”), with the post it’s on under it as one outlined line.</p>
       <Card as="div" pad={false}>
         <p class="demo-post">The post’s title and summary sit up here.</p>
         <NoteBlock note={{ id: -3, body: 'Worth a second read for the ending.', createdAt: ago(1), updatedAt: ago(1), author: { handle: 'alan', displayName: 'Alan Turing', avatarUpdatedAt: null } }} mine onedit={() => showToast('Edit opens the note’s editor')} />

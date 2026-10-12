@@ -14,6 +14,7 @@
    * matched words fenced (lib/words.ts). They are drawn highlighted, and if the
    * three lines would hide every one of them the note opens by itself.
    */
+  import type { Snippet } from 'svelte';
   import type { Note, PublicNote } from '$lib/api';
   import { profileHref } from '$lib/api';
   import { renderMarkdown } from '$lib/markdown';
@@ -21,7 +22,13 @@
   import { relativeTime } from '$lib/time';
   import { session } from '$lib/session.svelte';
 
-  let { note, mine = false, marked = null, onedit }: { note: Note | PublicNote; mine?: boolean; marked?: string | null; onedit?: () => void } = $props();
+  /*
+   * `says`: what the writer did, after their name ("mentioned you"), and
+   * `lead`: the note heads its own row instead of sitting under a post, so it
+   * drops the band and the rule above it. Notifications uses both (issue #274):
+   * a mention leads with what was written to you, the post under it.
+   */
+  let { note, mine = false, marked = null, onedit, says, lead = false }: { note: Note | PublicNote; mine?: boolean; marked?: string | null; onedit?: () => void; says?: Snippet; lead?: boolean } = $props();
   let expanded = $state(false);
   let body = $state<HTMLElement | null>(null);
   let overflows = $state(false);
@@ -47,7 +54,7 @@
   });
 </script>
 
-<div class="note">
+<div class="note" class:lead>
   <div class="head">
     {#if who}
       <!-- The picture is a second way to tap through for a pointer; it's hidden from keyboards and screen readers, so they meet the name's link once. -->
@@ -55,7 +62,8 @@
     {/if}
     <div class="id">
       {#if who}
-        <a class="who" href={profileHref(who.handle)}>{#if who.displayName}<span class="name">{who.displayName}</span> <span class="handle">(@{who.handle})</span>{:else}<span class="name">@{who.handle}</span>{/if}</a>
+        {#snippet byline()}<a class="who" href={profileHref(who!.handle)}>{#if who!.displayName}<span class="name">{who!.displayName}</span> <span class="handle">(@{who!.handle})</span>{:else}<span class="name">@{who!.handle}</span>{/if}</a>{/snippet}
+        {#if says}<span class="says">{@render byline()} {@render says()}</span>{:else}{@render byline()}{/if}
       {/if}
       <span class="when" title={new Date(note.createdAt).toLocaleString()}>{relativeTime(note.createdAt)}{#if edited}{' '}<Dot /> edited {relativeTime(note.updatedAt)}{/if}</span>
     </div>
@@ -76,11 +84,15 @@
      Notes stacked one after another join into one band. The writer's picture
      and name head each one (issue #239). */
   .note { --band: 12px; border-top: 1px solid var(--line); border-left: var(--band) solid var(--line); margin: 0 var(--card-pad, var(--space-4)) 0 0; padding: var(--space-3) 0 var(--space-3) calc(var(--card-pad, var(--space-4)) - var(--band) + var(--space-1)); font-size: calc(var(--text-sm) * var(--size-app)); }
+  /* Heading its own row: no band, no rule, and no inset of its own; the row has one. */
+  .note.lead { border: 0; margin: 0; padding: 0; }
   .head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
   .pic { display: flex; flex: none; }
   .id { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.35; }
   /* A long name and handle cut off at the end, so the handle goes first and Edit always fits. */
   .who { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* With what they did after it, the line cuts off as a whole. */
+  .says { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .name { font-weight: 600; }
   .handle { color: var(--text-2); }
   @media (hover: hover) { .who:hover .name { text-decoration: underline; text-underline-offset: 3px; } }
