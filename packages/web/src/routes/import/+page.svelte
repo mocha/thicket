@@ -203,16 +203,15 @@
             <li class="feedrow" class:refused={f.state === 'failed'}>
               <SourceIcon feedId={null} {name} size={40} />
               <span class="meta">
-                <span class="named">
-                  <span class="row-name title">{name}</span>
-                  {#if f.state === 'pending'}<Badge>Checking…</Badge>
-                  {:else if f.state === 'failed'}<Badge tone="danger">Can’t import</Badge>
-                  {:else if f.state === 'unsure'}<Badge>Will retry</Badge>
-                  {:else}<Badge tone="soft">Ready</Badge>{/if}
-                </span>
+                <span class="row-name title">{name}</span>
                 {#if name !== host(f.url)}<span class="row-details origin">{host(f.url)}</span>{/if}
                 {#if f.reason && (f.state === 'failed' || f.state === 'unsure')}<span class="row-details reason">{f.reason}</span>{/if}
               </span>
+              <!-- The status sits at the row's right end, level with the middle of the row. -->
+              {#if f.state === 'pending'}<Badge>Checking…</Badge>
+              {:else if f.state === 'failed'}<Badge tone="danger">Can’t import</Badge>
+              {:else if f.state === 'unsure'}<Badge>Will retry</Badge>
+              {:else}<Badge tone="soft">Ready</Badge>{/if}
             </li>
           {/each}
         </ul>
@@ -279,12 +278,11 @@
   .counts { font-variant-numeric: tabular-nums; }
 
   /* The feeds are the card's rows, edge to edge, to the card's bottom edge.
-     Each is laid out like the shared Feed row: the site's icon, the name with
-     its status beside it, the site tight under it, then any reason in gray. */
+     Each is laid out like the shared Feed row: the site's icon, the name, the
+     site tight under it, any reason in gray, and the status at the right end. */
   .feeds { margin: 0 calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)); }
   .feedrow { display: flex; align-items: center; gap: var(--space-3); }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .named { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
   .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* -2px is optical, as on the Feed row: the site reads as a byline to the name. */
   .origin { margin-top: -2px; color: var(--text); overflow-wrap: anywhere; }
