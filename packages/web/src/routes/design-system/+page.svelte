@@ -12,6 +12,7 @@
   import { onMount } from 'svelte';
   import Button from '$lib/components/Button.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import FiltersBox from '$lib/components/FiltersBox.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import Banner from '$lib/components/Banner.svelte';
@@ -228,6 +229,7 @@
         { id: 'dot', label: 'Dot' },
         { id: 'empty-note', label: 'Empty note' },
         { id: 'field', label: 'Field' },
+        { id: 'filters-box', label: 'Filters box' },
         { id: 'follow-button', label: 'Follow button' },
         { id: 'icon-button', label: 'Icon button' },
         { id: 'input', label: 'Input' },
@@ -638,6 +640,12 @@
           {/snippet}
         </Field>
       </div>
+    </section>
+
+    <section class="entry" id="filters-box" aria-labelledby="filters-box-h">
+      <h3 class="entry-h" id="filters-box-h">Filters box</h3>
+      <p class="section-lede">A list’s filters, folded into one box that says what’s chosen and opens the choices in a Sheet, so they never push the list down. It wears the dropdown’s outline and caret so it reads as something to press. What’s chosen is short phrases joined by dots; a long summary breaks at the dots. Explore uses it for its dropdowns, Notifications for which kinds you get.</p>
+      <FiltersBox summary={['Every kind', 'Mentions from everyone']} onclick={() => {}} />
     </section>
 
     <section class="entry" id="follow-button" aria-labelledby="follow-button-h">
