@@ -25,7 +25,10 @@
   let expanded = $state(false);
   let body = $state<HTMLElement | null>(null);
   let overflows = $state(false);
-  const html = $derived(marked ? highlightHtml(renderMarkdown(marked, note.mentions)) : renderMarkdown(note.body, note.mentions));
+  /* My own @name, wherever someone mentions me, is highlighted so I can find it (issue #274). */
+  const youLink = $derived(session.user ? `<a class="mention" href="/@${session.user.handle}">` : null);
+  const rendered = $derived(marked ? highlightHtml(renderMarkdown(marked, note.mentions)) : renderMarkdown(note.body, note.mentions));
+  const html = $derived(youLink ? rendered.replaceAll(youLink, youLink.replace('class="mention"', 'class="mention you"')) : rendered);
   const edited = $derived(new Date(note.updatedAt).getTime() - new Date(note.createdAt).getTime() > 60_000);
   const author = $derived('author' in note ? note.author : null);
   /* Who wrote it. Mine comes from the signed-in account, which can be briefly
@@ -97,6 +100,8 @@
   .body :global(pre code) { background: none; padding: 0; }
   .body :global(a) { color: var(--accent); font-weight: 600; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); }
   /* The words a search matched. The same highlight as a search result on Explore. */
+  /* My own @name: the same highlight as a search match. */
+  .body :global(a.you),
   .body :global(mark) { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 1px; }
   .more { margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .more:hover { color: var(--accent); }
