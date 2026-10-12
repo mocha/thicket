@@ -287,7 +287,7 @@
             <li class="invite">
               <span class="what">
                 <span class="row-name">{inviteName(inv)}</span>
-                {#if inv.expiresAt}<span class="row-details">Expires {relativeTime(inv.expiresAt)}</span>{/if}
+                {#if inv.expiresAt}<span class="row-details">Expires {new Date(inv.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>{/if}
               </span>
               <span class="acts">
                 <Button size="sm" onclick={() => copyInvite(inv)}><Icon name="copy" size={16} />Copy link</Button>
@@ -350,10 +350,12 @@
   <Sheet title={managing ? label(managing) : 'Manage account'} lede={managing?.displayName ? `@${managing.handle}` : undefined} bind:dialog={manageDialog} dismiss={false} locked={busy}>
     {#if managing}
       <div class="sheet-rows">
-        <label class="choice">
-          <Checkbox checked={managing.isAdmin} disabled={busy} onchange={(e) => setAdmin(e.currentTarget.checked)} />
-          <span><strong>Admin</strong><small>Can manage accounts, invites, and this page’s settings.</small></span>
-        </label>
+        <div>
+          <label class="choice">
+            <Checkbox checked={managing.isAdmin} disabled={busy} onchange={(e) => setAdmin(e.currentTarget.checked)} />
+            <span><strong>Admin</strong><small>Can manage accounts, invites, and this page’s settings.</small></span>
+          </label>
+        </div>
         <div class="password">
           <span class="choice-text"><strong>Password</strong><small>{issued ? 'Shown once. Pass it on however you like; they can change it in Account and data.' : 'Gives them a temporary password and signs them out everywhere.'}</small></span>
           {#if issued}
