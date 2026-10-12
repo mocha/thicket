@@ -73,9 +73,6 @@
   });
 
   const kept = $derived(imp.groups.filter((g) => g.keep && g.name.trim() && canKeep(g)));
-  /* Only feeds I don't already follow count as new: one I follow is just filed again. */
-  const newFeeds = (g: ImportGroup) => ready(g).filter((f) => !f.following);
-  const keptNew = $derived(new Set(kept.flatMap((g) => newFeeds(g).map((f) => f.url))).size);
   const totalFeeds = $derived(new Set(imp.groups.flatMap((g) => g.feeds.map((f) => f.url))).size);
   /* With a single group there is nothing to choose between, so no box to untick. */
   const choosing = $derived(imp.groups.length > 1);
@@ -161,8 +158,6 @@
   {#each imp.groups as g, gi (gi)}
     {@const ok = ready(g)}
     {@const bad = refused(g)}
-    {@const fresh = newFeeds(g).length}
-    {@const following = ok.length - fresh}
     {@const final = finalNames.get(gi)}
     {@const renamed = !!final && final !== g.name.trim()}
     {@const why = blockedReason(g)}
@@ -192,7 +187,7 @@
           {:else if on}
             <p class="section-description">
               {#if renamed}<span class="line">A collection named “{g.name.trim()}” already exists.</span>{/if}
-              <span class="line counts">{#if !settled(g) && !ok.length}Checking feeds…{:else}Importing {plural(fresh, 'feed')}{/if}{#if following}{' '}<Dot />{' '}{following} you already follow{/if}{#if bad.length}{' '}<Dot />{' '}{plural(bad.length, 'feed')} we can’t import{/if}</span>
+              <span class="line counts">{#if !settled(g) && !ok.length}Checking feeds…{:else}Importing {plural(ok.length, 'feed')}{/if}{#if bad.length}{' '}<Dot />{' '}{plural(bad.length, 'feed')} we can’t import{/if}</span>
             </p>
           {/if}
         </div>
@@ -213,7 +208,6 @@
                   {#if f.state === 'pending'}<Badge>Checking…</Badge>
                   {:else if f.state === 'failed'}<Badge tone="danger">Can’t import</Badge>
                   {:else if f.state === 'unsure'}<Badge>Will retry</Badge>
-                  {:else if f.following}<Badge>Already following</Badge>
                   {:else}<Badge tone="soft">Ready</Badge>{/if}
                 </span>
                 {#if name !== host(f.url)}<span class="row-details origin">{host(f.url)}</span>{/if}
@@ -237,7 +231,7 @@
     <Button variant="primary" onclick={() => commitImport(kept)} disabled={imp.busy || imp.checking || !kept.length}>
       {#if imp.busy}Bringing them in…
       {:else if imp.checking}Checking feeds…
-      {:else}Bring in {kept.length} {kept.length === 1 ? 'collection' : 'collections'}{#if keptNew}, {keptNew} new {keptNew === 1 ? 'feed' : 'feeds'}{/if}{/if}
+      {:else}Bring in {kept.length} {kept.length === 1 ? 'collection' : 'collections'}{/if}
     </Button>
   </div>
 {:else if imp.step === 'done'}
