@@ -10,6 +10,10 @@
    * Each fact shows only when the screen has it. Anything more a screen wants
    * to say (why a search found them) goes in `children`, on a line of its own
    * under the facts, so neither line runs long.
+   *
+   * A screen that acts on the person instead of following them (Site admin's
+   * accounts) puts its status pills and its one action in `end`, which sits
+   * where Follow would: at the right, dropping under the text on a phone.
    */
   import type { Snippet } from 'svelte';
   import { profileHref } from '$lib/api';
@@ -28,9 +32,11 @@
     onfollow?: () => void;
     onopen?: () => void;
     children?: Snippet;
+    /** Pills and an action at the row's right end, in place of Follow. */
+    end?: Snippet;
   }
 
-  let { person: u, feeds, collections, following, busy = false, onfollow, onopen, children }: Props = $props();
+  let { person: u, feeds, collections, following, busy = false, onfollow, onopen, children, end }: Props = $props();
 
   const facts = $derived(
     [
@@ -57,6 +63,8 @@
   </a>
   {#if following !== undefined}
     <FollowButton {following} {busy} onclick={onfollow} />
+  {:else if end}
+    <div class="end">{@render end()}</div>
   {/if}
 </li>
 
@@ -73,9 +81,12 @@
   /* Last, so it wins over the row's own sizing above. On a phone the button
      would squeeze the bio into a column four words wide, so it drops to its
      own line, at the right, and the text gets the row. */
+  /* Pills over the action, both against the right edge. */
+  .end { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
   @media (max-width: 560px) {
     .row { flex-basis: 100%; }
-    .personrow > :global(.follow) { margin-left: auto; }
+    .personrow > :global(.follow), .end { margin-left: auto; }
+    .end { flex-direction: row; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
   }
   @media (hover: hover) { .row:hover .title { text-decoration: underline; text-underline-offset: 3px; } }
 </style>

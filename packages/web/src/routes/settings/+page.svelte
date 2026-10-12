@@ -60,7 +60,7 @@
 </PageHeader>
 
 <Card kind="section" as="section" class="settings-section">
-  <label class="switch">
+  <label class="choice">
     <Checkbox checked={isSource()} disabled={savingDisplay} onchange={toggleSource} />
     <span>
       <strong>Use these settings on new devices</strong>
@@ -103,16 +103,16 @@
 <Card kind="section" as="section" class="settings-section">
   <h2 class="section-title">Notes from other people</h2>
   <p class="section-description">Whose notes appear under posts as you read. Yours always do.</p>
-  <fieldset>
-    <label class="radio">
+  <fieldset class="choices">
+    <label class="choice">
       <input type="radio" name="notesFrom" value="none" checked={me.notesFrom === 'none'} onchange={() => set({ notesFrom: 'none' }, 'Showing only your own notes')} />
       <span><strong>No one</strong><small>Just your own notes.</small></span>
     </label>
-    <label class="radio">
+    <label class="choice">
       <input type="radio" name="notesFrom" value="following" checked={me.notesFrom === 'following'} onchange={() => set({ notesFrom: 'following' }, 'Showing notes from people you follow')} />
       <span><strong>People I follow</strong><small>The default. Follow someone from their profile and their notes start showing on posts you both see.</small></span>
     </label>
-    <label class="radio">
+    <label class="choice">
       <input type="radio" name="notesFrom" value="everyone" checked={me.notesFrom === 'everyone'} onchange={() => set({ notesFrom: 'everyone' }, 'Showing notes from everyone')} />
       <span><strong>Everyone</strong><small>Any note anyone has chosen to share.</small></span>
     </label>
@@ -122,12 +122,12 @@
 <Card kind="section" as="section" class="settings-section">
   <h2 class="section-title">YouTube</h2>
   <p class="section-description">What every YouTube channel shows unless you change it on that channel.</p>
-  <fieldset>
-    <label class="radio">
+  <fieldset class="choices">
+    <label class="choice">
       <input type="radio" name="shortsDefault" value="videos" checked={me.hideShortsByDefault} onchange={() => set({ hideShortsByDefault: true }, 'YouTube channels now show videos only')} />
       <span><strong>Videos</strong><small>Shorts are left out of every channel you read, unless you turn them back on for one.</small></span>
     </label>
-    <label class="radio">
+    <label class="choice">
       <input type="radio" name="shortsDefault" value="all" checked={!me.hideShortsByDefault} onchange={() => set({ hideShortsByDefault: false }, 'YouTube channels now show videos and Shorts')} />
       <span><strong>Videos + Shorts</strong><small>Everything a channel posts. You can still hide Shorts on any one channel.</small></span>
     </label>
@@ -137,7 +137,7 @@
 {#if me.instanceTracking}
   <Card kind="section" as="section" class="settings-section">
     <h2 class="section-title">Privacy</h2>
-    <label class="switch">
+    <label class="choice">
       <Checkbox checked={tracking} onchange={(e) => set({ trackActivity: e.currentTarget.checked }, e.currentTarget.checked ? 'Usage tracking on' : 'Usage tracking off')} />
       <span>
         <strong>Help improve thicket by sharing anonymous usage data</strong>
@@ -151,14 +151,4 @@
 <style>
   /* The page has no element of its own around its sections, so the room between them is set on the cards' own class. */
   :global(.settings-section) { margin-bottom: var(--space-4); }
-  fieldset { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; gap: var(--space-3); }
-  .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
-  .radio input, .switch :global(.checkbox) { margin-top: 3px; }
-  /* The ring these used to borrow from the password boxes, now said outright.
-     A tick box or a dial isn't typed into, so the browser only calls it
-     keyboard focus when you tabbed to it — no special handling needed. */
-  /* 2px between a choice and its explanation is optical, not a spacing step. */
-  .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
-  .radio small, .switch small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .section-description a { color: var(--accent); font-weight: 600; }
 </style>

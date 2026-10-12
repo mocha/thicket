@@ -3,68 +3,66 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   import Dot from '$lib/components/Dot.svelte';
   /**
-   * The instance, for its admins: who can sign up, invite links, the accounts.
-   * Everything a small instance's owner does by hand today. Personal settings
-   * stay on /settings; this page is about everyone else.
+   * Site admin: the accounts, invite links, and the site-wide settings, for
+   * the site's admins. Personal settings stay on Reading settings; this page
+   * is about everyone else.
+   *
+   * Every setting is its own section card, built like Reading settings. Each
+   * change shows at once; if saving fails, the card says why and the control
+   * goes back to what's saved.
+   *
+   * Accounts are the shared Person row, with their pills and one Manage button
+   * at the right. Manage opens a Sheet with that account's admin switch,
+   * password reset, and Delete account. Anything that can't be undone asks
+   * first in a Sheet of its own.
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { api, adminApi, profileHref, type AdminUser, type InstanceStatus, type Invite, type SignupPolicy } from '$lib/api';
+  import { api, adminApi, type AdminUser, type InstanceStatus, type Invite, type SignupPolicy } from '$lib/api';
   import { session } from '$lib/session.svelte';
-  import { relativeTime } from '$lib/time';
+  import { longAgo, relativeTime } from '$lib/time';
+  import { plural } from '$lib/words';
   import { showToast } from '$lib/toast.svelte';
-  import Avatar from '$lib/components/Avatar.svelte';
   import Badge from '$lib/components/Badge.svelte';
+  import Banner from '$lib/components/Banner.svelte';
   import Button from '$lib/components/Button.svelte';
+  import Checkbox from '$lib/components/Checkbox.svelte';
+  import EmptyNote from '$lib/components/EmptyNote.svelte';
   import Field from '$lib/components/Field.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Input from '$lib/components/Input.svelte';
+  import PersonRow from '$lib/components/PersonRow.svelte';
+  import SecretValue from '$lib/components/SecretValue.svelte';
+  import Sheet from '$lib/components/Sheet.svelte';
 
-  /**
-   * "last active 23h ago" while relativeTime is still giving a relative form
-   * (just now / 5m / 3h / 2d); once it falls back to an absolute date ("Aug
-   * 12"), "ago" stops making sense, so we drop it: "last active Aug 12".
-   */
-  function lastActive(iso: string): string {
-    const r = relativeTime(iso);
-    if (r === 'just now' || /^\d+[mhd]$/.test(r)) return `last active ${r}${r === 'just now' ? '' : ' ago'}`;
-    return `last active ${r}`;
-  }
+  const say = (e: unknown) => (e instanceof Error ? e.message : String(e));
+  /** "Aug 12", or "2 hours ago" while it's recent enough to say so. */
+  const when = (iso: string) => (/^\d+[mhd]$|^just now$/.test(relativeTime(iso)) ? longAgo(iso) : relativeTime(iso));
 
   const me = $derived(session.user);
   let instance = $state<(InstanceStatus & { signupsStored: SignupPolicy | null }) | null>(null);
+  let loadError = $state<string | null>(null);
+  /** What failed to save, by card, said on that card. */
+  let errors = $state<Record<'signups' | 'visitors' | 'name' | 'starter' | 'invites' | 'manage', string | null>>({ signups: null, visitors: null, name: null, starter: null, invites: null, manage: null });
+
   let name = $state('');
+  let savingName = $state(false);
   let invites = $state<Invite[]>([]);
   let inviteNote = $state('');
   let minting = $state(false);
   let users = $state<AdminUser[]>([]);
-  let busyId = $state<number | null>(null);
-  /** A freshly minted temporary password, shown once. */
-  let issued = $state<{ handle: string; password: string } | null>(null);
-  /** Starter packs: one account's public collections are what a newcomer is offered. */
   let starter = $state('');
-  let starterError = $state<string | null>(null);
   let savingStarter = $state(false);
 
-  async function setStarter() {
-    if (savingStarter) return;
-    starterError = null;
-    savingStarter = true;
-    try {
-      const r = await adminApi.setStarter(starter);
-      starter = r.handle ?? '';
-      showToast(starter ? `Newcomers are offered @${starter}'s collections` : 'Newcomers get the fullest public collections instead');
-    } catch (e) {
-      starterError = e instanceof Error ? e.message : 'Could not save';
-    } finally {
-      savingStarter = false;
-    }
-  }
-
   async function load() {
-    const [s, i, u, f] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter()]);
-    instance = s; name = s.name; invites = i.invites; users = u.users;
-    starter = f.handle ?? '';
+    try {
+      const [s, i, u, f] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter()]);
+      instance = s; name = s.name; invites = i.invites; users = u.users;
+      starter = f.handle ?? '';
+    } catch (e) {
+      loadError = say(e);
+      console.error('Site admin failed to load', e);
+    }
   }
   onMount(() => {
     if (!session.user?.isAdmin) return void goto('/new-posts', { replaceState: true });
@@ -72,33 +70,75 @@
     void load();
   });
 
+  /** Shows the change at once and puts the saved value back if saving fails. */
   async function setPolicy(signups: SignupPolicy) {
     if (!instance) return;
-    instance = { ...instance, ...(await adminApi.update({ signups })) };
-    api.event('instance_signups_changed', { signups });
-    showToast(signups === 'open' ? 'Anyone can sign up' : signups === 'invite' ? 'Sign ups need an invite' : 'Sign ups closed');
+    const was = instance.signups;
+    instance.signups = signups;
+    errors.signups = null;
+    try {
+      instance = { ...instance, ...(await adminApi.update({ signups })) };
+      api.event('instance_signups_changed', { signups });
+    } catch (e) {
+      instance.signups = was;
+      errors.signups = say(e);
+    }
   }
   async function setVisitorLimit(visitorLimit: boolean) {
     if (!instance) return;
-    instance = { ...instance, ...(await adminApi.update({ visitorLimit })) };
-    api.event('instance_visitor_limit_changed', { visitorLimit });
-    showToast(visitorLimit ? 'Visitors see the newest 100' : 'Visitors see everything');
+    const was = instance.visitorLimit;
+    instance.visitorLimit = visitorLimit;
+    errors.visitors = null;
+    try {
+      instance = { ...instance, ...(await adminApi.update({ visitorLimit })) };
+      api.event('instance_visitor_limit_changed', { visitorLimit });
+    } catch (e) {
+      instance.visitorLimit = was;
+      errors.visitors = say(e);
+    }
   }
   async function saveName() {
-    if (!instance || name.trim() === instance.name) return;
-    instance = { ...instance, ...(await adminApi.update({ name: name.trim() })) };
-    name = instance.name;
-    showToast('Instance name saved');
+    if (!instance || savingName || name.trim() === instance.name) return;
+    savingName = true; errors.name = null;
+    try {
+      instance = { ...instance, ...(await adminApi.update({ name: name.trim() })) };
+      name = instance.name;
+      showToast('Site name saved');
+    } catch (e) {
+      name = instance.name;
+      errors.name = say(e);
+    } finally {
+      savingName = false;
+    }
   }
+  async function setStarter() {
+    if (savingStarter) return;
+    savingStarter = true; errors.starter = null;
+    try {
+      const r = await adminApi.setStarter(starter);
+      starter = r.handle ?? '';
+      showToast(starter ? `New people are offered @${starter}’s collections` : 'New people are offered the fullest public collections');
+    } catch (e) {
+      errors.starter = say(e);
+    } finally {
+      savingStarter = false;
+    }
+  }
+
+  // Invites
+  const openInvites = $derived(invites.filter((i) => !i.usedAt && (!i.expiresAt || new Date(i.expiresAt).getTime() > Date.now())));
+  const inviteName = (inv: Invite) => inv.note ?? 'Invite';
   async function mint() {
     if (minting) return;
-    minting = true;
+    minting = true; errors.invites = null;
     try {
       const inv = await adminApi.createInvite(inviteNote.trim() || undefined);
       invites = [inv, ...invites];
       inviteNote = '';
-      try { await navigator.clipboard.writeText(inv.url); showToast('Invite link copied'); } catch { showToast('Invite created'); }
+      try { await navigator.clipboard.writeText(inv.url); showToast('Invite link copied'); } catch { showToast('Invite link made. Copy it from the list.'); }
       api.event('invite_created');
+    } catch (e) {
+      errors.invites = say(e);
     } finally {
       minting = false;
     }
@@ -106,54 +146,94 @@
   async function copyInvite(inv: Invite) {
     try { await navigator.clipboard.writeText(inv.url); showToast('Invite link copied'); } catch { showToast(inv.url); }
   }
-  async function revoke(inv: Invite) {
-    await adminApi.revokeInvite(inv.code);
-    invites = invites.filter((i) => i.code !== inv.code);
-    showToast('Invite revoked');
-  }
-  const openInvites = $derived(invites.filter((i) => !i.usedAt && (!i.expiresAt || new Date(i.expiresAt).getTime() > Date.now())));
-
-  async function setAdmin(u: AdminUser, isAdmin: boolean) {
-    busyId = u.id;
+  let revoking = $state<Invite | null>(null);
+  let revokeDialog = $state<HTMLDialogElement | null>(null);
+  let revokeBusy = $state(false);
+  function askRevoke(inv: Invite) { revoking = inv; revokeDialog?.showModal(); }
+  async function revoke() {
+    if (!revoking || revokeBusy) return;
+    revokeBusy = true; errors.invites = null;
+    const inv = revoking;
     try {
-      const r = await adminApi.setAdmin(u.id, isAdmin);
-      users = users.map((x) => (x.id === u.id ? { ...x, isAdmin: r.isAdmin } : x));
-      api.event('admin_role_changed', { userId: u.id, isAdmin });
-      showToast(isAdmin ? `@${u.handle} is an admin now` : `@${u.handle} is no longer an admin`);
+      await adminApi.revokeInvite(inv.code);
+      invites = invites.filter((i) => i.code !== inv.code);
+      showToast('Invite revoked');
     } catch (e) {
-      showToast(e instanceof Error ? e.message : String(e));
+      errors.invites = say(e);
     } finally {
-      busyId = null;
+      revokeBusy = false;
+      revokeDialog?.close();
     }
   }
-  async function resetPassword(u: AdminUser) {
-    if (!confirm(`Give @${u.handle} a new temporary password? Their current password stops working and they’re signed out everywhere.`)) return;
-    busyId = u.id;
+
+  // Accounts: the one being managed, and what's happened to it in this Sheet.
+  let managing = $state<AdminUser | null>(null);
+  let manageDialog = $state<HTMLDialogElement | null>(null);
+  let busy = $state(false);
+  /** A freshly made temporary password, shown once. */
+  let issued = $state<string | null>(null);
+  let resetDialog = $state<HTMLDialogElement | null>(null);
+  let deleteDialog = $state<HTMLDialogElement | null>(null);
+  const label = (u: AdminUser) => u.displayName ?? `@${u.handle}`;
+
+  function manage(u: AdminUser) {
+    managing = u; issued = null; errors.manage = null;
+    manageDialog?.showModal();
+  }
+  function replace(u: AdminUser) {
+    users = users.map((x) => (x.id === u.id ? u : x));
+    if (managing?.id === u.id) managing = u;
+  }
+  async function setAdmin(isAdmin: boolean) {
+    const u = managing;
+    if (!u || busy) return;
+    busy = true; errors.manage = null;
+    replace({ ...u, isAdmin });
     try {
-      issued = await adminApi.resetPassword(u.id);
+      const r = await adminApi.setAdmin(u.id, isAdmin);
+      replace({ ...u, isAdmin: r.isAdmin });
+      api.event('admin_role_changed', { userId: u.id, isAdmin });
+    } catch (e) {
+      replace(u);
+      errors.manage = say(e);
+    } finally {
+      busy = false;
+    }
+  }
+  async function resetPassword() {
+    const u = managing;
+    if (!u || busy) return;
+    busy = true; errors.manage = null;
+    try {
+      issued = (await adminApi.resetPassword(u.id)).password;
       api.event('admin_password_reset', { userId: u.id });
     } catch (e) {
-      showToast(e instanceof Error ? e.message : String(e));
+      errors.manage = say(e);
     } finally {
-      busyId = null;
+      busy = false;
+      resetDialog?.close();
     }
   }
   async function copyIssued() {
     if (!issued) return;
-    try { await navigator.clipboard.writeText(issued.password); showToast('Password copied'); } catch { /* it is on screen */ }
+    try { await navigator.clipboard.writeText(issued); showToast('Password copied'); } catch { showToast('Couldn’t copy it for you. Select the password to copy it.'); }
   }
-  async function remove(u: AdminUser) {
-    if (!confirm(`Delete @${u.handle}? Their collections and bookmarks go with them. Feeds stay in the index. This cannot be undone.`)) return;
-    busyId = u.id;
+  async function remove() {
+    const u = managing;
+    if (!u || busy) return;
+    busy = true; errors.manage = null;
     try {
       await adminApi.deleteUser(u.id);
       users = users.filter((x) => x.id !== u.id);
       api.event('admin_user_deleted', { userId: u.id });
       showToast(`Deleted @${u.handle}`);
+      deleteDialog?.close();
+      manageDialog?.close();
     } catch (e) {
-      showToast(e instanceof Error ? e.message : String(e));
+      errors.manage = say(e);
+      deleteDialog?.close();
     } finally {
-      busyId = null;
+      busy = false;
     }
   }
 </script>
@@ -164,98 +244,152 @@
 <PageHeader name="Site admin" description={instance ? site : undefined} />
 
 {#if instance}
-  <Card kind="section" as="section" class="admin-section">
-    <h2 class="section-title">This instance</h2>
-    <form class="inline" onsubmit={(e) => { e.preventDefault(); void saveName(); }}>
-      <Field label="Name" class="grow">
-        {#snippet children({ id, describedBy, invalid })}
-          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={name} maxlength={60} placeholder={instance!.url.replace(/^https?:\/\//, '')} />
-        {/snippet}
-      </Field>
-      <Button type="submit" size="lg" disabled={name.trim() === instance.name}>Save</Button>
-    </form>
-    <fieldset>
-      <legend>Who can sign up</legend>
-      <label class="radio"><input type="radio" name="signups" checked={instance.signups === 'invite'} onchange={() => setPolicy('invite')} /><span><strong>By invite</strong><small>You mint invite links below and send them to people.</small></span></label>
-      <label class="radio"><input type="radio" name="signups" checked={instance.signups === 'open'} onchange={() => setPolicy('open')} /><span><strong>Anyone</strong><small>Right for a private network. On a public address, expect spam accounts.</small></span></label>
-      <label class="radio"><input type="radio" name="signups" checked={instance.signups === 'closed'} onchange={() => setPolicy('closed')} /><span><strong>Nobody</strong><small>Existing accounts keep working.</small></span></label>
-    </fieldset>
-    <fieldset>
-      <legend>What visitors without an account can read</legend>
-      <label class="radio"><input type="radio" name="visitors" checked={instance.visitorLimit} onchange={() => setVisitorLimit(true)} /><span><strong>The newest 100</strong><small>Feed pages, collections, and people’s notes, bookmarks and activity show their 100 most recent items, then ask visitors to log in or sign up.</small></span></label>
-      <label class="radio"><input type="radio" name="visitors" checked={!instance.visitorLimit} onchange={() => setVisitorLimit(false)} /><span><strong>Everything</strong><small>Visitors can scroll back as far as anyone signed in.</small></span></label>
-    </fieldset>
-  </Card>
-
-  <Card kind="section" as="section" class="admin-section">
-    <h2 class="section-title">Invite links</h2>
-    <form class="mint" onsubmit={(e) => { e.preventDefault(); void mint(); }}>
-      <Field label="Who is this invite for?" hideLabel class="grow">
-        {#snippet children({ id, describedBy, invalid })}
-          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={inviteNote} placeholder="Who is this for? (optional note)" maxlength={120} />
-        {/snippet}
-      </Field>
-      <Button type="submit" variant="primary" size="lg" disabled={minting}>{minting ? 'Creating…' : 'New invite link'}</Button>
-    </form>
-    {#if openInvites.length}
-      <ul class="invites">
-        {#each openInvites as inv (inv.code)}
-          <li>
-            <span class="note">{inv.note ?? 'Invite'}</span>
-            <span class="exp">{inv.expiresAt ? `expires ${new Date(inv.expiresAt).toLocaleDateString()}` : ''}</span>
-            <Button size="sm" onclick={() => copyInvite(inv)}><Icon name="copy" size={16} />Copy link</Button>
-            <Button variant="danger" size="sm" onclick={() => revoke(inv)}>Revoke</Button>
-          </li>
+  <Card kind="section" as="section" class="admin-section" aria-labelledby="accounts-h">
+    <h2 class="section-title" id="accounts-h">Accounts ({users.length.toLocaleString()})</h2>
+    <div class="rows">
+      <ul class="list-rows">
+        {#each users as u (u.id)}
+          <PersonRow person={{ ...u, bio: null }}>
+            <span class="line">{plural(u.following, 'feed')} <Dot /> {plural(u.collections, 'collection')} <Dot /> {plural(u.bookmarks, 'bookmark')}</span>
+            <span class="line">Joined {when(u.createdAt)}{#if u.invitedBy}{' '}via @{u.invitedBy}{/if}{#if u.lastSeenAt}{' '}<Dot />{' '}last active {when(u.lastSeenAt)}{/if}</span>
+            {#snippet end()}
+              {#if u.isAdmin || u.profileVisibility === 'private' || u.id === me?.id}
+                <span class="pills">
+                  {#if u.isAdmin}<Badge>Admin</Badge>{/if}
+                  {#if u.profileVisibility === 'private'}<Badge>Private</Badge>{/if}
+                  {#if u.id === me?.id}<Badge>You</Badge>{/if}
+                </span>
+              {/if}
+              {#if u.id !== me?.id}<Button size="sm" onclick={() => manage(u)} aria-label="Manage @{u.handle}">Manage</Button>{/if}
+            {/snippet}
+          </PersonRow>
         {/each}
       </ul>
-    {:else}
-      <p class="help">No open invites. Each link works once and lasts two weeks.</p>
-    {/if}
+    </div>
   </Card>
 
-  <Card kind="section" as="section" class="admin-section">
-    <h2 class="section-title">Starter packs</h2>
-    <p class="section-description">Someone who has just signed up follows nothing, so the first screen offers them collections to copy. Point it at an account and its public collections become those packs — curate them by signing in as that account and making collections the normal way. An account made for the purpose works well, and its profile doubles as a worked example: what it reads, bookmarks and notes.</p>
-    <form class="inline starter-form" onsubmit={(e) => { e.preventDefault(); void setStarter(); }}>
-      <Field label="Account handle" hint="Leave blank to use the fullest public collections on the instance." error={starterError} class="grow">
+  <Card kind="section" as="section" class="admin-section" aria-labelledby="invites-h">
+    <h2 class="section-title" id="invites-h">Invite links</h2>
+    <p class="section-description">Each link works once and lasts two weeks.</p>
+    <form class="inline" onsubmit={(e) => { e.preventDefault(); void mint(); }}>
+      <Field label="Who’s it for?" hideLabel class="grow">
         {#snippet children({ id, describedBy, invalid })}
-          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={starter} placeholder="@handle" autocomplete="off" autocapitalize="none" spellcheck={false} disabled={savingStarter} oninput={() => (starterError = null)} />
+          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={inviteNote} placeholder="Who’s it for? (optional)" maxlength={120} />
         {/snippet}
       </Field>
-      <Button type="submit" size="lg" disabled={savingStarter}>{savingStarter ? 'Saving…' : 'Save'}</Button>
+      <Button type="submit" variant="primary" size="lg" loading={minting}>New invite link</Button>
+    </form>
+    {#if errors.invites}<div class="err"><Banner tone="error" title="That didn’t work">{errors.invites}</Banner></div>{/if}
+    <div class="rows below">
+      {#if openInvites.length}
+        <ul class="list-rows">
+          {#each openInvites as inv (inv.code)}
+            <li class="invite">
+              <span class="what">
+                <span class="row-name">{inviteName(inv)}</span>
+                {#if inv.expiresAt}<span class="row-details">Expires {relativeTime(inv.expiresAt)}</span>{/if}
+              </span>
+              <span class="acts">
+                <Button size="sm" onclick={() => copyInvite(inv)}><Icon name="copy" size={16} />Copy link</Button>
+                <Button size="sm" variant="danger" link onclick={() => askRevoke(inv)}>Revoke</Button>
+              </span>
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <EmptyNote bare icon="link" title="No open invites" />
+      {/if}
+    </div>
+  </Card>
+
+  <Card kind="section" as="section" class="admin-section" aria-labelledby="signups-h">
+    <h2 class="section-title" id="signups-h">Who can sign up</h2>
+    <fieldset class="choices" aria-labelledby="signups-h">
+      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'invite'} onchange={() => setPolicy('invite')} /><span><strong>Invite only</strong><small>People sign up with an invite link from you.</small></span></label>
+      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'open'} onchange={() => setPolicy('open')} /><span><strong>Anyone</strong><small>Fine on a private network. On a public address, expect spam accounts.</small></span></label>
+      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'closed'} onchange={() => setPolicy('closed')} /><span><strong>No one</strong><small>Existing accounts keep working.</small></span></label>
+    </fieldset>
+    {#if errors.signups}<div class="err"><Banner tone="error" title="Couldn’t save that">{errors.signups}</Banner></div>{/if}
+  </Card>
+
+  <Card kind="section" as="section" class="admin-section" aria-labelledby="visitors-h">
+    <h2 class="section-title" id="visitors-h">What visitors can read</h2>
+    <p class="section-description">Visitors are people who aren’t signed in.</p>
+    <fieldset class="choices" aria-labelledby="visitors-h">
+      <label class="choice"><input type="radio" name="visitors" checked={instance.visitorLimit} onchange={() => setVisitorLimit(true)} /><span><strong>The newest 100</strong><small>Feeds, collections, and profiles show their latest 100 items, then ask visitors to sign in.</small></span></label>
+      <label class="choice"><input type="radio" name="visitors" checked={!instance.visitorLimit} onchange={() => setVisitorLimit(false)} /><span><strong>Everything</strong><small>Visitors can scroll back as far as anyone signed in.</small></span></label>
+    </fieldset>
+    {#if errors.visitors}<div class="err"><Banner tone="error" title="Couldn’t save that">{errors.visitors}</Banner></div>{/if}
+  </Card>
+
+  <Card kind="section" as="section" class="admin-section" aria-labelledby="starter-h">
+    <h2 class="section-title" id="starter-h">Starter packs</h2>
+    <p class="section-description">New people are offered one account’s public collections to copy. Leave it blank to offer the site’s fullest public collections.</p>
+    <form class="inline" onsubmit={(e) => { e.preventDefault(); void setStarter(); }}>
+      <Field label="Account" hideLabel error={errors.starter} class="grow">
+        {#snippet children({ id, describedBy, invalid })}
+          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={starter} placeholder="@handle" autocomplete="off" autocapitalize="none" spellcheck={false} disabled={savingStarter} oninput={() => (errors.starter = null)} />
+        {/snippet}
+      </Field>
+      <Button type="submit" size="lg" loading={savingStarter}>Save</Button>
     </form>
   </Card>
 
-  <Card kind="section" as="section" class="admin-section">
-    <h2 class="section-title">Accounts <Badge>{users.length}</Badge></h2>
-    {#if issued}
-      <div class="issued" role="status">
-        <p><strong>Temporary password for @{issued.handle}:</strong> <code>{issued.password}</code></p>
-        <p class="help">Pass it on however you like. It won’t be shown again; they should change it in Settings.</p>
-        <div class="row"><Button size="sm" onclick={copyIssued}><Icon name="copy" size={16} />Copy</Button><Button size="sm" onclick={() => (issued = null)}>Done</Button></div>
-      </div>
-    {/if}
-    <ul class="users">
-      {#each users as u (u.id)}
-        <li class:busy={busyId === u.id}>
-          <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={36} v={u.avatarUpdatedAt} />
-          <div class="who">
-            <div class="line">
-              <a class="name tap" href={profileHref(u.handle)}>{u.displayName ?? u.handle}</a><span class="handle">{' '}<Dot />{' '}@{u.handle}{#if u.isAdmin}{' '}<Dot />{' '}<Badge>Admin</Badge>{/if}{#if u.profileVisibility === 'private'}{' '}<Dot />{' '}<Badge>Private</Badge>{/if}{#if u.id === me?.id}{' '}<Dot />{' '}<Badge>You</Badge>{/if}</span>
-            </div>
-            <div class="facts">{u.following} {u.following === 1 ? 'feed' : 'feeds'} <Dot /> {u.collections} {u.collections === 1 ? 'collection' : 'collections'} <Dot /> {u.bookmarks} {u.bookmarks === 1 ? 'bookmark' : 'bookmarks'} <Dot /> joined {relativeTime(u.createdAt)}{#if u.invitedBy}{' via @'}{u.invitedBy}{/if}{#if u.lastSeenAt}{' '}<Dot />{' '}{lastActive(u.lastSeenAt)}{/if}</div>
-            {#if u.id !== me?.id}
-              <div class="acts">
-                <Button size="sm" onclick={() => setAdmin(u, !u.isAdmin)} disabled={busyId === u.id}>{u.isAdmin ? 'Remove admin' : 'Make admin'}</Button>
-                <Button size="sm" onclick={() => resetPassword(u)} disabled={busyId === u.id}>Reset password</Button>
-                <Button variant="danger" size="sm" onclick={() => remove(u)} disabled={busyId === u.id}>Delete</Button>
-              </div>
-            {/if}
-          </div>
-        </li>
-      {/each}
-    </ul>
+  <Card kind="section" as="section" class="admin-section" aria-labelledby="name-h">
+    <h2 class="section-title" id="name-h">Site name</h2>
+    <form class="inline" onsubmit={(e) => { e.preventDefault(); void saveName(); }}>
+      <Field label="Site name" hideLabel error={errors.name} class="grow">
+        {#snippet children({ id, describedBy, invalid })}
+          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={name} maxlength={60} placeholder={instance!.url.replace(/^https?:\/\//, '')} oninput={() => (errors.name = null)} />
+        {/snippet}
+      </Field>
+      <Button type="submit" size="lg" loading={savingName} disabled={name.trim() === instance.name}>Save</Button>
+    </form>
   </Card>
+
+  <Sheet title={managing ? label(managing) : 'Manage account'} lede={managing?.displayName ? `@${managing.handle}` : undefined} bind:dialog={manageDialog} dismiss={false} locked={busy}>
+    {#if managing}
+      <div class="sheet-rows">
+        <label class="choice">
+          <Checkbox checked={managing.isAdmin} disabled={busy} onchange={(e) => setAdmin(e.currentTarget.checked)} />
+          <span><strong>Admin</strong><small>Can manage accounts, invites, and this page’s settings.</small></span>
+        </label>
+        <div class="password">
+          <span class="choice-text"><strong>Password</strong><small>{issued ? 'Shown once. Pass it on however you like; they can change it in Account and data.' : 'Gives them a temporary password and signs them out everywhere.'}</small></span>
+          {#if issued}
+            <div class="secret"><SecretValue value={issued} label="Temporary password" /><Button size="sm" onclick={copyIssued}><Icon name="copy" size={16} />Copy</Button></div>
+          {:else}
+            <div><Button size="sm" disabled={busy} onclick={() => resetDialog?.showModal()}>Reset password</Button></div>
+          {/if}
+        </div>
+      </div>
+      {#if errors.manage}<Banner tone="error" title="That didn’t work">{errors.manage}</Banner>{/if}
+    {/if}
+    {#snippet footer()}
+      <Button variant="primary" size="lg" disabled={busy} onclick={() => manageDialog?.close()}>Done</Button>
+      <Button variant="danger" link disabled={busy} onclick={() => deleteDialog?.showModal()}>Delete account</Button>
+    {/snippet}
+  </Sheet>
+
+  <Sheet title="Reset @{managing?.handle}’s password?" lede="Their current password stops working, and they’re signed out everywhere. You’ll get a temporary password to pass on." alert locked={busy} bind:dialog={resetDialog}>
+    {#snippet footer()}
+      <Button variant="primary" size="lg" loading={busy} onclick={resetPassword}>Reset password</Button>
+    {/snippet}
+  </Sheet>
+
+  <Sheet title="Delete @{managing?.handle}’s account?" lede="Their collections, bookmarks, and notes are deleted with it. Feeds they follow stay on thicket. This can’t be undone." alert locked={busy} bind:dialog={deleteDialog}>
+    {#snippet footer()}
+      <Button variant="danger" solid size="lg" loading={busy} onclick={remove}>Delete account</Button>
+    {/snippet}
+  </Sheet>
+
+  <Sheet title="Revoke {revoking ? `the invite for ${inviteName(revoking)}` : 'this invite'}?" lede="Its link stops working right away. You can make a new one anytime." alert locked={revokeBusy} bind:dialog={revokeDialog}>
+    {#snippet footer()}
+      <Button variant="danger" solid size="lg" loading={revokeBusy} onclick={revoke}>Revoke invite</Button>
+    {/snippet}
+  </Sheet>
+{:else if loadError}
+  <Banner tone="error" title="Couldn’t load Site admin">{loadError}</Banner>
 {:else}
   <p class="status">Loading…</p>
 {/if}
@@ -264,46 +398,23 @@
   code { font-size: calc(var(--text-sm) * var(--size-app)); /* 1px vertical is optical: an inline code chip stays on the text's line. */ background: var(--surface-2); padding: 1px var(--space-2); border-radius: var(--radius-xs); overflow-wrap: anywhere; }
   /* The room between sections is set on the cards' own class, since the cards are drawn by the shared Card. */
   :global(.admin-section) { margin-bottom: var(--space-4); }
-  /* Accounts carries its count beside the heading. */
-  .section-title { display: flex; align-items: baseline; gap: var(--space-2); }
-  .help { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .inline { display: flex; gap: var(--space-2); align-items: flex-end; margin-bottom: var(--space-4); }
-  /* The field takes the room the button beside it doesn't. */
-  .inline :global(.grow), .mint :global(.grow) { flex: 1; min-width: 0; }
-  fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-3); }
-  fieldset + fieldset { margin-top: var(--space-4); }
-  legend { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); padding: 0; margin-bottom: var(--space-2); }
-  .radio { display: flex; align-items: flex-start; gap: var(--space-3); cursor: pointer; }
-  .radio input { margin-top: 3px; }
-  /* The ring these used to borrow from the instance-name box, now said
-     outright. A dial isn't typed into, so it only counts as keyboard focus
-     when you actually tabbed to it. */
-  /* 2px between a choice and its explanation is optical, not a spacing step. */
-  .radio span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
-  .radio small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .mint { display: flex; gap: var(--space-2); }
-  .starter-form { margin: var(--space-3) 0 0; }
-  .invites { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
-  .invites li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .invites .note { flex: 1 1 8ch; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .invites .exp { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); white-space: nowrap; }
-  .issued { background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); }
-  .issued p { margin: 0 0 var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .issued code { font-size: calc(var(--text-base) * var(--size-app)); user-select: all; }
-  .row { display: flex; gap: var(--space-2); }
-  .users { list-style: none; margin: 0; padding: 0; }
-  .users li { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
-  .users li:first-child { border-top: 0; padding-top: var(--space-1); }
-  .users li.busy { opacity: 0.6; }
-  /* Two or three stacked rows, all aligned under the name (not the avatar):
-     name + handle + badges, then the account facts, then the actions —
-     skipped entirely on your own row, where the "You" badge on row one
-     already says there is nothing to act on. */
-  .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
-  .line { line-height: 1.4; }
-  .name { font-weight: 600; }
-  .handle { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .facts { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .acts { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-1); }
+  /* Rows run to the card's edges, as on Import, so each row insets itself like any list row. */
+  .rows { margin: 0 calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)); }
+  /* Under the invite form, the same step a card puts before its controls. */
+  .rows.below { margin-top: var(--space-3); }
+  .line { display: block; }
+  .pills { display: flex; gap: var(--space-1); flex-wrap: wrap; justify-content: flex-end; }
+  /* A text box and its button side by side, the field taking the room. */
+  .inline { display: flex; gap: var(--space-2); align-items: flex-start; }
+  .inline :global(.grow) { flex: 1; min-width: 0; }
+  .err { margin-top: var(--space-3); }
+  .invite { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+  .what { flex: 1 1 12rem; min-width: 0; display: flex; flex-direction: column; }
+  .what .row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .acts { display: flex; align-items: center; gap: var(--space-3); margin-left: auto; }
+  .password { display: flex; flex-direction: column; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .choice-text { display: flex; flex-direction: column; gap: 2px; }
+  .choice-text small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .secret { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
   .status { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
 </style>
