@@ -149,7 +149,8 @@ type Author = Person & {
 };
 
 /** Someone following me. */
-export type FollowRow = { at: string; person: Person & { profileVisibility: "public" | "private" } };
+/** Someone following me, and whether I follow them back (for Follow back on the row). */
+export type FollowRow = { at: string; person: Person & { profileVisibility: "public" | "private" }; following?: boolean };
 
 /** A post, as the one-line notifications name it. */
 export type PostRef = { url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean };
@@ -182,12 +183,13 @@ type Who = Omit<Person, "id">;
 const who = (p: Person): Who => ({ handle: p.handle, displayName: p.displayName, avatarUpdatedAt: p.avatarUpdatedAt });
 
 export type Notification =
-  | { kind: "follow"; key: string; at: string; isNew: boolean; person: Who }
+  /** `following`: I already follow them, so the row needs no Follow back. */
+  | { kind: "follow"; key: string; at: string; isNew: boolean; person: Who; following: boolean }
   | { kind: "bookmark" | "note"; key: string; at: string; isNew: boolean; person: Who; post: PostRef }
   | { kind: "mention" | "reply"; key: string; at: string; isNew: boolean; person: Who; bookmark: Record<string, unknown> }
   | { kind: "collection"; key: string; at: string; isNew: boolean; person: Who; collection: CollectionRef }
   /** `person` is null when their profile is private: someone joined, unnamed. */
-  | { kind: "invite"; key: string; at: string; isNew: boolean; person: Who | null };
+  | { kind: "invite"; key: string; at: string; isNew: boolean; person: Who | null; following: boolean };
 
 /** A notification before it is judged new or not. */
 type Draft = Notification extends infer N ? (N extends unknown ? Omit<N, "isNew"> : never) : never;
@@ -214,13 +216,13 @@ export function assemble(meId: number, c: Candidates, opts: { seenAt: string; si
 
   if (p.follow) for (const f of c.follows) {
     if (f.person.id === meId || f.person.profileVisibility !== "public" || !inWindow(f.at)) continue;
-    out.push({ kind: "follow", key: `follow:${f.person.handle}`, at: f.at, person: who(f.person) });
+    out.push({ kind: "follow", key: `follow:${f.person.handle}`, at: f.at, person: who(f.person), following: !!f.following });
   }
 
   if (p.invite) for (const i of c.invites) {
     if (i.person.id === meId || !inWindow(i.at)) continue;
     const named = i.person.profileVisibility === "public";
-    out.push({ kind: "invite", key: named ? `invite:${i.person.handle}` : `invite:${i.at}`, at: i.at, person: named ? who(i.person) : null });
+    out.push({ kind: "invite", key: named ? `invite:${i.person.handle}` : `invite:${i.at}`, at: i.at, person: named ? who(i.person) : null, following: named && !!i.following });
   }
 
   if (p.collection) for (const k of c.collections) {
@@ -303,8 +305,8 @@ const bookmarkJson = (meId: number) => sql`jsonb_build_object(
   'linkUrl', i.link_url, 'linkLabel', i.link_label
 )`;
 
-type PersonDbRow = { at: Date; id: number; handle: string; displayName: string | null; avatarUpdatedAt: Date | null; profileVisibility: "public" | "private" };
-const personRow = (r: PersonDbRow) => ({ at: iso(r.at)!, person: { id: Number(r.id), handle: r.handle, displayName: r.displayName, avatarUpdatedAt: iso(r.avatarUpdatedAt), profileVisibility: r.profileVisibility } });
+type PersonDbRow = { at: Date; id: number; handle: string; displayName: string | null; avatarUpdatedAt: Date | null; profileVisibility: "public" | "private"; following: boolean };
+const personRow = (r: PersonDbRow) => ({ at: iso(r.at)!, person: { id: Number(r.id), handle: r.handle, displayName: r.displayName, avatarUpdatedAt: iso(r.avatarUpdatedAt), profileVisibility: r.profileVisibility }, following: r.following });
 
 /**
  * Everything that could be a notification for me in the window, straight from
@@ -319,7 +321,8 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
   const inRange = (col: string) => sql`${sql.raw(col)} > ${since}::timestamptz and ${sql.raw(col)} <= ${until}::timestamptz`;
 
   const follows = prefs.follow ? await db.execute<PersonDbRow>(sql`
-    select uf.created_at as at, fu.id, fu.handle, fu.display_name as "displayName", ua.updated_at as "avatarUpdatedAt", fu.profile_visibility as "profileVisibility"
+    select uf.created_at as at, fu.id, fu.handle, fu.display_name as "displayName", ua.updated_at as "avatarUpdatedAt", fu.profile_visibility as "profileVisibility",
+           exists(select 1 from user_follows fb where fb.follower_id = ${me.id} and fb.followee_id = fu.id) as following
     from user_follows uf join users fu on fu.id = uf.follower_id
     left join user_avatars ua on ua.user_id = fu.id
     where uf.followee_id = ${me.id} and ${inRange("uf.created_at")} and fu.profile_visibility = 'public'
@@ -328,7 +331,8 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
 
   // Named or not, every sign-up counts, so the profile isn't filtered here.
   const invites = prefs.invite ? await db.execute<PersonDbRow>(sql`
-    select i.used_at as at, nu.id, nu.handle, nu.display_name as "displayName", ua.updated_at as "avatarUpdatedAt", nu.profile_visibility as "profileVisibility"
+    select i.used_at as at, nu.id, nu.handle, nu.display_name as "displayName", ua.updated_at as "avatarUpdatedAt", nu.profile_visibility as "profileVisibility",
+           exists(select 1 from user_follows fb where fb.follower_id = ${me.id} and fb.followee_id = nu.id) as following
     from invites i join users nu on nu.id = i.used_by
     left join user_avatars ua on ua.user_id = nu.id
     where i.created_by = ${me.id} and ${inRange("i.used_at")}

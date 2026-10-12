@@ -276,11 +276,18 @@ export type NotificationPost = { url: string; title: string | null; siteTitle: s
  *   bookmark  `person` (someone I follow) bookmarked `post`
  *   note      `person` (someone I follow) wrote a note on `post`
  *   mention   `person` @mentioned me in the note on `bookmark`
+ *   reply     `person` noted a post I saved; the note is on `bookmark`
+ *   collection  `person` (someone I follow) made `collection`
+ *   invite    someone signed up with my invite: `person`, or null when their profile is private
+ * Only the kinds I've turned on in Settings (Me.notify*, Me.mentionsFrom).
  */
 export type Notification =
-  | { kind: 'follow'; key: string; at: string; isNew: boolean; person: NotificationPerson }
+  /** `following`: I already follow them back. */
+  | { kind: 'follow'; key: string; at: string; isNew: boolean; person: NotificationPerson; following: boolean }
   | { kind: 'bookmark' | 'note'; key: string; at: string; isNew: boolean; person: NotificationPerson; post: NotificationPost }
-  | { kind: 'mention'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark };
+  | { kind: 'mention' | 'reply'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark }
+  | { kind: 'collection'; key: string; at: string; isNew: boolean; person: NotificationPerson; collection: { name: string; slug: string; description: string | null; feedCount: number } }
+  | { kind: 'invite'; key: string; at: string; isNew: boolean; person: NotificationPerson | null; following: boolean };
 
 export const notificationsApi = {
   /** The last 30 days, at most 100. Reading does not mark them seen; `asOf` is what to pass to `seen`. */
@@ -378,6 +385,9 @@ export type Me = {
   /** Who may see the one running list of what I've been up to. Caps the whole list; each source still obeys its own section. */
   activityVisibility: ShareLevel;
   notesFrom: 'none' | 'following' | 'everyone';
+  /** Which notifications I get (issue #274). Mentions have only `mentionsFrom`: "none" turns them off. */
+  notifyFollows: boolean; notifyBookmarks: boolean; notifyNotes: boolean; notifyCollections: boolean; notifyInvites: boolean; notifyReplies: boolean;
+  mentionsFrom: 'none' | 'following' | 'everyone';
   /** null = follow the instance setting (instanceTracking). */
   trackActivity: boolean | null; instanceTracking: boolean; hasPassword: boolean; createdAt: string; isAdmin: boolean;
   /** Feed setting defaults: leave Shorts out of YouTube channels unless a channel's own setting says otherwise. */
@@ -428,7 +438,7 @@ export const authApi = {
   signup: (handle: string, password: string, displayName?: string, inviteCode?: string, email?: string) => j<Me>('/api/auth/signup', { method: 'POST', body: JSON.stringify({ handle, password, displayName, inviteCode, email }) }),
   login: (handle: string, password: string) => j<Me>('/api/auth/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   logout: () => j<void>('/api/auth/logout', { method: 'POST' }),
-  update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'activityVisibility' | 'notesFrom' | 'trackActivity' | 'hideShortsByDefault'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
+  update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'activityVisibility' | 'notesFrom' | 'trackActivity' | 'hideShortsByDefault' | 'notifyFollows' | 'notifyBookmarks' | 'notifyNotes' | 'notifyCollections' | 'notifyInvites' | 'notifyReplies' | 'mentionsFrom'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
   /**
    * Record that the setup tour was seen, so no device shows it again. Sent
    * while setup may be navigating away, so it outlives the page. A failure
