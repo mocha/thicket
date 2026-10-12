@@ -77,7 +77,7 @@
     { key: 'notifyBookmarks', label: 'Bookmarks by people you follow', short: 'bookmarks' },
     { key: 'notifyNotes', label: 'Notes by people you follow', short: 'notes' },
     { key: 'notifyCollections', label: 'New collections by people you follow', short: 'collections' },
-    { key: 'notifyReplies', label: 'Notes on posts you saved', short: 'notes on your saved posts', hint: 'Starts off, since a popular post can draw a lot of notes' }
+    { key: 'notifyReplies', label: 'Notes on posts you saved', short: 'notes on your saved posts', hint: 'Starts disabled, since a popular post can draw a lot of notes' }
   ]);
   const MENTIONS: { value: Me['mentionsFrom']; label: string; hint?: string; summary: string }[] = [
     { value: 'none', label: 'No one', summary: 'No mentions' },
@@ -89,10 +89,10 @@
   const list = (xs: string[]) => (xs.length < 3 ? xs.join(' and ') : `${xs.slice(0, -1).join(', ')}, and ${xs[xs.length - 1]}`);
   const filterSummary = $derived.by(() => {
     if (!me) return [];
-    // Say whichever list is shorter: what's off ("Bookmarks and collections off"), or, past two, what's left on ("Only followers and notes").
+    // Say whichever list is shorter: what's off ("Bookmarks and collections disabled"), or, past two, what's left enabled ("Only followers and notes").
     const off = KIND_PREFS.filter((k) => !me[k.key]).map((k) => k.short);
     const on = KIND_PREFS.filter((k) => me[k.key]).map((k) => k.short);
-    const kinds = off.length === 0 ? 'Everything on' : on.length === 0 ? 'Everything off' : off.length <= 2 ? cap(`${list(off)} off`) : `Only ${list(on)}`;
+    const kinds = off.length === 0 ? 'Everything enabled' : on.length === 0 ? 'Everything disabled' : off.length <= 2 ? cap(`${list(off)} disabled`) : `Only ${list(on)}`;
     return [kinds, MENTIONS.find((m) => m.value === me.mentionsFrom)?.summary ?? ''];
   });
   let filtersDialog = $state<HTMLDialogElement | null>(null);
@@ -160,7 +160,7 @@
 {:else if items.length === 0}
   <div class="empty">
     <h2>Nothing yet</h2>
-    <p>When someone follows you, it shows up here. So does every post the people you follow bookmark or write a note on, and any note that mentions you as @{session.user?.handle ?? 'yourhandle'}.{#if filterSummary[0] !== 'Everything on' || me?.mentionsFrom !== 'everyone'} Some of these are turned off in Notification settings.{/if}</p>
+    <p>When someone follows you, it shows up here. So does every post the people you follow bookmark or write a note on, and any note that mentions you as @{session.user?.handle ?? 'yourhandle'}.{#if filterSummary[0] !== 'Everything enabled' || me?.mentionsFrom !== 'everyone'} Some of these are disabled in Notification settings.{/if}</p>
     <div class="ctas"><Button href="/explore?scope=people">Find people to follow</Button></div>
   </div>
 {:else}
