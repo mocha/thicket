@@ -283,14 +283,13 @@ export type NotificationPost = { url: string; title: string | null; siteTitle: s
  */
 export type Notification =
   /** `following`: I already follow them back. */
-  | { kind: 'follow'; key: string; at: string; isNew: boolean; person: NotificationPerson; following: boolean }
-  | { kind: 'bookmark'; key: string; at: string; isNew: boolean; person: NotificationPerson; post: NotificationPost }
-  /** `bookmark`: the post with the note on it, shown as a Bookmark card. */
-  | { kind: 'note'; key: string; at: string; isNew: boolean; person: NotificationPerson; post: NotificationPost; bookmark: PublicBookmark }
+  | { kind: 'follow'; key: string; at: string; isNew: boolean; person: NotificationPerson & { bio: string | null }; following: boolean }
+  /** `bookmark`: the bookmark whole, note included, shown as a Bookmark card. */
+  | { kind: 'bookmark' | 'note'; key: string; at: string; isNew: boolean; person: NotificationPerson; post: NotificationPost; bookmark: PublicBookmark }
   | { kind: 'mention'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark }
   | { kind: 'reply'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark }
   | { kind: 'collection'; key: string; at: string; isNew: boolean; person: NotificationPerson; collection: { name: string; slug: string; description: string | null; feedCount: number } }
-  | { kind: 'invite'; key: string; at: string; isNew: boolean; person: NotificationPerson | null; following: boolean };
+  | { kind: 'invite'; key: string; at: string; isNew: boolean; person: (NotificationPerson & { bio: string | null }) | null; following: boolean };
 
 export const notificationsApi = {
   /** The last 30 days, at most 100. Reading does not mark them seen; `asOf` is what to pass to `seen`. */

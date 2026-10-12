@@ -149,13 +149,13 @@ type Author = Person & {
 };
 
 /** Someone following me, and whether I follow them back (for Follow back on the row). */
-export type FollowRow = { at: string; person: Person & { profileVisibility: "public" | "private" }; following?: boolean };
+export type FollowRow = { at: string; person: Person & { profileVisibility: "public" | "private"; bio?: string | null }; following?: boolean };
 
 /** A post, as the one-line notifications name it. */
 export type PostRef = { url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean };
 
 /** A bookmark by someone I follow, noted or not, and when I started following them. */
-/** `bookmark`: the whole bookmark, note included, when it has a note, so a "noted" notification can show it as a Bookmark card. */
+/** `bookmark`: the whole bookmark, note included, so the notification can show it as a Bookmark card. */
 export type SaveRow = { id: number; author: Author; post: PostRef; savedAt: string; noteCreatedAt: string | null; followedAt: string; bookmark?: Record<string, unknown> | null };
 
 /**
@@ -184,14 +184,13 @@ const who = (p: Person): Who => ({ handle: p.handle, displayName: p.displayName,
 
 export type Notification =
   /** `following`: I already follow them, so the row needs no Follow back. */
-  | { kind: "follow"; key: string; at: string; isNew: boolean; person: Who; following: boolean }
-  | { kind: "bookmark"; key: string; at: string; isNew: boolean; person: Who; post: PostRef }
-  /** A note shows whole, as the Bookmark card it lives on; `post` names it in one line for a script. */
-  | { kind: "note"; key: string; at: string; isNew: boolean; person: Who; post: PostRef; bookmark: Record<string, unknown> }
+  | { kind: "follow"; key: string; at: string; isNew: boolean; person: Who & { bio: string | null }; following: boolean }
+  /** Shown whole, as the Bookmark card; `post` names it in one line for a script. */
+  | { kind: "bookmark" | "note"; key: string; at: string; isNew: boolean; person: Who; post: PostRef; bookmark: Record<string, unknown> }
   | { kind: "mention" | "reply"; key: string; at: string; isNew: boolean; person: Who; bookmark: Record<string, unknown> }
   | { kind: "collection"; key: string; at: string; isNew: boolean; person: Who; collection: CollectionRef }
   /** `person` is null when their profile is private: someone joined, unnamed. */
-  | { kind: "invite"; key: string; at: string; isNew: boolean; person: Who | null; following: boolean };
+  | { kind: "invite"; key: string; at: string; isNew: boolean; person: (Who & { bio: string | null }) | null; following: boolean };
 
 /** A notification before it is judged new or not. */
 type Draft = Notification extends infer N ? (N extends unknown ? Omit<N, "isNew"> : never) : never;
@@ -218,13 +217,13 @@ export function assemble(meId: number, c: Candidates, opts: { seenAt: string; si
 
   if (p.follow) for (const f of c.follows) {
     if (f.person.id === meId || f.person.profileVisibility !== "public" || !inWindow(f.at)) continue;
-    out.push({ kind: "follow", key: `follow:${f.person.handle}`, at: f.at, person: who(f.person), following: !!f.following });
+    out.push({ kind: "follow", key: `follow:${f.person.handle}`, at: f.at, person: { ...who(f.person), bio: f.person.bio ?? null }, following: !!f.following });
   }
 
   if (p.invite) for (const i of c.invites) {
     if (i.person.id === meId || !inWindow(i.at)) continue;
     const named = i.person.profileVisibility === "public";
-    out.push({ kind: "invite", key: named ? `invite:${i.person.handle}` : `invite:${i.at}`, at: i.at, person: named ? who(i.person) : null, following: named && !!i.following });
+    out.push({ kind: "invite", key: named ? `invite:${i.person.handle}` : `invite:${i.at}`, at: i.at, person: named ? { ...who(i.person), bio: i.person.bio ?? null } : null, following: named && !!i.following });
   }
 
   if (p.collection) for (const k of c.collections) {
@@ -261,7 +260,7 @@ export function assemble(meId: number, c: Candidates, opts: { seenAt: string; si
       continue;
     }
     if (p.bookmark && allows(a.bookmarksVisibility, audience(a)) && fresh(s.savedAt)) {
-      out.push({ kind: "bookmark", key: `bookmark:${s.id}`, at: s.savedAt, person: who(a), post: s.post });
+      out.push({ kind: "bookmark", key: `bookmark:${s.id}`, at: s.savedAt, person: who(a), post: s.post, bookmark: s.bookmark ?? {} });
     }
   }
 
@@ -301,14 +300,14 @@ const readableSql = (meId: number) => sql`u.profile_visibility = 'public' and ${
 const bookmarkJson = (meId: number) => sql`jsonb_build_object(
   'id', b.id, 'itemId', b.item_id, 'feedId', b.feed_id, 'url', b.url, 'title', b.title, 'summary', b.summary,
   'imageUrl', b.image_url, 'siteTitle', b.site_title, 'author', b.author, 'publishedAt', b.published_at,
-  'savedAt', b.saved_at, 'activeAt', greatest(b.saved_at, b.note_updated_at), 'note', ${noteJson("b")},
+  'savedAt', b.saved_at, 'activeAt', greatest(b.saved_at, b.note_updated_at), 'note', case when b.note is null then null else ${noteJson("b")} end,
   'hasIcon', ${ICON},
   'myBookmarkId', (select mb.id from bookmarks mb where mb.user_id = ${meId} and mb.url = b.url limit 1),
   'linkUrl', i.link_url, 'linkLabel', i.link_label
 )`;
 
-type PersonDbRow = { at: Date; id: number; handle: string; displayName: string | null; avatarUpdatedAt: Date | null; profileVisibility: "public" | "private"; following: boolean };
-const personRow = (r: PersonDbRow) => ({ at: iso(r.at)!, person: { id: Number(r.id), handle: r.handle, displayName: r.displayName, avatarUpdatedAt: iso(r.avatarUpdatedAt), profileVisibility: r.profileVisibility }, following: r.following });
+type PersonDbRow = { at: Date; id: number; handle: string; displayName: string | null; avatarUpdatedAt: Date | null; profileVisibility: "public" | "private"; following: boolean; bio: string | null };
+const personRow = (r: PersonDbRow) => ({ at: iso(r.at)!, person: { id: Number(r.id), handle: r.handle, displayName: r.displayName, avatarUpdatedAt: iso(r.avatarUpdatedAt), profileVisibility: r.profileVisibility, bio: r.bio }, following: r.following });
 
 /**
  * Everything that could be a notification for me in the window, straight from
@@ -323,7 +322,7 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
   const inRange = (col: string) => sql`${sql.raw(col)} > ${since}::timestamptz and ${sql.raw(col)} <= ${until}::timestamptz`;
 
   const followsQ = prefs.follow ? db.execute<PersonDbRow>(sql`
-    select uf.created_at as at, fu.id, fu.handle, fu.display_name as "displayName", ua.updated_at as "avatarUpdatedAt", fu.profile_visibility as "profileVisibility",
+    select uf.created_at as at, fu.id, fu.handle, fu.display_name as "displayName", fu.bio, ua.updated_at as "avatarUpdatedAt", fu.profile_visibility as "profileVisibility",
            exists(select 1 from user_follows fb where fb.follower_id = ${me.id} and fb.followee_id = fu.id) as following
     from user_follows uf join users fu on fu.id = uf.follower_id
     left join user_avatars ua on ua.user_id = fu.id
@@ -333,7 +332,7 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
 
   // Named or not, every sign-up counts, so the profile isn't filtered here.
   const invitesQ = prefs.invite ? db.execute<PersonDbRow>(sql`
-    select i.used_at as at, nu.id, nu.handle, nu.display_name as "displayName", ua.updated_at as "avatarUpdatedAt", nu.profile_visibility as "profileVisibility",
+    select i.used_at as at, nu.id, nu.handle, nu.display_name as "displayName", nu.bio, ua.updated_at as "avatarUpdatedAt", nu.profile_visibility as "profileVisibility",
            exists(select 1 from user_follows fb where fb.follower_id = ${me.id} and fb.followee_id = nu.id) as following
     from invites i join users nu on nu.id = i.used_by
     left join user_avatars ua on ua.user_id = nu.id
@@ -347,7 +346,7 @@ export async function candidatesFor(me: { id: number; handle: string }, since: s
     select b.id, b.url, b.title, b.site_title as "siteTitle", b.feed_id as "feedId", ${ICON} as "hasIcon",
            b.saved_at as "savedAt", case when b.note is null then null else b.note_created_at end as "noteCreatedAt",
            mine.created_at as "followedAt",
-           case when b.note is null then null else ${bookmarkJson(me.id)} end as bookmark,
+           ${bookmarkJson(me.id)} as bookmark,
            ${authorCols(me.id)}
     from user_follows mine
     join bookmarks b on b.user_id = mine.followee_id
