@@ -3,7 +3,7 @@
   import Card from '$lib/components/Card.svelte';
   import Dot from '$lib/components/Dot.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { page } from '$app/state';
   import { importApi } from '$lib/api';
   import { session } from '$lib/session.svelte';
@@ -80,7 +80,28 @@
 
   function startOver() { startOverImport(); link = ''; }
 
-  const label = (f: ImportFeed) => f.title?.trim() || host(f.url);
+  /* A file often gives the address itself as a feed's name; the site's name says it better. */
+  const label = (f: ImportFeed) => { const t = f.title?.trim(); return t && !/^https?:\/\//i.test(t) ? t : host(f.url); };
+
+  /**
+   * Renaming is one card at a time: Rename swaps the title for the shared text
+   * box, and pressing Enter, Escape or leaving the box puts the title back.
+   * Escape, or leaving it empty, keeps the name it had.
+   */
+  let renaming = $state<number | null>(null);
+  let before = '';
+  let nameBox = $state<HTMLInputElement | null>(null);
+  async function startRename(gi: number) {
+    before = imp.groups[gi].name;
+    renaming = gi;
+    await tick();
+    nameBox?.focus();
+    nameBox?.select();
+  }
+  function finishRename(g: ImportGroup) {
+    if (!g.name.trim()) g.name = before;
+    renaming = null;
+  }
 </script>
 
 <svelte:head><title>Import · thicket</title></svelte:head>
@@ -147,53 +168,50 @@
           <!-- A group with nothing that works can't be ticked; the line below says why. -->
           <input type="checkbox" class="keep" checked={on} disabled={!!why} onchange={(e) => (g.keep = e.currentTarget.checked)} aria-label="Create {g.name.trim() || 'this collection'}" />
         {/if}
-        <div class="gname">
-          {#if on}
-            <Input bind:value={g.name} clearable={false} invalid={!g.name.trim()} aria-label="Collection name" />
-          {:else}
-            <span class="offname">{g.name.trim() || 'Untitled'}</span>
-          {/if}
-          {#if why}<p class="note">{why}</p>
-          {:else if on}
-            {#if !g.name.trim()}<p class="note">Give this collection a name</p>
-            {:else if renamed}<p class="note">Will be called “{final}”, since you already have a {g.name.trim()}</p>{/if}
-            <p class="note counts">
-              {#if !settled(g) && !ok.length}Checking feeds…{:else}{fresh} new{/if}{#if following}{' '}<Dot />{' '}{following} you already follow{/if}{#if bad.length}{' '}<Dot />{' '}{bad.length} we can’t import{/if}
-            </p>
-          {/if}
-        </div>
+        {#if on && renaming === gi}
+          <form class="rename" onsubmit={(e) => { e.preventDefault(); finishRename(g); }}>
+            <Input bind:value={g.name} bind:element={nameBox} clearable={false} aria-label="Collection name" onblur={() => finishRename(g)} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') { g.name = before; finishRename(g); } }} />
+          </form>
+        {:else}
+          <h2 class="section-title gtitle">{g.name.trim() || 'Untitled'}</h2>
+          {#if on}<Button size="sm" onclick={() => startRename(gi)}>Rename</Button>{/if}
+        {/if}
+      </div>
+      <div class="notes">
+        {#if why}<p class="note">{why}</p>
+        {:else if on}
+          {#if renamed}<p class="note">Will be called “{final}”, since you already have a {g.name.trim()}</p>{/if}
+          <p class="note counts">
+            {#if !settled(g) && !ok.length}Checking feeds…{:else}{fresh} new{/if}{#if following}{' '}<Dot />{' '}{following} you already follow{/if}{#if bad.length}{' '}<Dot />{' '}{bad.length} we can’t import{/if}
+          </p>
+        {/if}
       </div>
 
-      {#if on || !choosing}
-        {#if ok.length}
-          <h3>Feeds</h3>
-          <ul class="feeds list-rows">
-            {#each g.open ? ok : ok.slice(0, SHOWN) as f (f.url)}
-              <li>
-                <span class="fname row-name">{label(f)}<small class="row-details">{host(f.url)}</small></span>
-                {#if f.state === 'pending'}<Badge>Checking…</Badge>
-                {:else if f.state === 'unsure'}<Badge>Will retry</Badge>
-                {:else if f.following}<Badge>Already following</Badge>
-                {:else}<Badge tone="soft">Ready</Badge>{/if}
-              </li>
-              {#if f.state === 'unsure' && f.reason}<li class="why">{f.reason}</li>{/if}
-            {/each}
-          </ul>
-          {#if !g.open && ok.length > SHOWN}
-            <button class="more tap" onclick={() => (g.open = true)}>Show all {ok.length}</button>
-          {/if}
-        {/if}
-      {/if}
-
-      {#if bad.length && (on || why || !choosing)}
-        <h3>Feeds we can’t import</h3>
-        <ul class="feeds list-rows refused">
-          {#each bad as f (f.url)}
-            <li>
-              <span class="fname row-name">{label(f)}<small class="row-details">{host(f.url)}</small><small class="reason">{f.reason}</small></span>
+      {#if on || why || !choosing}
+        {@const rows = [...ok, ...bad]}
+        <h3>Feeds</h3>
+        <div class="feeds">
+        <ul class="list-rows">
+          {#each g.open ? rows : rows.slice(0, SHOWN) as f (f.url)}
+            {@const name = label(f)}
+            <li class:refused={f.state === 'failed'}>
+              <span class="fname">
+                <span class="row-name">{name}</span>
+                {#if name !== host(f.url)}<small class="row-details">{host(f.url)}</small>{/if}
+                {#if f.reason && (f.state === 'failed' || f.state === 'unsure')}<small class="row-details reason">{f.reason}</small>{/if}
+              </span>
+              {#if f.state === 'pending'}<Badge>Checking…</Badge>
+              {:else if f.state === 'failed'}<Badge tone="danger">Can’t import</Badge>
+              {:else if f.state === 'unsure'}<Badge>Will retry</Badge>
+              {:else if f.following}<Badge>Already following</Badge>
+              {:else}<Badge tone="soft">Ready</Badge>{/if}
             </li>
           {/each}
         </ul>
+        {#if !g.open && rows.length > SHOWN}
+          <button class="row-more tap" onclick={() => (g.open = true)}>Show all {rows.length}</button>
+        {/if}
+        </div>
       {/if}
     </Card>
   {/each}
@@ -239,29 +257,30 @@
   .bar { height: 6px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
   .bar span { display: block; height: 100%; background: var(--accent); transition: width 200ms ease; }
 
-  .ghead { display: flex; align-items: flex-start; gap: var(--space-3); }
-  /* The box sits level with the middle of the name field beside it. */
-  .keep { width: 20px; height: 20px; margin: 10px 0 0; flex: none; accent-color: var(--accent); cursor: pointer; }
+  .ghead { display: flex; align-items: center; gap: var(--space-3); min-height: 40px; }
+  .keep { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); cursor: pointer; }
   .keep:disabled { cursor: not-allowed; }
   .keep:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .gname { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
-  /* A group that's switched off isn't being named, so its name is plain text, level with the box. */
-  .offname { font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; line-height: 40px; color: var(--text-2); }
+  /* The card's own title, without the room it usually leaves below: the notes sit tight under it. */
+  .ghead :global(.gtitle) { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+  :global(.import-section.off) .gtitle { color: var(--text-2); }
+  .rename { flex: 1; min-width: 0; }
+  /* The notes line up with the title's first letter, past the checkbox when there is one. */
+  .notes { display: flex; flex-direction: column; gap: var(--space-1); margin-top: var(--space-1); }
+  .ghead:has(.keep) + .notes { padding-left: calc(20px + var(--space-3)); }
   .note { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .counts { font-variant-numeric: tabular-nums; }
 
-  /* The feeds run edge to edge across the card, between two hairlines, so each
-     row's text starts the card's own inset in, as on every other list of rows. */
-  .feeds { margin: 0 calc(-1 * var(--card-pad)); border-block: 1px solid var(--line); }
+  /* The feeds run edge to edge across the card, so each row's text starts the
+     card's own inset in, as on every other list of rows. Lines only between rows;
+     the list runs to the card's bottom edge. */
+  .feeds { margin: 0 calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)); }
   .feeds li { display: flex; align-items: center; gap: var(--space-3); }
-  .feeds li.why { border-top: 0; padding-top: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .fname { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
-  .fname small { font-weight: 400; }
-  /* Feeds that won't come in are quieter than the ones that will: lighter name, reason beneath. */
-  .refused .fname { font-weight: 400; color: var(--text-2); }
-  .reason { margin-top: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  /* A feed we can't import is quieter than the ones that will come in. */
+  .refused .row-name { font-weight: 400; color: var(--text-2); }
+  .reason { margin-top: var(--space-1); }
   .count { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .more { margin-top: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); }
 
   /* Pinned to the bottom while a long review scrolls, so the main action is always in reach. On a
      phone it sits on top of the tab bar; where the sidebar shows there is no tab bar. */
