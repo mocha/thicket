@@ -9,11 +9,12 @@
    * mine to choose in Settings (issue #274).
    *
    * Most of it is one terse line to skim: who, what, and the post's title
-   * linking to the post. What was written to me or on my posts leads with the
-   * note itself, headed by its writer and what they did ("mentioned you", in
-   * the accent color for a mention), with the post under it as one line. Each
-   * row offers its next step: Follow back, Read note, or the collection
-   * itself.
+   * linking to the post. What was written to me or about my posts comes in
+   * full, the post with the note on it, the same content a profile's Bookmark
+   * cards show, drawn flat inside its row. A mention also carries a note mark
+   * on the writer's picture, so it stands out without a second tint (the tint
+   * means "new"). Each row offers its next step: Follow back, Read note, or
+   * the collection itself.
    *
    * Opening the page marks everything seen, so the bubble in the sidebar
    * clears. What was new stays highlighted for this visit, so you can still
@@ -21,18 +22,19 @@
    * read, never later, so nothing arriving in between is marked seen unshown.
    */
   import { onMount } from 'svelte';
-  import { api, authApi, collectionHref, notificationsApi, profileHref, profilesApi, type Me, type Notification, type NotificationPost } from '$lib/api';
+  import { api, authApi, collectionHref, notificationsApi, profileHref, profilesApi, type Me, type Notification } from '$lib/api';
   import { setMe } from '$lib/session.svelte';
   import FiltersBox from '$lib/components/FiltersBox.svelte';
   import Sheet from '$lib/components/Sheet.svelte';
   import { showToast } from '$lib/toast.svelte';
   import CollectionRow from '$lib/components/CollectionRow.svelte';
   import FollowButton from '$lib/components/FollowButton.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import { clearNotifs, loadNotifs } from '$lib/notifications.svelte';
   import { session } from '$lib/session.svelte';
   import { dayKey, dayLabel, hostOf, relativeTime, savedHref, ugcRel } from '$lib/time';
   import Avatar from '$lib/components/Avatar.svelte';
-  import NoteBlock from '$lib/components/NoteBlock.svelte';
+  import BookmarkCard from '$lib/components/BookmarkCard.svelte';
   import Button from '$lib/components/Button.svelte';
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import FeedPopover from '$lib/components/FeedPopover.svelte';
@@ -148,14 +150,8 @@
   {#snippet description()}Followers, mentions, and what the people you follow save.{/snippet}
 </PageHeader>
 
-{#snippet who(p: NonNullable<Notification['person']>)}
-  <a class="who" href={profileHref(p.handle)} title={p.displayName ?? undefined}><Avatar handle={p.handle} name={p.displayName ?? p.handle} size={24} v={p.avatarUpdatedAt} /><span>{name(p)}</span></a>
-{/snippet}
-{#snippet postLine(post: NotificationPost)}
-  <button class="source tap" onclick={() => openSource(post.feedId, post.hasIcon, post.siteTitle ?? hostOf(post.url))} aria-label="About {post.siteTitle ?? hostOf(post.url)}" title="About {post.siteTitle ?? hostOf(post.url)}">
-    <SourceIcon feedId={post.feedId} hasIcon={post.hasIcon} name={post.siteTitle ?? hostOf(post.url)} size={16} />
-  </button>
-  <a class="post" href={savedHref(post.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(post.url))} title={post.siteTitle ?? hostOf(post.url)}>{post.title ?? post.url}</a>
+{#snippet who(p: NonNullable<Notification['person']>, mark = false)}
+  <a class="who" href={profileHref(p.handle)} title={p.displayName ?? undefined}><span class="pic"><Avatar handle={p.handle} name={p.displayName ?? p.handle} size={24} v={p.avatarUpdatedAt} />{#if mark}<span class="mark" aria-hidden="true"><Icon name="note" size={10} stroke={2.5} fill /></span>{/if}</span><span>{name(p)}</span></a>
 {/snippet}
 {#snippet when(at: string)}<time datetime={at} title={new Date(at).toLocaleString()}>{relativeTime(at)}</time>{/snippet}
 {#snippet follow(n: Extract<Notification, { kind: 'follow' | 'invite' }>, label: string)}
@@ -181,17 +177,11 @@
   <h2 class={g.key === todayKey ? 'visually-hidden' : 'dayhead'}>{g.label}</h2>
   <Card kind="list" as="ul" class="list-rows">
     {#each g.items as n (n.key)}
-      <li class:new={n.isNew} class:rich={n.kind === 'collection'} class:mention={n.kind === 'mention'} class:noted={n.kind === 'mention' || n.kind === 'reply'}>
+      <li class:new={n.isNew} class:rich={n.kind === 'mention' || n.kind === 'reply' || n.kind === 'collection'} class:mention={n.kind === 'mention'}>
         {#if n.isNew}<span class="visually-hidden">New: </span>{/if}
         {#if n.kind === 'mention' || n.kind === 'reply'}
-          <!-- What was written to me leads; the post it's on follows as one line. -->
-          {@const kind = n.kind}
-          {#if n.bookmark.note}
-            <NoteBlock lead note={{ ...n.bookmark.note, author: n.person }}>
-              {#snippet says()}<span class="verb">{kind === 'mention' ? 'mentioned you' : 'noted a post you saved'}</span>{/snippet}
-            </NoteBlock>
-          {/if}
-          <p class="line on-post">{@render postLine({ url: n.bookmark.url, title: n.bookmark.title, siteTitle: n.bookmark.siteTitle, feedId: n.bookmark.feedId, hasIcon: n.bookmark.hasIcon })}</p>
+          <p class="line row-event">{@render who(n.person, n.kind === 'mention')} <span class="verb">{n.kind === 'mention' ? 'mentioned you' : 'noted a post you saved'}</span> {@render when(n.at)}</p>
+          <BookmarkCard flat b={n.bookmark} author={n.person} onopen={() => api.event('bookmark_opened', { via: 'notifications' })} />
         {:else if n.kind === 'collection'}
           <p class="line row-event">{@render who(n.person)} <span class="verb">made a collection</span> {@render when(n.at)}</p>
           <ul class="nested-list"><CollectionRow href={collectionHref(n.person.handle, n.collection.slug)} name={n.collection.name} description={n.collection.description} feedCount={n.collection.feedCount} /></ul>
@@ -207,7 +197,10 @@
           <p class="line row-event">
             {@render who(n.person)}
             <span class="verb">{n.kind === 'note' ? 'noted' : 'bookmarked'}</span>
-            {@render postLine(n.post)}
+            <button class="source tap" onclick={() => openSource(n.post.feedId, n.post.hasIcon, n.post.siteTitle ?? hostOf(n.post.url))} aria-label="About {n.post.siteTitle ?? hostOf(n.post.url)}" title="About {n.post.siteTitle ?? hostOf(n.post.url)}">
+              <SourceIcon feedId={n.post.feedId} hasIcon={n.post.hasIcon} name={n.post.siteTitle ?? hostOf(n.post.url)} size={16} />
+            </button>
+            <a class="post" href={savedHref(n.post.url) ?? '#'} target="_blank" rel={ugcRel(savedHref(n.post.url))} title={n.post.siteTitle ?? hostOf(n.post.url)}>{n.post.title ?? n.post.url}</a>
             {#if n.kind === 'note'}<span class="act"><Button size="sm" href="{profileHref(n.person.handle)}/bookmarks?notes=1">Read note</Button></span>{/if}
             {@render when(n.at)}
           </p>
@@ -259,10 +252,11 @@
   .rich .line { padding: 0 var(--card-pad); }
   /* The collection keeps its own row, inset like any row, under the line that says who made it. */
   .nested-list { list-style: none; margin: 0; padding: 0; }
+  /* A mention: the writer's picture carries a note mark, so it reads as written to me even once it's no longer new. */
+  .pic { position: relative; display: inline-flex; flex: none; }
+  /* The same corner mark as the edit badge on a profile picture. */
+  .mark { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 14px; height: 14px; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 2px var(--surface); }
   .mention .verb { color: var(--accent); font-weight: 600; }
-  /* The post a note is on, one line under the note, lined up with the note's text. */
-  /* Outlined like the Filters box, so it reads as the thing the note is about, not more of the note. */
-  .on-post { margin-top: var(--space-3); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); }
   /* The next step sits at the end of the line, before the time, like Follow on a person's row. */
   .act { flex: none; margin-left: auto; }
   .act + time { margin-left: 0; }
