@@ -44,8 +44,6 @@
    * renders straight away rather than waiting on who's signed in.
    */
   const bare = $derived(path === '/design-system');
-  /** The admin feed list is a table of a couple hundred rows, so it gets more room than the reading column. */
-  const wide = $derived(path === '/admin/feeds' || (path === '/admin' && page.url.searchParams.get('tab') === 'feeds'));
   /** The front page only sends people on (to Everything or the login screen), so it draws no frame of its own. */
   const front = $derived(path === '/');
   const inApp = $derived(signedIn && !front);
@@ -106,7 +104,7 @@
     </header>
   {/if}
 
-  <main class:anon={!inApp} class:paged={inApp && display.layout === 'paged'} class:wide={inApp && wide} inert={covered} id="content" tabindex="-1" bind:this={content}>
+  <main class:anon={!inApp} class:paged={inApp && display.layout === 'paged'} inert={covered} id="content" tabindex="-1" bind:this={content}>
     {#if show}{@render children()}
     {:else if session.unreachable}
       <div class="unreachable" role="status">
@@ -138,7 +136,6 @@
     max-width: 900px;
     padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) var(--space-4) calc(var(--space-6) + var(--space-5));
   }
-  main.wide { max-width: 1200px; }
   /* Paged: room for the page-turn strips down both sides. */
   main.paged { max-width: none; padding-left: calc(env(safe-area-inset-left, 0px) + var(--pager-w) + var(--space-2)); padding-right: calc(env(safe-area-inset-right, 0px) + var(--pager-w) + var(--space-2)); }
   /* 80px is how far down the offline notice sits, a layout drop rather than a spacing step. */
@@ -160,7 +157,6 @@
   @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) {
     /* The left margin is column math, not spacing: the sidebar plus half of what's left over. */
     main:not(.anon):not(.paged):not(.bare) { margin-left: calc(var(--nav-w) + max(24px, (100vw - var(--nav-w) - 640px) / 2)); padding: calc(var(--space-5) + var(--space-1)) var(--space-5) calc(var(--space-6) + var(--space-5)); }
-    main.wide:not(.anon):not(.paged):not(.bare) { margin-left: calc(var(--nav-w) + max(24px, (100vw - var(--nav-w) - 1200px) / 2)); }
   }
   @media (min-width: 900px) {
     main.anon, header.anon { max-width: 680px; }

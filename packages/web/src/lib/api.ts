@@ -73,7 +73,6 @@ export type Feed = {
   /** Posts from the last 30 days that appear to repeat an earlier post from this feed. */
   repeatsLast30d: number;
   /** The site's posts are behind a paywall, as marked by an admin. Shown beside the feed's address. */
-  requiresSubscription: boolean;
   /** Conditional-GET state, shown on the settings page for diagnosing a feed. */
   etag: string | null; lastModified: string | null;
 };
@@ -507,7 +506,7 @@ export type AdminFeedSort = (typeof ADMIN_FEED_SORTS)[number];
 export type AdminFeed = {
   id: number; url: string; siteUrl: string | null; title: string | null; kind: string; slug: string; hasIcon: boolean;
   itemCount: number; followerCount: number; posts30d: number; createdAt: string; lastFetchedAt: string | null; lastItemAt: string | null;
-  consecutiveFailures: number; lastStatus: number | null; lastError: string | null; requiresSubscription: boolean;
+  consecutiveFailures: number; lastStatus: number | null; lastError: string | null;
   checks: number; failures: number;
 };
 export type AdminFeedPage = {
@@ -554,9 +553,8 @@ export const adminApi = {
   /** The categories one post was filed under. Admins only, for now. */
   itemCategories: (id: number) => j<{ categories: string[] }>(`/api/admin/items/${id}/categories`),
   /** Mark a feed's posts as paywalled, for everyone. */
-  setRequiresSubscription: (id: number, requiresSubscription: boolean) => j<{ id: number; requiresSubscription: boolean; title: string | null }>(`/api/admin/feeds/${id}`, { method: 'PATCH', body: JSON.stringify({ requiresSubscription }) }),
   /** Retitle a feed for everyone; null hands the title back to the feed's own on its next check. */
-  setFeedTitle: (id: number, title: string | null) => j<{ id: number; requiresSubscription: boolean; title: string | null }>(`/api/admin/feeds/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }),
+  setFeedTitle: (id: number, title: string | null) => j<{ id: number; title: string | null }>(`/api/admin/feeds/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }),
   /** Every feed in the index, a page at a time, with its health (issue #103). */
   feeds: (opts: { q?: string; filter?: AdminFeedFilter; sort?: AdminFeedSort; dir?: 'asc' | 'desc'; page?: number; per?: number } = {}) => {
     const q = new URLSearchParams();

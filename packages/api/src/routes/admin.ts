@@ -212,9 +212,10 @@ const FILTER_SQL: Record<(typeof ADMIN_FEED_FILTERS)[number], SQL> = {
 export const ADMIN_FEED_SORTS = ["followers", "posts", "added", "failures", "lastPost", "checked", "title"] as const;
 const SORT_SQL: Record<(typeof ADMIN_FEED_SORTS)[number], SQL> = {
   followers: sql`f.follower_count`,
-  posts: sql`f.item_count`,
+  posts: sql`f.posts_30d`,
   added: sql`f.created_at`,
-  failures: sql`f.consecutive_failures`,
+  // Grouped as the list's Health column words them (broken, failing, OK); within a group the most-followed come first, below.
+  failures: sql`case when f.consecutive_failures >= ${BROKEN_AFTER} then 2 when f.consecutive_failures > 0 then 1 else 0 end`,
   lastPost: sql`f.last_item_at`,
   checked: sql`f.last_fetched_at`,
   title: sql`lower(coalesce(f.title, f.url))`,
@@ -274,7 +275,6 @@ admin.get("/feeds", async (c) => {
            f.item_count as "itemCount", f.follower_count as "followerCount", f.posts_30d as "posts30d",
            f.created_at as "createdAt", f.last_fetched_at as "lastFetchedAt", f.last_item_at as "lastItemAt",
            f.consecutive_failures as "consecutiveFailures", f.last_status as "lastStatus", f.last_error as "lastError",
-           f.requires_subscription as "requiresSubscription",
            h.checks, h.failures
     from pick join feeds f on f.id = pick.id
     left join lateral (
@@ -323,7 +323,7 @@ admin.get("/feeds/:id/impact", async (c) => {
 
 /** The longest title an admin can give a feed. */
 export const FEED_TITLE_MAX = 200;
-const PATCH_ERROR = "requiresSubscription (boolean) or title (string or null) is required";
+const PATCH_ERROR = "title (string or null) is required";
 /** How many of a feed's post terms the diagnostics list. More is noise on one screen. */
 const FEED_TERMS_SHOWN = 500;
 
@@ -361,9 +361,7 @@ admin.get("/items/:id/categories", async (c) => {
 });
 
 /**
- * Facts about a feed that hold for everyone, set by an admin: whether its
- * posts are behind a paywall (issue #216), which shows as "Requires
- * subscription" beside the feed's address, and its title. Fetching only fills
+ * A feed's title for everyone, set by an admin. Fetching only fills
  * a title in when there is none, so one set here stays. Clearing it hands the
  * title back to the feed: the next check is made unconditional and soon, so the
  * feed's own title comes back with it.
@@ -374,21 +372,14 @@ admin.patch("/feeds/:id", async (c) => {
   if (id === null) return c.json({ error: "not found" }, 404);
   const body = await c.req.json<unknown>().catch(() => null);
   if (!body || typeof body !== "object" || Array.isArray(body)) return c.json({ error: PATCH_ERROR }, 400);
-  const { requiresSubscription, title } = body as { requiresSubscription?: unknown; title?: unknown };
-  if (requiresSubscription === undefined && title === undefined) return c.json({ error: PATCH_ERROR }, 400);
-  if (requiresSubscription !== undefined && typeof requiresSubscription !== "boolean") return c.json({ error: PATCH_ERROR }, 400);
-  if (title !== undefined && title !== null && typeof title !== "string") return c.json({ error: PATCH_ERROR }, 400);
+  const { title } = body as { title?: unknown };
+  if (title === undefined || (title !== null && typeof title !== "string")) return c.json({ error: PATCH_ERROR }, 400);
 
-  const set: Partial<typeof schema.feeds.$inferInsert> = {};
-  if (typeof requiresSubscription === "boolean") set.requiresSubscription = requiresSubscription;
-  if (title !== undefined) {
-    const trimmed = typeof title === "string" ? title.trim().slice(0, FEED_TITLE_MAX) : "";
-    set.title = trimmed || null;
-    if (!trimmed) Object.assign(set, { etag: null, lastModified: null, nextFetchAt: new Date() });
-    set.updatedAt = new Date();
-  }
+  const trimmed = typeof title === "string" ? title.trim().slice(0, FEED_TITLE_MAX) : "";
+  const set: Partial<typeof schema.feeds.$inferInsert> = { title: trimmed || null, updatedAt: new Date() };
+  if (!trimmed) Object.assign(set, { etag: null, lastModified: null, nextFetchAt: new Date() });
   const [row] = await db.update(schema.feeds).set(set).where(eq(schema.feeds.id, id))
-    .returning({ id: schema.feeds.id, requiresSubscription: schema.feeds.requiresSubscription, title: schema.feeds.title });
+    .returning({ id: schema.feeds.id, title: schema.feeds.title });
   return row ? c.json(row) : c.json({ error: "not found" }, 404);
 });
 
