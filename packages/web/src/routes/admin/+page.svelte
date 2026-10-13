@@ -373,7 +373,7 @@
 
   <Sheet title="Reset @{managing?.handle}’s password?" lede="Their current password stops working, and they’re signed out everywhere. You’ll get a temporary password to pass on." alert locked={busy} bind:dialog={resetDialog}>
     {#snippet footer()}
-      <Button variant="primary" size="lg" loading={busy} onclick={resetPassword}>Reset password</Button>
+      <Button variant="primary" size="lg" loading={busy} onclick={resetPassword}><Icon name="key" size={16} />Reset password</Button>
     {/snippet}
   </Sheet>
 
