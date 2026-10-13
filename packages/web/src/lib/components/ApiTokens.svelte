@@ -4,6 +4,7 @@
   import { longAgo } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
   import Button from './Button.svelte';
+  import SecretValue from './SecretValue.svelte';
 
   /**
    * The API tokens section of the Account page (issue #140). Two tokens a
@@ -44,9 +45,6 @@
       .catch((e) => { error = say(e); })
       .finally(() => { loaded = true; });
   });
-
-  /** The prefix says which kind it is, so it stays readable; the rest is dots. */
-  const hidden = (token: string) => token.slice(0, 7) + '•'.repeat(24);
 
   async function enable(kind: ApiTokenKind) {
     if (busy) return;
@@ -112,7 +110,8 @@
 
         {#if t}
           <div class="token">
-            <code class="value" class:revealed={shown[k.kind]} aria-label={shown[k.kind] ? `${k.name} token` : `${k.name} token, hidden`}>{shown[k.kind] ? t.token : hidden(t.token)}</code>
+            <!-- Hidden, the prefix still says which kind it is. -->
+            <SecretValue value={t.token} shown={!!shown[k.kind]} label="{k.name} token" />
             <div class="actions">
               <Button size="sm" aria-pressed={!!shown[k.kind]} onclick={() => (shown[k.kind] = !shown[k.kind])}>{shown[k.kind] ? 'Hide' : 'Show'}</Button>
               <Button size="sm" onclick={() => copy(k.kind)}>Copy</Button>
@@ -158,14 +157,6 @@
   :global(.api-tokens.off) .what { opacity: 0.6; }
 
   .token { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-3); }
-  .value {
-    flex: 1 1 16rem; min-width: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm);
-    background: var(--surface-2); border: 1px solid var(--line);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: calc(var(--text-sm) * var(--size-app));
-    color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: all;
-  }
-  /* Shown, the whole token has to be readable and selectable, so it wraps instead of trailing off. */
-  .value.revealed { white-space: normal; overflow-wrap: anywhere; color: var(--text); }
   .actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
   .used { margin: var(--space-2) 0 0; font-size: calc(var(--text-xs) * var(--size-app)); color: var(--text-2); }
 

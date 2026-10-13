@@ -6,8 +6,7 @@
    * Profile (the page at your address, showing what you share),
    * Settings (your reading preferences), and Account (your email and password —
    * how you get in, and back in; importing and exporting live there too).
-   * An admin also gets Admin here wherever the bottom bar is the navigation (a
-   * phone, or the paged layout), because the sidebar that holds it isn't there.
+   * An admin also gets Admin here, on every screen size; it's the only way in.
    * Then Send feedback (readthicket.com only), which opens a sheet rather than
    * a page, and under a line of its own, Log out.
    *
@@ -116,16 +115,16 @@
     {/if}
     <a role="menuitem" href="/settings" onclick={onclose}>
       <Icon name="gear" size={20} />
-      <span>Settings</span>
+      <span>Reading settings</span>
     </a>
     <a role="menuitem" href="/account" onclick={onclose}>
       <Icon name="key" size={20} />
-      <span>Account</span>
+      <span>Account and data</span>
     </a>
-    {#if me.isAdmin && (sheet || display.layout === 'paged')}
+    {#if me.isAdmin}
       <a role="menuitem" href="/admin" onclick={onclose}>
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z" /></svg>
-        <span>Admin</span>
+        <Icon name="shield" size={20} />
+        <span>Site admin</span>
       </a>
     {/if}
     {#if hosted}

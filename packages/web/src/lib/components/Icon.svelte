@@ -1,6 +1,6 @@
 <script lang="ts">
   interface Props {
-    name: 'gear' | 'pencil' | 'close' | 'caret' | 'back' | 'dots' | 'bookmark' | 'note' | 'search' | 'check' | 'key' | 'import' | 'copy' | 'eye' | 'eye-off';
+    name: 'gear' | 'pencil' | 'close' | 'caret' | 'back' | 'dots' | 'bookmark' | 'note' | 'search' | 'check' | 'key' | 'import' | 'copy' | 'eye' | 'eye-off' | 'shield';
     size?: number;
     stroke?: number;
     /** Paint the shape solid instead of outlining it: the on state of a toggle. */
@@ -53,6 +53,8 @@
   {:else if name === 'key'}
     <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" />
     <circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />
+  {:else if name === 'shield'}
+    <path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z" />
   {:else if name === 'import'}
     <path d="M12 3v12M7 10l5 5 5-5" />
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />

@@ -13,6 +13,8 @@ import { currentUser, destroyAllSessions, hashPassword } from "../lib/auth.js";
 import { createInvite, getSetting, listInvites, publicStatus, revokeInvite, setSetting, type SignupPolicy } from "../lib/instance.js";
 import { SIGNUPS_DEFAULT } from "../lib/config.js";
 import { reconcile, recountWindows } from "../lib/counts.js";
+import { featuredCollections } from "./explore.js";
+import { likeFor } from "../lib/like.js";
 
 export const admin = new Hono();
 
@@ -22,6 +24,12 @@ async function requireAdmin(c: Parameters<typeof currentUser>[0]) {
   if (!row?.isAdmin) throw new HTTPException(403, { res: Response.json({ error: "admins only" }, { status: 403 }) });
   return user;
 }
+
+/** Every route here is for admins. Checked once for the whole router, so a new route can't forget it; handlers that need who's asking still call requireAdmin. */
+admin.use("*", async (c, next) => {
+  await requireAdmin(c);
+  await next();
+});
 
 admin.get("/settings", async (c) => {
   await requireAdmin(c);
@@ -56,21 +64,76 @@ admin.post("/invites", async (c) => {
 
 // ---- users ------------------------------------------------------------------
 
+const USERS_DEFAULT_LIMIT = 20;
+const USERS_MAX_LIMIT = 100;
+const CURSOR_RE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z)_(\d{1,15})$/;
+
+/** Search text as typed: trimmed, a leading "@" dropped. Empty means no filter. */
+export function normalizeSearch(q: string | undefined): string {
+  return (q ?? "").trim().replace(/^@/, "").trim();
+}
+
+/** Page size from the query string: default 20, clamped to 1..100. */
+export function parseLimit(raw: string | undefined): number {
+  const n = Math.floor(Number(raw));
+  if (raw === undefined || raw.trim() === "" || !Number.isFinite(n)) return USERS_DEFAULT_LIMIT;
+  return Math.min(USERS_MAX_LIMIT, Math.max(1, n));
+}
+
+/** A cursor is "<createdAt ISO, UTC>_<id>". Returns null when it is not one. */
+export function parseCursor(raw: string): { createdAt: string; id: number } | null {
+  const m = CURSOR_RE.exec(raw);
+  if (!m) return null;
+  // The date must be a real one: JavaScript rolls February 31 into March, but the database refuses it.
+  const d = new Date(m[1]);
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 19) !== m[1].slice(0, 19)) return null;
+  return { createdAt: m[1], id: Number(m[2]) };
+}
+
 admin.get("/users", async (c) => {
   await requireAdmin(c);
-  const rows = await db.execute(sql`
+  const q = normalizeSearch(c.req.query("q"));
+  const limit = parseLimit(c.req.query("limit"));
+  const beforeRaw = c.req.query("before");
+  const cursor = beforeRaw ? parseCursor(beforeRaw) : null;
+  if (beforeRaw && !cursor) return c.json({ error: "before is not a valid cursor; use the next value from the previous page" }, 400);
+
+  const pattern = likeFor(q);
+  const search = q ? sql`and (u.handle ilike ${pattern} escape '\\' or u.display_name ilike ${pattern} escape '\\')` : sql``;
+  const after = cursor ? sql`and (u.created_at, u.id) < (${cursor.createdAt}::timestamptz, ${cursor.id})` : sql``;
+
+  const page = db.execute(sql`
     select u.id, u.handle, u.display_name as "displayName", u.is_admin as "isAdmin", u.profile_visibility as "profileVisibility",
-           u.created_at as "createdAt", (select ua.updated_at from user_avatars ua where ua.user_id = u.id) as "avatarUpdatedAt",
+           u.created_at as "createdAt",
+           to_char(u.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt",
+           (select ua.updated_at from user_avatars ua where ua.user_id = u.id) as "avatarUpdatedAt",
            (select max(s.last_seen_at) from sessions s where s.user_id = u.id) as "lastSeenAt",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = u.id) as following,
            (select count(*)::int from collections col where col.user_id = u.id and col.parent_id is not null) as collections,
            (select count(*)::int from bookmarks b where b.user_id = u.id) as bookmarks,
-           (select i.created_by from invites i where i.used_by = u.id limit 1) as "invitedById"
-    from users u order by u.created_at
+           (select inviter.handle from invites i join users inviter on inviter.id = i.created_by where i.used_by = u.id limit 1) as "invitedBy"
+    from users u
+    where true ${search} ${after}
+    order by u.created_at desc, u.id desc
+    limit ${limit + 1}
   `);
+  // The totals don't change while paging, so only the first page counts them, alongside the page itself.
+  const [rows, counted] = await Promise.all([
+    page,
+    cursor ? null : db.execute<{ total: number; matched: number }>(sql`
+      select count(*)::int as total,
+             (count(*) filter (where true ${search}))::int as matched
+      from users u
+    `),
+  ]);
+  const counts = counted?.rows[0];
+
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
-  const byId = new Map(rows.rows.map((r: any) => [Number(r.id), r.handle]));
-  return c.json({ users: rows.rows.map((r: any) => ({ ...r, id: Number(r.id), createdAt: iso(r.createdAt), lastSeenAt: iso(r.lastSeenAt), invitedBy: r.invitedById ? byId.get(Number(r.invitedById)) ?? null : null, invitedById: undefined })) });
+  const shown = rows.rows.slice(0, limit) as any[];
+  const last = shown[shown.length - 1];
+  const next = rows.rows.length > limit && last ? `${last.cursorAt}_${Number(last.id)}` : null;
+  const users = shown.map((r) => ({ ...r, id: Number(r.id), createdAt: iso(r.createdAt), lastSeenAt: iso(r.lastSeenAt), avatarUpdatedAt: r.avatarUpdatedAt ? iso(r.avatarUpdatedAt) : null, invitedBy: r.invitedBy ?? null, cursorAt: undefined }));
+  return c.json({ users, next, ...(counts ? { total: counts.total, matched: counts.matched } : {}) });
 });
 
 async function adminCount() {
@@ -205,23 +268,30 @@ admin.delete("/invites/:code", async (c) => {
 
 /**
  * Starter packs: which account's public collections a newcomer is offered.
- * Returns the current handle for the admin to edit. The account is checked
- * when saving, so loading this setting doesn't need to enumerate accounts.
+ * Returns the current handle for the admin to edit, and the collections a
+ * brand-new account is offered as a result. The account is checked when
+ * saving, so loading this setting doesn't need to enumerate accounts.
  */
 admin.get("/starter", async (c) => {
+  await requireAdmin(c);
   const handle = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
-  return c.json({ handle: handle || null });
+  const featured = await featuredCollections(-1);
+  return c.json({ handle: handle || null, from: featured.from, offered: featured.collections });
 });
 
 admin.put("/starter", async (c) => {
+  await requireAdmin(c);
   const body = await c.req.json<{ handle?: unknown }>().catch(() => ({}) as { handle?: unknown });
   const handle = typeof body.handle === "string" ? body.handle.trim().toLowerCase().replace(/^@/, "") : "";
   if (handle) {
-    const [u] = (await db.execute<{ id: number }>(sql`select id from users where handle = ${handle}`)).rows;
+    const [u] = (await db.execute<{ shared: boolean }>(sql`select (profile_visibility = 'public' and collections_visibility = 'public') as shared from users where handle = ${handle}`)).rows;
     if (!u) return c.json({ error: "No account with that handle." }, 404);
+    // New people only ever see public collections, so a private account would silently fall back to the default set.
+    if (!u.shared) return c.json({ error: "That account’s profile or collections aren’t public, so new people couldn’t see them." }, 400);
   }
   await setSetting("starter_account", handle);
-  return c.json({ handle: handle || null });
+  const featured = await featuredCollections(-1);
+  return c.json({ handle: handle || null, from: featured.from, offered: featured.collections });
 });
 
 // ---- maintenance --------------------------------------------------------------

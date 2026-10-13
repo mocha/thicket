@@ -142,9 +142,9 @@
   }
 </script>
 
-<svelte:head><title>Account · thicket</title></svelte:head>
+<svelte:head><title>Account and data · thicket</title></svelte:head>
 
-<PageHeader name="Account">
+<PageHeader name="Account and data">
   {#snippet description()}Your email, your password, and your data.{/snippet}
 </PageHeader>
 

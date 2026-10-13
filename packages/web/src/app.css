@@ -401,6 +401,18 @@ input[type="radio"]:checked { border-color: var(--accent); background: radial-gr
 input[type="radio"]:disabled { cursor: not-allowed; opacity: 0.5; }
 input[type="radio"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* Choices: a radio or Checkbox with its name and a line explaining it, the
+   way a section card offers a setting (Reading settings, Site admin). The
+   group is a `choices` fieldset; each choice is a `choice` label holding the
+   control, then a span with the name in <strong> over the line in <small>.
+   See the Choices entry on /design-system. */
+.choices { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.choice { display: flex; align-items: flex-start; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
+.choice > input, .choice > .checkbox { margin-top: 3px; }
+/* 2px between a choice and its explanation is optical, not a spacing step. */
+.choice > span { display: flex; flex-direction: column; gap: 2px; }
+.choice small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+
 /* List rows: the one way a list of rows is laid out, on a list card or in a
    Sheet (see the List row entry on /design-system). The list takes
    `list-rows`; each row is an `li` inset by the card's edge inset, with a
