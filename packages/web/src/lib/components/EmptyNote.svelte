@@ -6,7 +6,7 @@
    * place; Activity, which has no menu row, gets Lucide's zap; a profile that shares nothing gets the crossed-out eye. A short serif
    * title over the line says it's empty, at the same size as the line. It
    * sits on a section card, so it has the same edge and inset as any other.
-   * Inside a card that's already there (Site admin's open invites), `bare`
+   * Inside a card that's already there (Admin's open invites), `bare`
    * leaves the card off and keeps the rest.
    */
   import Card from './Card.svelte';

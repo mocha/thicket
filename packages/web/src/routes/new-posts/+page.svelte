@@ -35,9 +35,9 @@
 <svelte:head><title>New posts · thicket</title></svelte:head>
 
 {#if emailNudge === 'add'}
-  <div class="nudge"><Banner tone="warning" title="Add an email to your account" href="/account">If you forget your password, an email is the only way back in.</Banner></div>
+  <div class="nudge"><Banner tone="warning" title="Add an email to your account" href="/settings?tab=account">If you forget your password, an email is the only way back in.</Banner></div>
 {:else if emailNudge === 'confirm'}
-  <div class="nudge"><Banner tone="info" title="Confirm your email" href="/account">We sent a link to {me?.email}. Until you click it, you can’t reset your password.</Banner></div>
+  <div class="nudge"><Banner tone="info" title="Confirm your email" href="/settings?tab=account">We sent a link to {me?.email}. Until you click it, you can’t reset your password.</Banner></div>
 {/if}
 
 {#if brandNew}

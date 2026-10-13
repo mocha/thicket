@@ -271,7 +271,7 @@
         <div class="radios" role="radiogroup" aria-label="YouTube Shorts">
           <label>
             <input type="radio" name="shorts" checked={feed.hideShortsSetting === null} onchange={() => setShorts(null)} />
-            <span><strong>Use my default</strong><small>{session.user?.hideShortsByDefault ? 'Videos only' : 'Videos + Shorts'}, as set in <a href="/settings">Reading settings</a>.</small></span>
+            <span><strong>Use my default</strong><small>{session.user?.hideShortsByDefault ? 'Videos only' : 'Videos + Shorts'}, as set in <a href="/settings">Settings</a>.</small></span>
           </label>
           <label>
             <input type="radio" name="shorts" checked={feed.hideShortsSetting === true} onchange={() => setShorts(true)} />

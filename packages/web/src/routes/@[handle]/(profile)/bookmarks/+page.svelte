@@ -116,7 +116,7 @@
   <p class="lead">
     {#if notedOnly}Posts {owner.displayName ?? `@${handle}`} has written a note on. {/if}{#if session.user}Tap the bookmark on any post to save it.{:else}<a href="/login?next={encodeURIComponent(page.url.pathname)}">Log in</a> to save these.{/if}
     {#if profile.bookmarks?.notes != null && session.user && profile.people.isFollowing}
-      You also see their notes on posts you come across{#if session.user.notesFrom === 'none'}, once you allow notes in <a href="/settings">Reading settings</a>{/if}.
+      You also see their notes on posts you come across{#if session.user.notesFrom === 'none'}, once you allow notes in <a href="/settings">Settings</a>{/if}.
     {:else if profile.bookmarks?.notes != null && session.user?.notesFrom === 'following'}
       Follow them to also see their notes on posts you come across.
     {/if}

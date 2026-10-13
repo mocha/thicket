@@ -63,7 +63,7 @@ writes a migration; it applies on the next boot. To reset someone's password
 pnpm passwd <handle> <new password> [--rename <new handle>]
 ```
 
-Sign-up policy is set by the admin in Site admin (from the profile menu), under Site settings; `SIGNUPS` in `.env` only seeds a fresh instance.
+Sign-up policy is set in Admin (from the profile menu), under Site settings; `SIGNUPS` in `.env` only seeds a fresh instance.
 
 To test email (confirmation and password reset), see [docs/testing.md](docs/testing.md).
 
@@ -95,7 +95,7 @@ Plain JSON over a session cookie. Public reads (a profile, a public
 collection, its river) work signed out.
 
 **API tokens.** A person's own scripts and assistants can use the same API
-with a token from the Account and data page, sent as `Authorization: Bearer <token>`.
+with a token from the Account and data tab in Settings, sent as `Authorization: Bearer <token>`.
 There are two kinds, at most one of each per account: read-only (`thk_ro_…`),
 refused on anything that is not a read, and full access (`thk_rw_…`). No token
 can reach the admin routes, token management, sign-in and account settings,

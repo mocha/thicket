@@ -114,7 +114,7 @@ explore.get("/collections", async (c) => {
  * account, so "here, copy mine" works as a link you can send to a friend.
  *
  * `viewerId`'s own collections are left out, since they can't copy their
- * own. Site admin's preview asks with no viewer, so it shows exactly what a
+ * own. Admin's preview asks with no viewer, so it shows exactly what a
  * brand-new account gets.
  */
 export async function featuredCollections(viewerId: number) {

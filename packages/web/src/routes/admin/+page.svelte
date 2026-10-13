@@ -3,11 +3,11 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   import Dot from '$lib/components/Dot.svelte';
   /**
-   * Site admin: the accounts, invite links, and the site-wide settings, for
-   * the site's admins. Personal settings stay on Reading settings; this page
+   * Admin: the accounts, invite links, and the site-wide settings, for
+   * the site's admins. Personal settings stay on Settings; this page
    * is about everyone else.
    *
-   * Every setting is its own section card, built like Reading settings. Each
+   * Every setting is its own section card, built like the Reading tab of Settings. Each
    * change shows at once; if saving fails, the card says why and the control
    * goes back to what's saved.
    *
@@ -140,7 +140,7 @@
       void loadStarterPerson(starterSaved);
     } catch (e) {
       loadError = say(e);
-      console.error('Site admin failed to load', e);
+      console.error('Admin failed to load', e);
     }
   }
   onMount(() => {
@@ -345,14 +345,14 @@
   }
 </script>
 
-<svelte:head><title>Site admin · thicket</title></svelte:head>
+<svelte:head><title>Admin · thicket</title></svelte:head>
 
 {#snippet site()}{instance?.name} <Dot /> <code>{instance?.url}</code>{/snippet}
-<PageHeader name="Site admin" description={instance ? site : undefined} />
+<PageHeader name="Admin" description={instance ? site : undefined} />
 
 {#if instance}
   <div class="pane">
-    <Tabs class="scopes" {tabs} value={tab} onchange={pick} label="Parts of Site admin" panel="admin-tab" fill />
+    <Tabs class="scopes" {tabs} value={tab} onchange={pick} label="Parts of Admin" panel="admin-tab" fill />
   </div>
   <div id="admin-tab" role="tabpanel" aria-label={tabs.find((t) => t.value === tab)?.label}>
   {#if tab === 'accounts'}
@@ -528,7 +528,7 @@
           <div><ChoiceGroup size="sm" label="Admin" disabled={busy} options={[{ value: 'on', label: 'Enabled' }, { value: 'off', label: 'Disabled' }]} value={managing.isAdmin ? 'on' : 'off'} onchange={(v) => setAdmin(v === 'on')} /></div>
         </div>
         <div>
-          <span class="choice-text"><strong>Password</strong><small>{issued ? 'Shown once. Pass it on however you like; they can change it in Account and data.' : 'Gives them a temporary password and signs them out everywhere.'}</small></span>
+          <span class="choice-text"><strong>Password</strong><small>{issued ? 'Shown once. Pass it on however you like; they can change it in Settings.' : 'Gives them a temporary password and signs them out everywhere.'}</small></span>
           {#if issued}
             <div class="secret"><SecretValue value={issued} label="Temporary password" /><Button size="sm" onclick={copyIssued}><Icon name="copy" size={16} />Copy</Button></div>
           {:else}
@@ -562,7 +562,7 @@
     {/snippet}
   </Sheet>
 {:else if loadError}
-  <Banner tone="error" title="Couldn’t load Site admin">{loadError}</Banner>
+  <Banner tone="error" title="Couldn’t load Admin">{loadError}</Banner>
 {:else}
   <p class="status">Loading…</p>
 {/if}

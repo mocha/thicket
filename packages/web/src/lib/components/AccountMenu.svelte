@@ -4,8 +4,8 @@
    * bar is the navigation (a phone, or the paged layout): the bar has no room
    * for it, so it lives here with its count, and the You tab shows a dot.
    * Profile (the page at your address, showing what you share),
-   * Settings (your reading preferences), and Account (your email and password —
-   * how you get in, and back in; importing and exporting live there too).
+   * and Settings (one page, two tabs: Reading, and Account and data — your
+   * email and password, importing and exporting).
    * An admin also gets Admin here, on every screen size; it's the only way in.
    * Then Send feedback (readthicket.com only), which opens a sheet rather than
    * a page, and under a line of its own, Log out.
@@ -115,16 +115,12 @@
     {/if}
     <a role="menuitem" href="/settings" onclick={onclose}>
       <Icon name="gear" size={20} />
-      <span>Reading settings</span>
-    </a>
-    <a role="menuitem" href="/account" onclick={onclose}>
-      <Icon name="key" size={20} />
-      <span>Account and data</span>
+      <span>Settings</span>
     </a>
     {#if me.isAdmin}
       <a role="menuitem" href="/admin" onclick={onclose}>
         <Icon name="shield" size={20} />
-        <span>Site admin</span>
+        <span>Admin</span>
       </a>
     {/if}
     {#if hosted}

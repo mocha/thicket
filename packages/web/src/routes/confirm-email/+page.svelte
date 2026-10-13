@@ -37,7 +37,7 @@
     <p class="alt">{#if session.user}<a href="/new-posts">Read new posts</a>{:else}<a href="/login">Log in</a>{/if}</p>
   {:else if phase === 'dead'}
     <h1>That link doesn’t work anymore</h1>
-    <p class="lede">Links expire after 24 hours and work only once. You can send a new one from your <a href="/account">Account and data</a> page.</p>
+    <p class="lede">Links expire after 24 hours and work only once. You can send a new one from <a href="/settings?tab=account">Account and data</a> in Settings.</p>
   {:else}
     <h1>We couldn’t confirm your email</h1>
     <p class="lede">{failure} Try the link again in a few minutes.</p>

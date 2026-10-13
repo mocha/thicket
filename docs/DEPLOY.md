@@ -14,7 +14,7 @@ $EDITOR .env          # set PUBLIC_URL and POSTGRES_PASSWORD
 docker compose up -d
 ```
 
-Open `PUBLIC_URL`, sign up, and you're the admin. Site admin, in the menu under
+Open `PUBLIC_URL`, sign up, and you're the admin. Admin, in the menu under
 your picture, is where you make invite links (Invites) or open sign-ups (Site
 settings).
 

@@ -53,7 +53,7 @@
     if (!signedIn && !isPublic) void goto(`/login?next=${encodeURIComponent(path + page.url.search)}`, { replaceState: true });
     else if (signedIn && (path === '/login' || path === '/signup')) void goto(page.url.searchParams.get('next') || '/new-posts', { replaceState: true });
     // Signed in, you change your password on Account (which can also email you a reset link). A reset link from an email still opens.
-    else if (signedIn && path === '/forgot-password') void goto('/account', { replaceState: true });
+    else if (signedIn && path === '/forgot-password') void goto('/settings?tab=account', { replaceState: true });
   });
   const show = $derived(session.loaded && (signedIn || isPublic));
   /**
