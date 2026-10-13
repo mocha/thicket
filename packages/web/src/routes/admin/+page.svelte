@@ -444,11 +444,9 @@
         {/if}
       </form>
     {/if}
-  </Card>
-
-  {#if offered.length}
-    <Card kind="section" as="section" class="admin-section" aria-labelledby="offered-h">
-      <h2 class="section-title" id="offered-h">What new people see</h2>
+    {#if offered.length}
+      <!-- The field label's look (the shared row-name style), so it reads like "Account" above the box. -->
+      <h3 class="row-name offered-h">New people see</h3>
       <div class="rows">
         <ul class="list-rows">
           {#each offered as c (c.id)}
@@ -456,8 +454,8 @@
           {/each}
         </ul>
       </div>
-    </Card>
-  {/if}
+    {/if}
+  </Card>
 
   <Card kind="section" as="section" class="admin-section" aria-labelledby="name-h">
     <h2 class="section-title" id="name-h">Site name</h2>
@@ -541,6 +539,7 @@
   /* Changing the account: the labeled box with Cancel and Save under it, as Edit profile does. */
   .edit { display: flex; flex-direction: column; gap: var(--space-3); }
   .editrow { display: flex; justify-content: flex-end; gap: var(--space-2); }
+  .offered-h { margin: var(--space-5) 0 var(--space-1); }
 
   .invite { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
   .what { flex: 1 1 12rem; min-width: 0; display: flex; flex-direction: column; }
