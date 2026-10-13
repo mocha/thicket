@@ -10,7 +10,12 @@
  * we think is best. Then, wherever the address itself says "give me the small
  * one", it is rewritten to ask for the large one. Only hosts whose URL scheme
  * we know are touched; anything else is left exactly as published.
+ *
+ * A tracking pixel is never the picture, declared or in the body: NPR puts
+ * one in every post, and on a card it shows as an empty picture frame.
  */
+
+import { isBeaconImage } from "../lib/sanitize.js";
 
 export type Declared = { url?: string | null; width?: number | string | null; height?: number | string | null } | string | null | undefined;
 
@@ -57,10 +62,17 @@ export function upsizeImageUrl(url: string): string {
   return url;
 }
 
+/** The body's first image that isn't a tracking pixel: a known beacon, or 2 pixels or smaller on a side. */
 export function firstImg(html: string | undefined | null): string | null {
   if (!html) return null;
-  const m = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
-  return m?.[1] ?? null;
+  for (const [tag] of html.matchAll(/<img\b[^>]*>/gi)) {
+    const src = /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1];
+    if (!src || isBeaconImage(src)) continue;
+    const w = Number(/\swidth=["']?(\d+)/i.exec(tag)?.[1] ?? NaN), h = Number(/\sheight=["']?(\d+)/i.exec(tag)?.[1] ?? NaN);
+    if (w <= 2 || h <= 2) continue;
+    return src;
+  }
+  return null;
 }
 
 /**
@@ -88,7 +100,8 @@ function webUrl(url: string | null | undefined, base?: string | null): string | 
  */
 export function choosePreview(declared: Declared, body: string | null | undefined, base?: string | null): string | null {
   const d = typeof declared === "string" ? { url: declared } : declared;
-  const url = webUrl(d?.url, base);
+  const declaredUrl = webUrl(d?.url, base);
+  const url = declaredUrl && !isBeaconImage(declaredUrl) ? declaredUrl : null;
   if (url && !isSmallImage(url, d?.width, d?.height)) return upsizeImageUrl(url);
   const body1 = webUrl(firstImg(body), base);
   if (body1) return upsizeImageUrl(body1);
