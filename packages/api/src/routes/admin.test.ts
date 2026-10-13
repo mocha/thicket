@@ -179,3 +179,14 @@ test("cursor parsing accepts what the server hands out and nothing else", () => 
   assert.equal(parseCursor("2026-10-08T10:00:00.1234567Z_8"), null);
   assert.equal(parseCursor(""), null);
 });
+
+test("starter packs setting requires a signed-in admin, to read and to change", async (t) => {
+  const put = (a: Hono) => a.request("/api/admin/starter", { method: "PUT", headers: { "content-type": "application/json" }, body: '{"handle":"someone"}' });
+  const execute = t.mock.method(db, "execute", () => { throw new Error("an unauthorized request reached the database"); });
+  assert.equal((await app(null).request("/api/admin/starter")).status, 401);
+  assert.equal((await put(app(null))).status, 401);
+  t.mock.method(db, "select", () => ({ from: () => ({ where: async () => [{ isAdmin: false }] }) }));
+  assert.equal((await app().request("/api/admin/starter")).status, 403);
+  assert.equal((await put(app())).status, 403);
+  assert.equal(execute.mock.callCount(), 0);
+});

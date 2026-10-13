@@ -13,6 +13,7 @@ import { currentUser, destroyAllSessions, hashPassword } from "../lib/auth.js";
 import { createInvite, getSetting, listInvites, publicStatus, revokeInvite, setSetting, type SignupPolicy } from "../lib/instance.js";
 import { SIGNUPS_DEFAULT } from "../lib/config.js";
 import { reconcile, recountWindows } from "../lib/counts.js";
+import { featuredCollections } from "./explore.js";
 
 export const admin = new Hono();
 
@@ -221,15 +222,18 @@ admin.delete("/invites/:code", async (c) => {
 
 /**
  * Starter packs: which account's public collections a newcomer is offered.
- * Returns the current handle for the admin to edit. The account is checked
- * when saving, so loading this setting doesn't need to enumerate accounts.
+ * Returns the current handle for the admin to edit, and the collections a
+ * brand-new account is offered as a result. The account is checked when
+ * saving, so loading this setting doesn't need to enumerate accounts.
  */
 admin.get("/starter", async (c) => {
+  await requireAdmin(c);
   const handle = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
-  return c.json({ handle: handle || null });
+  return c.json({ handle: handle || null, offered: (await featuredCollections(-1)).collections });
 });
 
 admin.put("/starter", async (c) => {
+  await requireAdmin(c);
   const body = await c.req.json<{ handle?: unknown }>().catch(() => ({}) as { handle?: unknown });
   const handle = typeof body.handle === "string" ? body.handle.trim().toLowerCase().replace(/^@/, "") : "";
   if (handle) {
@@ -237,7 +241,7 @@ admin.put("/starter", async (c) => {
     if (!u) return c.json({ error: "No account with that handle." }, 404);
   }
   await setSetting("starter_account", handle);
-  return c.json({ handle: handle || null });
+  return c.json({ handle: handle || null, offered: (await featuredCollections(-1)).collections });
 });
 
 // ---- maintenance --------------------------------------------------------------
