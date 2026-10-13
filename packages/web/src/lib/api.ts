@@ -541,8 +541,8 @@ export const adminApi = {
   createInvite: (note?: string) => j<Invite>('/api/admin/invites', { method: 'POST', body: JSON.stringify({ note }) }),
   revokeInvite: (code: string) => j<void>(`/api/admin/invites/${encodeURIComponent(code)}`, { method: 'DELETE' }),
   /** Starter packs: whose public collections a newcomer is offered. */
-  starter: () => j<{ handle: string | null; offered: ExploreCollection[] }>('/api/admin/starter'),
-  setStarter: (handle: string | null) => j<{ handle: string | null; offered: ExploreCollection[] }>('/api/admin/starter', { method: 'PUT', body: JSON.stringify({ handle: handle ?? '' }) })
+  starter: () => j<{ handle: string | null; from: string | null; offered: ExploreCollection[] }>('/api/admin/starter'),
+  setStarter: (handle: string | null) => j<{ handle: string | null; from: string | null; offered: ExploreCollection[] }>('/api/admin/starter', { method: 'PUT', body: JSON.stringify({ handle: handle ?? '' }) })
 };
 
 export const feedbackApi = {

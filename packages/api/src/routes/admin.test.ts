@@ -251,3 +251,10 @@ test("starter packs refuse an account whose profile or collections are private, 
   assert.match((await r.json() as { error: string }).error, /aren’t public/);
   assert.equal(execute.mock.callCount(), 1, "only the lookup ran; nothing was saved");
 });
+
+test("a paging cursor with an impossible date is refused, not rolled into the next month", () => {
+  assert.equal(parseCursor("2026-02-31T10:00:00.000000Z_8"), null);
+  assert.equal(parseCursor("2026-13-01T10:00:00Z_8"), null);
+  assert.equal(parseCursor("2026-10-12T25:00:00Z_8"), null);
+  assert.deepEqual(parseCursor("2026-02-28T10:00:00.123456Z_8"), { createdAt: "2026-02-28T10:00:00.123456Z", id: 8 });
+});

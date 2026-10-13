@@ -116,6 +116,8 @@
   const bare = (handle: string) => ({ handle, displayName: null as string | null, bio: null, avatarUpdatedAt: null as string | null });
   let starterPerson = $state<ReturnType<typeof bare> | null>(null);
   let offered = $state<ExploreCollection[]>([]);
+  /** Whose collections new people actually get: null when it's the default set, even with an account saved (it was deleted or made private since). */
+  let offeredFrom = $state<string | null>(null);
   async function loadStarterPerson(handle: string) {
     starterPerson = null;
     if (!handle) return;
@@ -133,7 +135,7 @@
       const [s, i, u, f] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter()]);
       instance = s; name = s.name; invites = i.invites;
       users = u.users; next = u.next; total = u.total ?? 0; matched = u.matched ?? 0;
-      starterSaved = starter = f.handle ?? ''; offered = f.offered;
+      starterSaved = starter = f.handle ?? ''; offered = f.offered; offeredFrom = f.from;
       starterPick = starterSaved ? 'account' : 'default';
       void loadStarterPerson(starterSaved);
     } catch (e) {
@@ -207,7 +209,7 @@
     savingStarter = true; errors.starter = null;
     try {
       const r = await adminApi.setStarter(handle);
-      starterSaved = starter = r.handle ?? ''; offered = r.offered;
+      starterSaved = starter = r.handle ?? ''; offered = r.offered; offeredFrom = r.from;
       changingStarter = false;
       await loadStarterPerson(starterSaved);
       return true;
@@ -428,9 +430,9 @@
   <Card kind="section" as="section" class="admin-section" aria-labelledby="signups-h">
     <h2 class="section-title" id="signups-h">Who can sign up</h2>
     <fieldset class="choices" aria-labelledby="signups-h">
-      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'invite'} disabled={savingSetting === 'signups'} onchange={() => setPolicy('invite')} /><span><strong>Invite only</strong><small>People sign up with an invite link from you.</small></span></label>
-      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'open'} disabled={savingSetting === 'signups'} onchange={() => setPolicy('open')} /><span><strong>Anyone</strong><small>Anyone who finds this site can sign up. On a public site, bots will make spam accounts, and there’s little to stop them.</small></span></label>
-      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'closed'} disabled={savingSetting === 'signups'} onchange={() => setPolicy('closed')} /><span><strong>No one</strong><small>Nobody new can join. People who already have an account can still sign in.</small></span></label>
+      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'invite'} disabled={!!savingSetting} onchange={() => setPolicy('invite')} /><span><strong>Invite only</strong><small>People sign up with an invite link from you.</small></span></label>
+      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'open'} disabled={!!savingSetting} onchange={() => setPolicy('open')} /><span><strong>Anyone</strong><small>Anyone who finds this site can sign up. On a public site, bots will make spam accounts, and there’s little to stop them.</small></span></label>
+      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'closed'} disabled={!!savingSetting} onchange={() => setPolicy('closed')} /><span><strong>No one</strong><small>Nobody new can join. People who already have an account can still sign in.</small></span></label>
     </fieldset>
     {#if errors.signups}<div class="err"><Banner tone="error" title="Couldn’t save that">{errors.signups}</Banner></div>{/if}
   </Card>
@@ -439,8 +441,8 @@
     <h2 class="section-title" id="visitors-h">What visitors can read</h2>
     <p class="section-description">Visitors are people who aren’t signed in.</p>
     <fieldset class="choices" aria-labelledby="visitors-h">
-      <label class="choice"><input type="radio" name="visitors" checked={instance.visitorLimit} disabled={savingSetting === 'visitors'} onchange={() => setVisitorLimit(true)} /><span><strong>The newest 100</strong><small>Feeds, collections, and profiles show their latest 100 items, then ask visitors to sign in.</small></span></label>
-      <label class="choice"><input type="radio" name="visitors" checked={!instance.visitorLimit} disabled={savingSetting === 'visitors'} onchange={() => setVisitorLimit(false)} /><span><strong>Everything</strong><small>Visitors can scroll back as far as anyone signed in.</small></span></label>
+      <label class="choice"><input type="radio" name="visitors" checked={instance.visitorLimit} disabled={!!savingSetting} onchange={() => setVisitorLimit(true)} /><span><strong>The newest 100</strong><small>Feeds, collections, and profiles show their latest 100 items, then ask visitors to sign in.</small></span></label>
+      <label class="choice"><input type="radio" name="visitors" checked={!instance.visitorLimit} disabled={!!savingSetting} onchange={() => setVisitorLimit(false)} /><span><strong>Everything</strong><small>Visitors can scroll back as far as anyone signed in.</small></span></label>
     </fieldset>
     {#if errors.visitors}<div class="err"><Banner tone="error" title="Couldn’t save that">{errors.visitors}</Banner></div>{/if}
   </Card>
@@ -475,7 +477,8 @@
           </form>
         {/if}
       </div>
-    {:else if errors.starter}
+    {/if}
+    {#if errors.starter && !(starterPick === 'account' && (!starterSaved || changingStarter))}
       <div class="err"><Banner tone="error" title="Couldn’t save that">{errors.starter}</Banner></div>
     {/if}
     {#if offered.length}
@@ -484,7 +487,7 @@
       <div class="rows">
         <ul class="list-rows">
           {#each offered as c (c.id)}
-            <CollectionRow href={collectionHref(c.handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} owner={starterSaved ? undefined : `@${c.handle}`} sample={c.sample} />
+            <CollectionRow href={collectionHref(c.handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} owner={offeredFrom ? undefined : `@${c.handle}`} sample={c.sample} />
           {/each}
         </ul>
       </div>

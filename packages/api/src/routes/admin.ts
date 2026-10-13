@@ -83,7 +83,10 @@ export function parseLimit(raw: string | undefined): number {
 /** A cursor is "<createdAt ISO, UTC>_<id>". Returns null when it is not one. */
 export function parseCursor(raw: string): { createdAt: string; id: number } | null {
   const m = CURSOR_RE.exec(raw);
-  if (!m || Number.isNaN(Date.parse(m[1]))) return null;
+  if (!m) return null;
+  // The date must be a real one: JavaScript rolls February 31 into March, but the database refuses it.
+  const d = new Date(m[1]);
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 19) !== m[1].slice(0, 19)) return null;
   return { createdAt: m[1], id: Number(m[2]) };
 }
 
@@ -272,7 +275,8 @@ admin.delete("/invites/:code", async (c) => {
 admin.get("/starter", async (c) => {
   await requireAdmin(c);
   const handle = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
-  return c.json({ handle: handle || null, offered: (await featuredCollections(-1)).collections });
+  const featured = await featuredCollections(-1);
+  return c.json({ handle: handle || null, from: featured.from, offered: featured.collections });
 });
 
 admin.put("/starter", async (c) => {
@@ -286,7 +290,8 @@ admin.put("/starter", async (c) => {
     if (!u.shared) return c.json({ error: "That account’s profile or collections aren’t public, so new people couldn’t see them." }, 400);
   }
   await setSetting("starter_account", handle);
-  return c.json({ handle: handle || null, offered: (await featuredCollections(-1)).collections });
+  const featured = await featuredCollections(-1);
+  return c.json({ handle: handle || null, from: featured.from, offered: featured.collections });
 });
 
 // ---- maintenance --------------------------------------------------------------

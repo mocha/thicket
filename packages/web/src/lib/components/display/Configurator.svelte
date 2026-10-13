@@ -74,7 +74,7 @@
   const header = $derived(
     view === 'offer' ? { title: 'Use your saved settings?', lead: 'These are the settings you saved on another device' }
     : view === 'import' ? { title: 'Import your feeds', lead: 'Coming from another reader?' }
-    : view === 'list' ? { title: 'Set up your device', lead: 'You can update your choices at any time in Settings' }
+    : view === 'list' ? { title: 'Set up your device', lead: 'You can update your choices at any time in Reading settings' }
     : view === 'tour' ? { title: '', lead: '' }
     : SETTINGS[view]
   );
