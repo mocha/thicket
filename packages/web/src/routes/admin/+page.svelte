@@ -26,7 +26,6 @@
   import Badge from '$lib/components/Badge.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import Button from '$lib/components/Button.svelte';
-  import Checkbox from '$lib/components/Checkbox.svelte';
   import EmptyNote from '$lib/components/EmptyNote.svelte';
   import Field from '$lib/components/Field.svelte';
   import Icon from '$lib/components/Icon.svelte';
@@ -349,12 +348,10 @@
     {#if managing}
       <div class="sheet-rows">
         <div>
-          <label class="choice">
-            <Checkbox checked={managing.isAdmin} disabled={busy} onchange={(e) => setAdmin(e.currentTarget.checked)} />
-            <span><strong>Admin</strong><small>Can manage accounts, invites, and this page’s settings.</small></span>
-          </label>
+          <span class="choice-text"><strong>Admin</strong><small>Can manage accounts, invites, and this page’s settings.</small></span>
+          <div><Button disabled={busy} onclick={() => setAdmin(!managing!.isAdmin)}><Icon name="shield" size={16} />{managing.isAdmin ? 'Remove admin' : 'Make admin'}</Button></div>
         </div>
-        <div class="password">
+        <div>
           <span class="choice-text"><strong>Password</strong><small>{issued ? 'Shown once. Pass it on however you like; they can change it in Account and data.' : 'Gives them a temporary password and signs them out everywhere.'}</small></span>
           {#if issued}
             <div class="secret"><SecretValue value={issued} label="Temporary password" /><Button size="sm" onclick={copyIssued}><Icon name="copy" size={16} />Copy</Button></div>
@@ -411,8 +408,7 @@
   .what { flex: 1 1 12rem; min-width: 0; display: flex; flex-direction: column; }
   .what .row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .acts { display: flex; align-items: center; gap: var(--space-3); margin-left: auto; }
-  .password { display: flex; flex-direction: column; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .choice-text { display: flex; flex-direction: column; gap: 2px; }
+  .choice-text { font-size: calc(var(--text-sm) * var(--size-app)); display: flex; flex-direction: column; gap: 2px; }
   .choice-text small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .secret { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
   .status { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
