@@ -18,6 +18,7 @@
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import { api, adminApi, type AdminUser, type InstanceStatus, type Invite, type SignupPolicy } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import { longAgo, relativeTime } from '$lib/time';
@@ -34,6 +35,15 @@
   import PersonRow from '$lib/components/PersonRow.svelte';
   import SecretValue from '$lib/components/SecretValue.svelte';
   import Sheet from '$lib/components/Sheet.svelte';
+  import Tabs from '$lib/components/Tabs.svelte';
+
+  /** Which tab is open, kept in the address so Back and a shared link land on it. Accounts by default. */
+  type Tab = 'accounts' | 'invites' | 'settings';
+  const tab = $derived<Tab>(((t) => (t === 'invites' || t === 'settings' ? t : 'accounts'))(page.url.searchParams.get('tab')));
+  function pick(v: string) {
+    api.event('admin_tab', { tab: v });
+    void goto(v === 'accounts' ? '/admin' : `/admin?tab=${v}`, { replaceState: true, noScroll: true, keepFocus: true });
+  }
 
   const say = (e: unknown) => (e instanceof Error ? e.message : String(e));
   /** "Aug 12", or "2 hours ago" while it's recent enough to say so. */
@@ -244,6 +254,11 @@
 <PageHeader name="Site admin" description={instance ? site : undefined} />
 
 {#if instance}
+  <div class="pane">
+    <Tabs class="scopes" tabs={[{ value: 'accounts', label: 'Accounts', count: users.length }, { value: 'invites', label: 'Invites', count: openInvites.length }, { value: 'settings', label: 'Site settings' }]} value={tab} onchange={pick} label="Parts of Site admin" panel="admin-tab" fill />
+  </div>
+  <div id="admin-tab" role="tabpanel" aria-label={tab === 'accounts' ? 'Accounts' : tab === 'invites' ? 'Invites' : 'Site settings'}>
+  {#if tab === 'accounts'}
   <Card kind="section" as="section" class="admin-section" aria-labelledby="accounts-h">
     <h2 class="section-title" id="accounts-h">Accounts ({users.length.toLocaleString()})</h2>
     <div class="rows">
@@ -266,6 +281,7 @@
     </div>
   </Card>
 
+  {:else if tab === 'invites'}
   <Card kind="section" as="section" class="admin-section" aria-labelledby="invites-h">
     <h2 class="section-title" id="invites-h">Invite links</h2>
     <p class="section-description">Each link works once and lasts two weeks.</p>
@@ -300,6 +316,7 @@
     </div>
   </Card>
 
+  {:else}
   <Card kind="section" as="section" class="admin-section" aria-labelledby="signups-h">
     <h2 class="section-title" id="signups-h">Who can sign up</h2>
     <fieldset class="choices" aria-labelledby="signups-h">
@@ -344,6 +361,9 @@
       <Button type="submit" size="lg" loading={savingName} disabled={name.trim() === instance.name}>Save</Button>
     </form>
   </Card>
+
+  {/if}
+  </div>
 
   <Sheet title={managing ? label(managing) : 'Manage account'} lede={managing?.displayName ? `@${managing.handle}` : undefined} bind:dialog={manageDialog} dismiss={false} locked={busy}>
     {#if managing}
@@ -396,6 +416,9 @@
   code { font-size: calc(var(--text-sm) * var(--size-app)); /* 1px vertical is optical: an inline code chip stays on the text's line. */ background: var(--surface-2); padding: 1px var(--space-2); border-radius: var(--radius-xs); overflow-wrap: anywhere; }
   /* The room between sections is set on the cards' own class, since the cards are drawn by the shared Card. */
   :global(.admin-section) { margin-bottom: var(--space-4); }
+  /* The same row as Explore's and a profile's, with the same air under it. */
+  .pane { margin-bottom: var(--space-2); }
+  .pane :global(.scopes) { margin-bottom: var(--space-1); }
   /* Rows run to the card's edges, as on Import, so each row insets itself like any list row. */
   .rows { margin: 0 calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)); }
   /* Under the invite form, the same step a card puts before its controls. */
