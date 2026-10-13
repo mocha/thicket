@@ -614,7 +614,7 @@
       <p class="section-lede">A setting on a section card, offered as option buttons or a checkbox, each with its name in bold and a line under it saying what it does in gray. The name and its line start where the text starts, beside the button, and the choices stack 12px apart. Reading settings and Site admin use them.</p>
       <fieldset class="choices" aria-label="Who can sign up">
         <label class="choice"><input type="radio" name="demo-choices" checked /><span><strong>Invite only</strong><small>People sign up with an invite link from you.</small></span></label>
-        <label class="choice"><input type="radio" name="demo-choices" /><span><strong>No one</strong><small>Existing accounts keep working.</small></span></label>
+        <label class="choice"><input type="radio" name="demo-choices" /><span><strong>No one</strong><small>Nobody new can join. People who already have an account can still sign in.</small></span></label>
       </fieldset>
     </section>
 
