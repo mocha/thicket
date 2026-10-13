@@ -434,10 +434,10 @@
 
   <Card kind="section" as="section" class="admin-section" aria-labelledby="starter-h">
     <h2 class="section-title" id="starter-h">Starter packs</h2>
-    <p class="section-description">To get users started, you can specify one account whose collections are available to copy. You might choose your own account, or create an account just for this purpose.</p>
+    <p class="section-description">To get users started, their Collections page offers a set of “Starter pack” collections they can copy. Choose what you want to display.</p>
     <fieldset class="choices" aria-labelledby="starter-h">
-      <label class="choice"><input type="radio" name="starter" checked={starterPick === 'default'} disabled={savingStarter} onchange={pickDefault} /><span><strong>Default collections</strong><small>The six public collections with the most feeds, from any account on this site.</small></span></label>
-      <label class="choice"><input type="radio" name="starter" checked={starterPick === 'account'} disabled={savingStarter} onchange={pickAccount} /><span><strong>One account’s collections</strong></span></label>
+      <label class="choice"><input type="radio" name="starter" checked={starterPick === 'default'} disabled={savingStarter} onchange={pickDefault} /><span><strong>Highest volume feeds</strong><small>The six public collections with the most feeds, from any account on your site.</small></span></label>
+      <label class="choice"><input type="radio" name="starter" checked={starterPick === 'account'} disabled={savingStarter} onchange={pickAccount} /><span><strong>One account’s collections</strong><small>You might choose your own account, or create an account just for this purpose.</small></span></label>
     </fieldset>
     {#if starterPick === 'account'}
       <!-- Under its choice, lined up with the choice's words. -->
@@ -467,7 +467,7 @@
     {/if}
     {#if offered.length}
       <!-- The field label's look (the shared row-name style), so it reads like "Account" above the box. -->
-      <h3 class="row-name offered-h">New people see</h3>
+      <h3 class="row-name offered-h">Feeds new people see:</h3>
       <div class="rows">
         <ul class="list-rows">
           {#each offered as c (c.id)}
