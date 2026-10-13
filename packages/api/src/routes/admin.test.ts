@@ -242,3 +242,12 @@ test("a post's categories, or none", async (t) => {
   assert.deepEqual(await (await get(app(), "/items/5/categories")).json(), { categories: ["rust", "wasm"] });
   assert.deepEqual(await (await get(app(), "/items/5/categories")).json(), { categories: [] });
 });
+
+test("starter packs refuse an account whose profile or collections are private, before saving", async (t) => {
+  allowAdmin(t);
+  const execute = t.mock.method(db, "execute", async () => ({ rows: [{ shared: false }] }) as never);
+  const r = await app().request("/api/admin/starter", { method: "PUT", headers: { "content-type": "application/json" }, body: '{"handle":"@Quiet"}' });
+  assert.equal(r.status, 400);
+  assert.match((await r.json() as { error: string }).error, /aren’t public/);
+  assert.equal(execute.mock.callCount(), 1, "only the lookup ran; nothing was saved");
+});

@@ -280,8 +280,10 @@ admin.put("/starter", async (c) => {
   const body = await c.req.json<{ handle?: unknown }>().catch(() => ({}) as { handle?: unknown });
   const handle = typeof body.handle === "string" ? body.handle.trim().toLowerCase().replace(/^@/, "") : "";
   if (handle) {
-    const [u] = (await db.execute<{ id: number }>(sql`select id from users where handle = ${handle}`)).rows;
+    const [u] = (await db.execute<{ shared: boolean }>(sql`select (profile_visibility = 'public' and collections_visibility = 'public') as shared from users where handle = ${handle}`)).rows;
     if (!u) return c.json({ error: "No account with that handle." }, 404);
+    // New people only ever see public collections, so a private account would silently fall back to the default set.
+    if (!u.shared) return c.json({ error: "That account’s profile or collections aren’t public, so new people couldn’t see them." }, 400);
   }
   await setSetting("starter_account", handle);
   return c.json({ handle: handle || null, offered: (await featuredCollections(-1)).collections });

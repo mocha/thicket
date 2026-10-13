@@ -93,7 +93,7 @@
     typing = setTimeout(() => void findAccounts(query.trim()), 250);
   }
   async function showMore() {
-    if (!next || more) return;
+    if (!next || more || searching) return;
     more = true; accountsError = null;
     const ask = asked;
     try {
@@ -148,30 +148,38 @@
   });
 
   /** Shows the change at once and puts the saved value back if saving fails. */
+  /** Which setting is saving; its choices are held still until the answer comes back, so two quick picks can't land out of order. */
+  let savingSetting = $state<'signups' | 'visitors' | null>(null);
   async function setPolicy(signups: SignupPolicy) {
-    if (!instance) return;
+    if (!instance || savingSetting) return;
     const was = instance.signups;
     instance.signups = signups;
     errors.signups = null;
+    savingSetting = 'signups';
     try {
       instance = { ...instance, ...(await adminApi.update({ signups })) };
       api.event('instance_signups_changed', { signups });
     } catch (e) {
       instance.signups = was;
       errors.signups = say(e);
+    } finally {
+      savingSetting = null;
     }
   }
   async function setVisitorLimit(visitorLimit: boolean) {
-    if (!instance) return;
+    if (!instance || savingSetting) return;
     const was = instance.visitorLimit;
     instance.visitorLimit = visitorLimit;
     errors.visitors = null;
+    savingSetting = 'visitors';
     try {
       instance = { ...instance, ...(await adminApi.update({ visitorLimit })) };
       api.event('instance_visitor_limit_changed', { visitorLimit });
     } catch (e) {
       instance.visitorLimit = was;
       errors.visitors = say(e);
+    } finally {
+      savingSetting = null;
     }
   }
   async function saveName() {
@@ -374,7 +382,7 @@
           </PersonRow>
           {/each}
         </ul>
-        {#if next}<button class="row-more tap" onclick={showMore} disabled={more}>{more ? 'Loading…' : 'Show more'}</button>{/if}
+        {#if next}<button class="row-more tap" onclick={showMore} disabled={more || searching}>{more ? 'Loading…' : 'Show more'}</button>{/if}
       {:else if searched && !searching}
         <EmptyNote bare icon="search" title="No accounts match “{searched}”" text="Try part of their name or @handle." />
       {/if}
@@ -420,9 +428,9 @@
   <Card kind="section" as="section" class="admin-section" aria-labelledby="signups-h">
     <h2 class="section-title" id="signups-h">Who can sign up</h2>
     <fieldset class="choices" aria-labelledby="signups-h">
-      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'invite'} onchange={() => setPolicy('invite')} /><span><strong>Invite only</strong><small>People sign up with an invite link from you.</small></span></label>
-      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'open'} onchange={() => setPolicy('open')} /><span><strong>Anyone</strong><small>Anyone who finds this site can sign up. On a public site, bots will make spam accounts, and there’s little to stop them.</small></span></label>
-      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'closed'} onchange={() => setPolicy('closed')} /><span><strong>No one</strong><small>Nobody new can join. People who already have an account can still sign in.</small></span></label>
+      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'invite'} disabled={savingSetting === 'signups'} onchange={() => setPolicy('invite')} /><span><strong>Invite only</strong><small>People sign up with an invite link from you.</small></span></label>
+      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'open'} disabled={savingSetting === 'signups'} onchange={() => setPolicy('open')} /><span><strong>Anyone</strong><small>Anyone who finds this site can sign up. On a public site, bots will make spam accounts, and there’s little to stop them.</small></span></label>
+      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'closed'} disabled={savingSetting === 'signups'} onchange={() => setPolicy('closed')} /><span><strong>No one</strong><small>Nobody new can join. People who already have an account can still sign in.</small></span></label>
     </fieldset>
     {#if errors.signups}<div class="err"><Banner tone="error" title="Couldn’t save that">{errors.signups}</Banner></div>{/if}
   </Card>
@@ -431,8 +439,8 @@
     <h2 class="section-title" id="visitors-h">What visitors can read</h2>
     <p class="section-description">Visitors are people who aren’t signed in.</p>
     <fieldset class="choices" aria-labelledby="visitors-h">
-      <label class="choice"><input type="radio" name="visitors" checked={instance.visitorLimit} onchange={() => setVisitorLimit(true)} /><span><strong>The newest 100</strong><small>Feeds, collections, and profiles show their latest 100 items, then ask visitors to sign in.</small></span></label>
-      <label class="choice"><input type="radio" name="visitors" checked={!instance.visitorLimit} onchange={() => setVisitorLimit(false)} /><span><strong>Everything</strong><small>Visitors can scroll back as far as anyone signed in.</small></span></label>
+      <label class="choice"><input type="radio" name="visitors" checked={instance.visitorLimit} disabled={savingSetting === 'visitors'} onchange={() => setVisitorLimit(true)} /><span><strong>The newest 100</strong><small>Feeds, collections, and profiles show their latest 100 items, then ask visitors to sign in.</small></span></label>
+      <label class="choice"><input type="radio" name="visitors" checked={!instance.visitorLimit} disabled={savingSetting === 'visitors'} onchange={() => setVisitorLimit(false)} /><span><strong>Everything</strong><small>Visitors can scroll back as far as anyone signed in.</small></span></label>
     </fieldset>
     {#if errors.visitors}<div class="err"><Banner tone="error" title="Couldn’t save that">{errors.visitors}</Banner></div>{/if}
   </Card>
