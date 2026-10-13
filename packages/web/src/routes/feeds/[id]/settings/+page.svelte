@@ -21,6 +21,8 @@
   import Sheet from '$lib/components/Sheet.svelte';
   import CategoryTerms from '$lib/components/CategoryTerms.svelte';
   import Card from '$lib/components/Card.svelte';
+  import CardFooter from '$lib/components/CardFooter.svelte';
+  import SettingRow from '$lib/components/SettingRow.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -348,15 +350,15 @@
     <!-- Admins, on a failing feed: what went wrong in plain words, with the fix it calls for and the way out inside the alert. -->
     <div class="diagnosis">
       <Banner tone={broken ? 'error' : 'warning'} title={diagnosis.title}>
-        <p>{diagnosis.text}</p>
-        <div class="fixes">
-          {#if diagnosis.fix === 'address'}
+        {diagnosis.text}
+        {#snippet actions()}
+          {#if diagnosis!.fix === 'address'}
             <Button size="sm" onclick={openAddress}>Change address</Button>
           {:else}
             <Button size="sm" onclick={refresh} disabled={refreshing}>{refreshing ? 'Checking…' : 'Check again now'}</Button>
           {/if}
           <Button variant="danger" link size="sm" onclick={askRemove}>Remove from thicket</Button>
-        </div>
+        {/snippet}
       </Banner>
       {#if refreshNote && diagnosis.fix === 'wait'}
         <Banner tone={refreshNote.tone} dismissible ondismiss={() => (refreshNote = null)}>{refreshNote.text}</Banner>
@@ -431,21 +433,21 @@
       <div class="body">
         <Card kind="section" as="section" class="detail-card" aria-labelledby="about-h">
           <h3 class="section-title" id="about-h">About this feed</h3>
-          <dl class="facts">
-            <dt>Feed address</dt><dd><a href={feed.url} target="_blank" rel="noopener noreferrer">{bare(feed.url)}</a></dd>
-            <dt>Website</dt><dd>{#if feed.siteUrl}<a href={feed.siteUrl} target="_blank" rel="noopener noreferrer">{bare(feed.siteUrl)}</a>{:else}—{/if}</dd>
-            <dt>Followers</dt><dd>{feed.followerCount.toLocaleString()}</dd>
-            <dt>Added</dt><dd>{day(feed.createdAt)}</dd>
-            <dt>Newest post</dt><dd>{feed.lastItemAt ? moment(feed.lastItemAt) : '—'}</dd>
-          </dl>
-          <div class="checked">
-            <p class="hint">{feed.lastFetchedAt ? `Last checked ${longAgo(feed.lastFetchedAt)}` : 'Not checked yet'}{#if feed.nextFetchAt}{` · next ${moment(feed.nextFetchAt).replace(/^Today, /, 'at ')}`}{/if}</p>
-            <!-- The alert at the top carries this button when waiting is the fix; once is enough. -->
-            {#if diagnosis?.fix !== 'wait'}<Button size="sm" onclick={refresh} disabled={refreshing}>{refreshing ? 'Checking…' : 'Check again now'}</Button>{/if}
-            {#if refreshNote && diagnosis?.fix !== 'wait'}
-              <Banner tone={refreshNote.tone} dismissible ondismiss={() => (refreshNote = null)}>{refreshNote.text}</Banner>
-            {/if}
+          <div>
+            <SettingRow label="Feed address" value={bare(feed.url)} />
+            <SettingRow label="Website" value={feed.siteUrl ? bare(feed.siteUrl) : '—'} />
+            <SettingRow label="Followers" value={feed.followerCount.toLocaleString()} />
+            <SettingRow label="Added" value={day(feed.createdAt)} />
+            <SettingRow label="Newest post" value={feed.lastItemAt ? moment(feed.lastItemAt) : '—'} />
           </div>
+          <CardFooter section>
+            <span>{feed.lastFetchedAt ? `Last checked ${longAgo(feed.lastFetchedAt)}` : 'Not checked yet'}{#if feed.nextFetchAt}{` · next ${moment(feed.nextFetchAt).replace(/^Today, /, 'at ')}`}{/if}</span>
+            <!-- The alert at the top carries this button when waiting is the fix; once is enough. -->
+            {#snippet actions()}{#if diagnosis?.fix !== 'wait'}<Button onclick={refresh} disabled={refreshing}>{refreshing ? 'Checking…' : 'Check again now'}</Button>{/if}{/snippet}
+          </CardFooter>
+          {#if refreshNote && diagnosis?.fix !== 'wait'}
+            <Banner tone={refreshNote.tone} dismissible ondismiss={() => (refreshNote = null)}>{refreshNote.text}</Banner>
+          {/if}
         </Card>
 
         <Card kind="section" as="section" class="detail-card" aria-labelledby="checks-h">
@@ -459,9 +461,9 @@
             <p class="hint">No checks recorded.</p>
           {:else}
             <p class="section-description">{fetches.filter((f) => f.error).length} of {fetches.length === 100 ? 'the latest 100 checks' : plural(fetches.length, 'check')} failed</p>
-            <ul class="checks">
+            <ul class="list-rows checks">
               {#each shownFetches as f (f.at)}
-                <li class:bad={!!f.error}>
+                <li class="row-event" class:bad={!!f.error}>
                   <span class="when">{moment(f.at)}</span>
                   <span class="what">{checkLabel(f)}</span>
                   {#if f.durationMs !== null}<span class="ms">{(f.durationMs / 1000).toFixed(1)}s</span>{/if}
@@ -475,6 +477,7 @@
         <!-- What labels the feed and its posts carry, as stored: groundwork for filtering Explore by them (#189). -->
         <Card kind="section" as="section" class="detail-card" aria-labelledby="cats-h">
           <h3 class="section-title" id="cats-h">Categories this feed sends</h3>
+          <div class="cats">
           {#if categories}
             {#if !categories.declared.length && !categories.terms.length}
               <p class="hint">None. {categories.tagged} of {plural(categories.posts, 'post')} came with categories.</p>
@@ -494,6 +497,7 @@
           {:else}
             <p class="hint" aria-live="polite">Loading…</p>
           {/if}
+          </div>
         </Card>
       </div>
     </details>
@@ -506,25 +510,29 @@
         <h2>Change this feed for everyone</h2>
       </summary>
       <div class="body admin">
-        <form class="adminfield" onsubmit={(e) => { e.preventDefault(); void saveTitle(); }}>
-          <Field label="Title" error={titleError} hint="What everyone sees, unless they have named the feed themselves. Leave it empty to use the feed’s own title, which comes back on its next check.">
-            {#snippet children({ id, describedBy, invalid })}
-              <Input {id} aria-describedby={describedBy} {invalid} bind:value={adminTitle} maxlength={200} placeholder={hostOf(feed!.siteUrl ?? feed!.url)} disabled={savingTitle}>
-                {#snippet trailing()}<Button type="submit" variant="primary" disabled={!titleDirty || savingTitle}>{savingTitle ? 'Saving…' : 'Save'}</Button>{/snippet}
-              </Input>
-            {/snippet}
-          </Field>
-        </form>
-        <div class="group">
-          <h3>Feed address</h3>
-          <p class="hint">{feed.url}</p>
+        <Card kind="section" as="section" class="detail-card" aria-labelledby="title-h">
+          <h3 class="section-title" id="title-h">Title</h3>
+          <p class="section-description">What everyone sees, unless they have named the feed themselves. Leave it empty to use the feed’s own title, which comes back on its next check.</p>
+          <form onsubmit={(e) => { e.preventDefault(); void saveTitle(); }}>
+            <Field label="Title" hideLabel error={titleError}>
+              {#snippet children({ id, describedBy, invalid })}
+                <Input {id} aria-describedby={describedBy} {invalid} bind:value={adminTitle} maxlength={200} placeholder={hostOf(feed!.siteUrl ?? feed!.url)} disabled={savingTitle}>
+                  {#snippet trailing()}<Button type="submit" variant="primary" disabled={!titleDirty || savingTitle}>{savingTitle ? 'Saving…' : 'Save'}</Button>{/snippet}
+                </Input>
+              {/snippet}
+            </Field>
+          </form>
+        </Card>
+        <Card kind="section" as="section" class="detail-card" aria-labelledby="address-h">
+          <h3 class="section-title" id="address-h">Feed address</h3>
+          <p class="section-description">{feed.url}</p>
           <div><Button onclick={openAddress}>Change address</Button></div>
-        </div>
-        <div class="group">
-          <h3>Remove this feed</h3>
-          <p class="hint">Removes it and its posts for everyone. Bookmarks keep a saved copy. For spam, abuse, or feeds that don’t belong.</p>
+        </Card>
+        <Card kind="section" as="section" class="detail-card" aria-labelledby="remove-h">
+          <h3 class="section-title" id="remove-h">Remove this feed</h3>
+          <p class="section-description">Removes it and its posts for everyone. Bookmarks keep a saved copy. For spam, abuse, or feeds that don’t belong.</p>
           <div><Button variant="danger" onclick={askRemove}>Remove from thicket</Button></div>
-        </div>
+        </Card>
       </div>
     </details>
 
@@ -600,43 +608,29 @@
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  /* Each change is its own group, spaced like Display name and Collections above. */
-  .fold .body.admin { align-items: flex-start; gap: var(--space-6); }
-  /* Named like a field, so it reads as one more thing to change. */
-  .group { display: flex; flex-direction: column; gap: var(--space-1); }
-  .group > div { margin-top: var(--space-2); }
+  /* Each change is its own section card, stacked like the Details cards. */
+  .fold .body.admin { gap: var(--space-3); }
   .moveform { display: flex; flex-direction: column; gap: var(--space-3); }
-  .group h3 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); }
-  .admin .hint { margin: 0; }
-  .admin .adminfield, .admin :global(.banner) { align-self: stretch; }
   .candidates { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
   .candidates li { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
   /* Details: three section cards, stacked. */
-  :global(.card.detail-card) { display: flex; flex-direction: column; gap: var(--space-3); }
-  /* The card's footer: when it was checked on the left, the button at the right end, as a post card's footer lays out. A note after a check takes a line of its own. */
-  .checked { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2) var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
-  .checked > :global(.banner) { flex-basis: 100%; }
-  .checked .hint, :global(.card.detail-card) .hint { margin: 0; }
+  /* The shared card spaces its own heading and description; what follows comes in the card's own flow. */
+  .cats { display: flex; flex-direction: column; gap: var(--space-2); }
   /* The history runs to the card's edges, like the Admin lists, so its Show more row does too. */
-  .checks { list-style: none; margin: 0 calc(-1 * var(--card-pad)); padding: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); font-variant-numeric: tabular-nums; }
-  .checks li { display: flex; gap: var(--space-3); padding: var(--space-2) var(--card-pad); border-top: 1px solid var(--line); }
+  /* Shared list rows (row-event), run to the card's edges like the Admin lists; inside each, when, what, and how long, in columns. */
+  .checks { margin: 0 calc(-1 * var(--card-pad)); border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .checks li { display: flex; gap: var(--space-3); }
   .checks li.bad .what { color: var(--danger); }
   .checks .when { flex: 0 0 auto; min-width: 16ch; white-space: nowrap; }
   .checks .what { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .checks .ms { flex: 0 0 auto; }
-  :global(.card.detail-card) .row-more { margin: 0 calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)); width: auto; }
+  :global(.card.detail-card) .row-more { margin: 0 calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)); width: calc(100% + 2 * var(--card-pad)); }
   .fold summary { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; list-style: none; color: var(--text-2); }
   .fold summary::-webkit-details-marker { display: none; }
   .fold summary h2 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); }
   .fold .body { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); }
   .fold .row { margin-top: 0; }
-  .facts { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: var(--space-2) var(--space-4); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .facts dt { font-weight: 600; color: var(--text); }
-  .facts dd { margin: 0; color: var(--text-2); overflow-wrap: anywhere; }
-  .facts a { color: var(--accent); }
   /* The alert at the top: what's wrong, then its fix and the way out on one row under the words. */
   .diagnosis { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-5); }
-  .diagnosis p { margin: 0; }
-  .fixes { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin-top: var(--space-3); }
   .status { text-align: center; color: var(--text-2); padding: var(--space-5) 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>

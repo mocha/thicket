@@ -366,11 +366,13 @@
     <form role="search" onsubmit={(e) => { e.preventDefault(); clearTimeout(typing); void findAccounts(query.trim()); }}>
       <Field label="Search accounts" hideLabel>
         {#snippet children({ id, describedBy, invalid })}
-          <Input {id} aria-describedby={describedBy} {invalid} inset type="search" bind:value={query} oninput={onSearch} placeholder="Search by name or @handle" autocomplete="off" autocapitalize="none" spellcheck={false} />
+          <Input {id} aria-describedby={describedBy} {invalid} inset variant="search" size="lg" enterkeyhint="search" bind:value={query} oninput={onSearch} placeholder="Search by name or @handle" autocomplete="off" autocapitalize="none" spellcheck={false}>
+            {#snippet trailing()}<Button type="submit" variant="primary" disabled={!query.trim() && !searched}>Search</Button>{/snippet}
+          </Input>
         {/snippet}
       </Field>
     </form>
-    <p class="row-details found" role="status">{#if searching}Searching…{:else if searched}{plural(matched, 'account')} {matched === 1 ? 'matches' : 'match'} “{searched}”{:else}Newest first{/if}</p>
+    <p class="row-details found" role="status">{#if searching}Searching…{:else if searched}{plural(matched, 'account')} {matched === 1 ? 'matches' : 'match'} “{searched}”{/if}</p>
     {#if accountsError}<div class="err"><Banner tone="error" title="Couldn’t load accounts">{accountsError}</Banner></div>{/if}
     <div class="rows below">
       {#if users.length}
@@ -586,6 +588,8 @@
   .rows.below { margin-top: var(--space-3); }
   .line { display: block; }
   .found { margin: var(--space-3) 0 0; }
+  /* Before any search it says nothing, and takes no room; it stays on the page so a search's result is still announced. */
+  .found:empty { margin: 0; }
   /* A text box and its button side by side, the field taking the room. */
   .inline { display: flex; gap: var(--space-2); align-items: flex-start; }
   .inline :global(.grow) { flex: 1; min-width: 0; }

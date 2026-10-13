@@ -161,7 +161,7 @@
             <td class="fit" title={f.lastItemAt ? full(f.lastItemAt) : undefined}>{f.lastItemAt ? relativeTime(f.lastItemAt) : '—'}</td>
             <td class="health">
               {#if f.consecutiveFailures > 0}
-                <a class="bad tap" href="/feeds/{f.id}/settings?admin">{health(f)}</a>
+                <Button variant="danger" link size="sm" href="/feeds/{f.id}/settings?admin">{health(f)}</Button>
               {:else}
                 <span class:quiet={!f.lastFetchedAt}>{health(f)}</span>
               {/if}
@@ -202,8 +202,6 @@
   .title { font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
   .url { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .health { color: var(--text-2); }
-  /* A failing feed's health is a link to where it's fixed: red, and underlined so it reads as one. */
-  .bad { color: var(--danger); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
   .quiet { color: var(--text-2); font-style: italic; }
   .status { text-align: center; color: var(--text-2); padding: var(--space-6) 0; }
 </style>
