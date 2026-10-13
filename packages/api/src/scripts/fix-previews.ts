@@ -7,15 +7,17 @@
  *
  * The stored image_url is whatever the parser chose at the time, so it is
  * treated as the declared picture here: if it is small, the body's first
- * image stands in, exactly as a fresh parse would now decide.
+ * image stands in, exactly as a fresh parse would now decide. A tracking
+ * pixel with nothing to replace it is cleared, so the card shows no picture.
  */
 import { sql } from "drizzle-orm";
 import { db, endPools } from "../db/client.js";
 import { choosePreview } from "../feeds/images.js";
+import { isBeaconImage } from "../lib/sanitize.js";
 
 const dry = process.argv.includes("--dry");
 const BATCH = 2000;
-let after = 0, seen = 0, changed = 0, swapped = 0, upsized = 0;
+let after = 0, seen = 0, changed = 0, swapped = 0, upsized = 0, cleared = 0;
 const hosts = new Map<string, number>();
 const hostOf = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return "?"; } };
 const fileOf = (u: string) => u.split("?")[0].split("/").pop() ?? "";
@@ -28,8 +30,14 @@ for (;;) {
     seen++;
     after = Number(r.id);
     const next = choosePreview(r.imageUrl, r.content, r.url);
-    if (!next || next === r.imageUrl) continue;
+    if (next === r.imageUrl || (!next && !isBeaconImage(r.imageUrl))) continue;
     changed++;
+    if (!next) {
+      cleared++;
+      hosts.set(hostOf(r.imageUrl), (hosts.get(hostOf(r.imageUrl)) ?? 0) + 1);
+      if (!dry) await db.execute(sql`update items set image_url = null where id = ${r.id}`);
+      continue;
+    }
     const sameFile = fileOf(next) !== "" && fileOf(next) === fileOf(r.imageUrl);
     if (sameFile) upsized++; else swapped++;
     hosts.set(hostOf(r.imageUrl), (hosts.get(hostOf(r.imageUrl)) ?? 0) + 1);
@@ -37,6 +45,6 @@ for (;;) {
   }
   if (seen % 20000 < BATCH) console.log(`  ${seen} looked at, ${changed} changed`);
 }
-console.log(`${dry ? "dry run: " : ""}${seen} posts with a picture; ${changed} changed (${upsized} asked for the large version of the same file, ${swapped} swapped for the body's first image)`);
+console.log(`${dry ? "dry run: " : ""}${seen} posts with a picture; ${changed} changed (${upsized} asked for the large version of the same file, ${swapped} swapped for the body's first image, ${cleared} tracking pixels cleared)`);
 console.log("by host:", [...hosts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([h, n]) => `${h} ${n}`).join(", "));
 await endPools();
