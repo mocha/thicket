@@ -479,6 +479,13 @@ export type AdminUser = {
   avatarUpdatedAt: string | null;
 };
 
+/**
+ * What a feed sent as categories, normalized: `declared` is what the feed says
+ * about itself on its last fetch; `terms` are its posts' terms with how many
+ * posts used each, most used first; `tagged` of `posts` came with any.
+ */
+export type FeedCategories = { declared: string[]; posts: number; tagged: number; terms: { term: string; posts: number }[] };
+
 export const adminApi = {
   users: () => j<{ users: AdminUser[] }>('/api/admin/users'),
   setAdmin: (id: number, isAdmin: boolean) => j<{ id: number; handle: string; isAdmin: boolean }>(`/api/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify({ isAdmin }) }),
@@ -487,6 +494,10 @@ export const adminApi = {
   /** Moderation: what removing this feed from the instance takes with it, then the removal itself. */
   feedImpact: (id: number) => j<{ title: string | null; url: string; posts: number; followers: number; collections: number; bookmarks: number }>(`/api/admin/feeds/${id}/impact`),
   deleteFeed: (id: number) => j<void>(`/api/admin/feeds/${id}`, { method: 'DELETE' }),
+  /** The categories a feed ships (issue #189): what it declares about itself, and its posts' terms counted. Admins only, for now. */
+  feedCategories: (id: number) => j<FeedCategories>(`/api/admin/feeds/${id}/categories`),
+  /** The categories one post was filed under. Admins only, for now. */
+  itemCategories: (id: number) => j<{ categories: string[] }>(`/api/admin/items/${id}/categories`),
   /** Mark a feed's posts as paywalled, for everyone. */
   setRequiresSubscription: (id: number, requiresSubscription: boolean) => j<{ id: number; requiresSubscription: boolean }>(`/api/admin/feeds/${id}`, { method: 'PATCH', body: JSON.stringify({ requiresSubscription }) }),
   settings: () => j<InstanceStatus & { signupsStored: SignupPolicy | null; signupsDefault: SignupPolicy }>('/api/admin/settings'),

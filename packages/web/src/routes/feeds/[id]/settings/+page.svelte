@@ -3,7 +3,7 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { api, adminApi, feedHref, type Feed } from '$lib/api';
+  import { api, adminApi, feedHref, type Feed, type FeedCategories } from '$lib/api';
   import { hostOf, relativeTime } from '$lib/time';
   import { feedName } from '$lib/feedname';
   import { plural } from '$lib/words';
@@ -18,6 +18,7 @@
   import Field from '$lib/components/Field.svelte';
   import Input from '$lib/components/Input.svelte';
   import Sheet from '$lib/components/Sheet.svelte';
+  import CategoryTerms from '$lib/components/CategoryTerms.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -209,6 +210,27 @@
     ['Last modified', feed.lastModified],
   ] : []);
 
+  /**
+   * Admins see, in the diagnostics, what categories the feed sends (issue
+   * #189). Fetched the first time the diagnostics open, once per feed.
+   */
+  let categories = $state<FeedCategories | null>(null);
+  let categoriesError = $state<string | null>(null);
+  let categoriesFor = -1;
+  /** A busy feed's posts use hundreds of terms; the most used come first and the rest wait behind a button. */
+  const TERMS_FIRST = 40;
+  let allTerms = $state(false);
+  $effect(() => {
+    if (!diagOpen || !feed || !session.user?.isAdmin || categoriesFor === feed.id) return;
+    const target = feed.id;
+    categoriesFor = target;
+    categories = null; categoriesError = null; allTerms = false;
+    adminApi.feedCategories(target).then(
+      (c) => { if (feed?.id === target) categories = c; },
+      (e) => { if (feed?.id === target) categoriesError = e instanceof Error ? e.message : String(e); },
+    );
+  });
+
   $effect(() => {
     if (!session.loaded) return;
     if (!session.user) return void goto(`/login?next=${encodeURIComponent(page.url.pathname)}`, { replaceState: true });
@@ -294,6 +316,27 @@
           <li><strong>{k}:</strong> <span>{v ?? '—'}</span></li>
         {/each}
       </ul>
+      {#if session.user?.isAdmin}
+        <!-- Admins only: the categories this feed sends, as stored. Raw material for #189, not yet shown to anyone else. -->
+        <div class="cats">
+          <h3>Categories this feed sends <span class="who">Admins only</span></h3>
+          {#if categories}
+            <p class="hint">On the feed itself, from its last check:</p>
+            <CategoryTerms terms={categories.declared.map((term) => ({ term }))} />
+            <p class="hint">On its posts: {categories.tagged} of {plural(categories.posts, 'stored post')} came with categories{categories.terms.length ? ', most used first' : ''}.</p>
+            {#if categories.terms.length}
+              <CategoryTerms terms={allTerms ? categories.terms : categories.terms.slice(0, TERMS_FIRST)} />
+              {#if !allTerms && categories.terms.length > TERMS_FIRST}
+                <div><Button size="sm" onclick={() => (allTerms = true)}>Show all {categories.terms.length} terms</Button></div>
+              {/if}
+            {/if}
+          {:else if categoriesError}
+            <p class="hint">Couldn’t load them: {categoriesError}</p>
+          {:else}
+            <p class="hint" aria-live="polite">Loading…</p>
+          {/if}
+        </div>
+      {/if}
     </div>
   </details>
 
@@ -377,5 +420,9 @@
   .facts { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .facts li { overflow-wrap: anywhere; }
   .facts strong { color: var(--text); font-weight: 600; }
+  .cats { display: flex; flex-direction: column; gap: var(--space-2); }
+  .cats h3 { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); display: flex; align-items: baseline; gap: var(--space-2); }
+  .cats .who { font-weight: 400; color: var(--text-2); }
+  .cats .hint { margin: 0; }
   .status { text-align: center; color: var(--text-2); padding: var(--space-5) 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>

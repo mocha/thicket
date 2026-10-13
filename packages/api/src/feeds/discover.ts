@@ -127,7 +127,7 @@ function feedNotAnswering(err: unknown): boolean {
  */
 async function waitForChannel(feedUrl: string, channel: { id: string; title: string | null }): Promise<Discovery> {
   const title = channel.title ?? (await channelName(channel.id));
-  const parsed: ParsedFeed = { kind: "atom", title, description: null, siteUrl: `https://www.youtube.com/channel/${channel.id}`, image: null, language: null, items: [] };
+  const parsed: ParsedFeed = { kind: "atom", title, description: null, siteUrl: `https://www.youtube.com/channel/${channel.id}`, image: null, language: null, categories: [], items: [] };
   return { status: "feed", url: normalizeFeedUrl(feedUrl), parsed, etag: null, lastModified: null, waiting: true };
 }
 

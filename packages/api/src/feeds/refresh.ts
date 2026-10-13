@@ -80,20 +80,26 @@ export async function storeItems(feedId: number, parsed: ParsedFeed, opts: { fir
     linkLabel: it.linkLabel,
     content: it.content,
     imageUrl: it.imageUrl,
+    categories: it.categories.length ? it.categories : null,
     publishedAt: dateFor(it.publishedAt),
   }));
   /**
-   * A post we already hold can come back carrying a body we never stored:
-   * YouTube descriptions before 2026-09-15, or anything the parser learns to
-   * read later. Fill that gap; never overwrite a body we have. `xmax = 0` is
-   * how Postgres tells a fresh insert from that fill, so only real arrivals
-   * count as new.
+   * A post we already hold can come back carrying something we never stored:
+   * a body (YouTube descriptions before 2026-09-15), categories (before
+   * issue #189), or anything the parser learns to read later. Fill those gaps;
+   * never overwrite what we have. `xmax = 0` is how Postgres tells a fresh
+   * insert from that fill, so only real arrivals count as new.
    */
+  const { content, summary, categories } = schema.items;
   const written = await db.insert(schema.items).values(rows)
     .onConflictDoUpdate({
       target: [schema.items.feedId, schema.items.dedupeKey],
-      set: { content: sql`excluded.content`, summary: sql`coalesce(${schema.items.summary}, excluded.summary)` },
-      setWhere: sql`${schema.items.content} is null and excluded.content is not null`,
+      set: {
+        content: sql`coalesce(${content}, excluded.content)`,
+        summary: sql`coalesce(${summary}, excluded.summary)`,
+        categories: sql`coalesce(${categories}, excluded.categories)`,
+      },
+      setWhere: sql`(${content} is null and excluded.content is not null) or (${categories} is null and excluded.categories is not null)`,
     })
     .returning({ id: schema.items.id, fresh: sql<boolean>`(xmax = 0)` });
   const fresh = written.filter((r) => r.fresh).map((r) => Number(r.id));
@@ -186,6 +192,7 @@ export async function refreshFeed(feedId: number): Promise<RefreshResult> {
         description: parsed.description ?? feed.description,
         siteUrl: parsed.siteUrl ?? feed.siteUrl,
         language: parsed.language,
+        categories: parsed.categories.length ? parsed.categories : null,
         etag: res.headers.get("etag"),
         lastModified: res.headers.get("last-modified"),
         lastStatus: res.status,
