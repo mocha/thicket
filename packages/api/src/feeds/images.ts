@@ -24,6 +24,9 @@ const SMALL = 100;
 
 const num = (v: unknown) => (v === null || v === undefined || v === "" ? NaN : Number(v));
 
+/** 2 pixels or smaller on a side: a tracking pixel, never a picture. */
+const isPixelSize = (width: unknown, height: unknown) => num(width) <= 2 || num(height) <= 2;
+
 /** Is this picture small, by its declared size or by a size written into its address? */
 export function isSmallImage(url: string, width?: number | string | null, height?: number | string | null): boolean {
   const w = num(width), h = num(height);
@@ -68,8 +71,7 @@ export function firstImg(html: string | undefined | null): string | null {
   for (const [tag] of html.matchAll(/<img\b[^>]*>/gi)) {
     const src = /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1];
     if (!src || isBeaconImage(src)) continue;
-    const w = Number(/\swidth=["']?(\d+)/i.exec(tag)?.[1] ?? NaN), h = Number(/\sheight=["']?(\d+)/i.exec(tag)?.[1] ?? NaN);
-    if (w <= 2 || h <= 2) continue;
+    if (isPixelSize(/\swidth=["']?(\d+)/i.exec(tag)?.[1], /\sheight=["']?(\d+)/i.exec(tag)?.[1])) continue;
     return src;
   }
   return null;
@@ -101,7 +103,7 @@ function webUrl(url: string | null | undefined, base?: string | null): string | 
 export function choosePreview(declared: Declared, body: string | null | undefined, base?: string | null): string | null {
   const d = typeof declared === "string" ? { url: declared } : declared;
   const declaredUrl = webUrl(d?.url, base);
-  const url = declaredUrl && !isBeaconImage(declaredUrl) ? declaredUrl : null;
+  const url = declaredUrl && !isBeaconImage(declaredUrl) && !isPixelSize(d?.width, d?.height) ? declaredUrl : null;
   if (url && !isSmallImage(url, d?.width, d?.height)) return upsizeImageUrl(url);
   const body1 = webUrl(firstImg(body), base);
   if (body1) return upsizeImageUrl(body1);
