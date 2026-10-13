@@ -9,7 +9,7 @@
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { api, adminApi, profileHref, type AdminUser, type InstanceStatus, type Invite, type SignupPolicy } from '$lib/api';
+  import { api, adminApi, profileHref, type AdminFeedPage, type AdminUser, type InstanceStatus, type Invite, type SignupPolicy } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import { relativeTime } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
@@ -45,6 +45,8 @@
   let starter = $state('');
   let starterError = $state<string | null>(null);
   let savingStarter = $state(false);
+  /** How many feeds the index holds, and how many are failing, for the way into the feed list. */
+  let feedCounts = $state<AdminFeedPage['counts'] | null>(null);
 
   async function setStarter() {
     if (savingStarter) return;
@@ -62,9 +64,10 @@
   }
 
   async function load() {
-    const [s, i, u, f] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter()]);
+    const [s, i, u, f, fc] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter(), adminApi.feeds({ per: 1 }).catch(() => null)]);
     instance = s; name = s.name; invites = i.invites; users = u.users;
     starter = f.handle ?? '';
+    feedCounts = fc?.counts ?? null;
   }
   onMount(() => {
     if (!session.user?.isAdmin) return void goto('/new-posts', { replaceState: true });
@@ -188,6 +191,15 @@
   </Card>
 
   <Card kind="section" as="section" class="admin-section">
+    <h2 class="section-title">Feeds{#if feedCounts}{' '}<Badge>{feedCounts.all.toLocaleString()}</Badge>{/if}</h2>
+    <p class="section-description">Every feed anyone here follows or has followed is shared by the whole instance. Look through them, find the ones that have stopped working and how many people they affect, then fix a feed's address or title or remove it.</p>
+    <div class="row feeds-row">
+      <Button href="/admin/feeds">Review all feeds</Button>
+      {#if feedCounts?.failing}<Button href="/admin/feeds?filter=failing" variant="danger">{feedCounts.failing.toLocaleString()} failing</Button>{/if}
+    </div>
+  </Card>
+
+  <Card kind="section" as="section" class="admin-section">
     <h2 class="section-title">Invite links</h2>
     <form class="mint" onsubmit={(e) => { e.preventDefault(); void mint(); }}>
       <Field label="Who is this invite for?" hideLabel class="grow">
@@ -283,6 +295,7 @@
   .radio small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .mint { display: flex; gap: var(--space-2); }
   .starter-form { margin: var(--space-3) 0 0; }
+  .feeds-row { margin-top: var(--space-3); flex-wrap: wrap; }
   .invites { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
   .invites li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); }
   .invites .note { flex: 1 1 8ch; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

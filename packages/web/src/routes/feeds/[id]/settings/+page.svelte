@@ -3,7 +3,7 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { api, adminApi, feedHref, type Feed } from '$lib/api';
+  import { api, adminApi, feedHref, type AdminFetch, type Feed, type FeedMove } from '$lib/api';
   import { hostOf, relativeTime } from '$lib/time';
   import { feedName } from '$lib/feedname';
   import { plural } from '$lib/words';
@@ -92,6 +92,89 @@
     }
   }
 
+  /* Admin: the feed's title for everyone. Empty hands it back to the feed, whose own title returns on its next check. */
+  let adminTitle = $state('');
+  let savingTitle = $state(false);
+  const titleDirty = $derived(!!feed && adminTitle.trim() !== (feed.title ?? ''));
+  async function saveTitle() {
+    if (!feed || savingTitle) return;
+    const target = feed;
+    savingTitle = true;
+    try {
+      const r = await adminApi.setFeedTitle(target.id, adminTitle.trim() || null);
+      api.event('admin_feed_retitled', { feedId: target.id, cleared: !r.title });
+      if (feed !== target) return;
+      target.title = r.title;
+      adminTitle = r.title ?? '';
+      showToast(r.title ? `Everyone sees this feed as “${r.title}” now` : 'The feed’s own title comes back on its next check');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e));
+    } finally {
+      savingTitle = false;
+    }
+  }
+
+  /* Admin: a new address for the feed. It may land on a feed thicket already has, and then this one is folded into it. */
+  let newUrl = $state('');
+  let moving = $state(false);
+  let moveNote = $state<{ tone: 'error' | 'info' | 'success'; text: string } | null>(null);
+  let candidates = $state<Extract<FeedMove, { status: 'choose' }>['candidates']>([]);
+  async function move(url: string) {
+    if (!feed || moving || !url.trim()) return;
+    if (!confirm(`Point ${feedName(feed)} at ${url.trim()}?\n\nIf thicket already has a feed at that address, this one is folded into it: its followers, their settings and bookmarks move over, and this can’t be undone.`)) return;
+    const target = feed;
+    moving = true;
+    moveNote = null;
+    candidates = [];
+    try {
+      const r = await adminApi.moveFeed(target.id, url.trim());
+      if (r.status === 'choose') {
+        candidates = r.candidates;
+        moveNote = { tone: 'info', text: 'That page lists more than one feed. Pick the one this feed should read.' };
+        return;
+      }
+      api.event('admin_feed_moved', { feedId: target.id, result: r.status, into: r.feedId });
+      if (r.status === 'merged' || r.feedId !== target.id) {
+        showToast(`${feedName(target)} was folded into the feed already at that address`);
+        return void goto(`/feeds/${r.feedId}/settings?admin`, { replaceState: true });
+      }
+      const next = await api.feed(target.id);
+      if (feed !== target) return;
+      feed = { ...next, displayName: target.displayName };
+      newUrl = next.url;
+      adminTitle = next.title ?? '';
+      void loadFetches();
+      moveNote = r.fetch.error
+        ? { tone: 'error', text: `Moved to ${r.url}, but fetching it failed: ${r.fetch.error}` }
+        : r.fetch.status === null
+          ? { tone: 'info', text: `Moved to ${r.url}. Its site has asked thicket to wait, so it will be fetched shortly.` }
+          : { tone: 'success', text: `Moved to ${r.url} and fetched it: ${plural(r.fetch.itemsNew, 'new post')}.` };
+    } catch (e) {
+      moveNote = { tone: 'error', text: e instanceof Error ? e.message : String(e) };
+    } finally {
+      moving = false;
+    }
+  }
+
+  /* Admin: the feed's recent checks, read when the admin section opens. */
+  let fetches = $state<AdminFetch[] | null>(null);
+  let fetchWindow = $state(14);
+  let allFetches = $state(false);
+  async function loadFetches() {
+    if (!feed) return;
+    const target = feed.id;
+    try {
+      const r = await adminApi.feedFetches(target);
+      if (feed?.id !== target) return;
+      fetches = r.fetches;
+      fetchWindow = r.windowDays;
+    } catch {
+      fetches = [];
+    }
+  }
+  $effect(() => { if (adminOpen && feed && fetches === null) void loadFetches(); });
+  const shortWhen = (v: string) => new Date(v).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
   async function load() {
     try {
       feed = await api.feed(id);
@@ -101,6 +184,10 @@
     ids = feed.myCollectionIds;
     diagOpen = feed.consecutiveFailures > 0;
     displayName = feed.displayName ?? '';
+    adminTitle = feed.title ?? '';
+    newUrl = feed.url;
+    // Arriving from the admin feed list opens the admin section.
+    adminOpen = !!session.user?.isAdmin && page.url.searchParams.has('admin');
   }
 
   /* Display name: a field with Save inside it, which wakes up once something changed. Saving it empty goes back to the feed's own title. */
@@ -216,6 +303,10 @@
     loadedId = id;
     feed = null;
     refreshNote = null;
+    moveNote = null;
+    candidates = [];
+    fetches = null;
+    allFetches = false;
     void load();
     api.event('feed_settings_view', { feedId: id });
   });
@@ -306,11 +397,60 @@
         <h2>Admin: change this feed for everyone</h2>
       </summary>
       <div class="body admin">
+        <form class="adminfield" onsubmit={(e) => { e.preventDefault(); void saveTitle(); }}>
+          <Field label="Title" hint="What everyone sees, unless they have named the feed themselves. Leave it empty to use the feed’s own title, which comes back on its next check.">
+            {#snippet children({ id, describedBy, invalid })}
+              <Input {id} aria-describedby={describedBy} {invalid} bind:value={adminTitle} maxlength={200} placeholder={hostOf(feed!.siteUrl ?? feed!.url)} disabled={savingTitle}>
+                {#snippet trailing()}<Button type="submit" variant="primary" disabled={!titleDirty || savingTitle}>{savingTitle ? 'Saving…' : 'Save'}</Button>{/snippet}
+              </Input>
+            {/snippet}
+          </Field>
+        </form>
+        <form class="adminfield" onsubmit={(e) => { e.preventDefault(); void move(newUrl); }}>
+          <Field label="Feed address" hint="For a feed that moved or stopped working. A site’s page works too. If thicket already has a feed at the new address, this one is folded into it and its followers move over.">
+            {#snippet children({ id, describedBy, invalid })}
+              <Input {id} aria-describedby={describedBy} {invalid} type="url" bind:value={newUrl} disabled={moving} autocomplete="off" autocapitalize="none" spellcheck={false} clearable={false}>
+                {#snippet trailing()}<Button type="submit" variant="primary" disabled={moving || !newUrl.trim() || newUrl.trim() === feed!.url}>{moving ? 'Checking…' : 'Move'}</Button>{/snippet}
+              </Input>
+            {/snippet}
+          </Field>
+        </form>
+        {#if moveNote}
+          <Banner tone={moveNote.tone} dismissible ondismiss={() => (moveNote = null)}>{moveNote.text}</Banner>
+        {/if}
+        {#if candidates.length}
+          <ul class="candidates">
+            {#each candidates as c (c.url)}
+              <li><Button size="sm" disabled={moving} onclick={() => { newUrl = c.url; void move(c.url); }}>{c.title ?? c.url}</Button><span class="hint inline">{c.url}</span></li>
+            {/each}
+          </ul>
+        {/if}
         <div class="radios">
           <label>
             <Checkbox bind:checked={subscriptionChecked} disabled={savingSubscription} onchange={(e) => setRequiresSubscription(e.currentTarget.checked)} />
             <span><strong>Requires a subscription</strong><small>The site’s posts are behind a paywall. Everyone sees “Requires subscription” next to this feed’s address.</small></span>
           </label>
+        </div>
+        <div class="history">
+          <h3>Checks in the last {plural(fetchWindow, 'day')}</h3>
+          {#if fetches === null}
+            <p class="hint">Loading…</p>
+          {:else if fetches.length === 0}
+            <p class="hint">No checks recorded.</p>
+          {:else}
+            {@const failedCount = fetches.filter((f) => f.error).length}
+            <p class="hint">{failedCount} of {plural(fetches.length, 'check')} failed{fetches.length === 100 ? ' (the latest 100 shown)' : ''}.</p>
+            <ul class="checks">
+              {#each allFetches ? fetches : fetches.slice(0, 12) as f (f.at)}
+                <li class:bad={!!f.error}>
+                  <span class="when">{shortWhen(f.at)}</span>
+                  <span class="what">{f.error ?? (f.status === 304 ? 'Not changed (304)' : f.status ? `HTTP ${f.status}` : 'OK')}{#if !f.error && f.itemsNew}{' · '}{plural(f.itemsNew, 'new post')}{/if}</span>
+                  {#if f.durationMs !== null}<span class="ms">{(f.durationMs / 1000).toFixed(1)}s</span>{/if}
+                </li>
+              {/each}
+            </ul>
+            {#if fetches.length > 12 && !allFetches}<Button size="sm" onclick={() => (allFetches = true)}>Show all {fetches.length}</Button>{/if}
+          {/if}
         </div>
         <p class="hint">Feeds are shared. Removing this one takes it away from everyone on thicket: its posts and its place in every collection. Bookmarks, and the notes on them, keep their saved copy. Use it for spam, abuse, or a feed that should never have been indexed.</p>
         <Button variant="danger" onclick={askRemove}>Remove from thicket</Button>
@@ -369,6 +509,17 @@
   .admin { align-items: flex-start; }
   .admin .hint { margin: 0; }
   .admin .radios { align-self: stretch; }
+  .admin .adminfield, .admin .history, .admin :global(.banner) { align-self: stretch; }
+  .candidates { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+  .candidates li { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+  .history h3 { margin: 0 0 var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
+  .checks { list-style: none; margin: var(--space-2) 0; padding: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .checks li { display: flex; gap: var(--space-3); padding: var(--space-1) 0; border-top: 1px solid var(--line); }
+  .checks li:first-child { border-top: 0; }
+  .checks li.bad .what { color: var(--danger); }
+  .checks .when { flex: 0 0 auto; min-width: 14ch; white-space: nowrap; }
+  .checks .what { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .checks .ms { flex: 0 0 auto; }
   .fold summary { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; list-style: none; color: var(--text-2); }
   .fold summary::-webkit-details-marker { display: none; }
   .fold summary h2 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); }
