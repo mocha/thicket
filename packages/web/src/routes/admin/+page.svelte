@@ -19,7 +19,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { api, adminApi, type AdminUser, type InstanceStatus, type Invite, type SignupPolicy } from '$lib/api';
+  import { api, adminApi, exploreApi, profilesApi, collectionHref, type ExploreCollection, type AdminUser, type InstanceStatus, type Invite, type SignupPolicy } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import { longAgo, relativeTime } from '$lib/time';
   import { plural } from '$lib/words';
@@ -28,6 +28,7 @@
   import Banner from '$lib/components/Banner.svelte';
   import Button from '$lib/components/Button.svelte';
   import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
+  import CollectionRow from '$lib/components/CollectionRow.svelte';
   import EmptyNote from '$lib/components/EmptyNote.svelte';
   import Field from '$lib/components/Field.svelte';
   import Icon from '$lib/components/Icon.svelte';
@@ -104,7 +105,30 @@
       more = false;
     }
   }
+  /** Starter packs: the saved account, the box while choosing one, and what new people are offered as a result. */
+  let starterSaved = $state('');
   let starter = $state('');
+  let changingStarter = $state(false);
+  let starterPerson = $state<{ handle: string; displayName: string | null; bio: string | null; avatarUpdatedAt: string | null } | null>(null);
+  let offered = $state<ExploreCollection[]>([]);
+  async function loadOffered() {
+    try {
+      offered = (await exploreApi.featured()).collections;
+    } catch (e) {
+      console.error('Couldn’t load the collections new people are offered', e);
+      offered = [];
+    }
+  }
+  async function loadStarterPerson(handle: string) {
+    starterPerson = null;
+    if (!handle) return;
+    try {
+      const p = await profilesApi.get(handle);
+      starterPerson = p.private ? { handle, displayName: null, bio: null, avatarUpdatedAt: null } : { handle: p.handle, displayName: p.displayName, bio: null, avatarUpdatedAt: p.avatarUpdatedAt };
+    } catch {
+      starterPerson = { handle, displayName: null, bio: null, avatarUpdatedAt: null };
+    }
+  }
   let savingStarter = $state(false);
 
   async function load() {
@@ -112,7 +136,9 @@
       const [s, i, u, f] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter()]);
       instance = s; name = s.name; invites = i.invites;
       users = u.users; next = u.next; total = u.total; matched = u.matched;
-      starter = f.handle ?? '';
+      starterSaved = starter = f.handle ?? '';
+      void loadStarterPerson(starterSaved);
+      void loadOffered();
     } catch (e) {
       loadError = say(e);
       console.error('Site admin failed to load', e);
@@ -165,13 +191,17 @@
       savingName = false;
     }
   }
+  function cancelStarter() {
+    starter = starterSaved; changingStarter = false; errors.starter = null;
+  }
   async function setStarter() {
     if (savingStarter) return;
     savingStarter = true; errors.starter = null;
     try {
       const r = await adminApi.setStarter(starter);
-      starter = r.handle ?? '';
-      showToast(starter ? `New people are offered @${starter}’s collections` : 'New people are offered the fullest public collections');
+      starterSaved = starter = r.handle ?? '';
+      changingStarter = false;
+      await Promise.all([loadStarterPerson(starterSaved), loadOffered()]);
     } catch (e) {
       errors.starter = say(e);
     } finally {
@@ -397,15 +427,42 @@
 
   <Card kind="section" as="section" class="admin-section" aria-labelledby="starter-h">
     <h2 class="section-title" id="starter-h">Starter packs</h2>
-    <p class="section-description">New people are offered one account’s public collections to copy. Leave it blank to offer the site’s fullest public collections.</p>
-    <form class="inline" onsubmit={(e) => { e.preventDefault(); void setStarter(); }}>
-      <Field label="Account" hideLabel error={errors.starter} class="grow">
-        {#snippet children({ id, describedBy, invalid })}
-          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={starter} placeholder="@handle" autocomplete="off" autocapitalize="none" spellcheck={false} disabled={savingStarter} oninput={() => (errors.starter = null)} />
-        {/snippet}
-      </Field>
-      <Button type="submit" size="lg" loading={savingStarter}>Save</Button>
-    </form>
+    <p class="section-description">To get users started, you can specify one account whose collections are available to copy. You might choose your own account, or create an account just for this purpose.</p>
+    {#if starterSaved && !changingStarter}
+      <div class="rows">
+        <ul class="list-rows">
+          <PersonRow person={starterPerson ?? { handle: starterSaved, displayName: null, bio: null, avatarUpdatedAt: null }}>
+            {#snippet end()}<Button size="sm" onclick={() => (changingStarter = true)}><Icon name="pencil" size={16} />Change account</Button>{/snippet}
+          </PersonRow>
+        </ul>
+      </div>
+    {:else}
+      <form class:inline={!changingStarter} class:edit={changingStarter} onsubmit={(e) => { e.preventDefault(); void setStarter(); }}>
+        <Field label="Account" hideLabel={!changingStarter} error={errors.starter} class="grow">
+          {#snippet children({ id, describedBy, invalid })}
+            <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={starter} placeholder="@handle" autocomplete="off" autocapitalize="none" spellcheck={false} disabled={savingStarter} oninput={() => (errors.starter = null)} />
+          {/snippet}
+        </Field>
+        {#if changingStarter}
+          <div class="editrow">
+            <Button onclick={cancelStarter} disabled={savingStarter}>Cancel</Button>
+            <Button type="submit" variant="primary" loading={savingStarter}>Save</Button>
+          </div>
+        {:else}
+          <Button type="submit" size="lg" loading={savingStarter}>Save</Button>
+        {/if}
+      </form>
+    {/if}
+    {#if offered.length}
+      <h3 class="offered-h">New people see</h3>
+      <div class="rows">
+        <ul class="list-rows">
+          {#each offered as c (c.id)}
+            <CollectionRow href={collectionHref(c.handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} owner={starterSaved ? undefined : `@${c.handle}`} sample={c.sample} />
+          {/each}
+        </ul>
+      </div>
+    {/if}
   </Card>
 
   <Card kind="section" as="section" class="admin-section" aria-labelledby="name-h">
@@ -487,6 +544,11 @@
   .inline { display: flex; gap: var(--space-2); align-items: flex-start; }
   .inline :global(.grow) { flex: 1; min-width: 0; }
   .err { margin-top: var(--space-3); }
+  /* Changing the account: the labeled box with Cancel and Save under it, as Edit profile does. */
+  .edit { display: flex; flex-direction: column; gap: var(--space-3); }
+  .editrow { display: flex; justify-content: flex-end; gap: var(--space-2); }
+  /* What new people are offered, under its own small heading, rows to the card's edges. */
+  .offered-h { margin: var(--space-5) 0 var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
   .invite { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
   .what { flex: 1 1 12rem; min-width: 0; display: flex; flex-direction: column; }
   .what .row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
