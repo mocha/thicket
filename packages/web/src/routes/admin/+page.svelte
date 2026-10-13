@@ -379,8 +379,8 @@
     <h2 class="section-title" id="signups-h">Who can sign up</h2>
     <fieldset class="choices" aria-labelledby="signups-h">
       <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'invite'} onchange={() => setPolicy('invite')} /><span><strong>Invite only</strong><small>People sign up with an invite link from you.</small></span></label>
-      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'open'} onchange={() => setPolicy('open')} /><span><strong>Anyone</strong><small>Fine on a private network. On a public address, expect spam accounts.</small></span></label>
-      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'closed'} onchange={() => setPolicy('closed')} /><span><strong>No one</strong><small>Existing accounts keep working.</small></span></label>
+      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'open'} onchange={() => setPolicy('open')} /><span><strong>Anyone</strong><small>Anyone who finds this site can sign up. On a public site, bots will make spam accounts, and there’s little to stop them.</small></span></label>
+      <label class="choice"><input type="radio" name="signups" checked={instance.signups === 'closed'} onchange={() => setPolicy('closed')} /><span><strong>No one</strong><small>Nobody new can join. People who already have an account can still sign in.</small></span></label>
     </fieldset>
     {#if errors.signups}<div class="err"><Banner tone="error" title="Couldn’t save that">{errors.signups}</Banner></div>{/if}
   </Card>
