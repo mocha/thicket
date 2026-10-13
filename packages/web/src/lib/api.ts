@@ -99,8 +99,33 @@ export function setUnauthorizedHandler(fn: () => void) { onUnauthorized = fn; }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * What to tell someone when the server refused without saying why: a plain
+ * sentence, with the status number at the end so support can tell the cases
+ * apart. A 502, 503, or 504 is the proxy in front saying the server itself
+ * didn't answer (a deploy, a restart, an outage).
+ */
+export function failureText(status: number): string {
+  if (status === 502 || status === 503 || status === 504) return `The server isn’t answering right now. Try again in a minute. (Error ${status})`;
+  if (status >= 500) return `Something went wrong on the server. Try again in a minute. (Error ${status})`;
+  if (status === 404) return `That isn’t here anymore. Reload the page and try again. (Error 404)`;
+  return `That didn’t work. Reload the page and try again. (Error ${status})`;
+}
+/** When the request never reached the server at all. */
+export const OFFLINE_TEXT = 'Can’t reach the server. Check your connection and try again.';
+
+/** fetch, with a failure to connect said in words instead of the browser's own "Failed to fetch". */
+async function reach(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (e) {
+    console.error('Request failed before reaching the server', input, e);
+    throw new ApiError(OFFLINE_TEXT, 0);
+  }
+}
+
 async function j<T>(input: string, init?: RequestInit): Promise<T> {
-  let res = await fetch(input, { headers: { 'content-type': 'application/json' }, ...init });
+  let res = await reach(input, { headers: { 'content-type': 'application/json' }, ...init });
   // A 429 comes from one of two places. A proxy in front dropped the request before the server saw
   // it: safe to retry any method, so back off 0.5s, 1s, 2s, 4s with jitter, honoring Retry-After if
   // present. Or thicket itself said "that's enough" (too many sign-in tries, a day's worth of saving):
@@ -109,12 +134,13 @@ async function j<T>(input: string, init?: RequestInit): Promise<T> {
   for (let attempt = 0; res.status === 429 && attempt < 4 && !(await ownRefusal(res)); attempt++) {
     const hinted = Number(res.headers.get('retry-after') ?? 0) * 1000;
     await sleep(Math.min(6000, hinted || 500 * 2 ** attempt) + Math.random() * 300);
-    res = await fetch(input, { headers: { 'content-type': 'application/json' }, ...init });
+    res = await reach(input, { headers: { 'content-type': 'application/json' }, ...init });
   }
   if (res.status === 204) return undefined as T;
   const body = await res.json().catch(() => ({}));
   if (res.status === 401) onUnauthorized?.();
-  if (!res.ok && !('status' in body)) throw new ApiError(body.error ?? `HTTP ${res.status}`, res.status, body.field);
+  if (!res.ok && !body.error) console.error('Request failed with no reason given', input, res.status);
+  if (!res.ok && !('status' in body)) throw new ApiError(body.error ?? failureText(res.status), res.status, body.field);
   return body as T;
 }
 
@@ -156,7 +182,7 @@ export const api = {
   refresh: async (id: number): Promise<{ ok: true; feedId: number } | { ok: false; cooldown: number; reason: string | null }> => {
     const res = await fetch(`/api/feeds/${id}/refresh`, { method: 'POST' });
     if (res.status === 429) { const b = await res.json().catch(() => ({})); return { ok: false, cooldown: Number(b.retryAfterS ?? 300), reason: b.reason ?? null }; }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) throw new Error(failureText(res.status));
     const b = await res.json().catch(() => ({}));
     return { ok: true, feedId: Number(b.feedId ?? id) };
   },
@@ -195,7 +221,7 @@ export const collectionsApi = {
   importOpml: async (id: number, file: File): Promise<ImportResult> => {
     const res = await fetch(`/api/collections/${id}/import`, { method: 'POST', headers: { 'content-type': 'text/x-opml' }, body: await file.text() });
     const body = await res.json();
-    if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+    if (!res.ok) throw new Error(body.error ?? failureText(res.status));
     return body as ImportResult;
   }
 };
@@ -217,7 +243,7 @@ async function raw<T>(input: string, init: RequestInit): Promise<T> {
   const res = await fetch(input, init);
   const body = await res.json().catch(() => ({}));
   if (res.status === 401) onUnauthorized?.();
-  if (!res.ok) throw new ApiError(body.error ?? `HTTP ${res.status}`, res.status);
+  if (!res.ok) throw new ApiError(body.error ?? failureText(res.status), res.status);
   return body as T;
 }
 
@@ -480,7 +506,15 @@ export type AdminUser = {
 };
 
 export const adminApi = {
-  users: () => j<{ users: AdminUser[] }>('/api/admin/users'),
+  /** One page of accounts, newest first. Pass the previous page's `next` as `before` for the following page. */
+  users: (opts: { q?: string; before?: string | null; limit?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (opts.q) qs.set('q', opts.q);
+    if (opts.before) qs.set('before', opts.before);
+    if (opts.limit !== undefined) qs.set('limit', String(opts.limit));
+    const query = qs.toString();
+    return j<{ users: AdminUser[]; next: string | null; total: number; matched: number }>(`/api/admin/users${query ? `?${query}` : ''}`);
+  },
   setAdmin: (id: number, isAdmin: boolean) => j<{ id: number; handle: string; isAdmin: boolean }>(`/api/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify({ isAdmin }) }),
   resetPassword: (id: number) => j<{ handle: string; password: string }>(`/api/admin/users/${id}/password`, { method: 'POST' }),
   deleteUser: (id: number) => j<void>(`/api/admin/users/${id}`, { method: 'DELETE' }),

@@ -1,10 +1,11 @@
 import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import { Hono } from "hono";
+import { PgDialect } from "drizzle-orm/pg-core";
 import type { SessionUser } from "../lib/auth.js";
 
 process.env.DATABASE_URL ??= "postgres://not-used-by-tests";
-const { admin } = await import("./admin.js");
+const { admin, normalizeSearch, escapeLike, parseLimit, parseCursor } = await import("./admin.js");
 const { db } = await import("../db/client.js");
 const ME: SessionUser = { id: 7, handle: "admin", displayName: null, rootCollectionId: 1, defaultCollectionId: 2, trackActivity: false };
 function app(user: SessionUser | null = ME) {
@@ -63,4 +64,118 @@ test("subscription changes accept both boolean values and report a missing feed"
   }
   found = false;
   assert.equal((await patch(app(), "999", '{"requiresSubscription":true}')).status, 404);
+});
+
+// ---- user list: search and paging --------------------------------------------
+// The database is stubbed: these check what we ask it and how we shape what it returns.
+const dialect = new PgDialect();
+function userRow(id: number, createdAt: string) {
+  return { id: String(id), handle: `user${id}`, displayName: null, isAdmin: false, profileVisibility: "public", createdAt: new Date(createdAt), cursorAt: createdAt.replace("Z", "000Z"), avatarUpdatedAt: null, lastSeenAt: null, following: 0, collections: 0, bookmarks: 0, invitedBy: id === 2 ? "admin" : null };
+}
+function stubUsers(t: TestContext, rows: ReturnType<typeof userRow>[], counts = { total: 50, matched: 3 }) {
+  allowAdmin(t);
+  const queries: { sql: string; params: unknown[] }[] = [];
+  t.mock.method(db, "execute", async (query: any) => {
+    const { sql, params } = dialect.sqlToQuery(query);
+    queries.push({ sql, params });
+    return { rows: queries.length === 1 ? rows : [counts] };
+  });
+  return queries;
+}
+const list = (qs = "") => app().request(`/api/admin/users${qs}`);
+
+test("user list requires an admin", async (t) => {
+  assert.equal((await app(null).request("/api/admin/users")).status, 401);
+  t.mock.method(db, "select", () => ({ from: () => ({ where: async () => [{ isAdmin: false }] }) }));
+  assert.equal((await list()).status, 403);
+});
+
+test("user list is newest first, one page at a time, with a cursor for the next page", async (t) => {
+  const rows = [userRow(9, "2026-10-09T10:00:00.123Z"), userRow(8, "2026-10-08T10:00:00.000Z"), userRow(7, "2026-10-07T10:00:00.000Z")];
+  const queries = stubUsers(t, rows, { total: 50, matched: 50 });
+  const r = await list("?limit=2");
+  assert.equal(r.status, 200);
+  const body = await r.json() as any;
+  assert.deepEqual(body.users.map((u: any) => u.id), [9, 8]);
+  assert.equal(body.next, "2026-10-08T10:00:00.000000Z_8");
+  assert.equal(body.total, 50);
+  assert.equal(body.users[0].cursorAt, undefined);
+  assert.match(queries[0].sql, /order by u\.created_at desc, u\.id desc/);
+  assert.ok(queries[0].params.includes(3), "asks for limit + 1 rows");
+});
+
+test("user list returns no cursor on the last page, and defaults and clamps the page size", async (t) => {
+  const queries = stubUsers(t, [userRow(2, "2026-10-02T00:00:00.000Z"), userRow(1, "2026-10-01T00:00:00.000Z")]);
+  const body = await (await list()).json() as any;
+  assert.equal(body.next, null);
+  assert.equal(body.users[0].invitedBy, "admin");
+  assert.ok(queries[0].params.includes(21));
+  assert.equal(parseLimit(undefined), 20);
+  assert.equal(parseLimit(""), 20);
+  assert.equal(parseLimit("abc"), 20);
+  assert.equal(parseLimit("0"), 1);
+  assert.equal(parseLimit("-5"), 1);
+  assert.equal(parseLimit("500"), 100);
+  assert.equal(parseLimit("7"), 7);
+});
+
+test("the second page starts strictly after the cursor", async (t) => {
+  const queries = stubUsers(t, [userRow(7, "2026-10-07T10:00:00.000Z")]);
+  const r = await list("?before=2026-10-08T10:00:00.000000Z_8");
+  assert.equal(r.status, 200);
+  assert.match(queries[0].sql, /\(u\.created_at, u\.id\) < \(\$\d+::timestamptz, \$\d+\)/);
+  assert.ok(queries[0].params.includes("2026-10-08T10:00:00.000000Z"));
+  assert.ok(queries[0].params.includes(8));
+});
+
+test("a malformed cursor is a 400 with a clear message, before any query", async (t) => {
+  allowAdmin(t);
+  const execute = t.mock.method(db, "execute", () => { throw new Error("bad cursor reached the database"); });
+  for (const before of ["nope", "8", "2026-10-08_8", "2026-10-08T10:00:00Z_x", "2026-13-45T99:00:00Z_8", "2026-10-08T10:00:00Z_8; drop table users"]) {
+    const r = await list(`?before=${encodeURIComponent(before)}`);
+    assert.equal(r.status, 400, before);
+    assert.match(((await r.json()) as any).error, /not a valid cursor/);
+  }
+  assert.equal(execute.mock.callCount(), 0);
+});
+
+test("search matches handle or display name, ignoring case, with or without a leading @", async (t) => {
+  for (const q of ["Ann", "  @ann  ", "@ANN"]) {
+    const queries = stubUsers(t, [userRow(3, "2026-10-03T00:00:00.000Z")], { total: 50, matched: 1 });
+    const body = await (await list(`?q=${encodeURIComponent(q)}`)).json() as any;
+    assert.match(queries[0].sql, /u\.handle ilike \$\d+ escape '\\' or u\.display_name ilike \$\d+ escape '\\'/);
+    assert.ok(queries[0].params.includes(`%${q.trim().replace(/^@/, "")}%`), q);
+    assert.equal(body.matched, 1);
+    t.mock.restoreAll();
+  }
+  assert.equal(normalizeSearch("  @Ann "), "Ann");
+  assert.equal(normalizeSearch("@@x"), "@x");
+  assert.equal(normalizeSearch("   "), "");
+  assert.equal(normalizeSearch(undefined), "");
+});
+
+test("an empty search adds no filter", async (t) => {
+  const queries = stubUsers(t, []);
+  await list("?q=%20%40%20");
+  assert.doesNotMatch(queries[0].sql, /ilike/);
+});
+
+test("search wildcards in user input match literally", async (t) => {
+  assert.equal(escapeLike("100%_done\\"), "100\\%\\_done\\\\");
+  const queries = stubUsers(t, []);
+  await list(`?q=${encodeURIComponent("a%b_c")}`);
+  assert.ok(queries[0].params.includes("%a\\%b\\_c%"));
+});
+
+test("total counts every account while matched counts only the search", async (t) => {
+  stubUsers(t, [userRow(3, "2026-10-03T00:00:00.000Z")], { total: 1234, matched: 5 });
+  const body = await (await list("?q=ann")).json() as any;
+  assert.equal(body.total, 1234);
+  assert.equal(body.matched, 5);
+});
+
+test("cursor parsing accepts what the server hands out and nothing else", () => {
+  assert.deepEqual(parseCursor("2026-10-08T10:00:00.123456Z_8"), { createdAt: "2026-10-08T10:00:00.123456Z", id: 8 });
+  assert.equal(parseCursor("2026-10-08T10:00:00.1234567Z_8"), null);
+  assert.equal(parseCursor(""), null);
 });

@@ -56,21 +56,73 @@ admin.post("/invites", async (c) => {
 
 // ---- users ------------------------------------------------------------------
 
+const USERS_DEFAULT_LIMIT = 20;
+const USERS_MAX_LIMIT = 100;
+const CURSOR_RE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z)_(\d{1,15})$/;
+
+/** Search text as typed: trimmed, a leading "@" dropped. Empty means no filter. */
+export function normalizeSearch(q: string | undefined): string {
+  return (q ?? "").trim().replace(/^@/, "").trim();
+}
+
+/** Makes user input match literally inside a LIKE pattern (escape character is backslash). */
+export function escapeLike(text: string): string {
+  return text.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
+/** Page size from the query string: default 20, clamped to 1..100. */
+export function parseLimit(raw: string | undefined): number {
+  const n = Math.floor(Number(raw));
+  if (raw === undefined || raw.trim() === "" || !Number.isFinite(n)) return USERS_DEFAULT_LIMIT;
+  return Math.min(USERS_MAX_LIMIT, Math.max(1, n));
+}
+
+/** A cursor is "<createdAt ISO, UTC>_<id>". Returns null when it is not one. */
+export function parseCursor(raw: string): { createdAt: string; id: number } | null {
+  const m = CURSOR_RE.exec(raw);
+  if (!m || Number.isNaN(Date.parse(m[1]))) return null;
+  return { createdAt: m[1], id: Number(m[2]) };
+}
+
 admin.get("/users", async (c) => {
   await requireAdmin(c);
+  const q = normalizeSearch(c.req.query("q"));
+  const limit = parseLimit(c.req.query("limit"));
+  const beforeRaw = c.req.query("before");
+  const cursor = beforeRaw ? parseCursor(beforeRaw) : null;
+  if (beforeRaw && !cursor) return c.json({ error: "before is not a valid cursor; use the next value from the previous page" }, 400);
+
+  const pattern = `%${escapeLike(q)}%`;
+  const search = q ? sql`and (u.handle ilike ${pattern} escape '\\' or u.display_name ilike ${pattern} escape '\\')` : sql``;
+  const after = cursor ? sql`and (u.created_at, u.id) < (${cursor.createdAt}::timestamptz, ${cursor.id})` : sql``;
+
   const rows = await db.execute(sql`
     select u.id, u.handle, u.display_name as "displayName", u.is_admin as "isAdmin", u.profile_visibility as "profileVisibility",
-           u.created_at as "createdAt", (select ua.updated_at from user_avatars ua where ua.user_id = u.id) as "avatarUpdatedAt",
+           u.created_at as "createdAt",
+           to_char(u.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt",
+           (select ua.updated_at from user_avatars ua where ua.user_id = u.id) as "avatarUpdatedAt",
            (select max(s.last_seen_at) from sessions s where s.user_id = u.id) as "lastSeenAt",
            (select count(distinct cf.feed_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where col.user_id = u.id) as following,
            (select count(*)::int from collections col where col.user_id = u.id and col.parent_id is not null) as collections,
            (select count(*)::int from bookmarks b where b.user_id = u.id) as bookmarks,
-           (select i.created_by from invites i where i.used_by = u.id limit 1) as "invitedById"
-    from users u order by u.created_at
+           (select inviter.handle from invites i join users inviter on inviter.id = i.created_by where i.used_by = u.id limit 1) as "invitedBy"
+    from users u
+    where true ${search} ${after}
+    order by u.created_at desc, u.id desc
+    limit ${limit + 1}
   `);
+  const [counts] = (await db.execute<{ total: number; matched: number }>(sql`
+    select count(*)::int as total,
+           (count(*) filter (where true ${search}))::int as matched
+    from users u
+  `)).rows;
+
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
-  const byId = new Map(rows.rows.map((r: any) => [Number(r.id), r.handle]));
-  return c.json({ users: rows.rows.map((r: any) => ({ ...r, id: Number(r.id), createdAt: iso(r.createdAt), lastSeenAt: iso(r.lastSeenAt), invitedBy: r.invitedById ? byId.get(Number(r.invitedById)) ?? null : null, invitedById: undefined })) });
+  const page = rows.rows.slice(0, limit) as any[];
+  const last = page[page.length - 1];
+  const next = rows.rows.length > limit && last ? `${last.cursorAt}_${Number(last.id)}` : null;
+  const users = page.map((r) => ({ ...r, id: Number(r.id), createdAt: iso(r.createdAt), lastSeenAt: iso(r.lastSeenAt), avatarUpdatedAt: r.avatarUpdatedAt ? iso(r.avatarUpdatedAt) : null, invitedBy: r.invitedBy ?? null, cursorAt: undefined }));
+  return c.json({ users, next, total: counts?.total ?? 0, matched: counts?.matched ?? 0 });
 });
 
 async function adminCount() {
