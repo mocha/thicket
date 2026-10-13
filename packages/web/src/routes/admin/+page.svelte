@@ -60,14 +60,58 @@
   let invites = $state<Invite[]>([]);
   let inviteNote = $state('');
   let minting = $state(false);
+  // Accounts come a page at a time, newest first, narrowed by the search box.
   let users = $state<AdminUser[]>([]);
+  let total = $state(0);
+  let matched = $state(0);
+  let next = $state<string | null>(null);
+  let query = $state('');
+  let searched = $state('');
+  let searching = $state(false);
+  let more = $state(false);
+  let accountsError = $state<string | null>(null);
+  /** Only the latest search's answer counts, so a slow early one can't replace a later one. */
+  let asked = 0;
+  async function findAccounts(q: string) {
+    const ask = ++asked;
+    searching = true; accountsError = null;
+    try {
+      const r = await adminApi.users({ q });
+      if (ask !== asked) return;
+      users = r.users; next = r.next; total = r.total; matched = r.matched; searched = q;
+    } catch (e) {
+      if (ask === asked) accountsError = say(e);
+    } finally {
+      if (ask === asked) searching = false;
+    }
+  }
+  let typing: ReturnType<typeof setTimeout> | undefined;
+  function onSearch() {
+    clearTimeout(typing);
+    typing = setTimeout(() => void findAccounts(query.trim()), 250);
+  }
+  async function showMore() {
+    if (!next || more) return;
+    more = true; accountsError = null;
+    const ask = asked;
+    try {
+      const r = await adminApi.users({ q: searched, before: next });
+      if (ask !== asked) return;
+      users = [...users, ...r.users]; next = r.next;
+    } catch (e) {
+      accountsError = say(e);
+    } finally {
+      more = false;
+    }
+  }
   let starter = $state('');
   let savingStarter = $state(false);
 
   async function load() {
     try {
       const [s, i, u, f] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter()]);
-      instance = s; name = s.name; invites = i.invites; users = u.users;
+      instance = s; name = s.name; invites = i.invites;
+      users = u.users; next = u.next; total = u.total; matched = u.matched;
       starter = f.handle ?? '';
     } catch (e) {
       loadError = say(e);
@@ -235,6 +279,7 @@
     try {
       await adminApi.deleteUser(u.id);
       users = users.filter((x) => x.id !== u.id);
+      total -= 1; matched -= 1;
       api.event('admin_user_deleted', { userId: u.id });
       showToast(`Deleted @${u.handle}`);
       deleteDialog?.close();
@@ -255,15 +300,24 @@
 
 {#if instance}
   <div class="pane">
-    <Tabs class="scopes" tabs={[{ value: 'accounts', label: 'Accounts', count: users.length }, { value: 'invites', label: 'Invites', count: openInvites.length }, { value: 'settings', label: 'Site settings' }]} value={tab} onchange={pick} label="Parts of Site admin" panel="admin-tab" fill />
+    <Tabs class="scopes" tabs={[{ value: 'accounts', label: 'Accounts', count: total }, { value: 'invites', label: 'Invites', count: openInvites.length }, { value: 'settings', label: 'Site settings' }]} value={tab} onchange={pick} label="Parts of Site admin" panel="admin-tab" fill />
   </div>
   <div id="admin-tab" role="tabpanel" aria-label={tab === 'accounts' ? 'Accounts' : tab === 'invites' ? 'Invites' : 'Site settings'}>
   {#if tab === 'accounts'}
-  <Card kind="section" as="section" class="admin-section" aria-labelledby="accounts-h">
-    <h2 class="section-title" id="accounts-h">Accounts ({users.length.toLocaleString()})</h2>
-    <div class="rows">
-      <ul class="list-rows">
-        {#each users as u (u.id)}
+  <Card kind="section" as="section" class="admin-section" aria-label="Accounts">
+    <form role="search" onsubmit={(e) => { e.preventDefault(); clearTimeout(typing); void findAccounts(query.trim()); }}>
+      <Field label="Search accounts" hideLabel>
+        {#snippet children({ id, describedBy, invalid })}
+          <Input {id} aria-describedby={describedBy} {invalid} inset type="search" bind:value={query} oninput={onSearch} placeholder="Search by name or @handle" autocomplete="off" autocapitalize="none" spellcheck={false} />
+        {/snippet}
+      </Field>
+    </form>
+    <p class="row-details found" role="status">{#if searching}Searching…{:else if searched}{plural(matched, 'account')} {matched === 1 ? 'matches' : 'match'} “{searched}”{:else}Newest first{/if}</p>
+    {#if accountsError}<div class="err"><Banner tone="error" title="Couldn’t load accounts">{accountsError}</Banner></div>{/if}
+    <div class="rows below">
+      {#if users.length}
+        <ul class="list-rows">
+          {#each users as u (u.id)}
           <PersonRow person={{ ...u, bio: null }}>
             <span class="line">{plural(u.following, 'feed')} <Dot /> {plural(u.collections, 'collection')} <Dot /> {plural(u.bookmarks, 'bookmark')}</span>
             <span class="line">Joined {when(u.createdAt)}{#if u.invitedBy}{' '}via @{u.invitedBy}{/if}{#if u.lastSeenAt}{' '}<Dot />{' '}last active {when(u.lastSeenAt)}{/if}</span>
@@ -276,8 +330,12 @@
               {#if u.id !== me?.id}<Button size="sm" onclick={() => manage(u)} aria-label="Manage @{u.handle}’s account"><Icon name="gear" size={16} />Manage account</Button>{/if}
             {/snippet}
           </PersonRow>
-        {/each}
-      </ul>
+          {/each}
+        </ul>
+        {#if next}<button class="row-more tap" onclick={showMore} disabled={more}>{more ? 'Loading…' : 'Show more'}</button>{/if}
+      {:else if searched && !searching}
+        <EmptyNote bare icon="search" title="No accounts match “{searched}”" text="Try part of their name or @handle." />
+      {/if}
     </div>
   </Card>
 
@@ -424,6 +482,7 @@
   /* Under the invite form, the same step a card puts before its controls. */
   .rows.below { margin-top: var(--space-3); }
   .line { display: block; }
+  .found { margin: var(--space-3) 0 0; }
   /* A text box and its button side by side, the field taking the room. */
   .inline { display: flex; gap: var(--space-2); align-items: flex-start; }
   .inline :global(.grow) { flex: 1; min-width: 0; }

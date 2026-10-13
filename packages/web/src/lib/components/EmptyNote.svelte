@@ -15,10 +15,10 @@
   const ZAP = 'M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z';
 
   /** `text` can be left out: the title alone says it. */
-  let { icon, title, text, bare = false }: { icon: 'collections' | 'bookmarks' | 'activity' | 'hidden' | 'link'; title: string; text?: string; bare?: boolean } = $props();
+  let { icon, title, text, bare = false }: { icon: 'collections' | 'bookmarks' | 'activity' | 'hidden' | 'link' | 'search'; title: string; text?: string; bare?: boolean } = $props();
   const HIDDEN = 'M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49M14.084 14.158a3 3 0 0 1-4.242-4.242M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143M2 2l20 20';
   const LINK = 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71';
-  const PATHS = { collections: MENU_ICONS.collections, bookmarks: MENU_ICONS.bookmarks, activity: ZAP, hidden: HIDDEN, link: LINK };
+  const PATHS = { collections: MENU_ICONS.collections, bookmarks: MENU_ICONS.bookmarks, activity: ZAP, hidden: HIDDEN, link: LINK, search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3' };
 </script>
 
 {#snippet note()}
