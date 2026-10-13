@@ -25,6 +25,7 @@
  * feed mentions the words over the last 30 days, counted exactly per feed.
  */
 import { Hono } from "hono";
+import { likeFor } from "../lib/like.js";
 import { sql, type SQL } from "drizzle-orm";
 import { collectionSample } from "../lib/subtree.js";
 import { cancellable } from "../db/client.js";
@@ -83,7 +84,6 @@ const fuzzy = (q: string, col: string) => {
 };
 
 const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
-const likeFor = (q: string) => `%${q.replace(/[%_\\]/g, (m) => `\\${m}`)}%`;
 
 /**
  * "People I follow", applied to a search. It is the same rule the browse lists

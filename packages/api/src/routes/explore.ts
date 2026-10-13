@@ -112,10 +112,12 @@ explore.get("/collections", async (c) => {
  *
  * Public on purpose: the sign-up page shows these before anyone has an
  * account, so "here, copy mine" works as a link you can send to a friend.
+ *
+ * `viewerId`'s own collections are left out, since they can't copy their
+ * own. Admin's preview asks with no viewer, so it shows exactly what a
+ * brand-new account gets.
  */
-explore.get("/featured", async (c) => {
-  const viewer = c.get("user");
-  const viewerId = viewer?.id ?? -1;
+export async function featuredCollections(viewerId: number) {
   const handle = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
   const visible = sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public'
     and u.collections_visibility = 'public' and exists(select 1 from collection_feeds cf where cf.collection_id = col.id)`;
@@ -137,12 +139,15 @@ explore.get("/featured", async (c) => {
     where ${where}
     order by ${order} limit 6
   `);
+  return { from: curated ? handle : null, collections: rows.rows.map((r: any) => ({ ...r, id: Number(r.id) })) };
+}
+
+explore.get("/featured", async (c) => {
+  const viewer = c.get("user");
+  const featured = await featuredCollections(viewer?.id ?? -1);
   c.header("vary", "cookie");
   if (!viewer) c.header("cache-control", "public, max-age=300");
-  return c.json({
-    from: curated ? handle : null,
-    collections: rows.rows.map((r: any) => ({ ...r, id: Number(r.id) })),
-  });
+  return c.json(featured);
 });
 
 /**

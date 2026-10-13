@@ -29,6 +29,7 @@
   import Input from '$lib/components/Input.svelte';
   import Textarea from '$lib/components/Textarea.svelte';
   import Select from '$lib/components/Select.svelte';
+  import SecretValue from '$lib/components/SecretValue.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import Monogram from '$lib/components/Monogram.svelte';
   import Card from '$lib/components/Card.svelte';
@@ -239,6 +240,7 @@
         { id: 'monogram', label: 'Monogram' },
         { id: 'note', label: 'Note' },
         { id: 'page-header', label: 'Page header' },
+        { id: 'secret-value', label: 'Secret value' },
         { id: 'select', label: 'Select' },
         { id: 'setup-tour', label: 'Setup tour' },
         { id: 'sheet', label: 'Sheet' },
@@ -608,6 +610,12 @@
         <label class="demo-check"><input type="radio" name="demo-option" checked /> An option button, chosen</label>
         <label class="demo-check"><input type="radio" name="demo-option" /> An option button</label>
       </div>
+      <h4 class="sub">Choices</h4>
+      <p class="section-lede">A setting on a section card, offered as option buttons or a checkbox, each with its name in bold and a line under it saying what it does in gray. The name and its line start where the text starts, beside the button, and the choices stack 12px apart. Settings and Admin use them.</p>
+      <fieldset class="choices" aria-label="Who can sign up">
+        <label class="choice"><input type="radio" name="demo-choices" checked /><span><strong>Invite only</strong><small>People sign up with an invite link from you.</small></span></label>
+        <label class="choice"><input type="radio" name="demo-choices" /><span><strong>No one</strong><small>Nobody new can join. People who already have an account can still sign in.</small></span></label>
+      </fieldset>
     </section>
 
     <section class="entry" id="choice-group" aria-labelledby="choice-group-h">
@@ -633,8 +641,9 @@
 
     <section class="entry" id="empty-note" aria-labelledby="empty-note-h">
       <h3 class="entry-h" id="empty-note-h">Empty note</h3>
-      <p class="section-lede">What an empty section says, on a card: a quiet icon, a short bold serif title at the same size as the line under it, then one line saying what goes here. Collections and Bookmarks use the left menu’s own icons; Activity uses a zap. The line can be left out when the title says it all.</p>
+      <p class="section-lede">What an empty section says, on a card: a quiet icon, a short bold serif title at the same size as the line under it, then one line saying what goes here. Collections and Bookmarks use the left menu’s own icons; Activity uses a zap. The line can be left out when the title says it all. Inside a card that's already there (Admin's open invites), it leaves its own card off and keeps the rest.</p>
       <EmptyNote icon="collections" title="No collections yet" text="A collection is a handful of feeds you read together." />
+      <Card kind="section" as="div"><EmptyNote bare icon="link" title="No open invites" /></Card>
     </section>
 
     <section class="entry" id="field" aria-labelledby="field-h">
@@ -719,7 +728,7 @@
       <h4 class="sub">A row for one thing</h4>
       <p class="section-lede">A feed, a person, a collection, or a post: something you can open. A 40px picture leads (a feed’s icon, a person’s picture, or for a collection a few of its feeds’ icons, overlapped), then the name in 16px bold, with the details under it in 14px gray. Used on Explore, a collection’s feeds, Collections, and the people someone follows. Import’s review list uses the same spacing and text, with each feed’s icon (its initial, for a feed thicket hasn’t saved).</p>
       <p class="section-lede">A feed is always the one Feed row, wherever feeds are listed: its name (with a Failing badge when its checks fail) and its site under it in dark, then its description, close under the site, and the facts about it (how often it posts, its latest post, its followers) in gray. Its icon, name, and site are their own piece, FeedLine, which the Import review uses for feeds thicket hasn’t saved yet, with their status at the right end instead of Follow.</p>
-      <p class="section-lede">A person is always the one Person row, the same way: their name with their @handle beside it in gray, as a note names its writer (Priya Nair (@priya)), then their bio, close under the name, and the facts about them (feeds, public collections) in gray, with Follow at the right where the screen offers it. When a search finds you, your own row has a soft “It’s you!” Badge there instead, since there’s no following yourself.</p>
+      <p class="section-lede">A person is always the one Person row, the same way: their name with their @handle beside it in gray, as a note names its writer (Priya Nair (@priya)), then their bio, close under the name, and the facts about them (feeds, public collections) in gray, with Follow at the right where the screen offers it. When a search finds you, your own row has a soft “It’s you!” Badge there instead, since there’s no following yourself. Admin's accounts use the same row with their status pills (Admin, Private, You) after the name, the facts an admin needs in gray, and Manage account at the right in place of Follow.</p>
       <p class="section-lede">A collection is always the one Collection row: its name with any badges after it (Yours, Copied, who can see it, how many new posts) and “by” whose it is under it in dark, then its description, close under the name, and how many feeds it holds in gray, ending in an arrow since the whole row opens it. On a search, the line saying why it was found comes last, in green, the same as on feed and person rows.</p>
       <div class="stack">
         <!-- The real rows, with made-up data, so this entry can't drift from the app. -->
@@ -727,6 +736,12 @@
           <FeedRow feed={demoFeed} failing postsLast30d={60} follow={false} />
           <PersonRow person={demoPerson} feeds={7} collections={2} following onfollow={() => {}} />
           <PersonRow person={{ ...demoPerson, handle: 'you', displayName: 'You' }} feeds={12} collections={3} me />
+          <PersonRow person={{ ...demoPerson, bio: null }}>
+            <span class="demo-line">7 feeds <Dot /> 2 collections <Dot /> 4 bookmarks</span>
+            <span class="demo-line">Joined Sep 18 <Dot /> last active 2 hours ago</span>
+            {#snippet badges()}<Badge>Admin</Badge>{/snippet}
+            {#snippet end()}<Button size="sm" onclick={() => {}}><Icon name="gear" size={16} />Manage account</Button>{/snippet}
+          </PersonRow>
           <CollectionRow href="#list-row" name="Small Web" description="A sample of the Kagi Small Web list." feedCount={32} owner="Christie" sample={demoSample}>
             {#snippet badges()}<Badge tone="soft">36 new</Badge>{/snippet}
           </CollectionRow>
@@ -776,6 +791,15 @@
           {#snippet description()}Systems, performance, and the hard parts, explained clearly.{/snippet}
           {#snippet actions()}<Button size="sm" onclick={() => {}}><Icon name="gear" size={16} />Manage collection</Button>{/snippet}
         </PageHeader>
+      </div>
+    </section>
+
+    <section class="entry" id="secret-value" aria-labelledby="secret-value-h">
+      <h3 class="entry-h" id="secret-value-h">Secret value</h3>
+      <p class="section-lede">A secret to copy: an API token, or the temporary password Admin hands out. Monospace in a quiet gray box, selected whole with one click, with its buttons (Show, Copy) beside it. Hidden, it keeps its first few characters, so a token still says which kind it is, and dots the rest on one line; shown, it wraps so all of it can be read.</p>
+      <div class="stack">
+        <div class="row"><SecretValue value="thk_ro_8f2c41d9e07a4b6c" shown={false} label="Read-only token" /><Button size="sm" onclick={() => {}}>Show</Button><Button size="sm" onclick={() => {}}><Icon name="copy" size={16} />Copy</Button></div>
+        <div class="row"><SecretValue value="yZFBgzJXD7Sx" label="Temporary password" /><Button size="sm" onclick={() => {}}><Icon name="copy" size={16} />Copy</Button></div>
       </div>
     </section>
 
@@ -1053,5 +1077,6 @@
   .ds-foot a { color: var(--accent); font-weight: 600; }
   .ds-foot a:hover { text-decoration: underline; }
   .setting-rows { max-width: 520px; }
+  .demo-line { display: block; }
   .demo-check { display: flex; align-items: center; gap: var(--space-2); }
 </style>

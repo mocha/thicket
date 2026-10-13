@@ -1,171 +1,41 @@
 <script lang="ts">
-  import Checkbox from '$lib/components/Checkbox.svelte';
+  import { page } from '$app/state';
+  import { goto } from '$app/navigation';
+  import { api } from '$lib/api';
   import PageHeader from '$lib/components/PageHeader.svelte';
-  import Card from '$lib/components/Card.svelte';
-  import { api, authApi } from '$lib/api';
-  import { session, setMe } from '$lib/session.svelte';
-  import { display, setDisplay, APPEARANCES, READING_MODES, LAYOUTS, FRESH_OPTIONS, type Display } from '$lib/display.svelte';
-  import Tiles from '$lib/components/display/Tiles.svelte';
-  import ThemePicker from '$lib/components/display/ThemePicker.svelte';
-  import FontTable from '$lib/components/display/FontTable.svelte';
-  import { appearanceArt, READING_ART, LAYOUT_ART, FRESH_ART } from '$lib/components/display/art';
-  import { showToast } from '$lib/toast.svelte';
-  import { isSource, saveForNewDevices, stopBeingSource } from '$lib/saved-display.svelte';
+  import Tabs from '$lib/components/Tabs.svelte';
+  import ReadingSettings from '$lib/components/settings/ReadingSettings.svelte';
+  import AccountSettings from '$lib/components/settings/AccountSettings.svelte';
 
   /**
-   * Your private preferences: reading, whose notes you see, feed defaults,
-   * tracking. Your email and password are on the Account page
-   * (routes/account). Who you are in public — name, bio, homepage, and who
-   * can see each part of your profile — is edited on the profile itself
-   * (routes/@[handle]), so those choices sit where you can see their effect.
-   *
-   * Nearly everything here saves the moment it changes. Display is the odd one
-   * out twice over: it is kept in this browser rather than on the account, and
-   * applies the moment you pick it. See lib/display.svelte.ts. "Use these
-   * settings on new devices" makes this device the one new devices copy, kept
-   * up to date as it changes (issue #186, lib/saved-display.svelte.ts).
+   * Settings: one door in the account menu, two tabs, the same row Explore and
+   * Admin use. Reading is how thicket looks and reads; Account and data is
+   * your email, password, imports, exports, and API tokens. They used to be two
+   * pages; /account now lands on the second tab.
    */
-  let savingDisplay = $state(false);
-  async function toggleSource(e: Event & { currentTarget: HTMLInputElement }) {
-    const box = e.currentTarget;
-    savingDisplay = true;
-    const ok = box.checked ? await saveForNewDevices('settings') : await stopBeingSource();
-    if (ok && !box.checked) showToast('New devices will offer the settings saved last');
-    savingDisplay = false;
-    // A save that didn't go through leaves the box as it was.
-    box.checked = isSource();
+  type Tab = 'reading' | 'account';
+  /** Which tab is open, kept in the address so Back and a shared link land on it. Reading by default. */
+  const tab = $derived<Tab>(page.url.searchParams.get('tab') === 'account' ? 'account' : 'reading');
+  const tabs = [{ value: 'reading', label: 'Reading' }, { value: 'account', label: 'Account and data' }];
+  function pick(v: string) {
+    api.event('settings_tab', { tab: v });
+    void goto(v === 'reading' ? '/settings' : `/settings?tab=${v}`, { replaceState: true, noScroll: true, keepFocus: true });
   }
-  const me = $derived(session.user!);
-
-  async function set(patch: Parameters<typeof authApi.update>[0], label: string) {
-    try {
-      setMe(await authApi.update(patch));
-      api.event('settings_changed', { keys: Object.keys(patch) });
-      showToast(label);
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  const tracking = $derived(me.trackActivity ?? me.instanceTracking);
-
-  function choose(patch: Partial<Omit<Display, 'fonts'>>, key: string) { setDisplay(patch); api.event('display_changed', { key, value: Object.values(patch)[0] }); }
-
 </script>
 
 <svelte:head><title>Settings · thicket</title></svelte:head>
 
-<PageHeader name="Settings">
-  {#snippet description()}How thicket looks and how reading in it works.{/snippet}
-</PageHeader>
+<PageHeader name="Settings" />
 
-<Card kind="section" as="section" class="settings-section">
-  <label class="switch">
-    <Checkbox checked={isSource()} disabled={savingDisplay} onchange={toggleSource} />
-    <span>
-      <strong>Use these settings on new devices</strong>
-      <small>New devices you sign into will offer the display settings below, kept up to date as you change them here. Each device keeps its own settings.</small>
-    </span>
-  </label>
-</Card>
-
-<Card kind="section" as="section" class="settings-section" id="display">
-  <h2 class="section-title">Appearance</h2>
-  <Tiles name="Appearance" options={APPEARANCES} value={display.appearance} art={appearanceArt(display.palette, display.accent)} onchange={(v) => choose({ appearance: v }, 'appearance')} />
-</Card>
-
-<Card kind="section" as="section" class="settings-section">
-  <h2 class="section-title">Color theme</h2>
-  <ThemePicker />
-</Card>
-
-<Card kind="section" as="section" class="settings-section">
-  <h2 class="section-title">Fonts</h2>
-  <FontTable />
-</Card>
-
-<Card kind="section" as="section" class="settings-section">
-  <h2 class="section-title">Opening a post</h2>
-  <Tiles name="Opening a post" options={READING_MODES} value={display.reading} art={READING_ART} notes onchange={(v) => choose({ reading: v }, 'reading')} />
-</Card>
-
-<Card kind="section" as="section" class="settings-section">
-  <h2 class="section-title">Unread posts</h2>
-  <Tiles name="Unread posts" options={FRESH_OPTIONS} value={display.fresh ? 'on' : 'off'} art={FRESH_ART} notes onchange={(v) => choose({ fresh: v === 'on' }, 'fresh')} />
-</Card>
-
-<Card kind="section" as="section" class="settings-section">
-  <h2 class="section-title">Scrolling or pages</h2>
-  <Tiles name="Scrolling or pages" options={LAYOUTS} value={display.layout} art={LAYOUT_ART} notes onchange={(v) => choose({ layout: v }, 'layout')} />
-</Card>
-
-
-<Card kind="section" as="section" class="settings-section">
-  <h2 class="section-title">Notes from other people</h2>
-  <p class="section-description">Whose notes appear under posts as you read. Yours always do.</p>
-  <fieldset>
-    <label class="radio">
-      <input type="radio" name="notesFrom" value="none" checked={me.notesFrom === 'none'} onchange={() => set({ notesFrom: 'none' }, 'Showing only your own notes')} />
-      <span><strong>No one</strong><small>Just your own notes.</small></span>
-    </label>
-    <label class="radio">
-      <input type="radio" name="notesFrom" value="following" checked={me.notesFrom === 'following'} onchange={() => set({ notesFrom: 'following' }, 'Showing notes from people you follow')} />
-      <span><strong>People I follow</strong><small>The default. Follow someone from their profile and their notes start showing on posts you both see.</small></span>
-    </label>
-    <label class="radio">
-      <input type="radio" name="notesFrom" value="everyone" checked={me.notesFrom === 'everyone'} onchange={() => set({ notesFrom: 'everyone' }, 'Showing notes from everyone')} />
-      <span><strong>Everyone</strong><small>Any note anyone has chosen to share.</small></span>
-    </label>
-  </fieldset>
-</Card>
-
-<Card kind="section" as="section" class="settings-section">
-  <h2 class="section-title">YouTube</h2>
-  <p class="section-description">What every YouTube channel shows unless you change it on that channel.</p>
-  <fieldset>
-    <label class="radio">
-      <input type="radio" name="shortsDefault" value="videos" checked={me.hideShortsByDefault} onchange={() => set({ hideShortsByDefault: true }, 'YouTube channels now show videos only')} />
-      <span><strong>Videos</strong><small>Shorts are left out of every channel you read, unless you turn them back on for one.</small></span>
-    </label>
-    <label class="radio">
-      <input type="radio" name="shortsDefault" value="all" checked={!me.hideShortsByDefault} onchange={() => set({ hideShortsByDefault: false }, 'YouTube channels now show videos and Shorts')} />
-      <span><strong>Videos + Shorts</strong><small>Everything a channel posts. You can still hide Shorts on any one channel.</small></span>
-    </label>
-  </fieldset>
-</Card>
-
-{#if me.instanceTracking}
-  <Card kind="section" as="section" class="settings-section">
-    <h2 class="section-title">Privacy</h2>
-    <label class="switch">
-      <Checkbox checked={tracking} onchange={(e) => set({ trackActivity: e.currentTarget.checked }, e.currentTarget.checked ? 'Usage tracking on' : 'Usage tracking off')} />
-      <span>
-        <strong>Help improve thicket by sharing anonymous usage data</strong>
-        <small>Which screens and buttons you use — never what you read. There’s no record of which posts you open.</small>
-      </span>
-    </label>
-  </Card>
-{/if}
-
-
-{#if me.isAdmin}
-  <Card kind="section" as="section" class="settings-section">
-    <h2 class="section-title">Admin</h2>
-    <p class="section-description">You’re an admin of this instance. Sign ups, invites, and accounts live on the <a href="/admin">Admin page</a>.</p>
-  </Card>
-{/if}
+<div class="pane">
+  <Tabs class="scopes" {tabs} value={tab} onchange={pick} label="Parts of Settings" panel="settings-tab" fill />
+</div>
+<div id="settings-tab" role="tabpanel" aria-label={tabs.find((t) => t.value === tab)?.label}>
+  {#if tab === 'account'}<AccountSettings />{:else}<ReadingSettings />{/if}
+</div>
 
 <style>
-  /* The page has no element of its own around its sections, so the room between them is set on the cards' own class. */
-  :global(.settings-section) { margin-bottom: var(--space-4); }
-  fieldset { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; gap: var(--space-3); }
-  .radio, .switch { display: flex; flex-direction: row; align-items: flex-start; gap: var(--space-3); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 400; color: var(--text); cursor: pointer; }
-  .radio input, .switch :global(.checkbox) { margin-top: 3px; }
-  /* The ring these used to borrow from the password boxes, now said outright.
-     A tick box or a dial isn't typed into, so the browser only calls it
-     keyboard focus when you tabbed to it — no special handling needed. */
-  /* 2px between a choice and its explanation is optical, not a spacing step. */
-  .radio span, .switch span { display: flex; flex-direction: column; gap: 2px; }
-  .radio small, .switch small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .section-description a { color: var(--accent); font-weight: 600; }
+  /* The same row as Explore's and Admin's, with the same air under it. */
+  .pane { margin-bottom: var(--space-2); }
+  .pane :global(.scopes) { margin-bottom: var(--space-1); }
 </style>

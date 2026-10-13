@@ -32,6 +32,11 @@ export async function ensureFeedFromDiscovery(d: Extract<Discovery, { status: "f
       title: d.parsed.title,
       description: d.parsed.description,
       kind: d.parsed.kind,
+      // What refreshFeed would record from the same document. It keeps the
+      // validators below, so the next check is often a 304 that rewrites
+      // neither: anything left out here stays missing until the feed changes.
+      language: d.parsed.language,
+      categories: d.parsed.categories.length ? d.parsed.categories : null,
       etag: d.etag,
       lastModified: d.lastModified,
       lastItemAt: newestAt,
@@ -96,9 +101,16 @@ export async function addFeedToCollection(collectionId: number, feedId: number) 
   await db.insert(schema.collectionFeeds).values({ collectionId, feedId }).onConflictDoNothing();
 }
 
+/**
+ * A feed's row as anyone who follows it may see it. Its categories are left
+ * out: what a feed sends is shown to admins only for now (issue #189, through
+ * /api/admin), and POST /api/feeds hands this to whoever followed.
+ */
+export type FollowedFeed = Omit<typeof schema.feeds.$inferSelect, "categories">;
+
 export type SubscribeOutcome =
   // `waiting`: followed, but its posts arrive later (a YouTube channel whose feed wasn't answering).
-  | { status: "subscribed"; feed: typeof schema.feeds.$inferSelect; alreadyFollowed: boolean; waiting: boolean }
+  | { status: "subscribed"; feed: FollowedFeed; alreadyFollowed: boolean; waiting: boolean }
   | { status: "choose"; candidates: { url: string; title: string | null; kind: string | null }[] }
   | { status: "none"; pageUrl: string };
 
@@ -107,7 +119,7 @@ export async function subscribe(user: SessionUser, input: string, collectionId?:
   const d = await discover(input);
   if (d.status === "candidates") return { status: "choose", candidates: d.candidates };
   if (d.status === "none") return { status: "none", pageUrl: d.pageUrl };
-  const feed = await ensureFeedFromDiscovery(d);
+  const { categories: _adminOnly, ...feed } = await ensureFeedFromDiscovery(d);
   const target = collectionId ?? (await defaultCollectionFor(user));
   const [before] = await db.select({ n: sql<number>`count(*)::int` }).from(schema.collectionFeeds).where(eq(schema.collectionFeeds.feedId, feed.id));
   await addFeedToCollection(target, feed.id);

@@ -1,6 +1,5 @@
 <script lang="ts">
   import Card from '$lib/components/Card.svelte';
-  import PageHeader from '$lib/components/PageHeader.svelte';
   import { api, authApi, bookmarksApi, ApiError } from '$lib/api';
   import { session, setMe } from '$lib/session.svelte';
   import { site, loadSite } from '$lib/site.svelte';
@@ -12,15 +11,16 @@
   import { showToast } from '$lib/toast.svelte';
 
   /**
+   * Settings' Account and data tab (routes/settings).
    * How you get into your account, and back in: your email and your password.
    * And, at the bottom, how your own applications get in: API tokens.
-   * Settings is for how thicket reads; this page is for the account itself.
+   * The Reading tab is for how thicket reads; this one is for the account itself.
    *
    * The Email section is readthicket.com only. Self-hosted copies don't ask for
    * email (their admin runs their users), so there this page is just the
    * password.
    *
-   * Unlike Settings, nothing here saves as you type: each change asks you to
+   * Unlike the Reading tab, nothing here saves as you type: each change asks you to
    * confirm it with your password or a button.
    *
    * It is where you bring your reading in from somewhere else: Import feeds,
@@ -141,12 +141,6 @@
     }
   }
 </script>
-
-<svelte:head><title>Account · thicket</title></svelte:head>
-
-<PageHeader name="Account">
-  {#snippet description()}Your email, your password, and your data.{/snippet}
-</PageHeader>
 
 {#if hosted}
   <Card kind="section" as="section" class="account-section">

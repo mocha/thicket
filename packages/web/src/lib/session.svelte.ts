@@ -43,7 +43,7 @@ export async function loadMe(): Promise<Me | null> {
       break;
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) { applyUser(null); session.unreachable = null; break; }
-      session.unreachable = e instanceof ApiError ? `HTTP ${e.status}` : 'no response';
+      session.unreachable = e instanceof ApiError && e.status ? `error ${e.status}` : 'no response';
       if (attempt >= 6) { applyUser(null); break; }
       await new Promise((r) => setTimeout(r, Math.min(8000, 1000 * 2 ** attempt)));
     }

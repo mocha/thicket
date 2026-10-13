@@ -24,7 +24,8 @@
    * The sidebar, top to bottom: New posts (every post you follow, its own item
    * now), then "Collections" — a group you can fold away — holding each of your
    * collections and "+ New collection", then Bookmarks (notes live there
-   * too), Notifications (with a count of what is new) and Explore. Add new
+   * too) and Explore. Notifications (with a count of what is new) sit at the
+   * foot, just above your account, since they're about you, not your reading. Add new
    * feed, the app's main action, sits above the list, under the logo.
    * Nothing here manages anything: a collection is managed from its
    * own page. Mobile has no room for the list, so its Collections tab opens
@@ -210,10 +211,6 @@
     <li>
       <a href="/bookmarks" aria-current={current('/bookmarks') ? 'page' : undefined}>{@render icon(icons.bookmarks)}<span class="long">Bookmarks</span><span class="shortl">Bookmarks</span></a>
     </li>
-    <!-- Sidebar only: the bottom bar is full, so on a phone Notifications is in the You menu, and the You tab carries its dot. -->
-    <li class="notifs">
-      <a href="/notifications" aria-current={current('/notifications') ? 'page' : undefined}>{@render icon(icons.notifications)}<span class="long">Notifications</span>{#if notifText()}<Badge tone="accent" class="tail" aria-label="{notifText()} new">{notifText()}</Badge>{/if}</a>
-    </li>
     <li>
       <a href="/explore" aria-current={current('/explore') ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
     </li>
@@ -223,19 +220,17 @@
         <button type="button" class="tab" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}><span class="mono ic"><Avatar handle={me.handle} name={me.displayName ?? me.handle} size={24} v={me.avatarUpdatedAt} />{#if notifs.count}<Badge variant="dot" class="pin" aria-label="New notifications" />{/if}</span><span class="shortl">You</span></button>
       </li>
     {/if}
-    {#if me?.isAdmin}
-      <li class="admin">
-        <a href="/admin" aria-current={current('/admin') ? 'page' : undefined}>{@render icon(icons.admin)}<span class="long">Admin</span><span class="shortl">Admin</span></a>
-      </li>
-    {/if}
   </ul>
 
   {#if me}
     <div class="account">
+      <!-- Notifications belong to you, not to your reading, so they sit with your account rather than in the list above. On a phone the bottom bar is full: they're in the You menu, and the You tab carries the dot. -->
+      <a class="notifrow" href="/notifications" aria-current={current('/notifications') ? 'page' : undefined}><span class="slot">{@render icon(icons.notifications)}</span><span class="label">Notifications</span>{#if notifText()}<Badge tone="accent" class="tail" aria-label="{notifText()} new">{notifText()}</Badge>{/if}</a>
+      <div class="split" role="presentation"></div>
       <button type="button" class="who" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}>
         <Avatar handle={me.handle} name={me.displayName ?? me.handle} size={34} v={me.avatarUpdatedAt} />
         <span class="names"><span class="dn">{me.displayName ?? me.handle}</span><span class="h">@{me.handle}</span></span>
-        <span class="chev"><Icon name="caret" dir="down" size={16} stroke={2.5} /></span>
+        <span class="chev"><Icon name="caret" dir={menuOpen ? 'up' : 'right'} size={16} stroke={2.5} /></span>
       </button>
     </div>
   {/if}
@@ -277,7 +272,7 @@
     background: var(--surface);
     border-top: 1px solid var(--line);
   }
-  .brand, .addfeed, .account, .long, li.admin, li.collections, li.notifs, .resize { display: none; }
+  .brand, .addfeed, .account, .long, li.collections, .resize { display: none; }
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
   /* Each tab is as wide as its label plus an even share of the spare room, so
      "Collections" gets more than "You" and none of them touch. Never narrower
@@ -334,12 +329,8 @@
     nav:not(.paged) li { flex: none; }
     nav:not(.paged) li > a { flex-direction: row; justify-content: flex-start; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); white-space: normal; }
     nav:not(.paged) li > a[aria-current='page'] { background: var(--surface-2); color: var(--text); font-weight: 600; }
-    nav:not(.paged) li.admin { display: block; margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 
     nav:not(.paged) li.collections { display: block; }
-    nav:not(.paged) li.notifs { display: block; }
-    /* Its count sits at the row's end, like Everything's. */
-    nav:not(.paged) li.notifs :global(.tail) { margin-left: auto; }
     /* Breathing room under the expanded list only; collapsed, the row spaces like its neighbors. */
     nav:not(.paged) li.collections .cols { margin-bottom: var(--space-2); }
     /* "Collections": a row you can click to fold the list away. */
@@ -367,7 +358,16 @@
     nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: var(--space-2); width: 100%; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     nav:not(.paged) .plus { font-size: calc(var(--text-base) * var(--size-app)); line-height: 1; width: 10px; }
 
-    nav:not(.paged) .account { display: flex; flex: none; align-items: center; gap: var(--space-1); padding: var(--space-3) 0 var(--space-4); border-top: 1px solid var(--line); background: var(--bg); }
+    nav:not(.paged) .account { display: flex; flex: none; flex-direction: column; align-items: stretch; gap: 2px; padding: var(--space-3) 0 var(--space-4); border-top: 1px solid var(--line); background: var(--bg); }
+    /* Lined up with the account row under it: the bell centered in the picture's
+       column, the label on the name's edge in the name's type, the count where the caret ends. */
+    nav:not(.paged) .notifrow { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
+    nav:not(.paged) .notifrow .slot { flex: none; display: grid; place-items: center; width: 34px; }
+    nav:not(.paged) .notifrow[aria-current='page'] { background: var(--surface-2); color: var(--text); }
+    /* A hairline between the two rows, inset so it stops short of the sidebar's edges. */
+    nav:not(.paged) .split { height: 1px; margin: var(--space-1) var(--space-3); background: var(--line); }
+    nav:not(.paged) .notifrow :global(.tail) { margin-left: auto; }
+    nav:not(.paged) .notifrow:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
     nav:not(.paged) .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); text-align: left; }
     nav:not(.paged) .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
     nav:not(.paged) .dn { font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -377,7 +377,7 @@
     /* Hover shading only where there's a mouse. A tap on a touchscreen leaves
        hover stuck on, so the row you last tapped stays shaded like the current page. */
     @media (hover: hover) {
-      nav:not(.paged) .addfeed:hover, nav:not(.paged) li > a:hover, nav:not(.paged) .heading:hover,
+      nav:not(.paged) .addfeed:hover, nav:not(.paged) li > a:hover, nav:not(.paged) .notifrow:hover, nav:not(.paged) .heading:hover,
       nav:not(.paged) .cols .caret:hover, nav:not(.paged) .cols .new button:hover, nav:not(.paged) .who:hover { background: var(--surface-2); }
       nav:not(.paged) .groupcaret:hover, nav:not(.paged) .cols .caret:hover { color: var(--text); }
     }

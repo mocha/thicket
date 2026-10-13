@@ -16,7 +16,7 @@
  * - Tracking pixels go: any image 2px or smaller on a side (Amazon affiliate
  *   beacons, PayPal pixels, The Conversation's counters, Jetpack's 1×1
  *   resizes in this corpus), and a short list of known beacon and share-button
- *   hosts.
+ *   hosts (NPR's undimensioned tracking pixel among them).
  * - Relative URLs are resolved against the post's own address, then the site's.
  *   Six percent of bodies here have relative image or link paths.
  * - Lazy-loaded images that hide their real source in `data-src` are rescued
@@ -43,7 +43,11 @@ const IMG_BLOCKLIST = [
   "stats.wordpress.com", "pixel.wp.com", "feeds.feedburner.com/~r/", "feeds.feedburner.com/~ff/", "feedsportal.com",
   "facebook.com/sharer.php", "twitter.com/intent", "twitter.com/share", "x.com/intent", "x.com/share",
   "pinterest.com/pin/create/button/", "linkedin.com/shareArticle", "api.flattr.com",
+  "media.npr.org/include/images/tracking/",
 ];
+
+/** A beacon or share widget, never a picture of the post. */
+export const isBeaconImage = (src: string) => IMG_BLOCKLIST.some((b) => src.includes(b));
 const TRACKING_PARAMS = /^(utm_|fbclid$|gclid$|mc_cid$|mc_eid$|_hsenc$|__hstc$|ref$)/;
 
 export type Sanitized = {
@@ -205,7 +209,7 @@ export function sanitizeContent(dirty: string, base: string | null): Sanitized {
         const src = frame.attribs.src ?? "";
         if (!src && !frame.attribs.srcset) return true;
         if (frame.attribs.width === "0" || frame.attribs.height === "0") return true;
-        if (IMG_BLOCKLIST.some((b) => src.includes(b))) return true;
+        if (isBeaconImage(src)) return true;
         hasImages = true;
       }
       return false;

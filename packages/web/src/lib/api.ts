@@ -99,8 +99,33 @@ export function setUnauthorizedHandler(fn: () => void) { onUnauthorized = fn; }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * What to tell someone when the server refused without saying why: a plain
+ * sentence, with the status number at the end so support can tell the cases
+ * apart. A 502, 503, or 504 is the proxy in front saying the server itself
+ * didn't answer (a deploy, a restart, an outage).
+ */
+export function failureText(status: number): string {
+  if (status === 502 || status === 503 || status === 504) return `The server isn’t answering right now. Try again in a minute. (Error ${status})`;
+  if (status >= 500) return `Something went wrong on the server. Try again in a minute. (Error ${status})`;
+  if (status === 404) return `That isn’t here anymore. Reload the page and try again. (Error 404)`;
+  return `That didn’t work. Reload the page and try again. (Error ${status})`;
+}
+/** When the request never reached the server at all. */
+export const OFFLINE_TEXT = 'Can’t reach the server. Check your connection and try again.';
+
+/** fetch, with a failure to connect said in words instead of the browser's own "Failed to fetch". */
+async function reach(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (e) {
+    console.error('Request failed before reaching the server', input, e);
+    throw new ApiError(OFFLINE_TEXT, 0);
+  }
+}
+
 async function j<T>(input: string, init?: RequestInit): Promise<T> {
-  let res = await fetch(input, { headers: { 'content-type': 'application/json' }, ...init });
+  let res = await reach(input, { headers: { 'content-type': 'application/json' }, ...init });
   // A 429 comes from one of two places. A proxy in front dropped the request before the server saw
   // it: safe to retry any method, so back off 0.5s, 1s, 2s, 4s with jitter, honoring Retry-After if
   // present. Or thicket itself said "that's enough" (too many sign-in tries, a day's worth of saving):
@@ -109,12 +134,13 @@ async function j<T>(input: string, init?: RequestInit): Promise<T> {
   for (let attempt = 0; res.status === 429 && attempt < 4 && !(await ownRefusal(res)); attempt++) {
     const hinted = Number(res.headers.get('retry-after') ?? 0) * 1000;
     await sleep(Math.min(6000, hinted || 500 * 2 ** attempt) + Math.random() * 300);
-    res = await fetch(input, { headers: { 'content-type': 'application/json' }, ...init });
+    res = await reach(input, { headers: { 'content-type': 'application/json' }, ...init });
   }
   if (res.status === 204) return undefined as T;
   const body = await res.json().catch(() => ({}));
   if (res.status === 401) onUnauthorized?.();
-  if (!res.ok && !('status' in body)) throw new ApiError(body.error ?? `HTTP ${res.status}`, res.status, body.field);
+  if (!res.ok && !body.error) console.error('Request failed with no reason given', input, res.status);
+  if (!res.ok && !('status' in body)) throw new ApiError(body.error ?? failureText(res.status), res.status, body.field);
   return body as T;
 }
 
@@ -154,9 +180,9 @@ export const api = {
   /** `reason` is set when the feed's whole site is paused (it asked thicket to slow down, or seems down), rather than this feed being fetched recently. */
   /** `feedId` differs from `id` when the fetch showed this feed to be another feed's address and it was folded into that one. */
   refresh: async (id: number): Promise<{ ok: true; feedId: number } | { ok: false; cooldown: number; reason: string | null }> => {
-    const res = await fetch(`/api/feeds/${id}/refresh`, { method: 'POST' });
+    const res = await reach(`/api/feeds/${id}/refresh`, { method: 'POST' });
     if (res.status === 429) { const b = await res.json().catch(() => ({})); return { ok: false, cooldown: Number(b.retryAfterS ?? 300), reason: b.reason ?? null }; }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) throw new ApiError(failureText(res.status), res.status);
     const b = await res.json().catch(() => ({}));
     return { ok: true, feedId: Number(b.feedId ?? id) };
   },
@@ -193,9 +219,9 @@ export const collectionsApi = {
   /** Copy a collection from anywhere: a thicket collection page on any instance, or an OPML URL. */
   importUrl: (url: string) => j<ImportResult & { collection: Collection }>('/api/collections/import-url', { method: 'POST', body: JSON.stringify({ url }) }),
   importOpml: async (id: number, file: File): Promise<ImportResult> => {
-    const res = await fetch(`/api/collections/${id}/import`, { method: 'POST', headers: { 'content-type': 'text/x-opml' }, body: await file.text() });
-    const body = await res.json();
-    if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+    const res = await reach(`/api/collections/${id}/import`, { method: 'POST', headers: { 'content-type': 'text/x-opml' }, body: await file.text() });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new ApiError(body.error ?? failureText(res.status), res.status);
     return body as ImportResult;
   }
 };
@@ -214,10 +240,10 @@ export const IMPORT_CHECK_BATCH = 8;
 
 /** Read and check go around j(): they answer 429 when someone is checking far too much, and that must not be retried. */
 async function raw<T>(input: string, init: RequestInit): Promise<T> {
-  const res = await fetch(input, init);
+  const res = await reach(input, init);
   const body = await res.json().catch(() => ({}));
   if (res.status === 401) onUnauthorized?.();
-  if (!res.ok) throw new ApiError(body.error ?? `HTTP ${res.status}`, res.status);
+  if (!res.ok) throw new ApiError(body.error ?? failureText(res.status), res.status);
   return body as T;
 }
 
@@ -499,14 +525,34 @@ export type AdminUser = {
   avatarUpdatedAt: string | null;
 };
 
+/**
+ * What a feed sent as categories, normalized: `declared` is what the feed says
+ * about itself on its last fetch; `terms` are its posts' terms with how many
+ * posts used each, most used first; `tagged` of `posts` came with any.
+ */
+export type FeedCategories = { declared: string[]; posts: number; tagged: number; terms: { term: string; posts: number }[] };
+
 export const adminApi = {
-  users: () => j<{ users: AdminUser[] }>('/api/admin/users'),
+  /** One page of accounts, newest first. Pass the previous page's `next` as `before` for the following page. */
+  users: (opts: { q?: string; before?: string | null; limit?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (opts.q) qs.set('q', opts.q);
+    if (opts.before) qs.set('before', opts.before);
+    if (opts.limit !== undefined) qs.set('limit', String(opts.limit));
+    const query = qs.toString();
+    /** `total` and `matched` come with the first page only; they don't change while paging. */
+    return j<{ users: AdminUser[]; next: string | null; total?: number; matched?: number }>(`/api/admin/users${query ? `?${query}` : ''}`);
+  },
   setAdmin: (id: number, isAdmin: boolean) => j<{ id: number; handle: string; isAdmin: boolean }>(`/api/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify({ isAdmin }) }),
   resetPassword: (id: number) => j<{ handle: string; password: string }>(`/api/admin/users/${id}/password`, { method: 'POST' }),
   deleteUser: (id: number) => j<void>(`/api/admin/users/${id}`, { method: 'DELETE' }),
   /** Moderation: what removing this feed from the instance takes with it, then the removal itself. */
   feedImpact: (id: number) => j<{ title: string | null; url: string; posts: number; followers: number; collections: number; bookmarks: number }>(`/api/admin/feeds/${id}/impact`),
   deleteFeed: (id: number) => j<void>(`/api/admin/feeds/${id}`, { method: 'DELETE' }),
+  /** The categories a feed ships (issue #189): what it declares about itself, and its posts' terms counted. Admins only, for now. */
+  feedCategories: (id: number) => j<FeedCategories>(`/api/admin/feeds/${id}/categories`),
+  /** The categories one post was filed under. Admins only, for now. */
+  itemCategories: (id: number) => j<{ categories: string[] }>(`/api/admin/items/${id}/categories`),
   /** Mark a feed's posts as paywalled, for everyone. */
   setRequiresSubscription: (id: number, requiresSubscription: boolean) => j<{ id: number; requiresSubscription: boolean; title: string | null }>(`/api/admin/feeds/${id}`, { method: 'PATCH', body: JSON.stringify({ requiresSubscription }) }),
   /** Retitle a feed for everyone; null hands the title back to the feed's own on its next check. */
@@ -527,8 +573,8 @@ export const adminApi = {
   createInvite: (note?: string) => j<Invite>('/api/admin/invites', { method: 'POST', body: JSON.stringify({ note }) }),
   revokeInvite: (code: string) => j<void>(`/api/admin/invites/${encodeURIComponent(code)}`, { method: 'DELETE' }),
   /** Starter packs: whose public collections a newcomer is offered. */
-  starter: () => j<{ handle: string | null }>('/api/admin/starter'),
-  setStarter: (handle: string | null) => j<{ handle: string | null }>('/api/admin/starter', { method: 'PUT', body: JSON.stringify({ handle: handle ?? '' }) })
+  starter: () => j<{ handle: string | null; from: string | null; offered: ExploreCollection[] }>('/api/admin/starter'),
+  setStarter: (handle: string | null) => j<{ handle: string | null; from: string | null; offered: ExploreCollection[] }>('/api/admin/starter', { method: 'PUT', body: JSON.stringify({ handle: handle ?? '' }) })
 };
 
 export const feedbackApi = {

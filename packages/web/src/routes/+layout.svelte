@@ -45,7 +45,7 @@
    */
   const bare = $derived(path === '/design-system');
   /** The admin feed list is a table of a couple hundred rows, so it gets more room than the reading column. */
-  const wide = $derived(path === '/admin/feeds');
+  const wide = $derived(path === '/admin/feeds' || (path === '/admin' && page.url.searchParams.get('tab') === 'feeds'));
   /** The front page only sends people on (to Everything or the login screen), so it draws no frame of its own. */
   const front = $derived(path === '/');
   const inApp = $derived(signedIn && !front);
@@ -55,7 +55,7 @@
     if (!signedIn && !isPublic) void goto(`/login?next=${encodeURIComponent(path + page.url.search)}`, { replaceState: true });
     else if (signedIn && (path === '/login' || path === '/signup')) void goto(page.url.searchParams.get('next') || '/new-posts', { replaceState: true });
     // Signed in, you change your password on Account (which can also email you a reset link). A reset link from an email still opens.
-    else if (signedIn && path === '/forgot-password') void goto('/account', { replaceState: true });
+    else if (signedIn && path === '/forgot-password') void goto('/settings?tab=account', { replaceState: true });
   });
   const show = $derived(session.loaded && (signedIn || isPublic));
   /**
