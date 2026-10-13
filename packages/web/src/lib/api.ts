@@ -180,9 +180,9 @@ export const api = {
   /** `reason` is set when the feed's whole site is paused (it asked thicket to slow down, or seems down), rather than this feed being fetched recently. */
   /** `feedId` differs from `id` when the fetch showed this feed to be another feed's address and it was folded into that one. */
   refresh: async (id: number): Promise<{ ok: true; feedId: number } | { ok: false; cooldown: number; reason: string | null }> => {
-    const res = await fetch(`/api/feeds/${id}/refresh`, { method: 'POST' });
+    const res = await reach(`/api/feeds/${id}/refresh`, { method: 'POST' });
     if (res.status === 429) { const b = await res.json().catch(() => ({})); return { ok: false, cooldown: Number(b.retryAfterS ?? 300), reason: b.reason ?? null }; }
-    if (!res.ok) throw new Error(failureText(res.status));
+    if (!res.ok) throw new ApiError(failureText(res.status), res.status);
     const b = await res.json().catch(() => ({}));
     return { ok: true, feedId: Number(b.feedId ?? id) };
   },
@@ -219,9 +219,9 @@ export const collectionsApi = {
   /** Copy a collection from anywhere: a thicket collection page on any instance, or an OPML URL. */
   importUrl: (url: string) => j<ImportResult & { collection: Collection }>('/api/collections/import-url', { method: 'POST', body: JSON.stringify({ url }) }),
   importOpml: async (id: number, file: File): Promise<ImportResult> => {
-    const res = await fetch(`/api/collections/${id}/import`, { method: 'POST', headers: { 'content-type': 'text/x-opml' }, body: await file.text() });
-    const body = await res.json();
-    if (!res.ok) throw new Error(body.error ?? failureText(res.status));
+    const res = await reach(`/api/collections/${id}/import`, { method: 'POST', headers: { 'content-type': 'text/x-opml' }, body: await file.text() });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new ApiError(body.error ?? failureText(res.status), res.status);
     return body as ImportResult;
   }
 };
@@ -240,7 +240,7 @@ export const IMPORT_CHECK_BATCH = 8;
 
 /** Read and check go around j(): they answer 429 when someone is checking far too much, and that must not be retried. */
 async function raw<T>(input: string, init: RequestInit): Promise<T> {
-  const res = await fetch(input, init);
+  const res = await reach(input, init);
   const body = await res.json().catch(() => ({}));
   if (res.status === 401) onUnauthorized?.();
   if (!res.ok) throw new ApiError(body.error ?? failureText(res.status), res.status);
@@ -520,7 +520,8 @@ export const adminApi = {
     if (opts.before) qs.set('before', opts.before);
     if (opts.limit !== undefined) qs.set('limit', String(opts.limit));
     const query = qs.toString();
-    return j<{ users: AdminUser[]; next: string | null; total: number; matched: number }>(`/api/admin/users${query ? `?${query}` : ''}`);
+    /** `total` and `matched` come with the first page only; they don't change while paging. */
+    return j<{ users: AdminUser[]; next: string | null; total?: number; matched?: number }>(`/api/admin/users${query ? `?${query}` : ''}`);
   },
   setAdmin: (id: number, isAdmin: boolean) => j<{ id: number; handle: string; isAdmin: boolean }>(`/api/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify({ isAdmin }) }),
   resetPassword: (id: number) => j<{ handle: string; password: string }>(`/api/admin/users/${id}/password`, { method: 'POST' }),

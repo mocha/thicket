@@ -5,7 +5,8 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import type { SessionUser } from "../lib/auth.js";
 
 process.env.DATABASE_URL ??= "postgres://not-used-by-tests";
-const { admin, normalizeSearch, escapeLike, parseLimit, parseCursor } = await import("./admin.js");
+const { admin, normalizeSearch, parseLimit, parseCursor } = await import("./admin.js");
+const { likeFor } = await import("../lib/like.js");
 const { db } = await import("../db/client.js");
 const ME: SessionUser = { id: 7, handle: "admin", displayName: null, rootCollectionId: 1, defaultCollectionId: 2, trackActivity: false };
 function app(user: SessionUser | null = ME) {
@@ -161,7 +162,7 @@ test("an empty search adds no filter", async (t) => {
 });
 
 test("search wildcards in user input match literally", async (t) => {
-  assert.equal(escapeLike("100%_done\\"), "100\\%\\_done\\\\");
+  assert.equal(likeFor("100%_done\\"), "%100\\%\\_done\\\\%");
   const queries = stubUsers(t, []);
   await list(`?q=${encodeURIComponent("a%b_c")}`);
   assert.ok(queries[0].params.includes("%a\\%b\\_c%"));

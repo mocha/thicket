@@ -48,7 +48,7 @@
 
   const say = (e: unknown) => (e instanceof Error ? e.message : String(e));
   /** "Aug 12", or "2 hours ago" while it's recent enough to say so. */
-  const when = (iso: string) => (/^\d+[mhd]$|^just now$/.test(relativeTime(iso)) ? longAgo(iso) : relativeTime(iso));
+  const when = (iso: string) => { const r = relativeTime(iso); return /^\d+[mhd]$|^just now$/.test(r) ? longAgo(iso) : r; };
 
   const me = $derived(session.user);
   let instance = $state<(InstanceStatus & { signupsStored: SignupPolicy | null }) | null>(null);
@@ -80,7 +80,7 @@
     try {
       const r = await adminApi.users({ q });
       if (ask !== asked) return;
-      users = r.users; next = r.next; total = r.total; matched = r.matched; searched = q;
+      users = r.users; next = r.next; total = r.total ?? 0; matched = r.matched ?? 0; searched = q;
     } catch (e) {
       if (ask === asked) accountsError = say(e);
     } finally {
@@ -112,16 +112,18 @@
   let changingStarter = $state(false);
   /** Which kind of starter packs is chosen. "account" can be picked before one is saved, while the box is open. */
   let starterPick = $state<'default' | 'account'>('default');
-  let starterPerson = $state<{ handle: string; displayName: string | null; bio: string | null; avatarUpdatedAt: string | null } | null>(null);
+  /** An account shown by its handle alone, when its name and picture aren't to hand (or it's private). */
+  const bare = (handle: string) => ({ handle, displayName: null as string | null, bio: null, avatarUpdatedAt: null as string | null });
+  let starterPerson = $state<ReturnType<typeof bare> | null>(null);
   let offered = $state<ExploreCollection[]>([]);
   async function loadStarterPerson(handle: string) {
     starterPerson = null;
     if (!handle) return;
     try {
       const p = await profilesApi.get(handle);
-      starterPerson = p.private ? { handle, displayName: null, bio: null, avatarUpdatedAt: null } : { handle: p.handle, displayName: p.displayName, bio: null, avatarUpdatedAt: p.avatarUpdatedAt };
+      starterPerson = p.private ? bare(handle) : { ...bare(p.handle), displayName: p.displayName, avatarUpdatedAt: p.avatarUpdatedAt };
     } catch {
-      starterPerson = { handle, displayName: null, bio: null, avatarUpdatedAt: null };
+      starterPerson = bare(handle);
     }
   }
   let savingStarter = $state(false);
@@ -130,7 +132,7 @@
     try {
       const [s, i, u, f] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter()]);
       instance = s; name = s.name; invites = i.invites;
-      users = u.users; next = u.next; total = u.total; matched = u.matched;
+      users = u.users; next = u.next; total = u.total ?? 0; matched = u.matched ?? 0;
       starterSaved = starter = f.handle ?? ''; offered = f.offered;
       starterPick = starterSaved ? 'account' : 'default';
       void loadStarterPerson(starterSaved);
@@ -221,6 +223,7 @@
   // Invites
   const openInvites = $derived(invites.filter((i) => !i.usedAt && (!i.expiresAt || new Date(i.expiresAt).getTime() > Date.now())));
   const inviteName = (inv: Invite) => inv.note ?? 'Invite';
+  const tabs = $derived([{ value: 'accounts', label: 'Accounts', count: total }, { value: 'invites', label: 'Invites', count: openInvites.length }, { value: 'settings', label: 'Site settings' }]);
   async function mint() {
     if (minting) return;
     minting = true; errors.invites = null;
@@ -339,9 +342,9 @@
 
 {#if instance}
   <div class="pane">
-    <Tabs class="scopes" tabs={[{ value: 'accounts', label: 'Accounts', count: total }, { value: 'invites', label: 'Invites', count: openInvites.length }, { value: 'settings', label: 'Site settings' }]} value={tab} onchange={pick} label="Parts of Site admin" panel="admin-tab" fill />
+    <Tabs class="scopes" {tabs} value={tab} onchange={pick} label="Parts of Site admin" panel="admin-tab" fill />
   </div>
-  <div id="admin-tab" role="tabpanel" aria-label={tab === 'accounts' ? 'Accounts' : tab === 'invites' ? 'Invites' : 'Site settings'}>
+  <div id="admin-tab" role="tabpanel" aria-label={tabs.find((t) => t.value === tab)?.label}>
   {#if tab === 'accounts'}
   <Card kind="section" as="section" class="admin-section" aria-label="Accounts">
     <form role="search" onsubmit={(e) => { e.preventDefault(); clearTimeout(typing); void findAccounts(query.trim()); }}>
@@ -446,7 +449,7 @@
       <div class="pick">
         {#if starterSaved && !changingStarter}
           <ul class="list-rows">
-            <PersonRow person={starterPerson ?? { handle: starterSaved, displayName: null, bio: null, avatarUpdatedAt: null }}>
+            <PersonRow person={starterPerson ?? bare(starterSaved)}>
               {#snippet end()}<Button size="sm" onclick={() => { starter = starterSaved; changingStarter = true; }}><Icon name="pencil" size={16} />Change account</Button>{/snippet}
             </PersonRow>
           </ul>

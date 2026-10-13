@@ -14,6 +14,7 @@ import { createInvite, getSetting, listInvites, publicStatus, revokeInvite, setS
 import { SIGNUPS_DEFAULT } from "../lib/config.js";
 import { reconcile, recountWindows } from "../lib/counts.js";
 import { featuredCollections } from "./explore.js";
+import { likeFor } from "../lib/like.js";
 
 export const admin = new Hono();
 
@@ -23,6 +24,12 @@ async function requireAdmin(c: Parameters<typeof currentUser>[0]) {
   if (!row?.isAdmin) throw new HTTPException(403, { res: Response.json({ error: "admins only" }, { status: 403 }) });
   return user;
 }
+
+/** Every route here is for admins. Checked once for the whole router, so a new route can't forget it; handlers that need who's asking still call requireAdmin. */
+admin.use("*", async (c, next) => {
+  await requireAdmin(c);
+  await next();
+});
 
 admin.get("/settings", async (c) => {
   await requireAdmin(c);
@@ -66,11 +73,6 @@ export function normalizeSearch(q: string | undefined): string {
   return (q ?? "").trim().replace(/^@/, "").trim();
 }
 
-/** Makes user input match literally inside a LIKE pattern (escape character is backslash). */
-export function escapeLike(text: string): string {
-  return text.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
-
 /** Page size from the query string: default 20, clamped to 1..100. */
 export function parseLimit(raw: string | undefined): number {
   const n = Math.floor(Number(raw));
@@ -93,11 +95,11 @@ admin.get("/users", async (c) => {
   const cursor = beforeRaw ? parseCursor(beforeRaw) : null;
   if (beforeRaw && !cursor) return c.json({ error: "before is not a valid cursor; use the next value from the previous page" }, 400);
 
-  const pattern = `%${escapeLike(q)}%`;
+  const pattern = likeFor(q);
   const search = q ? sql`and (u.handle ilike ${pattern} escape '\\' or u.display_name ilike ${pattern} escape '\\')` : sql``;
   const after = cursor ? sql`and (u.created_at, u.id) < (${cursor.createdAt}::timestamptz, ${cursor.id})` : sql``;
 
-  const rows = await db.execute(sql`
+  const page = db.execute(sql`
     select u.id, u.handle, u.display_name as "displayName", u.is_admin as "isAdmin", u.profile_visibility as "profileVisibility",
            u.created_at as "createdAt",
            to_char(u.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt",
@@ -112,18 +114,23 @@ admin.get("/users", async (c) => {
     order by u.created_at desc, u.id desc
     limit ${limit + 1}
   `);
-  const [counts] = (await db.execute<{ total: number; matched: number }>(sql`
-    select count(*)::int as total,
-           (count(*) filter (where true ${search}))::int as matched
-    from users u
-  `)).rows;
+  // The totals don't change while paging, so only the first page counts them, alongside the page itself.
+  const [rows, counted] = await Promise.all([
+    page,
+    cursor ? null : db.execute<{ total: number; matched: number }>(sql`
+      select count(*)::int as total,
+             (count(*) filter (where true ${search}))::int as matched
+      from users u
+    `),
+  ]);
+  const counts = counted?.rows[0];
 
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
-  const page = rows.rows.slice(0, limit) as any[];
-  const last = page[page.length - 1];
+  const shown = rows.rows.slice(0, limit) as any[];
+  const last = shown[shown.length - 1];
   const next = rows.rows.length > limit && last ? `${last.cursorAt}_${Number(last.id)}` : null;
-  const users = page.map((r) => ({ ...r, id: Number(r.id), createdAt: iso(r.createdAt), lastSeenAt: iso(r.lastSeenAt), avatarUpdatedAt: r.avatarUpdatedAt ? iso(r.avatarUpdatedAt) : null, invitedBy: r.invitedBy ?? null, cursorAt: undefined }));
-  return c.json({ users, next, total: counts?.total ?? 0, matched: counts?.matched ?? 0 });
+  const users = shown.map((r) => ({ ...r, id: Number(r.id), createdAt: iso(r.createdAt), lastSeenAt: iso(r.lastSeenAt), avatarUpdatedAt: r.avatarUpdatedAt ? iso(r.avatarUpdatedAt) : null, invitedBy: r.invitedBy ?? null, cursorAt: undefined }));
+  return c.json({ users, next, ...(counts ? { total: counts.total, matched: counts.matched } : {}) });
 });
 
 async function adminCount() {
