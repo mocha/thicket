@@ -676,6 +676,8 @@ export type SearchPerson = {
   handle: string; displayName: string | null; bio: string | null;
   nameMatch: boolean; notesMatch: number; marksMatch: number;
   feeds: number; collections: number; isFollowing: boolean; avatarUpdatedAt: string | null;
+  /** The one searching: shown, but with no Follow button. */
+  isMe: boolean;
 };
 /**
  * `total` is null for the newest posts with nothing typed: the API doesn't count every post to print one number.
