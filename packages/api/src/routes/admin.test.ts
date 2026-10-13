@@ -64,3 +64,54 @@ test("subscription changes accept both boolean values and report a missing feed"
   found = false;
   assert.equal((await patch(app(), "999", '{"requiresSubscription":true}')).status, 404);
 });
+
+const get = (a: Hono, path: string) => a.request(`/api/admin${path}`);
+
+test("a feed's and a post's categories are for signed-in admins only", async (t) => {
+  const execute = t.mock.method(db, "execute", async () => { throw new Error("a non-admin reached the database"); });
+  for (const path of ["/feeds/1/categories", "/items/1/categories"]) assert.equal((await get(app(null), path)).status, 401, path);
+  t.mock.method(db, "select", () => ({ from: () => ({ where: async () => [{ isAdmin: false }] }) }));
+  for (const path of ["/feeds/1/categories", "/items/1/categories"]) assert.equal((await get(app(), path)).status, 403, path);
+  assert.equal(execute.mock.callCount(), 0);
+});
+
+test("categories reject invalid IDs before querying, and report what isn't there", async (t) => {
+  allowAdmin(t);
+  const execute = t.mock.method(db, "execute", async () => { throw new Error("invalid ID reached the database"); });
+  for (const id of ["nope", "0", "-1", "1.5", "9007199254740992"]) {
+    assert.equal((await get(app(), `/feeds/${id}/categories`)).status, 404, id);
+    assert.equal((await get(app(), `/items/${id}/categories`)).status, 404, id);
+  }
+  assert.equal(execute.mock.callCount(), 0);
+  execute.mock.mockImplementation(async () => ({ rows: [] }) as never);
+  assert.equal((await get(app(), "/feeds/9/categories")).status, 404);
+  assert.equal((await get(app(), "/items/9/categories")).status, 404);
+});
+
+test("a feed's categories: what it declares, and its posts' terms counted", async (t) => {
+  allowAdmin(t);
+  const answers = [
+    { rows: [{ declared: ["science", "physics"], posts: 12, tagged: 9 }] },
+    { rows: [{ term: "rust", posts: 7 }, { term: "python", posts: 3 }] },
+  ];
+  const execute = t.mock.method(db, "execute", async () => answers.shift() as never);
+  const r = await get(app(), "/feeds/3/categories");
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { declared: ["science", "physics"], posts: 12, tagged: 9, terms: [{ term: "rust", posts: 7 }, { term: "python", posts: 3 }] });
+  assert.equal(execute.mock.callCount(), 2);
+});
+
+test("a feed that declares nothing and whose posts carry nothing skips the count", async (t) => {
+  allowAdmin(t);
+  const execute = t.mock.method(db, "execute", async () => ({ rows: [{ declared: null, posts: 4, tagged: 0 }] }) as never);
+  assert.deepEqual(await (await get(app(), "/feeds/3/categories")).json(), { declared: [], posts: 4, tagged: 0, terms: [] });
+  assert.equal(execute.mock.callCount(), 1);
+});
+
+test("a post's categories, or none", async (t) => {
+  allowAdmin(t);
+  const answers = [{ rows: [{ categories: ["rust", "wasm"] }] }, { rows: [{ categories: null }] }];
+  t.mock.method(db, "execute", async () => answers.shift() as never);
+  assert.deepEqual(await (await get(app(), "/items/5/categories")).json(), { categories: ["rust", "wasm"] });
+  assert.deepEqual(await (await get(app(), "/items/5/categories")).json(), { categories: [] });
+});

@@ -38,6 +38,12 @@ export type ParsedItem = {
   content: string | null;
   imageUrl: string | null;
   publishedAt: Date | null;
+  /**
+   * The terms the publisher filed this post under, normalized by
+   * categoryTerm: "Artificial-Intelligence" and "artificial intelligence"
+   * are one term. Empty when the feed says nothing. See categoryTerms.
+   */
+  categories: string[];
 };
 
 export type ParsedFeed = {
@@ -49,6 +55,12 @@ export type ParsedFeed = {
   image: string | null;
   /** The language the feed declares (feedLanguage), or null. */
   language: string | null;
+  /**
+   * What the feed as a whole says it is about, normalized like a post's.
+   * Rare outside podcasts (Apple's categories) and Blogger, which lists every
+   * label the blog has ever used.
+   */
+  categories: string[];
   items: ParsedItem[];
 };
 
@@ -222,6 +234,87 @@ function mediaDescription(media: any): string | null {
   return typeof v === "string" && v.trim() ? v.trim() : null;
 }
 
+/** More than any honest feed sends; a cap so a runaway list can't bloat a row. */
+const MAX_ITEM_CATEGORIES = 100;
+const MAX_FEED_CATEGORIES = 500;
+const MAX_TERM_LEN = 200;
+
+/**
+ * One publisher's tag in the form thicket stores it: plain text, Unicode
+ * folded, lowercase, a hyphen or underscore joining two words read as a
+ * space, and stray punctuation and a hashtag's "#" trimmed from the ends.
+ * "Artificial-Intelligence", "artificial_intelligence" and "#Artificial
+ * Intelligence" are all "artificial intelligence". Periods stay (".net", "node.js",
+ * "u.s."). Null when nothing is left.
+ *
+ * Deliberately no smarter than that. A comma is kept, because it is as
+ * often part of a name ("Kent, Allegra"; "Feminism, Gender, and Equality")
+ * as a separator between several, and nothing here guesses at meaning.
+ */
+export function categoryTerm(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const term = stripHtml(raw)
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/(?<=[\p{L}\p{N}])[-_]+(?=[\p{L}\p{N}])/gu, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s#,;:|/\\]+|[\s,;:|/\\]+$/g, "")
+    .slice(0, MAX_TERM_LEN)
+    .trim();
+  return term || null;
+}
+
+/**
+ * Blogger's Atom marks every entry with a category saying it is a post. That is
+ * the document describing itself, not the publisher describing the post.
+ */
+const NOT_A_SUBJECT = new Set(["http://schemas.google.com/g/2005#kind"]);
+
+/** Raw terms made into stored ones: normalized, emptied ones dropped, repeats folded, capped. */
+function categoryTerms(raw: unknown[], cap: number): string[] {
+  const out = new Set<string>();
+  for (const r of raw) {
+    const term = categoryTerm(r);
+    if (term) out.add(term);
+    if (out.size >= cap) break;
+  }
+  return [...out];
+}
+
+/** Apple's categories nest one level ("Science" › "Physics"); each level is a term of its own. */
+function itunesCategories(cats: any[] | undefined): unknown[] {
+  return (cats ?? []).flatMap((c: any) => [c?.text, ...itunesCategories(c?.categories)]);
+}
+
+/**
+ * Terms from the extensions any format can carry, on a feed or on a post:
+ * Dublin Core subjects, iTunes categories and keywords, Google Play
+ * categories, and Media RSS categories and keywords (which can also sit
+ * inside a media:group, as YouTube's do).
+ */
+function extensionCategories(node: any): unknown[] {
+  const media = [node?.media, ...(node?.media?.groups ?? [])];
+  const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+  return [
+    ...list(node?.dc?.subjects ?? (node?.dc?.subject ? [node.dc.subject] : [])),
+    ...itunesCategories(node?.itunes?.categories),
+    ...list(node?.itunes?.keywords),
+    ...list(node?.googleplay?.categories),
+    ...media.flatMap((m: any) => list(m?.categories).map((c: any) => c?.label || c?.name)),
+    ...media.flatMap((m: any) => list(m?.keywords)),
+  ];
+}
+
+/** RSS's <category>. Its domain attribute names a vocabulary, nearly always the site's own, and is not kept. */
+const rssCategories = (node: any): unknown[] => (node?.categories ?? []).map((c: any) => c?.name);
+
+/**
+ * Atom's <category>: the label when there is one, since that is the
+ * publisher's words and the term may be an identifier (HBR's are numbers).
+ */
+const atomCategories = (node: any): unknown[] =>
+  (node?.categories ?? []).filter((c: any) => !NOT_A_SUBJECT.has(c?.scheme)).map((c: any) => c?.label || c?.term);
+
 export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
   // A NUL character means nothing in a feed, and Postgres refuses it in text: one
   // stray 0x00 in one post failed the insert of every post in the feed with it
@@ -260,11 +353,13 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         content: body && !linkOnly(body) ? body : mediaText,
         imageUrl: choosePreview(mediaThumb ?? enclosureImg, body, link ?? siteUrl ?? feedUrl),
         publishedAt: toDate(it.pubDate) ?? toDate(it.dc?.dates?.[0]) ?? null,
+        categories: categoryTerms([...rssCategories(it), ...extensionCategories(it)], MAX_ITEM_CATEGORIES),
       });
     }
     const image = absolutize(f.image?.url ?? null, feedUrl);
     const language = feedLanguage(f.language) ?? feedLanguage(f.dc?.language);
-    return { kind: format, title: f.title ? stripHtml(f.title) : null, description: f.description ? stripHtml(f.description) : null, siteUrl, image, language, items };
+    const categories = categoryTerms([...rssCategories(f), ...extensionCategories(f)], MAX_FEED_CATEGORIES);
+    return { kind: format, title: f.title ? stripHtml(f.title) : null, description: f.description ? stripHtml(f.description) : null, siteUrl, image, language, categories, items };
   }
 
   if (format === "atom") {
@@ -289,10 +384,12 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
         content: body && !linkOnly(body) ? body : mediaText,
         imageUrl: choosePreview(e.media?.thumbnails?.[0] ?? e.media?.groups?.[0]?.thumbnails?.[0], body, link ?? siteUrl ?? feedUrl),
         publishedAt: toDate(e.published) ?? toDate(e.updated) ?? null,
+        categories: categoryTerms([...atomCategories(e), ...extensionCategories(e)], MAX_ITEM_CATEGORIES),
       });
     }
     const image = absolutize(f.icon ?? f.logo ?? null, feedUrl);
-    return { kind: "atom", title: f.title ? stripHtml(f.title) : null, description: f.subtitle ? stripHtml(f.subtitle) : null, siteUrl, image, language: atomLanguage(text), items };
+    const categories = categoryTerms([...atomCategories(f), ...extensionCategories(f)], MAX_FEED_CATEGORIES);
+    return { kind: "atom", title: f.title ? stripHtml(f.title) : null, description: f.subtitle ? stripHtml(f.subtitle) : null, siteUrl, image, language: atomLanguage(text), categories, items };
   }
 
   // json
@@ -315,8 +412,9 @@ export function parseFeedDocument(text: string, feedUrl: string): ParsedFeed {
       content: body && !linkOnly(body) ? body : null,
       imageUrl: choosePreview(it.image ?? it.banner_image, it.content_html, link ?? siteUrl ?? feedUrl),
       publishedAt: toDate(it.date_published) ?? toDate(it.date_modified) ?? null,
+      categories: categoryTerms(Array.isArray(it.tags) ? it.tags : [], MAX_ITEM_CATEGORIES),
     });
   }
   const image = absolutize(f.icon ?? f.authors?.[0]?.avatar ?? f.author?.avatar ?? f.favicon ?? null, feedUrl);
-  return { kind: "json", title: f.title ? stripHtml(f.title) : null, description: f.description ? stripHtml(f.description) : null, siteUrl, image, language: feedLanguage(f.language), items };
+  return { kind: "json", title: f.title ? stripHtml(f.title) : null, description: f.description ? stripHtml(f.description) : null, siteUrl, image, language: feedLanguage(f.language), categories: [] /* JSON Feed has tags on posts only */, items };
 }
