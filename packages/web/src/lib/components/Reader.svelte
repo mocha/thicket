@@ -8,7 +8,7 @@
    * original is right there. The original is always one press away regardless.
    */
   import { page } from '$app/state';
-  import { api, itemsApi, type ItemContent, type SavedNote } from '$lib/api';
+  import { adminApi, api, itemsApi, type ItemContent, type SavedNote } from '$lib/api';
   import { noteToast } from '$lib/saves';
   import { hostOf, webHref } from '$lib/time';
   import { closeReader, reader, readerClosed, reopenReader } from '$lib/reader.svelte';
@@ -21,6 +21,8 @@
   import NoteBlock from './NoteBlock.svelte';
   import Pager from './Pager.svelte';
   import ReadOnSiteLink from './ReadOnSiteLink.svelte';
+  import CategoryTerms from './CategoryTerms.svelte';
+  import { session } from '$lib/session.svelte';
   import { display } from '$lib/display.svelte';
   import { scrollBehavior } from '$lib/motion';
 
@@ -79,6 +81,8 @@
   function prevPage() { if (pageIndex > 0) pageIndex--; }
   let content = $state<ItemContent | null>(null);
   let error = $state<string | null>(null);
+  /** For admins: the categories the feed filed this post under (issue #189). Null until known, or for everyone else. */
+  let categories = $state<string[] | null>(null);
   let editing = $state(false);
 
   const item = $derived(reader.item);
@@ -136,11 +140,13 @@
 
   $effect(() => {
     const it = item;
-    content = null; error = null; editing = reader.note; pageIndex = 0;
+    content = null; error = null; editing = reader.note; pageIndex = 0; categories = null;
     if (!it) return;
     scroller?.scrollTo({ top: 0 });
     api.event('item_opened', { itemId: it.id, feedId: it.feedId, inline: true });
     itemsApi.content(it.id).then((c) => { if (reader.item?.id === it.id) content = c; }, (e) => { if (reader.item?.id === it.id) error = e instanceof Error ? e.message : String(e); });
+    // An admin's extra; failing to load it must not disturb reading.
+    if (session.user?.isAdmin) adminApi.itemCategories(it.id).then((r) => { if (reader.item?.id === it.id) categories = r.categories; }, () => {});
   });
 
   /**
@@ -215,6 +221,12 @@
 
           {#if !content?.partial}
             <footer><ReadOnSiteLink {href} label={outLabel} onclick={outbound} /></footer>
+          {/if}
+          {#if categories}
+            <div class="cats">
+              <p class="partial">Categories the feed sent with this post <span class="who">· admins only</span></p>
+              <CategoryTerms terms={categories.map((term) => ({ term }))} />
+            </div>
           {/if}
 
           {#if item.myNote && !editing}<NoteBlock note={item.myNote} mine onedit={() => (editing = true)} />{/if}
@@ -305,6 +317,9 @@
     .leave-in { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--space-4); }
     .leave-in :global(.btn) { width: auto; }
   }
+  /* An admin's extra under the post (issue #189), set apart like the footer. */
+  .cats { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-5); }
+  .cats .who { opacity: 0.8; }
   /* No card here, so the notes line up with the post's words, as on a post's own page. */
   .page > :global(.note) { margin-left: 0; margin-right: 0; }
   .page > :global(:not(.note) + .note) { margin-top: var(--space-4); }

@@ -576,7 +576,7 @@
   {#snippet why()}
     {#if ev?.notesMatch}{plural(ev.notesMatch, 'note')} about {@render searched()}{/if}{#if ev?.notesMatch && ev?.marksMatch}{'\u00a0'}<Dot />{' '}{/if}{#if ev?.marksMatch}{plural(ev.marksMatch, 'bookmark')} about {@render searched()}{/if}
   {/snippet}
-  <PersonRow person={u} feeds={u.feeds} collections={u.collections} following={u.isFollowing} busy={followBusy === u.handle} onfollow={() => toggleFollow(u)} onopen={() => (opened = { person: u.handle })}
+  <PersonRow person={u} feeds={u.feeds} collections={u.collections} following={u.isFollowing} me={ev?.isMe} busy={followBusy === u.handle} onfollow={() => toggleFollow(u)} onopen={() => (opened = { person: u.handle })}
     children={ev && ev.notesMatch + ev.marksMatch > 0 ? why : undefined} />
 {/snippet}
 

@@ -182,6 +182,42 @@ admin.get("/feeds/:id/impact", async (c) => {
   return row ? c.json(row) : c.json({ error: "not found" }, 404);
 });
 
+/** How many of a feed's post terms the diagnostics list. More is noise on one screen. */
+const FEED_TERMS_SHOWN = 500;
+
+/**
+ * The categories a feed ships, for its diagnostics (issue #189): what the
+ * feed says about itself on its last fetch, and every term its posts were
+ * filed under, counted across all the posts thicket holds. Raw material,
+ * shown to admins only while we learn what feeds actually send.
+ */
+admin.get("/feeds/:id/categories", async (c) => {
+  await requireAdmin(c);
+  const id = Number(c.req.param("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) return c.json({ error: "not found" }, 404);
+  const [feed] = (await db.execute<{ declared: string[] | null; posts: number; tagged: number }>(sql`
+    select f.categories as declared,
+           (select count(*)::int from items i where i.feed_id = f.id) as posts,
+           (select count(*)::int from items i where i.feed_id = f.id and i.categories is not null) as tagged
+    from feeds f where f.id = ${id}`)).rows;
+  if (!feed) return c.json({ error: "not found" }, 404);
+  const terms = feed.tagged ? (await db.execute<{ term: string; posts: number }>(sql`
+    select t.term, count(*)::int as posts
+    from items i cross join lateral unnest(i.categories) as t(term)
+    where i.feed_id = ${id} and i.categories is not null
+    group by t.term order by posts desc, t.term limit ${FEED_TERMS_SHOWN}`)).rows : [];
+  return c.json({ declared: feed.declared ?? [], posts: feed.posts, tagged: feed.tagged, terms });
+});
+
+/** The categories one post was filed under, for the reader's admin line. */
+admin.get("/items/:id/categories", async (c) => {
+  await requireAdmin(c);
+  const id = Number(c.req.param("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) return c.json({ error: "not found" }, 404);
+  const [row] = (await db.execute<{ categories: string[] | null }>(sql`select categories from items where id = ${id}`)).rows;
+  return row ? c.json({ categories: row.categories ?? [] }) : c.json({ error: "not found" }, 404);
+});
+
 /**
  * Facts about a feed that hold for everyone, set by an admin. For now only
  * whether its posts are behind a paywall (issue #216), which shows as

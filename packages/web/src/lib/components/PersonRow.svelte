@@ -5,7 +5,8 @@
    * row: their name with their @handle beside it in gray, as a note names its
    * writer; then their bio and the facts about them (feeds, public
    * collections), gray. Follow sits at the right when the screen offers it,
-   * and drops under the text on a phone.
+   * and drops under the text on a phone. On your own row (`me`) an "It's you!"
+   * Badge sits there instead, in Following's soft green, with nothing to press.
    *
    * Each fact shows only when the screen has it. Anything more a screen wants
    * to say (why a search found them) goes in `children`, on a line of its own
@@ -21,6 +22,7 @@
   import { profileHref } from '$lib/api';
   import { plural } from '$lib/words';
   import Avatar from './Avatar.svelte';
+  import Badge from './Badge.svelte';
   import Dot from './Dot.svelte';
   import FollowButton from './FollowButton.svelte';
 
@@ -30,6 +32,8 @@
     collections?: number;
     /** Whether you follow them. Left off, the row has no Follow button. */
     following?: boolean;
+    /** The row is you: "It's you!" in place of Follow. */
+    me?: boolean;
     busy?: boolean;
     onfollow?: () => void;
     onopen?: () => void;
@@ -40,7 +44,7 @@
     end?: Snippet;
   }
 
-  let { person: u, feeds, collections, following, busy = false, onfollow, onopen, children, badges, end }: Props = $props();
+  let { person: u, feeds, collections, following, me = false, busy = false, onfollow, onopen, children, badges, end }: Props = $props();
 
   const facts = $derived(
     [
@@ -65,7 +69,9 @@
       {/if}
     </div>
   </a>
-  {#if following !== undefined}
+  {#if me}
+    <Badge tone="soft" class="me">It’s you!</Badge>
+  {:else if following !== undefined}
     <FollowButton {following} {busy} onclick={onfollow} />
   {:else if end}
     <div class="end">{@render end()}</div>
@@ -90,7 +96,7 @@
   .end { flex: none; }
   @media (max-width: 560px) {
     .row { flex-basis: 100%; }
-    .personrow > :global(.follow), .end { margin-left: auto; }
+    .personrow > :global(.follow), .personrow > :global(.me), .end { margin-left: auto; }
   }
   @media (hover: hover) { .row:hover .title { text-decoration: underline; text-underline-offset: 3px; } }
 </style>

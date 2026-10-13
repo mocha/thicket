@@ -61,10 +61,10 @@ test("stored counts stay equal to a fresh count through every write path", { ski
     const add = (collectionId: number, feedId: number) => q("insert into collection_feeds (collection_id, feed_id) values ($1, $2) on conflict do nothing", [collectionId, feedId]);
     const followers = async (feedId: number) => (await one<{ n: number }>("select follower_count as n from feeds where id = $1", [feedId])).n;
     const posts = (n: number, prefix: string, daysAgo = 1) => ({
-      kind: "rss" as const, title: null, description: null, siteUrl: null, image: null, language: null,
+      kind: "rss" as const, title: null, description: null, siteUrl: null, image: null, language: null, categories: [],
       items: Array.from({ length: n }, (_, k) => ({
         dedupeKey: `${prefix}-${k}`, url: `https://example.com/${prefix}/${k}`, title: `${prefix} ${k}`, author: null, summary: null,
-        linkUrl: null, linkLabel: null, content: null, imageUrl: null, publishedAt: new Date(Date.now() - daysAgo * 86_400_000),
+        linkUrl: null, linkLabel: null, content: null, imageUrl: null, publishedAt: new Date(Date.now() - daysAgo * 86_400_000), categories: [],
       })),
     });
 

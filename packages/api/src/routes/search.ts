@@ -638,7 +638,10 @@ const PEOPLE_ORDER: Record<PeopleSort, SQL> = {
  * Someone with six notes about a thing is a better answer than someone who put
  * the word in their bio — and the audience rules still hold, so a private note
  * never ranks anybody. Signed-in only: this is for following, which is the same
- * rule the Explore users list already carried.
+ * rule the Explore users list already carried. Unlike that list, the viewer is
+ * in it, marked `isMe`: someone searching their own name expects to be found,
+ * and seeing themselves (or not, with a private profile) is how they check
+ * what everyone else sees.
  */
 async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null = null,
   sort: PeopleSort = DEFAULT_PEOPLE_SORT, since: string | null = null) {
@@ -663,7 +666,7 @@ async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: 
              ${named} as name_match,
              ${notesSeen} as notes_match, ${marksSeen} as marks_match
       from users u
-      where u.profile_visibility = 'public' and u.id <> ${viewerId} and ${sinceSql("u.created_at", since)}
+      where u.profile_visibility = 'public' and ${sinceSql("u.created_at", since)}
         ${net ? sql`and ${userInNetwork("u.id", net)}` : sql``}
         and (${named} or ${notesSeen} > 0 or ${marksSeen} > 0)
     )
@@ -676,7 +679,8 @@ async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: 
            -- all, the same count the browse list gives (routes/explore.ts).
            (select count(*)::int from collections col where col.user_id = c.id and col.parent_id is not null and col.visibility = 'public'
               and c.collections_visibility = 'public') as collections,
-           exists(select 1 from user_follows uf where uf.follower_id = ${viewerId} and uf.followee_id = c.id) as "isFollowing"
+           exists(select 1 from user_follows uf where uf.follower_id = ${viewerId} and uf.followee_id = c.id) as "isFollowing",
+           c.id = ${viewerId} as "isMe"
     from cand c
     order by ${PEOPLE_ORDER[sort]}
     limit ${limit + 1} offset ${offset}

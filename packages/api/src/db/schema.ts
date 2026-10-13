@@ -275,6 +275,15 @@ export const feeds = pgTable("feeds", {
    */
   language: text("language"),
   /**
+   * What the feed as a whole says it is about — channel <category>, Atom
+   * <category>, dc:subject, iTunes and Google Play categories, keywords — as
+   * the last fetch declared it, normalized (categoryTerm in feeds/parse.ts),
+   * or null when it declares nothing. The publisher's words, not a browsing
+   * category, and shown only to admins. The terms its posts use are a
+   * separate thing, counted from items.categories.
+   */
+  categories: text("categories").array(),
+  /**
    * The site's posts are behind a paywall: the feed shows what they publish,
    * but reading a post takes a subscription (issue #216). Set by an admin on
    * the feed's settings page, shown to everyone beside the feed's address.
@@ -394,6 +403,13 @@ export const items = pgTable("items", {
   linkUrl: text("link_url"),
   linkLabel: text("link_label"),
   imageUrl: text("image_url"),
+  /**
+   * The tags and categories the publisher filed this post under, normalized
+   * (categoryTerm in feeds/parse.ts), or null when it gave none. Most feeds
+   * only ever show their newest posts, so this is kept on arrival or not at
+   * all. Shown only to admins for now (issue #189).
+   */
+  categories: text("categories").array(),
   publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
   /**
