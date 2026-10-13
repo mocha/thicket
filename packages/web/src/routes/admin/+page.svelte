@@ -58,6 +58,7 @@
 
   let name = $state('');
   let savingName = $state(false);
+  let editingName = $state(false);
   let invites = $state<Invite[]>([]);
   let inviteNote = $state('');
   let minting = $state(false);
@@ -172,12 +173,13 @@
     }
   }
   async function saveName() {
-    if (!instance || savingName || name.trim() === instance.name) return;
+    if (!instance || savingName) return;
+    if (name.trim() === instance.name) { editingName = false; return; }
     savingName = true; errors.name = null;
     try {
       instance = { ...instance, ...(await adminApi.update({ name: name.trim() })) };
       name = instance.name;
-      showToast('Site name saved');
+      editingName = false;
     } catch (e) {
       name = instance.name;
       errors.name = say(e);
@@ -481,14 +483,24 @@
   <Card kind="section" as="section" class="admin-section" aria-labelledby="name-h">
     <h2 class="section-title" id="name-h">Site name</h2>
     <p class="section-description">Shown on sign-up and sign-in pages and in link previews.</p>
-    <form class="inline" onsubmit={(e) => { e.preventDefault(); void saveName(); }}>
-      <Field label="Site name" hideLabel error={errors.name} class="grow">
-        {#snippet children({ id, describedBy, invalid })}
-          <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={name} maxlength={60} placeholder={instance!.url.replace(/^https?:\/\//, '')} oninput={() => (errors.name = null)} />
-        {/snippet}
-      </Field>
-      <Button type="submit" size="lg" loading={savingName} disabled={name.trim() === instance.name}>Save</Button>
-    </form>
+    {#if editingName}
+      <form class="edit" onsubmit={(e) => { e.preventDefault(); void saveName(); }}>
+        <Field label="Site name" error={errors.name}>
+          {#snippet children({ id, describedBy, invalid })}
+            <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={name} maxlength={60} placeholder={instance!.url.replace(/^https?:\/\//, '')} disabled={savingName} oninput={() => (errors.name = null)} />
+          {/snippet}
+        </Field>
+        <div class="editrow">
+          <Button onclick={() => { name = instance!.name; editingName = false; errors.name = null; }} disabled={savingName}>Cancel</Button>
+          <Button type="submit" variant="primary" loading={savingName} disabled={!name.trim()}>Save</Button>
+        </div>
+      </form>
+    {:else}
+      <div class="shown">
+        <span class="row-name">{instance.name}</span>
+        <Button size="sm" onclick={() => (editingName = true)}><Icon name="pencil" size={16} />Edit name</Button>
+      </div>
+    {/if}
   </Card>
 
   {/if}
@@ -561,6 +573,8 @@
   /* Changing the account: the labeled box with Cancel and Save under it, as Edit profile does. */
   .edit { display: flex; flex-direction: column; gap: var(--space-3); }
   .editrow { display: flex; justify-content: flex-end; gap: var(--space-2); }
+  /* A saved value and the button that edits it, on one line that wraps on a phone. */
+  .shown { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
   .offered-h { margin: var(--space-5) 0 var(--space-1); }
   /* 28px is the option button (16px) plus the gap beside it, so the account sits under its choice's words. */
   .pick { margin: var(--space-2) 0 0 28px; }
