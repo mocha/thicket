@@ -19,7 +19,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { api, adminApi, exploreApi, profilesApi, collectionHref, type ExploreCollection, type AdminUser, type InstanceStatus, type Invite, type SignupPolicy } from '$lib/api';
+  import { api, adminApi, profilesApi, collectionHref, type ExploreCollection, type AdminUser, type InstanceStatus, type Invite, type SignupPolicy } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import { longAgo, relativeTime } from '$lib/time';
   import { plural } from '$lib/words';
@@ -111,14 +111,6 @@
   let changingStarter = $state(false);
   let starterPerson = $state<{ handle: string; displayName: string | null; bio: string | null; avatarUpdatedAt: string | null } | null>(null);
   let offered = $state<ExploreCollection[]>([]);
-  async function loadOffered() {
-    try {
-      offered = (await exploreApi.featured()).collections;
-    } catch (e) {
-      console.error('Couldn’t load the collections new people are offered', e);
-      offered = [];
-    }
-  }
   async function loadStarterPerson(handle: string) {
     starterPerson = null;
     if (!handle) return;
@@ -136,9 +128,8 @@
       const [s, i, u, f] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter()]);
       instance = s; name = s.name; invites = i.invites;
       users = u.users; next = u.next; total = u.total; matched = u.matched;
-      starterSaved = starter = f.handle ?? '';
+      starterSaved = starter = f.handle ?? ''; offered = f.offered;
       void loadStarterPerson(starterSaved);
-      void loadOffered();
     } catch (e) {
       loadError = say(e);
       console.error('Site admin failed to load', e);
@@ -199,9 +190,9 @@
     savingStarter = true; errors.starter = null;
     try {
       const r = await adminApi.setStarter(starter);
-      starterSaved = starter = r.handle ?? '';
+      starterSaved = starter = r.handle ?? ''; offered = r.offered;
       changingStarter = false;
-      await Promise.all([loadStarterPerson(starterSaved), loadOffered()]);
+      await loadStarterPerson(starterSaved);
     } catch (e) {
       errors.starter = say(e);
     } finally {
