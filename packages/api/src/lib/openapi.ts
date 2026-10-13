@@ -164,7 +164,7 @@ export function openApiDocument(serverUrl: string) {
       title: "thicket",
       version: "1",
       description: [
-        "thicket is a feed reader: you follow feeds, keep them in collections, save posts as bookmarks and write notes on them. This describes what an application can do with it on a person's behalf, using an API token that person turned on in their Account and data page.",
+        "thicket is a feed reader: you follow feeds, keep them in collections, save posts as bookmarks and write notes on them. This describes what an application can do with it on a person's behalf, using an API token that person turned on on the Account and data tab of their Settings.",
         "",
         "**Signing requests.** Send the token on every request as `Authorization: Bearer <token>`. There are two kinds. A **read-only** token (it starts `thk_ro_`) can make every request marked as a read here, and is refused with 403 on the rest. A **full access** token (`thk_rw_`) can make every request described here. Each operation says which it needs, and carries it as `x-token-access`.",
         "",
@@ -182,8 +182,8 @@ export function openApiDocument(serverUrl: string) {
     paths,
     components: {
       securitySchemes: {
-        readOnlyToken: { type: "http", scheme: "bearer", bearerFormat: "thk_ro_…", description: "A read-only access token from the Account and data page. Reads only." },
-        fullAccessToken: { type: "http", scheme: "bearer", bearerFormat: "thk_rw_…", description: "A full access token from the Account and data page. Reads and writes." },
+        readOnlyToken: { type: "http", scheme: "bearer", bearerFormat: "thk_ro_…", description: "A read-only access token from the Account and data tab in Settings. Reads only." },
+        fullAccessToken: { type: "http", scheme: "bearer", bearerFormat: "thk_rw_…", description: "A full access token from the Account and data tab in Settings. Reads and writes." },
       },
       schemas: {
         Error: { type: "object", required: ["error"], properties: { error: { type: "string", description: "What went wrong, in a sentence." }, retryAfterS: { type: "integer", description: "On a 429: seconds to wait." } } },

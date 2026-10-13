@@ -14,7 +14,7 @@
    *
    * Status pills (Admin, Private, You) go in `badges`, after the name, as on
    * the Collection and Feed rows. A screen that acts on the person instead of
-   * following them (Site admin's accounts) puts its one action in `end`,
+   * following them (Admin's accounts) puts its one action in `end`,
    * which sits where Follow would: at the right, dropping under the text on a
    * phone.
    */

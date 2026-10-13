@@ -91,7 +91,7 @@ export function llmsTxt(site: string, publicUrl: string): string {
 
 > ${site === "thicket" ? "thicket is a feed reader" : `${site} runs thicket, a feed reader`} where people follow RSS, Atom and YouTube feeds, keep them in collections, save posts as bookmarks and write notes on them. The web app runs in the browser with JavaScript, so its pages are empty to programs. Read the JSON API instead; it is the same data the app shows.
 
-Public things (profiles that are shared publicly, their shared collections and bookmarks, every feed and post) can be read without signing in. A person's own reading (New posts, their collections, bookmarks and notifications) needs an API token that person creates on their Account and data page (${publicUrl}/account). If you are acting for someone and need their own data, ask them for one.
+Public things (profiles that are shared publicly, their shared collections and bookmarks, every feed and post) can be read without signing in. A person's own reading (New posts, their collections, bookmarks and notifications) needs an API token that person creates on the Account and data tab of their Settings (${publicUrl}/settings?tab=account). If you are acting for someone and need their own data, ask them for one.
 
 ## Using the API
 

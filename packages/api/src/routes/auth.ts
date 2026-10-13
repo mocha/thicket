@@ -86,7 +86,7 @@ auth.post("/signup", async (c) => {
     return c.json({ error: BAD_INVITE, field: "inviteCode" }, 403);
   }
   await createSession(c, user.id);
-  // The account works either way; a confirmation that didn't send is resent from the Account and data page.
+  // The account works either way; a confirmation that didn't send is resent from the Account and data tab in Settings.
   if (email) await sendConfirm(user, email);
   return c.json(await me(user.id), 201);
 });
