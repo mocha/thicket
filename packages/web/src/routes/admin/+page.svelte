@@ -480,6 +480,7 @@
 
   <Card kind="section" as="section" class="admin-section" aria-labelledby="name-h">
     <h2 class="section-title" id="name-h">Site name</h2>
+    <p class="section-description">Shown on sign-up and sign-in pages, and in link previews.</p>
     <form class="inline" onsubmit={(e) => { e.preventDefault(); void saveName(); }}>
       <Field label="Site name" hideLabel error={errors.name} class="grow">
         {#snippet children({ id, describedBy, invalid })}
