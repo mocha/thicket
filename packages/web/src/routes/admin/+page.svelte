@@ -109,6 +109,8 @@
   let starterSaved = $state('');
   let starter = $state('');
   let changingStarter = $state(false);
+  /** Which kind of starter packs is chosen. "account" can be picked before one is saved, while the box is open. */
+  let starterPick = $state<'default' | 'account'>('default');
   let starterPerson = $state<{ handle: string; displayName: string | null; bio: string | null; avatarUpdatedAt: string | null } | null>(null);
   let offered = $state<ExploreCollection[]>([]);
   async function loadStarterPerson(handle: string) {
@@ -129,6 +131,7 @@
       instance = s; name = s.name; invites = i.invites;
       users = u.users; next = u.next; total = u.total; matched = u.matched;
       starterSaved = starter = f.handle ?? ''; offered = f.offered;
+      starterPick = starterSaved ? 'account' : 'default';
       void loadStarterPerson(starterSaved);
     } catch (e) {
       loadError = say(e);
@@ -182,22 +185,35 @@
       savingName = false;
     }
   }
+  /** Closing the box goes back to what's saved: the account row, or Default when there's no account yet. */
   function cancelStarter() {
     starter = starterSaved; changingStarter = false; errors.starter = null;
+    starterPick = starterSaved ? 'account' : 'default';
   }
-  async function setStarter() {
-    if (savingStarter) return;
+  async function setStarter(handle: string): Promise<boolean> {
+    if (savingStarter) return false;
     savingStarter = true; errors.starter = null;
     try {
-      const r = await adminApi.setStarter(starter);
+      const r = await adminApi.setStarter(handle);
       starterSaved = starter = r.handle ?? ''; offered = r.offered;
       changingStarter = false;
       await loadStarterPerson(starterSaved);
+      return true;
     } catch (e) {
       errors.starter = say(e);
+      return false;
     } finally {
       savingStarter = false;
     }
+  }
+  /** Default saves the moment it's picked, like the other choices on this tab, and goes back if saving fails. */
+  async function pickDefault() {
+    starterPick = 'default'; changingStarter = false; errors.starter = null;
+    if (starterSaved && !(await setStarter(''))) starterPick = 'account';
+  }
+  function pickAccount() {
+    starterPick = 'account'; errors.starter = null;
+    if (!starterSaved) { starter = ''; changingStarter = true; }
   }
 
   // Invites
@@ -419,30 +435,35 @@
   <Card kind="section" as="section" class="admin-section" aria-labelledby="starter-h">
     <h2 class="section-title" id="starter-h">Starter packs</h2>
     <p class="section-description">To get users started, you can specify one account whose collections are available to copy. You might choose your own account, or create an account just for this purpose.</p>
-    {#if starterSaved && !changingStarter}
-      <div class="rows">
-        <ul class="list-rows">
-          <PersonRow person={starterPerson ?? { handle: starterSaved, displayName: null, bio: null, avatarUpdatedAt: null }}>
-            {#snippet end()}<Button size="sm" onclick={() => (changingStarter = true)}><Icon name="pencil" size={16} />Change account</Button>{/snippet}
-          </PersonRow>
-        </ul>
-      </div>
-    {:else}
-      <form class:inline={!changingStarter} class:edit={changingStarter} onsubmit={(e) => { e.preventDefault(); void setStarter(); }}>
-        <Field label="Account" hideLabel={!changingStarter} error={errors.starter} class="grow">
-          {#snippet children({ id, describedBy, invalid })}
-            <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={starter} placeholder="@handle" autocomplete="off" autocapitalize="none" spellcheck={false} disabled={savingStarter} oninput={() => (errors.starter = null)} />
-          {/snippet}
-        </Field>
-        {#if changingStarter}
-          <div class="editrow">
-            <Button onclick={cancelStarter} disabled={savingStarter}>Cancel</Button>
-            <Button type="submit" variant="primary" loading={savingStarter}>Save</Button>
-          </div>
+    <fieldset class="choices" aria-labelledby="starter-h">
+      <label class="choice"><input type="radio" name="starter" checked={starterPick === 'default'} disabled={savingStarter} onchange={pickDefault} /><span><strong>Default collections</strong><small>The six public collections with the most feeds, from any account on this site.</small></span></label>
+      <label class="choice"><input type="radio" name="starter" checked={starterPick === 'account'} disabled={savingStarter} onchange={pickAccount} /><span><strong>One account’s collections</strong></span></label>
+    </fieldset>
+    {#if starterPick === 'account'}
+      <!-- Under its choice, lined up with the choice's words. -->
+      <div class="pick">
+        {#if starterSaved && !changingStarter}
+          <ul class="list-rows">
+            <PersonRow person={starterPerson ?? { handle: starterSaved, displayName: null, bio: null, avatarUpdatedAt: null }}>
+              {#snippet end()}<Button size="sm" onclick={() => { starter = starterSaved; changingStarter = true; }}><Icon name="pencil" size={16} />Change account</Button>{/snippet}
+            </PersonRow>
+          </ul>
         {:else}
-          <Button type="submit" size="lg" loading={savingStarter}>Save</Button>
+          <form class="edit" onsubmit={(e) => { e.preventDefault(); void setStarter(starter); }}>
+            <Field label="Account" error={errors.starter}>
+              {#snippet children({ id, describedBy, invalid })}
+                <Input {id} aria-describedby={describedBy} {invalid} inset bind:value={starter} placeholder="@handle" autocomplete="off" autocapitalize="none" spellcheck={false} disabled={savingStarter} oninput={() => (errors.starter = null)} />
+              {/snippet}
+            </Field>
+            <div class="editrow">
+              <Button onclick={cancelStarter} disabled={savingStarter}>Cancel</Button>
+              <Button type="submit" variant="primary" loading={savingStarter} disabled={!starter.trim()}>Save</Button>
+            </div>
+          </form>
         {/if}
-      </form>
+      </div>
+    {:else if errors.starter}
+      <div class="err"><Banner tone="error" title="Couldn’t save that">{errors.starter}</Banner></div>
     {/if}
     {#if offered.length}
       <!-- The field label's look (the shared row-name style), so it reads like "Account" above the box. -->
@@ -540,6 +561,9 @@
   .edit { display: flex; flex-direction: column; gap: var(--space-3); }
   .editrow { display: flex; justify-content: flex-end; gap: var(--space-2); }
   .offered-h { margin: var(--space-5) 0 var(--space-1); }
+  /* 28px is the option button (16px) plus the gap beside it, so the account sits under its choice's words. */
+  .pick { margin: var(--space-2) 0 0 28px; }
+  .pick .list-rows > :global(li) { padding: var(--space-2) 0; }
 
   .invite { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
   .what { flex: 1 1 12rem; min-width: 0; display: flex; flex-direction: column; }
