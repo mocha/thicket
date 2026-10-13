@@ -23,6 +23,7 @@
   import { api, collectionsApi } from '$lib/api';
   import { collectionStore, loadCollections, namedCollections } from '$lib/collections.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import Checkbox from './Checkbox.svelte';
   import Button from './Button.svelte';
   import Field from './Field.svelte';
   import Input from './Input.svelte';
@@ -118,7 +119,7 @@
       {#each visible as c (c.id)}
         <li>
           <label>
-            <input type="checkbox" checked={ids.includes(c.id)} onchange={() => ontoggle(c.id)} {disabled} />
+            <Checkbox checked={ids.includes(c.id)} onchange={() => ontoggle(c.id)} {disabled} />
             <span class="name">{c.name}</span>
             <span class="count" class:flash={flash.has(c.id)}>{c.feedCount}</span>
           </label>
@@ -187,7 +188,6 @@
   .checks label { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-1); border-bottom: 1px solid var(--line); cursor: pointer; }
   .checks li:last-child label { border-bottom: 0; }
   /* No browser margin, so the box and the + in the last row share one column. */
-  .checks input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
   .name { flex: 1; font-weight: 500; }
   .count { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); transition: color 300ms; }
   .count.flash { color: var(--accent); font-weight: 700; animation: pop 1.2s ease-out; }

@@ -25,7 +25,7 @@
  */
 import { readFileSync } from "node:fs";
 import { eq, sql } from "drizzle-orm";
-import { db, pool, schema } from "../db/client.js";
+import { db, schema, endPools } from "../db/client.js";
 import { normalizeFeedUrl } from "../feeds/normalize.js";
 import { carefulNetwork } from "../feeds/hosts.js";
 import { refreshFeed } from "../feeds/refresh.js";
@@ -77,7 +77,7 @@ const fresh = urls.filter((u) => !known.has(u) && !known.has(otherScheme(u) ?? u
 console.log(`${urls.length} urls in ${file}; ${urls.length - fresh.length} already in the index; ${fresh.length} to try`);
 if (dry || fresh.length === 0) {
   console.log(dry ? "dry run, stopping here" : "nothing to do");
-  await pool.end();
+  await endPools();
   process.exit(0);
 }
 
@@ -169,4 +169,4 @@ const why = [...failures.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
 if (why.length) console.log("why not:", why.map(([k, n]) => `${k} ${n}`).join(", "));
 const [{ n }] = (await db.execute<{ n: number }>(sql`select count(*)::int as n from feeds`)).rows;
 console.log(`index now holds ${n} feeds`);
-await pool.end();
+await endPools();

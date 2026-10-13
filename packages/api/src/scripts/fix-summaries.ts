@@ -17,7 +17,7 @@
  * other than the post's own URL.
  */
 import { sql } from "drizzle-orm";
-import { db, pool } from "../db/client.js";
+import { db, endPools } from "../db/client.js";
 import { linkOnly, stripHtml } from "../feeds/parse.js";
 
 const dry = process.argv.includes("--dry");
@@ -64,4 +64,4 @@ for (;;) {
 
 console.log(`${dry ? "dry run: " : ""}${cleared} posts fixed, ${linked} kept a link, ${bmCleared} stale bookmark summaries cleared`);
 for (const s of samples) console.log(`  ${s}`);
-await pool.end();
+await endPools();

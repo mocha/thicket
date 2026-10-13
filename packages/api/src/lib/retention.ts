@@ -39,7 +39,8 @@
  * Deletes run in chunks so a big first pass never holds a long lock.
  */
 import { sql } from "drizzle-orm";
-import { db } from "../db/client.js";
+// Background work: the worker pool, so fetching never takes a request's connection (db/client.ts).
+import { workerDb as db } from "../db/client.js";
 import { RETAIN_EVENTS_DAYS, RETAIN_FETCH_LOG_DAYS, RETAIN_ITEMS_DAYS } from "./config.js";
 
 const CHUNK = 5_000;

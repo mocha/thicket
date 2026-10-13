@@ -17,6 +17,7 @@ import { refreshIcon } from "../feeds/icons.js";
 import { isYouTubeUrl, YOUTUBE_FEED_PATTERN } from "../feeds/youtube.js";
 import { feedSlugSql } from "../lib/slug.js";
 import { PUBLIC_URL } from "../lib/config.js";
+import { sinceIntervalFrom, sinceSql } from "../lib/since.js";
 
 export const feeds = new Hono();
 
@@ -32,9 +33,9 @@ const feedColumns = (userId: number) => sql`
   f.requires_subscription as "requiresSubscription",
   exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon",
   (select count(*)::int from feeds g where g.title = f.title) as "sameTitle",
-  (select count(*)::int from items i where i.feed_id = f.id) as "itemCount",
+  f.item_count as "itemCount",
   (select count(*)::int from items i where i.feed_id = f.id and i.published_at > now() - interval '30 days') as "postsLast30d",
-  (select count(distinct col.user_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where cf.feed_id = f.id) as "followerCount",
+  f.follower_count as "followerCount",
   coalesce((select array_agg(cf.collection_id order by cf.collection_id) from collection_feeds cf join collections col on col.id = cf.collection_id and col.user_id = ${userId} where cf.feed_id = f.id), '{}') as "myCollectionIds",
   exists(select 1 from blocks b where b.user_id = ${userId} and b.feed_id = f.id) as "blocked",
   (select fs.display_name from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = f.id) as "displayName",
@@ -76,8 +77,8 @@ feeds.get("/", async (c) => {
     where.push(sql`(f.title ilike ${like} or f.description ilike ${like} or f.url ilike ${like} or f.site_url ilike ${like}
       or exists(select 1 from feed_settings fs where fs.user_id = ${user.id} and fs.feed_id = f.id and fs.display_name ilike ${like}))`);
   }
-  const sinceInterval = since === "24h" ? "1 day" : since === "week" ? "7 days" : since === "month" ? "30 days" : since === "year" ? "365 days" : null;
-  if (sinceInterval) where.push(sql`f.created_at > now() - ${sinceInterval}::interval`);
+  const sinceInterval = sinceIntervalFrom(since);
+  if (sinceInterval) where.push(sinceSql("f.created_at", sinceInterval));
   const followedBy = sql`exists(select 1 from collection_feeds cf join collections col on col.id = cf.collection_id and col.user_id = ${user.id} where cf.feed_id = f.id)`;
   if (following === "1") where.push(followedBy);
   if (following === "0") where.push(sql`not ${followedBy}`);
@@ -101,17 +102,24 @@ feeds.get("/", async (c) => {
   const networkColumn = networkIds?.length
     ? sql`, (select count(distinct col.user_id)::int from collection_feeds cf join collections col on col.id = cf.collection_id where cf.feed_id = f.id and col.user_id in (${sql.join(networkIds.map((id) => sql`${id}`), sql`, `)})) as "networkFollowers"`
     : sql`, null::int as "networkFollowers"`;
+  /**
+   * Every order reads a column on the feed itself (follower_count and
+   * posts_30d are kept by lib/counts.ts), so Postgres sorts the index and
+   * builds the display columns for one page of rows only. "Most active" used to
+   * count every feed's last 30 days before it could sort; it reads the hourly
+   * count now, while the row still shows the exact one.
+   */
   const order =
-    sort === "title" ? sql`lower(coalesce(x.title, x.url)) asc`
+    sort === "title" ? sql`lower(coalesce(f.title, f.url)) asc`
     // Ties (on a young instance, most of the index) go to feeds that posted this week, then
     // to a fixed shuffle. Never to how often a feed posts: that is the firehose again.
-    : sort === "popular" ? sql`"followerCount" desc, ("lastItemAt" > now() - interval '7 days') desc nulls last, md5(x.id::text)`
-    : sort === "posts" ? sql`"postsLast30d" desc, "lastItemAt" desc nulls last`
-    : sort === "added" ? sql`"createdAt" desc`
-    : sql`"lastItemAt" desc nulls last, x.id desc`;
+    : sort === "popular" ? sql`f.follower_count desc, (f.last_item_at > now() - interval '7 days') desc nulls last, md5(f.id::text)`
+    : sort === "posts" ? sql`f.posts_30d desc, f.last_item_at desc nulls last`
+    : sort === "added" ? sql`f.created_at desc`
+    : sql`f.last_item_at desc nulls last, f.id desc`;
 
   const rows = await db.execute(sql`
-    select * from (select ${feedColumns(user.id)} ${networkColumn} from feeds f where ${sql.join(where, sql` and `)}) x
+    select ${feedColumns(user.id)} ${networkColumn} from feeds f where ${sql.join(where, sql` and `)}
     order by ${order} limit ${limit + 1} offset ${offset}
   `);
   const [{ total }] = (await db.execute<{ total: number }>(sql`select count(*)::int as total from feeds f where ${sql.join(where, sql` and `)}`)).rows;

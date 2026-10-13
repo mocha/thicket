@@ -9,7 +9,7 @@
  * bookmark, so each noted post is saved too. Idempotent: a post the account
  * already has a note on is left alone.
  */
-import { db, pool, schema } from "../db/client.js";
+import { db, schema, endPools } from "../db/client.js";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { snapshotOfItem } from "../lib/bookmarks.js";
 
@@ -68,8 +68,8 @@ async function main() {
 }
 
 main()
-  .then(() => pool.end())
+  .then(() => endPools())
   .catch((e) => {
     console.error(e);
-    return pool.end().then(() => process.exit(1));
+    return endPools().then(() => process.exit(1));
   });

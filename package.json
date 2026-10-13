@@ -11,6 +11,7 @@
     "web": "pnpm --filter @thicket/web dev",
     "db:push": "pnpm --filter @thicket/api db:push",
     "seed": "pnpm --filter @thicket/api seed",
-    "passwd": "pnpm --filter @thicket/api passwd"
+    "passwd": "pnpm --filter @thicket/api passwd",
+    "recount": "pnpm --filter @thicket/api recount"
   }
 }

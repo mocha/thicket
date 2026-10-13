@@ -15,6 +15,7 @@
   import { loadCollections, whereItGoes } from '$lib/collections.svelte';
   import { hostOf } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
+  import Checkbox from './Checkbox.svelte';
   import Sheet from './Sheet.svelte';
   import Button from './Button.svelte';
   import CollectionList from './CollectionList.svelte';
@@ -208,7 +209,7 @@
             {@const r = results[c.url]}
             <li>
               <label>
-                <input type="checkbox" checked={r?.ok || picked.includes(c.url)} onchange={() => togglePick(c.url)} disabled={busy || r?.ok} aria-describedby={r ? `pick-${c.url}` : undefined} />
+                <Checkbox checked={r?.ok || picked.includes(c.url)} onchange={() => togglePick(c.url)} disabled={busy || r?.ok} aria-describedby={r ? `pick-${c.url}` : undefined} />
                 <span class="which">
                   <strong>{c.title ?? hostOf(c.url)}</strong>
                   <span>{c.note ?? c.url}</span>
@@ -240,7 +241,6 @@
   .candidates { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
   /* The same tick box and spacing as the collection rows below. */
   .candidates label { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); cursor: pointer; }
-  .candidates input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
   .which { display: flex; flex-direction: column; /* 2px is an optical gap between a name and its address. */ gap: 2px; min-width: 0; }
   .which strong { color: var(--text); }
   .which span { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }

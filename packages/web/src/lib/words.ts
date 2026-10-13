@@ -55,8 +55,18 @@ export function highlight(snippet: string): { text: string; hit: boolean }[] {
   return out;
 }
 
+/** Text fenced whole, as if a search had matched all of it: the searched words themselves, drawn highlighted. */
+export const fence = (text: string) => `${OPEN}${text}${CLOSE}`;
+
 /** The same text with the fences taken out. */
 export const unmarked = (snippet: string) => snippet.replaceAll(OPEN, '').replaceAll(CLOSE, '');
+
+/**
+ * The matched part of a summary is the bit around the match, so it may start
+ * part-way through the full text. A card shows "…" in front when it does.
+ */
+export const startsMidway = (full: string | null, marked: string) =>
+  !(full ?? '').trimStart().startsWith(unmarked(marked).slice(0, 24));
 
 /**
  * The same highlight for HTML we rendered ourselves from fenced text (a note's

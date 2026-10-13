@@ -301,7 +301,7 @@
         </svg>
         <h2>No bookmarks yet</h2>
         <p>To keep a post, select the bookmark in its top right corner. It stays here until you remove it.</p>
-        <div class="ctas"><Button variant="primary" size="lg" href="/new-posts">Read new posts</Button><Button size="lg" href="/explore">Explore feeds</Button></div>
+        <div class="ctas"><Button variant="primary" size="lg" href="/new-posts">Read new posts</Button><Button size="lg" href="/explore?scope=feeds">Explore feeds</Button></div>
       {/if}
     </div>
     {#if q}

@@ -12,6 +12,7 @@ import { db, schema } from "../db/client.js";
 import { currentUser, destroyAllSessions, hashPassword } from "../lib/auth.js";
 import { createInvite, getSetting, listInvites, publicStatus, revokeInvite, setSetting, type SignupPolicy } from "../lib/instance.js";
 import { SIGNUPS_DEFAULT } from "../lib/config.js";
+import { reconcile, recountWindows } from "../lib/counts.js";
 
 export const admin = new Hono();
 
@@ -221,4 +222,18 @@ admin.put("/starter", async (c) => {
   }
   await setSetting("starter_account", handle);
   return c.json({ handle: handle || null });
+});
+
+// ---- maintenance --------------------------------------------------------------
+
+/**
+ * Recount the stored sort counts now (lib/counts.ts), for when one looks wrong
+ * and the nightly pass is hours away. The answer says how many were off, which
+ * is the number worth knowing: anything but zero means a trigger missed a write.
+ */
+admin.post("/recount", async (c) => {
+  await requireAdmin(c);
+  const drift = await reconcile();
+  const windows = await recountWindows();
+  return c.json({ drift, windowsChanged: windows });
 });

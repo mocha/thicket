@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Checkbox from '$lib/components/Checkbox.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
@@ -58,7 +59,7 @@
       removeDialog?.close();
       showToast(`Removed ${feedName(feed)} from thicket`);
       await loadCollections(true);
-      await goto('/explore', { replaceState: true });
+      await goto('/explore?scope=feeds', { replaceState: true });
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e));
     } finally {
@@ -96,7 +97,7 @@
     try {
       feed = await api.feed(id);
     } catch {
-      return void goto('/explore', { replaceState: true });
+      return void goto('/explore?scope=feeds', { replaceState: true });
     }
     ids = feed.myCollectionIds;
     diagOpen = feed.consecutiveFailures > 0;
@@ -350,7 +351,7 @@
       <div class="body admin">
         <div class="radios">
           <label>
-            <input type="checkbox" bind:checked={subscriptionChecked} disabled={savingSubscription} onchange={(e) => setRequiresSubscription(e.currentTarget.checked)} />
+            <Checkbox bind:checked={subscriptionChecked} disabled={savingSubscription} onchange={(e) => setRequiresSubscription(e.currentTarget.checked)} />
             <span><strong>Requires a subscription</strong><small>The site’s posts are behind a paywall. Everyone sees “Requires subscription” next to this feed’s address.</small></span>
           </label>
         </div>
@@ -404,7 +405,7 @@
   .radios { display: flex; flex-direction: column; gap: var(--space-2); }
   .radios label { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
   .radios label:has(input:checked) { border-color: var(--accent); }
-  .radios input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .radios input, .radios :global(.checkbox) { margin-top: 3px; }
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }

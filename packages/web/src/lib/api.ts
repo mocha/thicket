@@ -203,7 +203,7 @@ export const collectionsApi = {
 /** The import page (api/src/lib/importer.ts). `unsure`: couldn't be checked just now; it is added and retried. */
 export type ImportFeedState = 'ok' | 'failed' | 'unsure' | 'pending';
 /** `retry`: this verdict could change if we ask again shortly — a timeout or a brief 5xx, never a 429 or a paused host. */
-export type ImportFeed = { url: string; title: string | null; siteUrl: string | null; state: ImportFeedState; reason: string | null; following: boolean; retry: boolean };
+export type ImportFeed = { url: string; title: string | null; siteUrl: string | null; state: ImportFeedState; reason: string | null; retry: boolean };
 export type ImportGroup = { name: string; feeds: ImportFeed[]; existing: { id: number; name: string; slug: string } | null };
 export type ImportPreview = { title: string | null; source: string | null; groups: ImportGroup[]; emptyFolders: string[]; duplicates: number };
 export type ImportCheck = { url: string; state: ImportFeedState; reason: string | null; title: string | null; finalUrl: string | null; retry: boolean };
@@ -274,13 +274,22 @@ export type NotificationPost = { url: string; title: string | null; siteTitle: s
  * happened after I last looked. `key` is stable across loads.
  *   follow    `person` started following me
  *   bookmark  `person` (someone I follow) bookmarked `post`
- *   note      `person` (someone I follow) wrote a note on `post`
+ *   note      `person` (someone I follow) wrote a note on `post`; the whole thing is `bookmark`
  *   mention   `person` @mentioned me in the note on `bookmark`
+ *   reply     `person` noted a post I saved; the note is on `bookmark`
+ *   collection  `person` (someone I follow) made `collection`
+ *   invite    someone signed up with my invite: `person`, or null when their profile is private
+ * Only the kinds I've turned on in Settings (Me.notify*, Me.mentionsFrom).
  */
 export type Notification =
-  | { kind: 'follow'; key: string; at: string; isNew: boolean; person: NotificationPerson }
-  | { kind: 'bookmark' | 'note'; key: string; at: string; isNew: boolean; person: NotificationPerson; post: NotificationPost }
-  | { kind: 'mention'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark };
+  /** `following`: I already follow them back. */
+  | { kind: 'follow'; key: string; at: string; isNew: boolean; person: NotificationPerson & { bio: string | null }; following: boolean }
+  /** `bookmark`: the bookmark whole, note included, shown as a Bookmark card. */
+  | { kind: 'bookmark' | 'note'; key: string; at: string; isNew: boolean; person: NotificationPerson; post: NotificationPost; bookmark: PublicBookmark }
+  | { kind: 'mention'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark }
+  | { kind: 'reply'; key: string; at: string; isNew: boolean; person: NotificationPerson; bookmark: PublicBookmark }
+  | { kind: 'collection'; key: string; at: string; isNew: boolean; person: NotificationPerson; collection: { name: string; slug: string; description: string | null; feedCount: number } }
+  | { kind: 'invite'; key: string; at: string; isNew: boolean; person: (NotificationPerson & { bio: string | null }) | null; following: boolean };
 
 export const notificationsApi = {
   /** The last 30 days, at most 100. Reading does not mark them seen; `asOf` is what to pass to `seen`. */
@@ -378,6 +387,9 @@ export type Me = {
   /** Who may see the one running list of what I've been up to. Caps the whole list; each source still obeys its own section. */
   activityVisibility: ShareLevel;
   notesFrom: 'none' | 'following' | 'everyone';
+  /** Which notifications I get (issue #274). Mentions have only `mentionsFrom`: "none" turns them off. */
+  notifyFollows: boolean; notifyBookmarks: boolean; notifyNotes: boolean; notifyCollections: boolean; notifyInvites: boolean; notifyReplies: boolean;
+  mentionsFrom: 'none' | 'following' | 'everyone';
   /** null = follow the instance setting (instanceTracking). */
   trackActivity: boolean | null; instanceTracking: boolean; hasPassword: boolean; createdAt: string; isAdmin: boolean;
   /** Feed setting defaults: leave Shorts out of YouTube channels unless a channel's own setting says otherwise. */
@@ -428,7 +440,7 @@ export const authApi = {
   signup: (handle: string, password: string, displayName?: string, inviteCode?: string, email?: string) => j<Me>('/api/auth/signup', { method: 'POST', body: JSON.stringify({ handle, password, displayName, inviteCode, email }) }),
   login: (handle: string, password: string) => j<Me>('/api/auth/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   logout: () => j<void>('/api/auth/logout', { method: 'POST' }),
-  update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'activityVisibility' | 'notesFrom' | 'trackActivity' | 'hideShortsByDefault'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
+  update: (patch: Partial<Pick<Me, 'displayName' | 'bio' | 'homepageUrl' | 'profileVisibility' | 'collectionsVisibility' | 'bookmarksVisibility' | 'notesVisibility' | 'activityVisibility' | 'notesFrom' | 'trackActivity' | 'hideShortsByDefault' | 'notifyFollows' | 'notifyBookmarks' | 'notifyNotes' | 'notifyCollections' | 'notifyInvites' | 'notifyReplies' | 'mentionsFrom'>>) => j<Me>('/api/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
   /**
    * Record that the setup tour was seen, so no device shows it again. Sent
    * while setup may be navigating away, so it outlives the page. A failure
@@ -506,7 +518,11 @@ export const feedbackApi = {
 export type PublicUser = { handle: string; displayName: string | null; bio: string | null; homepageUrl: string | null; createdAt: string; avatarUpdatedAt: string | null };
 export type ProfileCollection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; visibility: ShareLevel; feedCount: number; copiedFromId: number | null;
   /** The viewer has a copy of this one (never true on your own profile). */
-  copiedByMe: boolean };
+  copiedByMe: boolean;
+  /** A few of its feeds, for the icons at the front of its row. */
+  sample: CollectionSample[] };
+/** A few of a collection's feeds, drawn overlapped at the front of its row. */
+export type CollectionSample = { id: number; title: string | null; hasIcon: boolean };
 export type Profile =
   | { handle: string; private: true }
   | (PublicUser & {
@@ -537,7 +553,7 @@ export type PublicCollectionFeed = {
 };
 export type PublicCollection = {
   id: number; name: string; slug: string; description: string | null; visibility: ShareLevel; createdAt: string | null;
-  owner: PublicUser; isMe: boolean; feeds: PublicCollectionFeed[]; children: { id: number; name: string; slug: string; description: string | null; feedCount: number }[];
+  owner: PublicUser; isMe: boolean; feeds: PublicCollectionFeed[]; children: { id: number; name: string; slug: string; description: string | null; feedCount: number; sample: CollectionSample[] }[];
   /**
    * For a signed-in visitor: the copy they already made of this collection, if
    * any, and how many of this collection's feeds it has. A copy with all of
@@ -596,29 +612,38 @@ export type ActivityEntry =
 
 export type ExploreCollection = {
   id: number; name: string; slug: string; description: string | null; handle: string; displayName: string | null; feedCount: number;
-  sample: { id: number; title: string | null; hasIcon: boolean }[];
+  sample: CollectionSample[];
 };
 export type ExploreUser = {
   handle: string; displayName: string | null; bio: string | null; createdAt: string;
   feeds: number; collections: number; notes: number | null; isFollowing: boolean; avatarUpdatedAt: string | null;
 };
 export const exploreApi = {
-  /** Public collections by other people. No options = the homepage's handful. */
-  collections: (opts: { q?: string; network?: boolean; limit?: number; offset?: number } | number = {}) => {
+  /**
+   * Public collections by other people. No options = the homepage's handful.
+   * `since` and `sort` are Explore's filters: a window on when the collection was made, and `feeds` (default), `newest` or `name`.
+   */
+  collections: (opts: { q?: string; network?: boolean; since?: string | null; sort?: string | null; limit?: number; offset?: number } | number = {}) => {
     const o = typeof opts === 'number' ? { limit: opts } : opts;
     const q = new URLSearchParams();
     if (o.q) q.set('q', o.q);
     if (o.network) q.set('network', '1');
+    if (o.since) q.set('since', o.since);
+    if (o.sort) q.set('sort', o.sort);
     if (o.limit) q.set('limit', String(o.limit));
     if (o.offset) q.set('offset', String(o.offset));
-    return j<{ collections: ExploreCollection[]; total: number; indexTotal: number; nextOffset: number | null }>(`/api/explore/collections?${q}`);
+    return j<{ collections: ExploreCollection[]; total: number; nextOffset: number | null }>(`/api/explore/collections?${q}`);
   },
-  users: (opts: { q?: string; limit?: number; offset?: number } = {}) => {
+  /** `network`: only people I follow. `since`: a window on when they joined. `sort`: `name` (default: people I follow first, then A to Z) or `newest`. */
+  users: (opts: { q?: string; network?: boolean; since?: string | null; sort?: string | null; limit?: number; offset?: number } = {}) => {
     const q = new URLSearchParams();
     if (opts.q) q.set('q', opts.q);
+    if (opts.network) q.set('network', '1');
+    if (opts.since) q.set('since', opts.since);
+    if (opts.sort) q.set('sort', opts.sort);
     if (opts.limit) q.set('limit', String(opts.limit));
     if (opts.offset) q.set('offset', String(opts.offset));
-    return j<{ users: ExploreUser[]; total: number; indexTotal: number; nextOffset: number | null }>(`/api/explore/users?${q}`);
+    return j<{ users: ExploreUser[]; total: number; nextOffset: number | null }>(`/api/explore/users?${q}`);
   },
   /** The instance's starter packs: one account's public collections. `from` is that handle, or null when falling back. */
   featured: () => j<{ from: string | null; collections: (ExploreCollection & { isMine: boolean })[] }>('/api/explore/featured')
@@ -627,24 +652,18 @@ export const exploreApi = {
 // ---- search ----------------------------------------------------------------
 
 /**
- * One query, four kinds of answer. Feeds and collections are aggregations over
- * the posts that matched, so every row carries its own evidence — `matches`,
- * `posts`, `lastMatchAt` — and the UI says it in words instead of showing a
- * rank. `nameMatch` marks a row found by its name rather than by its posts.
+ * One query, over one kind of thing at a time: the tab you are on. Feeds and
+ * collections are aggregations over the posts that matched, so every row
+ * carries its own evidence — `matches`, `posts`, `lastMatchAt` — and the UI
+ * says it in words instead of showing a rank. `nameMatch` marks a row found by
+ * its name rather than by its posts.
  */
-export type SearchScope = 'all' | 'feeds' | 'collections' | 'posts' | 'people';
-/**
- * How the Feeds list of a search is ordered (issue 182); the API's FeedSort.
- * `about` is the default, the nearest to the relevance order the list had
- * before there was a choice. To change the default, change this and
- * DEFAULT_FEED_SORT in the API's routes/search.ts together.
- */
-export type FeedSearchSort = 'mentioned' | 'posted' | 'about' | 'active';
-export const FEED_SEARCH_SORTS: FeedSearchSort[] = ['mentioned', 'posted', 'about', 'active'];
-export const DEFAULT_FEED_SORT: FeedSearchSort = 'about';
-/** Anything that isn't one of the four, including nothing, is the default. */
-export const feedSortFrom = (v: string | null | undefined): FeedSearchSort =>
-  FEED_SEARCH_SORTS.includes(v as FeedSearchSort) ? (v as FeedSearchSort) : DEFAULT_FEED_SORT;
+export type SearchScope = 'posts' | 'feeds' | 'collections' | 'people';
+export const SEARCH_SCOPES: SearchScope[] = ['posts', 'feeds', 'collections', 'people'];
+/** Posts, when nothing says otherwise. `all` is the retired everything-at-once scope; old links land on posts. */
+export const DEFAULT_SCOPE: SearchScope = 'posts';
+export const scopeFrom = (v: string | null | undefined): SearchScope =>
+  SEARCH_SCOPES.includes(v as SearchScope) ? (v as SearchScope) : DEFAULT_SCOPE;
 export type SearchFeed = {
   id: number; url: string; siteUrl: string | null; title: string | null; description: string | null; slug: string;
   lastItemAt: string | null; consecutiveFailures: number; postsLast30d: number; hasIcon: boolean; myCollectionIds: number[];
@@ -656,37 +675,47 @@ export type SearchFeed = {
 export type SearchCollection = ExploreCollection & {
   isMine: boolean; copiedByMe: boolean; matches: number; matchingFeeds: number; lastMatchAt: string | null; nameMatch: boolean;
 };
-export type SearchPost = {
-  id: number; feedId: number; feedTitle: string | null; siteUrl: string | null; url: string | null;
-  title: string | null; author: string | null; imageUrl: string | null; publishedAt: string;
-  /** Matched words are fenced by … so the page highlights them without rendering feed HTML. */
+/** A post a search found: the same post an article card shows in a feed, plus where the search matched. */
+export type SearchPost = RiverItem & {
+  /** The part of the post that matched (with nothing typed, the start of its summary). Matched words are fenced (see lib/words.ts) so the page highlights them without rendering feed HTML. */
   snippet: string | null;
-  hasIcon: boolean; bookmarkId: number | null; myCollectionIds: number[];
+  /** The title with the matched words fenced the same way; null with nothing typed. */
+  titleMarked: string | null;
+  myCollectionIds: number[];
 };
 export type SearchPerson = {
   handle: string; displayName: string | null; bio: string | null;
   nameMatch: boolean; notesMatch: number; marksMatch: number;
   feeds: number; collections: number; isFollowing: boolean; avatarUpdatedAt: string | null;
+  /** The one searching: shown, but with no Follow button. */
+  isMe: boolean;
 };
-export type SearchGroup<T> = { rows: T[]; total: number; nextOffset: number | null };
-export type SearchResults = {
-  q: string; scope: SearchScope;
-  /** The order the feeds came back in; always the default unless scope is feeds. */
-  sort?: FeedSearchSort;
-  feeds: SearchGroup<SearchFeed>; collections: SearchGroup<SearchCollection>;
-  posts: SearchGroup<SearchPost>; people: SearchGroup<SearchPerson>;
-};
+/**
+ * `total` is null for the newest posts with nothing typed: the API doesn't count every post to print one number.
+ * `capped`: a Posts search's count reached the API's cap, so there are more matches than `total` says.
+ */
+export type SearchGroup<T> = { rows: T[]; total: number | null; nextOffset: number | null; capped?: boolean };
+type SearchRows = { feeds: SearchFeed; collections: SearchCollection; posts: SearchPost; people: SearchPerson };
+/** The one list asked for, under its scope's name: `{ q, scope: 'posts', posts: { rows, total, nextOffset } }`. */
+export type SearchResults<S extends SearchScope = SearchScope> = {
+  q: string; scope: S;
+  /** The order the list came back in. */
+  sort: string | null;
+} & { [K in S]: SearchGroup<SearchRows[K]> };
 
 export const searchApi = {
-  run: (opts: { q: string; scope?: SearchScope; limit?: number; offset?: number; network?: string | null; sort?: FeedSearchSort }) => {
-    const p = new URLSearchParams({ q: opts.q });
-    if (opts.scope && opts.scope !== 'all') p.set('scope', opts.scope);
+  /**
+   * `signal` cancels the request, and the API then cancels its query in the
+   * database, so a search nobody is waiting for stops costing anything.
+   */
+  run: <S extends SearchScope>(opts: { q: string; scope: S; limit?: number; offset?: number; network?: string | null; since?: string | null; sort?: string | null }, signal?: AbortSignal) => {
+    const p = new URLSearchParams({ q: opts.q, scope: opts.scope });
     if (opts.limit) p.set('limit', String(opts.limit));
     if (opts.offset) p.set('offset', String(opts.offset));
     if (opts.network) p.set('network', opts.network);
-    // Only the Feeds list takes an order; the API ignores it anywhere else.
-    if (opts.sort && opts.scope === 'feeds') p.set('sort', opts.sort);
-    return j<SearchResults>(`/api/search?${p}`);
+    if (opts.since) p.set('since', opts.since);
+    if (opts.sort) p.set('sort', opts.sort);
+    return j<SearchResults<S>>(`/api/search?${p}`, { signal });
   }
 };
 

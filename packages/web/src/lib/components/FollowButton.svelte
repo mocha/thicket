@@ -1,36 +1,34 @@
 <script lang="ts">
   /**
-   * Follow for a person: one tap, a green outline, tinted green once you
-   * follow. It wears the same look as a feed's Follow (FollowControl), which
-   * also asks which collection the feed goes in.
+   * Follow for a person: one tap. It's the shared small Button: the plain
+   * ghost look until you follow, then the pale green secondary look, so green
+   * means "you have this", as on the bookmark icon. A feed's Follow
+   * (FollowControl) wears the same two looks; it also asks which collection
+   * the feed goes in.
    *
    * With `href` it's a link instead, for someone signed out: "Follow" takes
    * them to sign in first.
    */
+  import Button from './Button.svelte';
+
   interface Props {
     following?: boolean;
     /** What it says before you follow, such as "Follow @maya". */
     label?: string;
     busy?: boolean;
-    /** The small size every page header's buttons use. */
-    small?: boolean;
     href?: string;
     onclick?: () => void;
+    /** For the screen to place the button. */
+    class?: string;
   }
 
-  let { following = false, label = 'Follow', busy = false, small = false, href, onclick }: Props = $props();
+  let { following = false, label = 'Follow', busy = false, href, onclick, class: klass = '' }: Props = $props();
 </script>
 
-{#if href}<a class="follow tap" class:small {href}><span class="lbl">{label}</span></a>
-{:else}<button type="button" class="follow tap" class:small class:on={following} disabled={busy} aria-pressed={following} {onclick}><span class="lbl">{following ? 'Following' : label}</span></button>{/if}
+{#if href}<Button size="sm" class="follow {klass}" {href}><span class="lbl">{label}</span></Button>
+{:else}<Button size="sm" variant={following ? 'secondary' : 'ghost'} class="follow {klass}" disabled={busy} aria-pressed={following} {onclick}><span class="lbl">{following ? 'Following' : label}</span></Button>{/if}
 
 <style>
-  .follow { flex: none; display: inline-flex; align-items: center; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--accent); background: var(--surface); color: var(--accent); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; white-space: nowrap; text-decoration: none; max-width: 100%; }
   /* A long label is cut short rather than pushing the page wider; the words clip themselves so the touch area can still reach past the edges. */
-  .lbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  .follow:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
-  .follow.on { background: var(--accent-tint); border-color: transparent; }
-  .follow.on:hover { background: var(--accent-tint); border-color: var(--accent); }
-  .follow:disabled { opacity: 0.6; }
-  .small { padding: var(--space-1) var(--space-3); }
+  .lbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

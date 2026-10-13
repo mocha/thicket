@@ -68,6 +68,8 @@ export async function applyMigrations(
   let committed = false;
   try {
     await client.query("BEGIN");
+    // A migration may rewrite a big table; the pool's per-request statement timeout is not for it.
+    await client.query("SET LOCAL statement_timeout = 0");
     // Serialize overlapping boots; read the ledger only after taking the lock.
     await client.query("SELECT pg_advisory_xact_lock($1, $2)", MIGRATION_LOCK);
     await client.query("CREATE SCHEMA IF NOT EXISTS drizzle");

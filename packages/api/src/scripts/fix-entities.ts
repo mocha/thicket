@@ -13,7 +13,7 @@
  */
 import { sql } from "drizzle-orm";
 import { decodeHTML } from "entities";
-import { db, pool } from "../db/client.js";
+import { db, endPools } from "../db/client.js";
 
 const dry = process.argv.includes("--dry");
 const BATCH = 2000;
@@ -64,4 +64,4 @@ for (const f of frows) {
 
 console.log(`${dry ? "dry run: " : ""}${items} posts rewritten (${titles} titles, ${summaries} summaries, ${authors} authors) and ${feeds} feeds`);
 for (const s of samples) console.log(`  ${s}`);
-await pool.end();
+await endPools();

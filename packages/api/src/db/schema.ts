@@ -131,6 +131,20 @@ export const users = pgTable("users", {
    * so nobody opens the app to a backlog they never asked for.
    */
   notificationsSeenAt: timestamp("notifications_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  /**
+   * Which kinds of notification I get (issue #274), one switch per kind, kept
+   * on the account so they're the same on every device. New and existing
+   * accounts start with everything they saw before on; notes on posts I saved
+   * start off, since a popular post can draw many.
+   */
+  notifyFollows: boolean("notify_follows").notNull().default(true),
+  notifyBookmarks: boolean("notify_bookmarks").notNull().default(true),
+  notifyNotes: boolean("notify_notes").notNull().default(true),
+  notifyCollections: boolean("notify_collections").notNull().default(true),
+  notifyInvites: boolean("notify_invites").notNull().default(true),
+  notifyReplies: boolean("notify_replies").notNull().default(false),
+  /** Whose @mentions of me notify me. The only mention switch: "no one" turns them off. */
+  mentionsFrom: notesFrom("mentions_from").notNull().default("everyone"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   /** Trigram GIN for fuzzy handle search (drizzle/0007). */
@@ -176,7 +190,10 @@ export const invites = pgTable("invites", {
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   usedBy: bigint("used_by", { mode: "number" }).references(() => users.id, { onDelete: "set null" }),
   usedAt: timestamp("used_at", { withTimezone: true }),
-});
+}, (t) => [
+  /** "Someone signed up with your invite" in Notifications: my invites, by when they were used. */
+  index("invites_created_by_used_idx").on(t.createdBy, t.usedAt),
+]);
 
 /**
  * Opaque session tokens. The cookie holds the random token; we store its
@@ -287,6 +304,23 @@ export const feeds = pgTable("feeds", {
   lastItemAt: timestamp("last_item_at", { withTimezone: true }),
   /** When we last looked for a site icon (success or not). Rechecked monthly. */
   iconCheckedAt: timestamp("icon_checked_at", { withTimezone: true }),
+  /*
+   * Counts the lists sort by, kept on the row so a sort reads a column instead
+   * of counting every feed's posts on every page view (lib/counts.ts).
+   *
+   * follower_count and item_count are recounted for the affected feed by
+   * triggers whenever its collection_feeds or items rows change (drizzle/0029),
+   * so they are exact as of the last write. posts_30d and posts_90d change as
+   * time passes with no write to trigger on, so the counts job recounts them
+   * hourly; it also re-checks the trigger-kept two nightly and logs any drift.
+   */
+  /** Distinct people with this feed in at least one of their collections. */
+  followerCount: integer("follower_count").notNull().default(0),
+  /** Every post we hold for this feed. */
+  itemCount: integer("item_count").notNull().default(0),
+  /** Posts published in the last 30 / 90 days, as of the counts job's last hourly pass. */
+  posts30d: integer("posts_30d").notNull().default(0),
+  posts90d: integer("posts_90d").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
@@ -434,11 +468,15 @@ export const collections = pgTable("collections", {
   visibility: shareLevel("visibility").notNull().default("public"),
   /** Provenance when copied from another user's collection. Informational; the copy is independent. */
   copiedFromId: bigint("copied_from_id", { mode: "number" }),
+  /** Feeds in this collection, kept by a trigger on collection_feeds (drizzle/0029). Explore sorts by it. */
+  feedCount: integer("feed_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   /** One address per collection: /@handle/collections/:slug resolves to exactly one row. */
   uniqueIndex("collections_user_slug_uq").on(t.userId, t.slug),
   index("collections_user_idx").on(t.userId),
+  /** New collections by the people I follow, for Notifications. */
+  index("collections_user_created_idx").on(t.userId, t.createdAt),
   /** Trigram GIN for fuzzy collection-name search (drizzle/0007). */
   index("collections_name_trgm_idx").using("gin", t.name.op("gin_trgm_ops")),
 ]);
@@ -581,6 +619,8 @@ export const bookmarks = pgTable("bookmarks", {
   index("bookmarks_noted_item_idx").on(t.itemId).where(sql`${t.note} is not null`),
   /** Notes written or edited lately: the only ones Notifications reads for @mentions (lib/notifications.ts). */
   index("bookmarks_noted_updated_idx").on(t.noteUpdatedAt).where(sql`${t.note} is not null`),
+  /** Notes written lately, by when they were first written: notes on posts I saved, in Notifications. */
+  index("bookmarks_noted_created_idx").on(t.noteCreatedAt).where(sql`${t.note} is not null`),
 ]);
 
 /**

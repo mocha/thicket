@@ -3,7 +3,8 @@
  * scheduler hands out. Safe to call directly (manual refresh, seeding).
  */
 import { eq, sql } from "drizzle-orm";
-import { db, schema } from "../db/client.js";
+// Background work: the worker pool, so fetching never takes a request's connection (db/client.ts).
+import { workerDb as db, schema } from "../db/client.js";
 import { httpGet } from "./http.js";
 import { parseFeedDocument, type ParsedFeed } from "./parse.js";
 import { ICON_RECHECK_MS, refreshIcon } from "./icons.js";
@@ -85,7 +86,7 @@ export async function storeItems(feedId: number, parsed: ParsedFeed, opts: { fir
   /**
    * A post we already hold can come back carrying something we never stored:
    * a body (YouTube descriptions before 2026-09-15), categories (before
-   * 2026-10-11), or anything the parser learns to read later. Fill those gaps;
+   * issue #189), or anything the parser learns to read later. Fill those gaps;
    * never overwrite what we have. `xmax = 0` is how Postgres tells a fresh
    * insert from that fill, so only real arrivals count as new.
    */

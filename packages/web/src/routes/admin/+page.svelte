@@ -274,11 +274,10 @@
   fieldset + fieldset { margin-top: var(--space-4); }
   legend { font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); padding: 0; margin-bottom: var(--space-2); }
   .radio { display: flex; align-items: flex-start; gap: var(--space-3); cursor: pointer; }
-  .radio input { margin-top: var(--space-1); width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .radio input { margin-top: 3px; }
   /* The ring these used to borrow from the instance-name box, now said
      outright. A dial isn't typed into, so it only counts as keyboard focus
      when you actually tabbed to it. */
-  .radio input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radio span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .radio small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }

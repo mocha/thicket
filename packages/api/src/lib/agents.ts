@@ -39,6 +39,7 @@ export const DATA_FOR: Page[] = [
     { api: "/api/profiles/:handle/activity", about: "recent activity" },
   ] },
   { page: "/explore", pattern: /^\/explore\/?$/, data: [
+    { api: "/api/search?scope=posts", about: "the newest posts on the instance, where Explore opens" },
     { api: "/api/explore/collections", about: "shared collections" },
     { api: "/api/explore/users", about: "people with public profiles" },
   ] },
@@ -108,6 +109,6 @@ Public things (profiles that are shared publicly, their shared collections and b
 Each page of the web app at ${publicUrl} is built from these endpoints. Pages also link to their data with \`<link rel="alternate" type="application/json">\`.
 
 ${pages.join("\n")}
-- Search: \`/api/search?q=…\` (feeds, collections, posts and people)
+- Search: \`/api/search?q=…&scope=…\`, one kind per request: posts (the default), feeds, collections or people
 `;
 }

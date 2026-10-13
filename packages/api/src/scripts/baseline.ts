@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
-import { db, pool } from "../db/client.js";
+import { db, endPools } from "../db/client.js";
 import { MIGRATIONS_DIR } from "../db/migrations.js";
 
 const journal = JSON.parse(readFileSync(join(MIGRATIONS_DIR, "meta", "_journal.json"), "utf8")) as { entries: { idx: number; when: number; tag: string }[] };
@@ -28,4 +28,4 @@ if (existing.rows[0].n > 0) {
   await db.execute(sql`insert into drizzle.__drizzle_migrations (hash, created_at) values (${hash}, ${first.when})`);
   console.log(`baselined at ${first.tag}`);
 }
-await pool.end();
+await endPools();

@@ -12,6 +12,7 @@
   import { onMount } from 'svelte';
   import Button from '$lib/components/Button.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import FiltersBox from '$lib/components/FiltersBox.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import Banner from '$lib/components/Banner.svelte';
@@ -31,11 +32,23 @@
   import Avatar from '$lib/components/Avatar.svelte';
   import Monogram from '$lib/components/Monogram.svelte';
   import Card from '$lib/components/Card.svelte';
+  import CardMeta from '$lib/components/CardMeta.svelte';
+  import CardFooter from '$lib/components/CardFooter.svelte';
+  import Checkbox from '$lib/components/Checkbox.svelte';
+  import FeedRow from '$lib/components/FeedRow.svelte';
+  import PersonRow from '$lib/components/PersonRow.svelte';
+  import CollectionRow from '$lib/components/CollectionRow.svelte';
   import NoteBlock from '$lib/components/NoteBlock.svelte';
   import SettingRow from '$lib/components/SettingRow.svelte';
   import Sheet from '$lib/components/Sheet.svelte';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import { showToast } from '$lib/toast.svelte';
+  /** The content card sample's post went up two hours ago. */
+  const demoPostedAt = new Date(Date.now() - 2 * 3600_000).toISOString();
+  /** Made-up rows for the List row entry. */
+  const demoFeed = { id: -1, url: 'https://daringfireball.net/feeds/main', siteUrl: 'https://daringfireball.net', title: 'Daring Fireball', slug: 'daring-fireball', hasIcon: false, description: 'By John Gruber, on Apple, technology, and design.', lastItemAt: new Date(Date.now() - 3 * 3600_000).toISOString(), myCollectionIds: [] };
+  const demoPerson = { handle: 'maya', displayName: 'Maya Chen', bio: 'Design engineer. Collects thoughtful writing about the craft of the web.', avatarUpdatedAt: null };
+  const demoSample = [{ id: -2, title: 'Aeon', hasIcon: false }, { id: -3, title: 'Low Tech Magazine', hasIcon: false }, { id: -4, title: 'Robin Sloan', hasIcon: false }];
 
   // Sample notes for the Note entry, after your own: one by someone with a display name, one by someone without.
   const day = 86_400_000;
@@ -213,13 +226,16 @@
         { id: 'breadcrumb', label: 'Breadcrumb' },
         { id: 'button', label: 'Button' },
         { id: 'card', label: 'Card' },
+        { id: 'checkbox', label: 'Checkbox' },
         { id: 'choice-group', label: 'Choice group' },
         { id: 'dot', label: 'Dot' },
         { id: 'empty-note', label: 'Empty note' },
         { id: 'field', label: 'Field' },
+        { id: 'filters-box', label: 'Filters box' },
         { id: 'follow-button', label: 'Follow button' },
         { id: 'icon-button', label: 'Icon button' },
         { id: 'input', label: 'Input' },
+        { id: 'list-row', label: 'List row' },
         { id: 'monogram', label: 'Monogram' },
         { id: 'note', label: 'Note' },
         { id: 'page-header', label: 'Page header' },
@@ -463,11 +479,13 @@
 
     <section class="entry" id="badge" aria-labelledby="badge-h">
       <h3 class="entry-h" id="badge-h">Badge</h3>
-      <p class="section-lede">A short status word or a count that rides alongside something else. Never something you press.</p>
+      <p class="section-lede">A short status word or a count that rides alongside something else. Never something you press. A gray outline for a label or a count, filled green for an unread count in the menus, soft green for “New” on a post or a collection’s “30 new”, soft red for something wrong, like a feed that’s failing.</p>
       <div class="row">
         <Badge>Private</Badge>
         <Badge>12</Badge>
         <Badge tone="accent">3 new</Badge>
+        <Badge tone="soft">New</Badge>
+        <Badge tone="danger">Failing</Badge>
         <span class="dot-demo">New<Badge variant="dot" title="Something new" /></span>
       </div>
     </section>
@@ -523,21 +541,40 @@
       <p class="section-lede">The one box lifted off the page: the card color, the rounded corner, and the soft shadow. On Crisp and Black and white, which have no shadow, a thin outline draws the edge instead. Every card is one of three kinds, and cards of the same kind look the same on every screen. The space inside a card belongs to the card; the space around it belongs to the screen.</p>
 
       <h4 class="sub">Content card</h4>
-      <p class="section-lede">One post, bookmark, or starter pack. The whole card is something to tap, so it gives a little when pressed. Its picture can run to the edge; the words sit 16px in.</p>
+      <p class="section-lede">One post, bookmark, or starter pack. The whole card is something to tap, so it gives a little when pressed. The article card, the Bookmark card, and the starter pack card are laid out the same way, top to bottom:</p>
+      <ul class="section-lede demo-list">
+        <li><strong>Source line.</strong> The site’s icon, its name, and when the post went up: the shared source line, the same on every card. A starter pack shows a row of its sites’ icons in place of one, then whose it is and how many sites.</li>
+        <li><strong>Picture.</strong> Wide, across the top of the card from edge to edge, on the article card and the Bookmark card alike. On the Pages layout, where every card is one height, it’s a small picture at the right of the title instead.</li>
+        <li><strong>Title, then summary.</strong> The title in the headings face; the summary in the reading face, stopping after a few lines. The words sit 16px in.</li>
+        <li><strong>Bottom row.</strong> Who wrote it, or when it was bookmarked, on the left (“Bookmarked by Priya Nair 3h” where whose it is isn’t plain from the page, as in Notifications); what you can do on the right, as icon buttons (Add a note, Bookmark, or Remove): the shared card footer. A starter pack’s Copy button sits here too. Nothing floats in a corner or sits in the top line.</li>
+        <li><strong>New.</strong> A small New beside the site name for something you haven’t seen yet: an unread post in New posts, a new notification.</li>
+        <li><strong>Searched words.</strong> On a search’s results, the words that matched are tinted in the title and the summary, the same way on every card.</li>
+      </ul>
       <div class="stack">
-        <Card as="div">
-          <h3 class="card-title">A post’s title, in the headings face</h3>
-          <p class="card-summary">The summary under it, in the reading face, stopping after three lines.</p>
+        <Card as="div" pad={false}>
+          <div class="demo-content">
+            <div><CardMeta feedId={null} name="Site name" when={demoPostedAt} /></div>
+            <div class="demo-picture" aria-hidden="true"></div>
+            <h3 class="card-title">A post’s title, in the headings face</h3>
+            <p class="card-summary">The summary under it, in the reading face, stopping after a few lines.</p>
+            <CardFooter>
+              <span>Author or “Bookmarked 5d”</span>
+              {#snippet actions()}
+                <IconButton icon="note" label="Add a note" title="Add a note" />
+                <IconButton icon="bookmark" label="Bookmark" title="Bookmark" />
+              {/snippet}
+            </CardFooter>
+          </div>
         </Card>
       </div>
 
       <h4 class="sub">List card</h4>
-      <p class="section-lede">Rows, one under another: Activity, a collection’s feeds, Explore’s results, Notifications. The card has no space inside of its own; each row sets itself 16px in from the edge.</p>
+      <p class="section-lede">Rows, one under another: Activity, a collection’s feeds, Explore’s results, Notifications. The card has no space inside of its own; each row sets itself 16px in from the edge. The rows themselves are a <a href="#list-row">List row</a>.</p>
       <div class="stack">
-        <Card kind="list" as="ul">
-          <li class="demo-row">The first row</li>
-          <li class="demo-row">The second row</li>
-          <li class="demo-row">The third row</li>
+        <Card kind="list" as="ul" class="list-rows">
+          <li class="row-event">The first row</li>
+          <li class="row-event">The second row</li>
+          <li class="row-event">The third row</li>
         </Card>
       </div>
 
@@ -558,6 +595,18 @@
             <Button variant="danger" size="sm">Revoke</Button>
           </div>
         </Card>
+      </div>
+    </section>
+
+    <section class="entry" id="checkbox" aria-labelledby="checkbox-h">
+      <h3 class="entry-h" id="checkbox-h">Checkbox</h3>
+      <p class="section-lede">Drawn by thicket, not the browser, so it looks the same in Chrome, Safari, and Firefox: a 16px box with softly rounded corners, outlined like a text field, filled with the accent and a check once ticked. 16px is the height of a line of body text, so a box sits evenly beside its label. It is still a real checkbox underneath, for the keyboard and screen readers. The option button (pick one of a few) is its round partner, drawn the same way, with an accent ring and dot. A screen only lines either one up with its label. Settings, Admin, Manage collection, Manage feed, the Add a feed sheet, Send feedback, and Import use them.</p>
+      <div class="stack">
+        <label class="demo-check"><Checkbox checked /> Checked</label>
+        <label class="demo-check"><Checkbox /> Not checked</label>
+        <label class="demo-check"><Checkbox checked disabled /> Checked, and can’t be changed</label>
+        <label class="demo-check"><input type="radio" name="demo-option" checked /> An option button, chosen</label>
+        <label class="demo-check"><input type="radio" name="demo-option" /> An option button</label>
       </div>
     </section>
 
@@ -608,9 +657,15 @@
       </div>
     </section>
 
+    <section class="entry" id="filters-box" aria-labelledby="filters-box-h">
+      <h3 class="entry-h" id="filters-box-h">Filters box</h3>
+      <p class="section-lede">A list’s filters, folded into one box that says what’s chosen and opens the choices in a Sheet, so they never push the list down. It wears the dropdown’s outline and caret so it reads as something to press. What’s chosen is short phrases joined by dots; a long summary breaks at the dots. Explore uses it as Filters for its dropdowns; Notifications names it Notification settings, for which kinds you get.</p>
+      <FiltersBox summary={['Every kind', 'Mentions from everyone']} onclick={() => {}} />
+    </section>
+
     <section class="entry" id="follow-button" aria-labelledby="follow-button-h">
       <h3 class="entry-h" id="follow-button-h">Follow button</h3>
-      <p class="section-lede">Follow for a person: one tap, a green outline, tinted green once you follow. It has the same look as a feed’s Follow, which also asks which collection the feed goes in. Signed out, it’s a link that goes to sign in first.</p>
+      <p class="section-lede">Follow for a person: one tap. It’s the small Button, in the plain ghost look until you follow, then the pale green secondary look: green means you have it, as on the bookmark icon. A feed’s Follow and a post’s Bookmark on Explore use the same two looks; a feed’s Follow also asks which collection the feed goes in. Signed out, it’s a link that goes to sign in first.</p>
       <div class="row"><FollowButton onclick={() => {}} /><FollowButton following onclick={() => {}} /></div>
     </section>
 
@@ -657,6 +712,41 @@
       </div>
     </section>
 
+    <section class="entry" id="list-row" aria-labelledby="list-row-h">
+      <h3 class="entry-h" id="list-row-h">List row</h3>
+      <p class="section-lede">Every list of rows, on a list card or in a Sheet, is laid out the same way: 12px above and below each row, its text 16px in from the card’s edge, and a thin line between rows but none above the first. A Button on a row is the small size, and sits as far in from the right edge as the text does from the left. There are two kinds of row.</p>
+
+      <h4 class="sub">A row for one thing</h4>
+      <p class="section-lede">A feed, a person, a collection, or a post: something you can open. A 40px picture leads (a feed’s icon, a person’s picture, or for a collection a few of its feeds’ icons, overlapped), then the name in 16px bold, with the details under it in 14px gray. Used on Explore, a collection’s feeds, Collections, and the people someone follows. Import’s review list uses the same spacing and text, with each feed’s icon (its initial, for a feed thicket hasn’t saved).</p>
+      <p class="section-lede">A feed is always the one Feed row, wherever feeds are listed: its name (with a Failing badge when its checks fail) and its site under it in dark, then its description, close under the site, and the facts about it (how often it posts, its latest post, its followers) in gray. Its icon, name, and site are their own piece, FeedLine, which the Import review uses for feeds thicket hasn’t saved yet, with their status at the right end instead of Follow.</p>
+      <p class="section-lede">A person is always the one Person row, the same way: their name with their @handle beside it in gray, as a note names its writer (Priya Nair (@priya)), then their bio, close under the name, and the facts about them (feeds, public collections) in gray, with Follow at the right where the screen offers it. When a search finds you, your own row has a soft “It’s you!” Badge there instead, since there’s no following yourself.</p>
+      <p class="section-lede">A collection is always the one Collection row: its name with any badges after it (Yours, Copied, who can see it, how many new posts) and “by” whose it is under it in dark, then its description, close under the name, and how many feeds it holds in gray, ending in an arrow since the whole row opens it. On a search, the line saying why it was found comes last, in green, the same as on feed and person rows.</p>
+      <div class="stack">
+        <!-- The real rows, with made-up data, so this entry can't drift from the app. -->
+        <Card kind="list" as="ul" class="list-rows">
+          <FeedRow feed={demoFeed} failing postsLast30d={60} follow={false} />
+          <PersonRow person={demoPerson} feeds={7} collections={2} following onfollow={() => {}} />
+          <PersonRow person={{ ...demoPerson, handle: 'you', displayName: 'You' }} feeds={12} collections={3} me />
+          <CollectionRow href="#list-row" name="Small Web" description="A sample of the Kagi Small Web list." feedCount={32} owner="Christie" sample={demoSample}>
+            {#snippet badges()}<Badge tone="soft">36 new</Badge>{/snippet}
+          </CollectionRow>
+        </Card>
+      </div>
+
+      <h4 class="sub">A row for something that happened</h4>
+      <p class="section-lede">Activity and Notifications: one 14px sentence saying who did what, with the names and titles in bold and when at the end. A long title trails off rather than wrapping. A mention on Notifications also shows the post under its sentence, flat, with no card of its own.</p>
+      <div class="stack">
+        <Card kind="list" as="div">
+          <ul class="list-rows">
+            <li class="row-event"><strong class="demo-strong">@maya</strong> started following you <span class="demo-when">2h</span></li>
+            <li class="row-event">Added 3 feeds to <strong class="demo-strong">Small Web</strong> <span class="demo-when">1d</span></li>
+          </ul>
+          <button class="row-more" onclick={() => {}}>Show more</button>
+        </Card>
+      </div>
+      <p class="section-lede">More rows (Show more, See all 12) is one line of accent words under the last row, spaced like a row.</p>
+    </section>
+
     <section class="entry" id="monogram" aria-labelledby="monogram-h">
       <h3 class="entry-h" id="monogram-h">Monogram</h3>
       <p class="section-lede">A source with no icon gets a monogram. It is drawn here too, so nothing depends on a service that could go away.</p>
@@ -669,7 +759,7 @@
 
     <section class="entry" id="note" aria-labelledby="note-h">
       <h3 class="entry-h" id="note-h">Note</h3>
-      <p class="section-lede">A note sits under its post, on whatever the post sits on. A band in the line color runs down the left of the notes, and the line above each note runs from the band and stops short of the card’s right side. It opens with the writer’s picture, name and handle, which go to their profile, and the date underneath. Someone with no display name shows their handle once. Your own note looks the same, with Edit note at the right. Three lines show, then Show more.</p>
+      <p class="section-lede">A note sits under its post, on whatever the post sits on. A band in the line color runs down the left of the notes, and the line above each note runs from the band and stops short of the card’s right side. It opens with the writer’s picture, name and handle, which go to their profile, and the date underneath. Someone with no display name shows their handle once. Your own note looks the same, with Edit note at the right. Three lines show, then Show more. Where a note mentions you, your @name is highlighted, the same as a search match.</p>
       <Card as="div" pad={false}>
         <p class="demo-post">The post’s title and summary sit up here.</p>
         <NoteBlock note={{ id: -3, body: 'Worth a second read for the ending.', createdAt: ago(1), updatedAt: ago(1), author: { handle: 'alan', displayName: 'Alan Turing', avatarUpdatedAt: null } }} mine onedit={() => showToast('Edit opens the note’s editor')} />
@@ -855,9 +945,14 @@
      short of the top when jumped to, so the jump menu doesn't cover the heading. */
   .group, .entry { scroll-margin-top: calc(var(--space-6) + var(--space-6)); }
   .group { margin: calc(var(--space-6) + var(--space-5)) 0 0; padding-top: var(--space-4); border-top: 2px solid var(--text); }
-  .demo-row { padding: var(--space-3) var(--card-pad); border-top: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .demo-row:first-child { border-top: 0; }
+  .demo-strong { color: var(--text); font-weight: 600; }
+  .demo-when { float: right; }
   .demo-inline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+  .demo-list { display: flex; flex-direction: column; gap: var(--space-2); padding-left: 1.2em; }
+  /* A sketch of the content card's parts, at its real insets; the live cards are on any feed. */
+  .demo-content { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) 0 var(--space-2); }
+  .demo-content > :not(.demo-picture) { margin-inline: var(--card-pad); }
+  .demo-picture { aspect-ratio: 16 / 9; background: var(--surface-2); }
   .demo-inline :global(.demo-grow) { flex: 1 1 12rem; min-width: 0; }
   .demo-invite { margin-top: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; }
   .demo-post { margin: 0; padding: var(--card-pad); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
@@ -958,4 +1053,5 @@
   .ds-foot a { color: var(--accent); font-weight: 600; }
   .ds-foot a:hover { text-decoration: underline; }
   .setting-rows { max-width: 520px; }
+  .demo-check { display: flex; align-items: center; gap: var(--space-2); }
 </style>
