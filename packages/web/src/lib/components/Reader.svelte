@@ -25,6 +25,7 @@
   import { session } from '$lib/session.svelte';
   import { display } from '$lib/display.svelte';
   import { scrollBehavior } from '$lib/motion';
+  import { hidePixelImages, isPixel } from '$lib/pixel';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let scroller = $state<HTMLElement | null>(null);
@@ -204,11 +205,11 @@
             <time datetime={item.publishedAt} title={new Date(item.publishedAt).toLocaleString()}>{new Date(item.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</time>
           </p>
 
-          {#if showHero}<img class="hero" src={item.imageUrl} alt="" referrerpolicy="no-referrer" />{/if}
+          {#if showHero}<img class="hero" src={item.imageUrl} alt="" referrerpolicy="no-referrer" onload={(e) => ((e.currentTarget as HTMLImageElement).hidden = isPixel(e))} />{/if}
 
           {#if content}
             {#if content.html.trim()}
-              <div class="body">{@html content.html}</div>
+              <div class="body" use:hidePixelImages>{@html content.html}</div>
             {:else}
               <p class="nobody">This site didn’t send the post’s text, only its title.</p>
             {/if}

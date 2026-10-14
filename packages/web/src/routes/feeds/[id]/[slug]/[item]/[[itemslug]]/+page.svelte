@@ -29,6 +29,7 @@
   import NoteEditor from '$lib/components/NoteEditor.svelte';
   import NoteBlock from '$lib/components/NoteBlock.svelte';
   import ReadOnSiteLink from '$lib/components/ReadOnSiteLink.svelte';
+  import { isPixel } from '$lib/pixel';
 
   const itemId = $derived(Number(page.params.item));
   let item = $state<RiverItem | null>(null);
@@ -107,7 +108,7 @@
     {#snippet postActions()}<ItemActions item={item!} noteOpen={editing} onnote={noteButton} via="post" />{/snippet}
 
     {#if item.imageUrl && !imgFailed}
-      <img class="hero" src={item.imageUrl} alt="" referrerpolicy="no-referrer" onerror={() => (imgFailed = true)} />
+      <img class="hero" src={item.imageUrl} alt="" referrerpolicy="no-referrer" onload={(e) => { if (isPixel(e)) imgFailed = true; }} onerror={() => (imgFailed = true)} />
     {/if}
 
     {#if item.summary && item.summary !== item.title}<p class="summary">{item.summary}</p>{/if}

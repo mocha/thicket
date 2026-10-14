@@ -17,6 +17,7 @@
   import { openReader, readsInline } from '$lib/reader.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { startsMidway } from '$lib/words';
+  import { isPixel } from '$lib/pixel';
 
   /**
    * `compact`: the paged layout's fixed-height card. Thumbnail beside the text, two lines each, notes counted rather than shown.
@@ -111,7 +112,7 @@
   </header>
   <a class="link" class:compact class:above-row={hasFooter} href={webHref(item.url) ?? webHref(item.siteUrl) ?? '#'} target="_blank" rel="noopener" onclick={opened} onauxclick={opened}>
     {#if item.imageUrl && !imgFailed}
-      <img class="hero" src={item.imageUrl} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror={() => (imgFailed = true)} />
+      <img class="hero" src={item.imageUrl} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onload={(e) => { if (isPixel(e)) imgFailed = true; }} onerror={() => (imgFailed = true)} />
     {/if}
     <h3 class="card-title" class:tight={compact}>{#if marks?.title}<Marked text={noOrphan(marks.title)} />{:else}{noOrphan(item.title ?? item.summary ?? item.url)}{/if}</h3>
     {#if marks?.summary}
