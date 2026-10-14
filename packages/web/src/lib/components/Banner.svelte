@@ -13,13 +13,16 @@
    * send you somewhere, so the text under it needn't say "go here" again.
    * The title can instead be a snippet, for a title where only a name in it
    * is the link ("You made <a>Design inspiration</a> from this collection").
+   * `actions` puts buttons on a row under the words: the fix the banner calls
+   * for, and at most a quiet way out beside it (a feed's Manage page: Change
+   * address, Remove from thicket).
    * A dismissible banner shows ✕ and calls `ondismiss`. Remembering the
    * dismissal is the caller's job, because only the caller knows what should
    * bring the banner back.
    */
   type Tone = 'error' | 'warning' | 'info' | 'success';
-  let { tone = 'info', title, href, dismissible = false, ondismiss, children }: {
-    tone?: Tone; title?: string | Snippet; href?: string; dismissible?: boolean; ondismiss?: () => void; children?: Snippet;
+  let { tone = 'info', title, href, dismissible = false, ondismiss, children, actions }: {
+    tone?: Tone; title?: string | Snippet; href?: string; dismissible?: boolean; ondismiss?: () => void; children?: Snippet; actions?: Snippet;
   } = $props();
 </script>
 
@@ -39,6 +42,7 @@
     {#if typeof title === 'function'}<p class="title">{@render title()}</p>
     {:else if title}<p class="title">{#if href}<a class="tap" {href}>{title}</a>{:else}{title}{/if}</p>{/if}
     {#if children}<div class="text">{@render children()}</div>{/if}
+    {#if actions}<div class="actions">{@render actions()}</div>{/if}
   </div>
   {#if dismissible}
     <IconButton class="x" icon="close" size="sm" label="Dismiss" onclick={() => ondismiss?.()} />
@@ -65,6 +69,8 @@
   .body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .title { margin: 0 0 2px; font-weight: 650; }
   .text :global(a), .title :global(a) { color: var(--accent); font-weight: 600; }
+  /* The buttons under the words: left-aligned with them, wrapping on a phone. */
+  .actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin-top: var(--space-3); }
   .title :global(a) { font-weight: inherit; }
   .title :global(a:hover) { text-decoration: underline; }
   /* Pulled flush with the banner's padding so it sits in the corner. Tuned by eye

@@ -17,7 +17,6 @@
   import FollowControl from './FollowControl.svelte';
   import Sheet from './Sheet.svelte';
   import Button from './Button.svelte';
-  import Badge from './Badge.svelte';
   import { session } from '$lib/session.svelte';
   import { site } from '$lib/site.svelte';
   import { untrack } from 'svelte';
@@ -63,7 +62,6 @@
       {#if feed}
         <div class="addr">
           <a class="host tap" href={webHref(feed.siteUrl) ?? webHref(feed.url) ?? '#'} target="_blank" rel="noopener">{feedOrigin(feed)}&nbsp;↗</a>
-          {#if feed.requiresSubscription}<Badge title="Posts from this site are behind a paywall: reading them takes a subscription">Requires subscription</Badge>{/if}
         </div>
       {:else if missing === 'gone'}
         <p class="said">Not on {site.status?.name ?? 'thicket'}</p>
@@ -103,7 +101,6 @@
   .id { display: flex; align-items: flex-start; gap: var(--space-3); }
   .who { flex: 1; min-width: 0; }
   .host { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--accent); font-weight: 600; }
-  /* "Requires subscription" sits beside the address, and drops under it when the line runs out. */
   .addr { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
   .desc { margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: 0; padding: var(--space-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }

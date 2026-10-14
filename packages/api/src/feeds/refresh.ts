@@ -220,7 +220,10 @@ export async function refreshFeed(feedId: number): Promise<RefreshResult> {
       await db.update(schema.feeds).set({ nextFetchAt: afterPause(err.until), updatedAt: new Date() }).where(eq(schema.feeds.id, feedId));
       return { feedId, durationMs: Date.now() - started, status: null, itemsNew: 0, error: null, deferredUntil: err.until, deferredReason: err.message };
     }
-    const message = err instanceof Error ? err.message : String(err);
+    // "fetch failed" alone says nothing; the reason (no such site, refused, a bad certificate) is the cause's code, kept beside it so the Manage page can say which.
+    const code = (err as { cause?: { code?: unknown } } | null)?.cause?.code;
+    const base = err instanceof Error ? err.message : String(err);
+    const message = typeof code === "string" && !base.includes(code) ? `${base} (${code})` : base;
     const failures = feed.consecutiveFailures + 1;
     const status = /^HTTP (\d+)/.exec(message) ? Number(/^HTTP (\d+)/.exec(message)![1]) : null;
     await outcome(status ? `HTTP ${status}` : /timeout|aborted/i.test(message) ? "timeout" : message.slice(0, 60));

@@ -496,7 +496,7 @@
 
     <section class="entry" id="banner" aria-labelledby="banner-h">
       <h3 class="entry-h" id="banner-h">Banner</h3>
-      <p class="section-lede">An inline notice inside a page. The tone sets the color and icon. When a banner's whole point is to send you somewhere, its title is the link, so the text under it doesn't repeat it. When the title names something, only the name is the link.</p>
+      <p class="section-lede">An inline notice inside a page. The tone sets the color and icon. When a banner's whole point is to send you somewhere, its title is the link, so the text under it doesn't repeat it. When the title names something, only the name is the link. A banner that asks for something to be done carries its buttons on a row under the words: the fix it calls for, small, and at most a quiet way out beside it as a link, as on a failing feed’s Manage page.</p>
       <div class="stack">
         <Banner tone="info" title="Heads up">Context, nothing wrong. The quiet one.</Banner>
         <Banner tone="warning" title="Add an email to your account" href="#banner">A title can be the link when the banner exists to send you somewhere.</Banner>
@@ -505,6 +505,13 @@
         <Banner tone="success" title="Saved">Your changes are in.</Banner>
         <Banner tone="warning" title="Check this">Something wants attention soon.</Banner>
         <Banner tone="error" title="That didn't work" dismissible ondismiss={() => {}}>Something failed, and here is why.</Banner>
+        <Banner tone="error" title="This address no longer has a feed">
+          example.com says there’s nothing here. The feed may have moved.
+          {#snippet actions()}
+            <Button size="sm" onclick={() => {}}>Change address</Button>
+            <Button variant="danger" link size="sm" onclick={() => {}}>Remove from thicket</Button>
+          {/snippet}
+        </Banner>
       </div>
     </section>
 
@@ -585,6 +592,7 @@
       <h4 class="sub">Section card</h4>
       <p class="section-lede">A group of settings, or one message standing on its own, like an empty section or who can see a profile tab. 16px of space inside, and nothing in it is cut off at the edge, so a menu or a focus ring can reach past it. It opens with a 21px bold heading in the interface face, and often a short 16px gray description tucked under it; Settings, Account, Admin, and Import all use this same pair. Cards on those pages sit 16px apart.</p>
       <p class="section-lede">Buttons on a section card follow one rule. A Button beside a text box is the large size, so it’s as tall as the box, on a touchscreen too. A Button that acts on one row of a list is small. The Button that finishes the card’s form, or is the card’s only action, is the regular size.</p>
+      <p class="section-lede">A section card can list facts as Setting rows, and end in a footer: a line across, a few words of status on the left, and the card’s one action at the right end. That’s the shared card footer’s section version, as in a feed’s About this feed card.</p>
       <div class="stack">
         <Card kind="section" as="section">
           <h4 class="section-title">Invite links</h4>
@@ -598,6 +606,17 @@
             <Button size="sm">Copy link</Button>
             <Button variant="danger" size="sm">Revoke</Button>
           </div>
+        </Card>
+        <Card kind="section" as="section">
+          <h4 class="section-title">About this feed</h4>
+          <div>
+            <SettingRow label="Followers" value="12" />
+            <SettingRow label="Newest post" value="Today, 3:45 PM" />
+          </div>
+          <CardFooter section>
+            <span>Last checked 3 minutes ago · next at 4:55 PM</span>
+            {#snippet actions()}<Button onclick={() => {}}>Check again now</Button>{/snippet}
+          </CardFooter>
         </Card>
       </div>
     </section>

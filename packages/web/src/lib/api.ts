@@ -72,8 +72,6 @@ export type Feed = {
   isYouTube: boolean;
   /** Posts from the last 30 days that appear to repeat an earlier post from this feed. */
   repeatsLast30d: number;
-  /** The site's posts are behind a paywall, as marked by an admin. Shown beside the feed's address. */
-  requiresSubscription: boolean;
   /** Conditional-GET state, shown on the settings page for diagnosing a feed. */
   etag: string | null; lastModified: string | null;
 };
@@ -499,6 +497,19 @@ export const authApi = {
 /** The address of a person's profile picture. `v` (their avatarUpdatedAt) busts the cache when they change it. */
 export const avatarUrl = (handle: string, v?: string | null) => `/api/users/${encodeURIComponent(handle)}/avatar${v ? `?v=${encodeURIComponent(v)}` : ''}`;
 
+export const ADMIN_FEED_SORTS = ['followers', 'posts', 'failures', 'lastPost', 'title'] as const;
+export type AdminFeedSort = (typeof ADMIN_FEED_SORTS)[number];
+/** One row of the admin feed list. */
+export type AdminFeed = {
+  id: number; url: string; siteUrl: string | null; title: string | null; slug: string; hasIcon: boolean;
+  followerCount: number; posts30d: number; lastFetchedAt: string | null; lastItemAt: string | null; consecutiveFailures: number;
+};
+export type AdminFeedPage = { feeds: AdminFeed[]; total: number; page: number; per: number; sort: AdminFeedSort; dir: 'asc' | 'desc'; brokenAfter: number };
+export type AdminFetch = { at: string; status: number | null; durationMs: number | null; itemsNew: number | null; error: string | null };
+export type FeedMove =
+  | { status: 'moved'; feedId: number; url: string; fetch: { status: number | null; itemsNew: number; error: string | null } }
+  | { status: 'merged'; feedId: number }
+  | { status: 'choose'; candidates: { url: string; title: string | null; kind: string | null; note?: string | null }[] };
 export type AdminUser = {
   id: number; handle: string; displayName: string | null; isAdmin: boolean; profileVisibility: 'public' | 'private';
   createdAt: string; lastSeenAt: string | null; following: number; collections: number; bookmarks: number; invitedBy: string | null;
@@ -533,8 +544,18 @@ export const adminApi = {
   feedCategories: (id: number) => j<FeedCategories>(`/api/admin/feeds/${id}/categories`),
   /** The categories one post was filed under. Admins only, for now. */
   itemCategories: (id: number) => j<{ categories: string[] }>(`/api/admin/items/${id}/categories`),
-  /** Mark a feed's posts as paywalled, for everyone. */
-  setRequiresSubscription: (id: number, requiresSubscription: boolean) => j<{ id: number; requiresSubscription: boolean }>(`/api/admin/feeds/${id}`, { method: 'PATCH', body: JSON.stringify({ requiresSubscription }) }),
+  /** Retitle a feed for everyone; null hands the title back to the feed's own on its next check. */
+  setFeedTitle: (id: number, title: string | null) => j<{ id: number; title: string | null }>(`/api/admin/feeds/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }),
+  /** Every feed in the index, a page at a time, with its health (issue #103). */
+  feeds: (opts: { q?: string; sort?: AdminFeedSort; dir?: 'asc' | 'desc'; page?: number; per?: number } = {}) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(opts)) if (v !== undefined && v !== '') q.set(k, String(v));
+    return j<AdminFeedPage>(`/api/admin/feeds?${q}`);
+  },
+  /** One feed's checks over the last couple of weeks, newest first. */
+  feedFetches: (id: number) => j<{ fetches: AdminFetch[]; windowDays: number }>(`/api/admin/feeds/${id}/fetches`),
+  /** Point a feed at a new address, folding it into the feed already there if there is one. */
+  moveFeed: (id: number, url: string) => j<FeedMove>(`/api/admin/feeds/${id}/address`, { method: 'POST', body: JSON.stringify({ url }) }),
   settings: () => j<InstanceStatus & { signupsStored: SignupPolicy | null; signupsDefault: SignupPolicy }>('/api/admin/settings'),
   update: (patch: { signups?: SignupPolicy; name?: string; visitorLimit?: boolean }) => j<InstanceStatus>('/api/admin/settings', { method: 'PATCH', body: JSON.stringify(patch) }),
   invites: () => j<{ invites: Invite[] }>('/api/admin/invites'),
