@@ -6,7 +6,7 @@
  * first device: a new account's first setup, or the first device an account
  * from before this change opens. After that only checking the box moves it.
  * Other devices never change on their own: a device only takes the saved
- * copy when it's first set up, and only if asked.
+ * copy when it's first set up.
  *
  * Saving can fail without anything on this device changing, so a failure
  * says why in a message, is written to the browser console for support, and
@@ -68,7 +68,7 @@ export async function saveForNewDevices(via: SaveVia, { quiet = false } = {}): P
   try {
     takeSaved(await authApi.saveDisplay(currentDisplay(), deviceId(), via === 'sync' ? 'sync' : via === 'first-device' ? 'first' : undefined));
     if (via !== 'sync') api.event('display_saved', { via });
-    if (!quiet) showToast('Saved. New devices will offer these settings');
+    if (!quiet) showToast('Saved. New devices will use these settings');
     return true;
   } catch (e) {
     const reason = failed(via, e);

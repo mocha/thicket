@@ -306,7 +306,7 @@ export function useDisplay(saved: unknown) {
   apply();
 }
 
-/** One line per display setting, saying what it's set to, for the setup list and the saved-settings offer. */
+/** One line per display setting, saying what it's set to, for the setup list. */
 export function describeDisplay(d: Display): { key: 'appearance' | 'theme' | 'fonts' | 'reading' | 'layout' | 'fresh'; label: string; value: string }[] {
   const label = <T extends string>(list: { id: T; label: string }[], id: T) => list.find((x) => x.id === id)?.label ?? id;
   const face = (f: Family) => (f === 'dyslexic' ? 'OpenDyslexic' : f === 'serif' ? 'serif' : 'sans');
@@ -322,7 +322,7 @@ export function describeDisplay(d: Display): { key: 'appearance' | 'theme' | 'fo
     { key: 'fonts', label: 'Fonts', value: fonts[0].toUpperCase() + fonts.slice(1) },
     { key: 'reading', label: 'Opening a post', value: label(READING_MODES, d.reading) },
     { key: 'layout', label: 'Scrolling or pages', value: label(LAYOUTS, d.layout) },
-    { key: 'fresh', label: 'Unread posts', value: d.fresh ? 'On' : 'Off' }
+    { key: 'fresh', label: 'Unread posts', value: d.fresh ? 'Enabled' : 'Disabled' }
   ];
 }
 
@@ -332,6 +332,6 @@ function snapshot(): Display {
 }
 
 export const FRESH_OPTIONS: { id: 'on' | 'off'; label: string; note: string }[] = [
-  { id: 'off', label: 'Off', note: 'Don’t show a count of new posts in the sidebar.' },
-  { id: 'on', label: 'On', note: 'Show a count of new posts in the sidebar.' }
+  { id: 'off', label: 'Disabled', note: 'Don’t show a count of new posts in the sidebar.' },
+  { id: 'on', label: 'Enabled', note: 'Show a count of new posts in the sidebar.' }
 ];

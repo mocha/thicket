@@ -105,7 +105,7 @@
   h2, .custom :global(h2) { margin: 0; font-size: calc(var(--text-xl) * var(--size-headings)); font-family: var(--font-headings); line-height: 1.2; overflow-wrap: break-word; }
   /* Pulled up against the title (4px, where the Sheet's other parts sit 12px apart) so the
      two read as one block. */
-  .lede { margin: calc(-1 * var(--space-2)) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.4; }
+  .lede { margin: calc(-1 * var(--space-2)) 0 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.4; }
   div.lede { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
   div.lede :global(p) { margin: 0; }
   /* Lays out as if the wrapper weren't there; it exists only to be pointed at. */

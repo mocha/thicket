@@ -7,7 +7,6 @@
   import { MENU_ICONS } from '$lib/menu-icons';
   import Monogram from '$lib/components/Monogram.svelte';
   import SceneLoop from './SceneLoop.svelte';
-  import Swap from './Swap.svelte';
 
   const EXPLORE = [
     { site: 'Crumb', readers: '41 readers' },
@@ -36,7 +35,7 @@
         <div class="feed" style:--at="{300 + i * 140}ms">
           <Monogram name={f.site} size={16} />
           <span class="names"><span class="site">{f.site}</span><span class="readers">{f.readers}</span></span>
-          {#if f.follow}<span class="pill on late"><Swap from="Follow" to="Following" at={2900} /></span>{:else}<span class="pill">Follow</span>{/if}
+          {#if f.follow}<span class="change"><span class="pill gone">Follow</span><span class="pill on late">Following</span></span>{:else}<span class="pill">Follow</span>{/if}
         </div>
       {/each}
     </div>
@@ -44,7 +43,7 @@
 </SceneLoop>
 
 <style>
-  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 210px)); gap: var(--space-3); justify-content: center; padding: var(--space-5) var(--space-4) 0; }
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 210px)); gap: var(--space-3); justify-content: center; padding: 0 var(--space-4); }
   .panel { container-type: inline-size; background: var(--surface); border-radius: var(--radius-sm); box-shadow: var(--shadow); border: var(--card-border, 0); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); }
   .head { display: flex; align-items: center; gap: 6px; margin: 0 0 var(--space-1); font-size: 12px; font-weight: 600; color: var(--text); }
   .head svg { color: var(--text-2); }
@@ -67,8 +66,14 @@
   .feed { display: flex; align-items: center; gap: 6px; animation: rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--at) backwards; }
   .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
   .readers { font-size: 10px; color: var(--text-2); }
+  /* Follow becomes Following: each word has its own badge, both ending at the
+     row's right edge, so the gray one matches its neighbors until it's pressed. */
+  .change { margin-left: auto; flex: none; display: inline-grid; justify-items: end; }
+  .change > .pill { grid-area: 1 / 1; margin-left: 0; }
+  .gone { opacity: 0; animation: gone 2900ms steps(1) backwards; }
+  @keyframes gone { from { opacity: 1; } }
   .late { animation: press 260ms ease-out 2900ms backwards; }
-  @keyframes press { from { background: var(--surface-2); color: var(--text-2); transform: scale(0.92); } }
+  @keyframes press { from { opacity: 0; transform: scale(0.92); } }
   /* A phone's narrow panels: the reader counts go, and the result's Following drops under its name. */
   @container (max-width: 200px) {
     .readers { display: none; }

@@ -16,7 +16,7 @@
 
 <SceneLoop round={7500}>
   <div class="wrap">
-    <MiniCard site="Slow Kitchen" time="2 hr" title="Ginger soup in 30 minutes" end={mark}>
+    <MiniCard site="Slow Kitchen" time="2h" title="Ginger soup in 30 minutes" end={mark}>
       <div class="note">
         <p class="who">Your note</p>
         <p class="body"><span class="typed">Made this tonight. More ginger next time.</span></p>
@@ -30,7 +30,7 @@
 </SceneLoop>
 
 <style>
-  .wrap { width: min(360px, 88%); margin: 0 auto; padding-top: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  .wrap { width: min(360px, 88%); margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-3); }
 
   /* The bookmark fills, with a small pop. */
   .wrap :global(.mark) { fill: var(--accent); stroke: var(--accent); animation: fill 360ms cubic-bezier(0.3, 1.6, 0.5, 1) 600ms backwards; }

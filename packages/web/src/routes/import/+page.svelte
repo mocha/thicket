@@ -232,7 +232,7 @@
   {#if imp.error}<p class="bad" role="alert">{imp.error}</p>{/if}
 
   <div class="footer">
-    <Button onclick={startOver} disabled={imp.busy}>Choose a different file</Button>
+    <Button onclick={startOver} disabled={imp.busy}>Upload a different file</Button>
     <Button variant="primary" onclick={() => commitImport(kept)} disabled={imp.busy || imp.checking || !kept.length}>
       {#if imp.busy}Importing…
       {:else if imp.checking}Checking feeds…

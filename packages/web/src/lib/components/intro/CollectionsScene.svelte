@@ -47,7 +47,7 @@
 </SceneLoop>
 
 <style>
-  .wrap { padding: var(--space-5) var(--space-4) 0; display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+  .wrap { padding: 0 var(--space-4); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
   .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 190px)); gap: var(--space-3); width: 100%; justify-content: center; }
 
   /* The collections' frames and names come in once the feeds are mostly sorted. */
