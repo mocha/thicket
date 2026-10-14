@@ -19,7 +19,7 @@
   import SourceIcon from '$lib/components/SourceIcon.svelte';
   import { healthWord } from '$lib/feedhealth';
 
-  let { oncounts }: { oncounts?: (counts: AdminFeedPage['counts']) => void } = $props();
+  let { ontotal }: { ontotal?: (total: number) => void } = $props();
 
   const one = <T extends string>(list: readonly T[], v: string | null): T | undefined => (list as readonly string[]).includes(v ?? '') ? (v as T) : undefined;
 
@@ -52,7 +52,7 @@
     failed = null;
     try {
       const r = await adminApi.feeds({ q, sort, dir, page: 1 });
-      if (ticket === latest) { data = r; if (!q) oncounts?.(r.counts); }
+      if (ticket === latest) { data = r; if (!q) ontotal?.(r.total); }
     } catch (e) {
       if (ticket === latest) failed = e instanceof Error ? e.message : String(e);
     } finally {

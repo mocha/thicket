@@ -38,7 +38,6 @@
   import Sheet from '$lib/components/Sheet.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
   import AdminFeedList from '$lib/components/admin/AdminFeedList.svelte';
-  import type { AdminFeedPage } from '$lib/api';
 
   /** Which tab is open, kept in the address so Back and a shared link land on it. Accounts by default. */
   type Tab = 'accounts' | 'feeds' | 'invites' | 'settings';
@@ -53,7 +52,8 @@
   const when = (iso: string) => { const r = relativeTime(iso); return /^\d+[mhd]$|^just now$/.test(r) ? longAgo(iso) : r; };
 
   const me = $derived(session.user);
-  let feedCounts = $state<AdminFeedPage['counts'] | null>(null);
+  /** How many feeds the index holds, for the Feeds tab's count. */
+  let feedTotal = $state<number | undefined>(undefined);
   let instance = $state<(InstanceStatus & { signupsStored: SignupPolicy | null }) | null>(null);
   let loadError = $state<string | null>(null);
   /** What failed to save, by card, said on that card. */
@@ -136,7 +136,7 @@
   async function load() {
     try {
       const [s, i, u, f, fc] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter(), adminApi.feeds({ per: 1 }).catch(() => null)]);
-      feedCounts = fc?.counts ?? null;
+      feedTotal = fc?.total;
       instance = s; name = s.name; invites = i.invites;
       users = u.users; next = u.next; total = u.total ?? 0; matched = u.matched ?? 0;
       starterSaved = starter = f.handle ?? ''; offered = f.offered; offeredFrom = f.from;
@@ -237,7 +237,7 @@
   // Invites
   const openInvites = $derived(invites.filter((i) => !i.usedAt && (!i.expiresAt || new Date(i.expiresAt).getTime() > Date.now())));
   const inviteName = (inv: Invite) => inv.note ?? 'Invite';
-  const tabs = $derived([{ value: 'accounts', label: 'Accounts', count: total }, { value: 'feeds', label: 'Feeds', count: feedCounts?.all }, { value: 'invites', label: 'Invites', count: openInvites.length }, { value: 'settings', label: 'Site settings' }]);
+  const tabs = $derived([{ value: 'accounts', label: 'Accounts', count: total }, { value: 'feeds', label: 'Feeds', count: feedTotal }, { value: 'invites', label: 'Invites', count: openInvites.length }, { value: 'settings', label: 'Site settings' }]);
   async function mint() {
     if (minting) return;
     minting = true; errors.invites = null;
@@ -360,7 +360,7 @@
   </div>
   <div id="admin-tab" role="tabpanel" aria-label={tabs.find((t) => t.value === tab)?.label}>
   {#if tab === 'feeds'}
-    <AdminFeedList oncounts={(counts) => (feedCounts = counts)} />
+    <AdminFeedList ontotal={(n) => (feedTotal = n)} />
   {:else if tab === 'accounts'}
   <Card kind="section" as="section" class="admin-section" aria-label="Accounts">
     <form role="search" onsubmit={(e) => { e.preventDefault(); clearTimeout(typing); void findAccounts(query.trim()); }}>

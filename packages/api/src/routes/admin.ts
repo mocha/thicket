@@ -190,37 +190,21 @@ function feedIdParam(raw: string): number | null {
   return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
-/** How far back "failed N of M checks" looks: two weeks, or less if the fetch log is pruned sooner. */
+/** How far back a feed's check history goes: two weeks, or less if the fetch log is pruned sooner. */
 export const FAILURE_WINDOW_DAYS = RETAIN_FETCH_LOG_DAYS > 0 ? Math.min(14, RETAIN_FETCH_LOG_DAYS) : 14;
 /** Failed checks in a row before a feed counts as broken rather than having a bad day: with backoff, at least most of a day of failing. */
 export const BROKEN_AFTER = 5;
 
-/**
- * The admin feed list (issue #103). Each filter is a condition on the feed
- * row; "all" is no condition. The counts beside the filters come from the
- * same conditions, so a filter's count is always the length of its list.
- */
-export const ADMIN_FEED_FILTERS = ["all", "failing", "broken", "unfollowed", "unfetched"] as const;
-const FILTER_SQL: Record<(typeof ADMIN_FEED_FILTERS)[number], SQL> = {
-  all: sql`true`,
-  failing: sql`f.consecutive_failures > 0`,
-  broken: sql`f.consecutive_failures >= ${BROKEN_AFTER}`,
-  unfollowed: sql`f.follower_count = 0`,
-  unfetched: sql`f.last_fetched_at is null`,
-};
-/** Every order reads a column on the feed row, so sorting the whole index is cheap; ties go to the most-followed. */
-export const ADMIN_FEED_SORTS = ["followers", "posts", "added", "failures", "lastPost", "checked", "title"] as const;
+/** The admin feed list's orders (issue #103). Each reads a column on the feed row, so sorting the whole index is cheap; ties go to the most-followed. */
+export const ADMIN_FEED_SORTS = ["followers", "posts", "failures", "lastPost", "title"] as const;
 const SORT_SQL: Record<(typeof ADMIN_FEED_SORTS)[number], SQL> = {
   followers: sql`f.follower_count`,
   posts: sql`f.posts_30d`,
-  added: sql`f.created_at`,
   // Grouped as the list's Health column words them (broken, failing, OK); within a group the most-followed come first, below.
   failures: sql`case when f.consecutive_failures >= ${BROKEN_AFTER} then 2 when f.consecutive_failures > 0 then 1 else 0 end`,
   lastPost: sql`f.last_item_at`,
-  checked: sql`f.last_fetched_at`,
   title: sql`lower(coalesce(f.title, f.url))`,
 };
-const filterFrom = oneOf(ADMIN_FEED_FILTERS, "all");
 const sortFrom = oneOf(ADMIN_FEED_SORTS, "followers");
 
 /**
@@ -238,54 +222,33 @@ export function feedSearch(q: string): SQL | null {
 
 /**
  * Every feed in the index, a page at a time, with what an admin needs to judge
- * its health: posts, followers, when it was added, and how its checks have
- * gone, both the current run of failures and the failures among its checks
- * over the last two weeks (from the fetch log). Who added a feed is not
- * recorded anywhere, on purpose.
+ * its health at a glance: followers, posts in the last 30 days, its last post,
+ * and its run of failed checks, which the list words as OK, Failing or Broken.
+ * The detail (errors, the check history) is on the feed's Manage page. Who
+ * added a feed is not recorded anywhere, on purpose.
  */
 admin.get("/feeds", async (c) => {
   await requireAdmin(c);
-  const filter = filterFrom(c.req.query("filter"));
   const sort = sortFrom(c.req.query("sort"));
   // Title reads A to Z; every other order starts with the biggest or newest.
   const dir = c.req.query("dir") === "asc" || c.req.query("dir") === "desc" ? c.req.query("dir")! : sort === "title" ? "asc" : "desc";
   const per = Math.min(500, Math.max(1, Math.trunc(Number(c.req.query("per"))) || 200));
   const page = Math.max(1, Math.trunc(Number(c.req.query("page"))) || 1);
-  const search = feedSearch(c.req.query("q") ?? "");
-  const matched = search ?? sql`true`;
+  const matched = feedSearch(c.req.query("q") ?? "") ?? sql`true`;
 
-  const [counts] = (await db.execute<Record<(typeof ADMIN_FEED_FILTERS)[number], number>>(sql`
-    select count(*)::int as "all",
-           count(*) filter (where ${FILTER_SQL.failing})::int as failing,
-           count(*) filter (where ${FILTER_SQL.broken})::int as broken,
-           count(*) filter (where ${FILTER_SQL.unfollowed})::int as unfollowed,
-           count(*) filter (where ${FILTER_SQL.unfetched})::int as unfetched
-    from feeds f where ${matched}`)).rows;
-
-  // The page's ids are picked first, so the fetch log is read for those rows only, not the whole index.
+  const [{ total }] = (await db.execute<{ total: number }>(sql`select count(*)::int as total from feeds f where ${matched}`)).rows;
   const order = sql`${SORT_SQL[sort]} ${sql.raw(dir)} nulls last, f.follower_count desc, f.id`;
   const rows = await db.execute(sql`
-    with pick as (
-      select f.id, row_number() over (order by ${order}) as n
-      from feeds f where ${matched} and ${FILTER_SQL[filter]}
-      order by n limit ${per} offset ${(page - 1) * per}
-    )
-    select f.id, f.url, f.site_url as "siteUrl", f.title, f.kind, ${feedSlugSql} as slug,
+    select f.id, f.url, f.site_url as "siteUrl", f.title, ${feedSlugSql} as slug,
            exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon",
-           f.item_count as "itemCount", f.follower_count as "followerCount", f.posts_30d as "posts30d",
-           f.created_at as "createdAt", f.last_fetched_at as "lastFetchedAt", f.last_item_at as "lastItemAt",
-           f.consecutive_failures as "consecutiveFailures", f.last_status as "lastStatus", f.last_error as "lastError",
-           h.checks, h.failures
-    from pick join feeds f on f.id = pick.id
-    left join lateral (
-      select count(*)::int as checks, count(*) filter (where l.error is not null)::int as failures
-      from fetch_log l where l.feed_id = f.id and l.at > now() - make_interval(days => ${FAILURE_WINDOW_DAYS})
-    ) h on true
-    order by pick.n`);
+           f.follower_count as "followerCount", f.posts_30d as "posts30d",
+           f.last_fetched_at as "lastFetchedAt", f.last_item_at as "lastItemAt", f.consecutive_failures as "consecutiveFailures"
+    from feeds f where ${matched}
+    order by ${order} limit ${per} offset ${(page - 1) * per}`);
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
   return c.json({
-    feeds: rows.rows.map((r: any) => ({ ...r, id: Number(r.id), createdAt: iso(r.createdAt), lastFetchedAt: iso(r.lastFetchedAt), lastItemAt: iso(r.lastItemAt) })),
-    total: counts[filter], counts, page, per, filter, sort, dir, windowDays: FAILURE_WINDOW_DAYS, brokenAfter: BROKEN_AFTER,
+    feeds: rows.rows.map((r: any) => ({ ...r, id: Number(r.id), lastFetchedAt: iso(r.lastFetchedAt), lastItemAt: iso(r.lastItemAt) })),
+    total, page, per, sort, dir, brokenAfter: BROKEN_AFTER,
   });
 });
 
