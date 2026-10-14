@@ -18,6 +18,7 @@
   import { display } from '$lib/display.svelte';
   import { marks, badge, anyNew, countText } from '$lib/marks.svelte';
   import { notifs, notifText } from '$lib/notifications.svelte';
+  import { untrack } from 'svelte';
   import { navWidth, loadNavWidth, setNavWidth, NAV_W_MIN, NAV_W_MAX, NAV_W_DEFAULT } from '$lib/navwidth.svelte';
 
   /**
@@ -105,7 +106,9 @@
   // The sidebar's right edge is a handle: drag it, or focus it and use the
   // arrow keys, to set how wide the sidebar is. Double-click puts it back.
   // The sidebar starts at the window's left edge, so the pointer's x is the width.
-  $effect(() => { loadNavWidth(); });
+  // Once, on arrival. Untracked: loading reads the width, and a tracked read
+  // would reload the saved width on every drag move and snap the edge back.
+  $effect(() => { untrack(loadNavWidth); });
   let dragging = $state(false);
   function dragStart(e: PointerEvent) {
     if (e.button !== 0) return;
@@ -129,7 +132,7 @@
 
 {#snippet row(c: { id: number; name: string; slug: string })}
   {@const b = fresh ? badge(marks.byId[c.id]) : { kind: 'none' as const }}
-  <a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined} class:new={b.kind !== 'none'}><span class="name">{c.name}</span>{#if b.kind === 'count'}<Badge tone="accent">{b.text}</Badge>{/if}</a>
+  <a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined} class:new={b.kind !== 'none'}><span class="name">{c.name}</span>{#if b.kind === 'count'}<Badge tone="soft">{b.text}</Badge>{/if}</a>
 {/snippet}
 
 {#snippet icon(d: string)}
@@ -152,7 +155,7 @@
     </li>
     <li class="collections">
       <!-- New posts: every post you follow, its own item now — the job the old italic "All collections" row did. -->
-      <a class="readall" href="/new-posts" aria-current={here === '/new-posts' ? 'page' : undefined}>{@render icon(icons.everything)}<span>New posts</span>{#if fresh && rootMark?.count}<Badge tone="accent" class="tail">{countText(rootMark)}</Badge>{/if}</a>
+      <a class="readall" href="/new-posts" aria-current={here === '/new-posts' ? 'page' : undefined}>{@render icon(icons.everything)}<span>New posts</span>{#if fresh && rootMark?.count}<Badge tone="soft" class="tail">{countText(rootMark)}</Badge>{/if}</a>
       <!-- My collections: a group you can fold away. Your collections sit under it.
            The word opens the Collections screen (the same one the bottom bar's
            tab opens on a phone); the caret beside it folds the list. -->
@@ -225,7 +228,7 @@
   {#if me}
     <div class="account">
       <!-- Notifications belong to you, not to your reading, so they sit with your account rather than in the list above. On a phone the bottom bar is full: they're in the You menu, and the You tab carries the dot. -->
-      <a class="notifrow" href="/notifications" aria-current={current('/notifications') ? 'page' : undefined}><span class="slot">{@render icon(icons.notifications)}</span><span class="label">Notifications</span>{#if notifText()}<Badge tone="accent" class="tail" aria-label="{notifText()} new">{notifText()}</Badge>{/if}</a>
+      <a class="notifrow" href="/notifications" aria-current={current('/notifications') ? 'page' : undefined}><span class="slot">{@render icon(icons.notifications)}</span><span class="label">Notifications</span>{#if notifText()}<Badge tone="soft" class="tail" aria-label="{notifText()} new">{notifText()}</Badge>{/if}</a>
       <div class="split" role="presentation"></div>
       <button type="button" class="who" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}>
         <Avatar handle={me.handle} name={me.displayName ?? me.handle} size={34} v={me.avatarUpdatedAt} />
