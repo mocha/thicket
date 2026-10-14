@@ -25,7 +25,7 @@
   import { session } from '$lib/session.svelte';
   import { display } from '$lib/display.svelte';
   import { scrollBehavior } from '$lib/motion';
-  import { isPixel } from '$lib/pixel';
+  import { hidePixelImages, isPixel } from '$lib/pixel';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let scroller = $state<HTMLElement | null>(null);
@@ -209,7 +209,7 @@
 
           {#if content}
             {#if content.html.trim()}
-              <div class="body">{@html content.html}</div>
+              <div class="body" use:hidePixelImages>{@html content.html}</div>
             {:else}
               <p class="nobody">This site didn’t send the post’s text, only its title.</p>
             {/if}
