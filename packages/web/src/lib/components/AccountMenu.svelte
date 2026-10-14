@@ -110,7 +110,7 @@
       <a role="menuitem" href="/notifications" onclick={onclose}>
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9M10 20.5a2.2 2.2 0 0 0 4 0" /></svg>
         <span>Notifications</span>
-        {#if notifText()}<Badge tone="accent" class="tail" aria-label="{notifText()} new">{notifText()}</Badge>{/if}
+        {#if notifText()}<Badge tone="soft" class="tail" aria-label="{notifText()} new">{notifText()}</Badge>{/if}
       </a>
     {/if}
     <a role="menuitem" href="/settings" onclick={onclose}>

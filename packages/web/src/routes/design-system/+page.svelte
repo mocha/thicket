@@ -481,11 +481,10 @@
 
     <section class="entry" id="badge" aria-labelledby="badge-h">
       <h3 class="entry-h" id="badge-h">Badge</h3>
-      <p class="section-lede">A short status word or a count that rides alongside something else. Never something you press. A gray outline for a label or a count, filled green for an unread count in the menus, soft green for “New” on a post or a collection’s “30 new”, soft red for something wrong, like a feed that’s failing.</p>
+      <p class="section-lede">A short status word or a count that rides alongside something else. Never something you press. A gray outline for a label or a count, soft green for what’s new (an unread count in the menus, “New” on a post, a collection’s “30 new”), soft red for something wrong, like a feed that’s failing.</p>
       <div class="row">
         <Badge>Private</Badge>
         <Badge>12</Badge>
-        <Badge tone="accent">3 new</Badge>
         <Badge tone="soft">New</Badge>
         <Badge tone="danger">Failing</Badge>
         <span class="dot-demo">New<Badge variant="dot" title="Something new" /></span>

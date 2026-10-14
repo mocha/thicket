@@ -6,13 +6,12 @@
    * something else — a heading, a row, a name. It is never something you press:
    * anything clickable is a Button, an IconButton, or a ChoiceGroup option.
    *
-   * Five looks, and only five:
+   * Four looks, and only four:
    *   neutral pill  the quiet gray outline — a label ("Private") or a count ("12")
-   *   accent pill   the filled one, for "what's new" counts that should catch
-   *                 the eye
    *   soft pill     soft green: the secondary button's pale wash and green
-   *                 lettering, for what's new on a card or row ("New" on a
-   *                 post, "30 new" on a collection)
+   *                 lettering, for anything new: an unread count in the menus,
+   *                 "New" on a post, "30 new" on a collection. (A filled green
+   *                 pill used to carry the menu counts; it read as too heavy.)
    *   danger pill   soft red: a pale wash of the theme's red with red
    *                 lettering, for something wrong ("Failing")
    *   dot           an 8px accent circle for "something new" where a number
@@ -31,7 +30,7 @@
    * component).
    */
   interface Props {
-    tone?: 'neutral' | 'accent' | 'soft' | 'danger';
+    tone?: 'neutral' | 'soft' | 'danger';
     variant?: 'pill' | 'dot';
     /** Hover text. On a dot it is also what a screen reader announces. */
     title?: string;
@@ -88,11 +87,6 @@
     color: var(--text-2);
     border: 1px solid var(--text-3);
     padding: 1px calc(var(--space-2) - 1px);
-  }
-
-  .pill.accent {
-    background: var(--accent);
-    color: var(--accent-ink);
   }
 
   /* Soft green: the secondary button's own wash, lettering, and (on the two
