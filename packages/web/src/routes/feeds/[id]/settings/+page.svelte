@@ -1,10 +1,11 @@
 <script lang="ts">
-  import Checkbox from '$lib/components/Checkbox.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { page } from '$app/state';
+  import { tick } from 'svelte';
   import { goto } from '$app/navigation';
-  import { api, adminApi, feedHref, type Feed, type FeedCategories } from '$lib/api';
-  import { hostOf, relativeTime } from '$lib/time';
+  import { api, adminApi, feedHref, type AdminFetch, type Feed, type FeedMove, type FeedCategories } from '$lib/api';
+  import { hostOf, longAgo } from '$lib/time';
+  import { diagnose, checkLabel, BROKEN_AFTER } from '$lib/feedhealth';
   import { feedName } from '$lib/feedname';
   import { plural } from '$lib/words';
   import { resetNotice } from '$lib/feedsettings';
@@ -19,6 +20,9 @@
   import Input from '$lib/components/Input.svelte';
   import Sheet from '$lib/components/Sheet.svelte';
   import CategoryTerms from '$lib/components/CategoryTerms.svelte';
+  import Card from '$lib/components/Card.svelte';
+  import CardFooter from '$lib/components/CardFooter.svelte';
+  import SettingRow from '$lib/components/SettingRow.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { session } from '$lib/session.svelte';
 
@@ -59,39 +63,128 @@
       removeDialog?.close();
       showToast(`Removed ${feedName(feed)} from thicket`);
       await loadCollections(true);
-      await goto('/explore?scope=feeds', { replaceState: true });
+      await goto('/admin?tab=feeds', { replaceState: true });
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e));
     } finally {
       removing = false;
     }
   }
-  let subscriptionChecked = $state(false);
-  let savingSubscription = $state(false);
-  $effect(() => { subscriptionChecked = feed?.requiresSubscription ?? false; });
-
-  /* One save at a time. Keep the checkbox honest on failure, and never apply
-   * a response to another feed if the admin navigated while it was saving. */
-  async function setRequiresSubscription(on: boolean) {
-    if (!feed || savingSubscription) return;
+  /* Admin: the feed's title for everyone. Empty hands it back to the feed, whose own title returns on its next check. */
+  let adminTitle = $state('');
+  let savingTitle = $state(false);
+  let titleError = $state<string | null>(null);
+  const titleDirty = $derived(!!feed && adminTitle.trim() !== (feed.title ?? ''));
+  async function saveTitle() {
+    if (!feed || savingTitle) return;
     const target = feed;
-    const previous = target.requiresSubscription;
-    savingSubscription = true;
+    savingTitle = true; titleError = null;
     try {
-      const r = await adminApi.setRequiresSubscription(target.id, on);
-      api.event('admin_feed_requires_subscription', { feedId: target.id, on: r.requiresSubscription });
-      if (feed !== target || id !== target.id) return;
-      target.requiresSubscription = r.requiresSubscription;
-      subscriptionChecked = r.requiresSubscription;
-      showToast(r.requiresSubscription ? `${feedName(target)} is marked as requiring a subscription` : `${feedName(target)} is no longer marked as requiring a subscription`);
+      const r = await adminApi.setFeedTitle(target.id, adminTitle.trim() || null);
+      api.event('admin_feed_retitled', { feedId: target.id, cleared: !r.title });
+      if (feed !== target) return;
+      target.title = r.title;
+      adminTitle = r.title ?? '';
+      showToast(r.title ? `Everyone sees this feed as “${r.title}” now` : 'The feed’s own title comes back on its next check');
     } catch (e) {
-      if (feed !== target || id !== target.id) return;
-      subscriptionChecked = previous;
-      showToast(e instanceof Error ? e.message : String(e));
+      if (feed === target) titleError = e instanceof Error ? e.message : String(e);
     } finally {
-      savingSubscription = false;
+      savingTitle = false;
     }
   }
+
+  /* Admin: a new address for the feed. It may land on a feed thicket already has, and then this one is folded into it. */
+  let newUrl = $state('');
+  let addressInput = $state<HTMLInputElement | null>(null);
+  let addressDialog = $state<HTMLDialogElement | null>(null);
+  let moving = $state(false);
+  /** From the alert, or from "Change this feed for everyone": a Sheet with the address selected, ready to paste over. */
+  async function openAddress() {
+    if (!feed) return;
+    newUrl = feed.url;
+    moveNote = null;
+    candidates = [];
+    addressDialog?.showModal();
+    await tick();
+    addressInput?.focus();
+    addressInput?.select();
+  }
+
+  let moveNote = $state<{ tone: 'error' | 'info' | 'success'; text: string } | null>(null);
+  let candidates = $state<Extract<FeedMove, { status: 'choose' }>['candidates']>([]);
+  async function move(url: string) {
+    if (!feed || moving || !url.trim()) return;
+    const target = feed;
+    moving = true;
+    moveNote = null;
+    candidates = [];
+    try {
+      const r = await adminApi.moveFeed(target.id, url.trim());
+      if (r.status === 'choose') {
+        candidates = r.candidates;
+        moveNote = { tone: 'info', text: 'That page lists more than one feed. Pick the one to use.' };
+        return;
+      }
+      api.event('admin_feed_moved', { feedId: target.id, result: r.status, into: r.feedId });
+      if (r.status === 'merged' || r.feedId !== target.id) {
+        showToast(`${feedName(target)} was folded into the feed already at that address`);
+        return void goto(`/feeds/${r.feedId}/settings?admin`, { replaceState: true });
+      }
+      const next = await api.feed(target.id);
+      if (feed !== target) return;
+      feed = { ...next, displayName: target.displayName };
+      newUrl = next.url;
+      adminTitle = next.title ?? '';
+      fetches = null;
+      if (diagOpen) void loadFetches();
+      // Moved: the Sheet's job is done. The alert at the top, or its absence, says how the new address is doing.
+      addressDialog?.close();
+      showToast(r.fetch.error
+        ? `Moved to ${r.url}, but checking it failed`
+        : r.fetch.status === null
+          ? `Moved to ${r.url}. The site asked us to wait, so it’ll be checked shortly`
+          : `Moved to ${r.url}: ${plural(r.fetch.itemsNew, 'new post')}`);
+    } catch (e) {
+      moveNote = { tone: 'error', text: e instanceof Error ? e.message : String(e) };
+    } finally {
+      moving = false;
+    }
+  }
+
+  /* Admin: the feed's recent checks, read when the admin section opens. */
+  let fetches = $state<AdminFetch[] | null>(null);
+  let fetchWindow = $state(14);
+  /** The latest dozen checks first; Show more shows the rest. */
+  let fetchesShown = $state(12);
+  const shownFetches = $derived(fetches ? fetches.slice(0, fetchesShown) : []);
+  let fetchesError = $state<string | null>(null);
+  let loadingFetches = $state(false);
+  async function loadFetches() {
+    if (!feed || loadingFetches) return;
+    const target = feed.id;
+    loadingFetches = true; fetchesError = null;
+    try {
+      const r = await adminApi.feedFetches(target);
+      if (feed?.id !== target) return;
+      fetches = r.fetches;
+      fetchWindow = r.windowDays;
+    } catch (e) {
+      if (feed?.id === target) fetchesError = e instanceof Error ? e.message : String(e);
+    } finally {
+      loadingFetches = false;
+    }
+  }
+  $effect(() => { if (diagOpen && session.user?.isAdmin && feed && fetches === null && !fetchesError) void loadFetches(); });
+  /* Dates as people say them: "Today, 3:00 PM", "Oct 12, 8:46 PM", and the year only when it isn't this one. */
+  const thisYear = (d: Date) => d.getFullYear() === new Date().getFullYear();
+  const day = (v: string) => { const d = new Date(v); return d.toLocaleDateString(undefined, thisYear(d) ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' }); };
+  const moment = (v: string) => {
+    const d = new Date(v);
+    const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    return `${d.toDateString() === new Date().toDateString() ? 'Today' : day(v)}, ${time}`;
+  };
+  /** An address without its "https://", "www." or a trailing slash. */
+  const bare = (url: string) => url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
 
   async function load() {
     try {
@@ -100,8 +193,13 @@
       return void goto('/explore?scope=feeds', { replaceState: true });
     }
     ids = feed.myCollectionIds;
-    diagOpen = feed.consecutiveFailures > 0;
+    // A reader's troubleshooting arrives open when the feed is failing, so the reason is never hidden. An admin gets the diagnosis card instead, and Details stays shut.
+    diagOpen = !session.user?.isAdmin && feed.consecutiveFailures > 0;
     displayName = feed.displayName ?? '';
+    adminTitle = feed.title ?? '';
+    newUrl = feed.url;
+    // Arriving from the admin feed list opens the admin section.
+    adminOpen = !!session.user?.isAdmin && page.url.searchParams.has('admin');
   }
 
   /* Display name: a field with Save inside it, which wakes up once something changed. Saving it empty goes back to the feed's own title. */
@@ -177,8 +275,8 @@
       const next = await api.feed(feed.id);
       feed = { ...next, displayName: feed.displayName };
       refreshNote = next.consecutiveFailures > 0
-        ? { tone: 'error', text: `Fetched, and it failed again: ${next.lastError ?? `HTTP ${next.lastStatus}`}` }
-        : { tone: 'success', text: 'Fetched just now.' };
+        ? { tone: 'error', text: 'Checked again just now, and it still isn’t working.' }
+        : { tone: 'success', text: 'Checked just now. It’s working.' };
       api.event('feed_refreshed', { feedId: feed.id, via: 'feed_settings' });
     } catch (e) {
       refreshNote = { tone: 'error', text: e instanceof Error ? e.message : String(e) };
@@ -187,28 +285,10 @@
     }
   }
 
+  /** Admins only, and only while the feed is failing: what went wrong and what to do (lib/feedhealth.ts). */
+  const diagnosis = $derived(feed && session.user?.isAdmin && feed.consecutiveFailures > 0 ? diagnose(feed, hostOf(feed.siteUrl ?? feed.url)) : null);
+  const broken = $derived(!!feed && feed.consecutiveFailures >= BROKEN_AFTER);
   const when = (v: string | null) => (v ? new Date(v).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : null);
-  const every = (s: number) => (s < 3600 ? `${Math.round(s / 60)} minutes` : s < 86400 ? `${+(s / 3600).toFixed(1)} hours` : `${+(s / 86400).toFixed(1)} days`);
-  const facts = $derived<[string, string | null][]>(feed ? [
-    ['Feed URL', feed.url],
-    ['Website', feed.siteUrl],
-    ['Feed title', feed.title],
-    ['Feed description', feed.description],
-    ['Format', feed.kind],
-    ['Feed number', String(feed.id)],
-    ['Added to thicket', when(feed.createdAt)],
-    ['Last checked', when(feed.lastFetchedAt)],
-    ['Next check', when(feed.nextFetchAt)],
-    ['Checked every', every(feed.fetchIntervalS)],
-    ['Last response', feed.lastStatus ? `HTTP ${feed.lastStatus}` : null],
-    ['Last error', feed.lastError],
-    ['Failed checks in a row', String(feed.consecutiveFailures)],
-    ['Newest post', when(feed.lastItemAt)],
-    ['Posts stored', String(feed.itemCount)],
-    ['Followers', String(feed.followerCount)],
-    ['ETag', feed.etag],
-    ['Last modified', feed.lastModified],
-  ] : []);
 
   /**
    * Admins see, in the diagnostics, what categories the feed sends (issue
@@ -238,12 +318,26 @@
     loadedId = id;
     feed = null;
     refreshNote = null;
+    moveNote = null;
+    candidates = [];
+    fetches = null; fetchesError = null; titleError = null;
+    fetchesShown = 12;
     void load();
     api.event('feed_settings_view', { feedId: id });
   });
 </script>
 
 <svelte:head><title>{feed ? `Managing ${feedName(feed)}` : 'Feed settings'} · thicket</title></svelte:head>
+
+{#snippet checkNow()}
+  <div class="row">
+    <Button onclick={refresh} disabled={refreshing}>{refreshing ? 'Checking…' : 'Check again now'}</Button>
+    <span class="hint inline">{feed?.lastFetchedAt ? `Last checked ${longAgo(feed.lastFetchedAt)}` : 'Not checked yet'}</span>
+  </div>
+  {#if refreshNote}
+    <Banner tone={refreshNote.tone} dismissible ondismiss={() => (refreshNote = null)}>{refreshNote.text}</Banner>
+  {/if}
+{/snippet}
 
 {#if feed}
   {@const here = feed}
@@ -252,6 +346,25 @@
     {#snippet description()}Its name, collections, and how posts show for you.{/snippet}
     {#snippet actions()}{#if ids.length > 0}<Button variant="danger" size="sm" onclick={unfollow}>Unfollow</Button>{/if}{/snippet}
   </PageHeader>
+  {#if diagnosis}
+    <!-- Admins, on a failing feed: what went wrong in plain words, with the fix it calls for and the way out inside the alert. -->
+    <div class="diagnosis">
+      <Banner tone={broken ? 'error' : 'warning'} title={diagnosis.title}>
+        {diagnosis.text}
+        {#snippet actions()}
+          {#if diagnosis!.fix === 'address'}
+            <Button size="sm" onclick={openAddress}>Change address</Button>
+          {:else}
+            <Button size="sm" onclick={refresh} disabled={refreshing}>{refreshing ? 'Checking…' : 'Check again now'}</Button>
+          {/if}
+          <Button variant="danger" link size="sm" onclick={askRemove}>Remove from thicket</Button>
+        {/snippet}
+      </Banner>
+      {#if refreshNote && diagnosis.fix === 'wait'}
+        <Banner tone={refreshNote.tone} dismissible ondismiss={() => (refreshNote = null)}>{refreshNote.text}</Banner>
+      {/if}
+    </div>
+  {/if}
   <section>
     <form class="opt" onsubmit={(e) => { e.preventDefault(); void saveName(displayName); }}>
       <Field label="Display name" hint="Only you see this name.">
@@ -294,40 +407,89 @@
   </section>
 
   <hr />
-  <!-- Troubleshooting, shut until asked for: a question to click, then the way to check the feed now and the raw facts about it. A feed whose last check failed arrives open, so the reason is never hidden. -->
-  <details class="fold" bind:open={diagOpen}>
-    <summary class="tap">
-      <Icon name="caret" dir={diagOpen ? 'down' : 'right'} size={16} stroke={2.4} />
-      <h2>Not seeing new posts from this feed?</h2>
-    </summary>
-    <div class="body">
-      {#if feed.consecutiveFailures > 0}
-        <Banner tone="error">Last fetch failed: {feed.lastError ?? `HTTP ${feed.lastStatus}`}</Banner>
-      {/if}
-      <div class="row">
-        <Button onclick={refresh} disabled={refreshing}>{refreshing ? 'Fetching…' : 'Refresh now'}</Button>
-        <span class="hint inline">{feed.lastFetchedAt ? `Last checked ${relativeTime(feed.lastFetchedAt)}` : 'Not fetched yet'}</span>
+  {#if !session.user?.isAdmin}
+    <!-- Readers: one plain sentence and the one thing they can do. Fixing a feed is an admin's job, so no raw facts here. -->
+    <details class="fold" bind:open={diagOpen}>
+      <summary class="tap">
+        <Icon name="caret" dir={diagOpen ? 'down' : 'right'} size={16} stroke={2.4} />
+        <h2>Not seeing new posts from this feed?</h2>
+      </summary>
+      <div class="body">
+        {#if feed.consecutiveFailures > 0}
+          <Banner tone="warning" title="We can’t get new posts from this feed right now">The site may have moved or changed it. We’ll keep trying.</Banner>
+        {:else}
+          <p class="hint">This feed is working.</p>
+        {/if}
+        {@render checkNow()}
       </div>
-      {#if refreshNote}
-        <Banner tone={refreshNote.tone} dismissible ondismiss={() => (refreshNote = null)}>{refreshNote.text}</Banner>
-      {/if}
-      <ul class="facts">
-        {#each facts as [k, v] (k)}
-          <li><strong>{k}:</strong> <span>{v ?? '—'}</span></li>
-        {/each}
-      </ul>
-      {#if session.user?.isAdmin}
-        <!-- Admins only: the categories this feed sends, as stored. Raw material for #189, not yet shown to anyone else. -->
-        <div class="cats">
-          <h3>Categories this feed sends <span class="who">Admins only</span></h3>
+    </details>
+  {:else}
+    <!-- Admins: the facts and the check history, folded. What's wrong, if anything, is in the card at the top. -->
+    <details class="fold" bind:open={diagOpen}>
+      <summary class="tap">
+        <Icon name="caret" dir={diagOpen ? 'down' : 'right'} size={16} stroke={2.4} />
+        <h2>Details</h2>
+      </summary>
+      <div class="body">
+        <Card kind="section" as="section" class="detail-card" aria-labelledby="about-h">
+          <h3 class="section-title" id="about-h">About this feed</h3>
+          <div>
+            <SettingRow label="Feed address" value={bare(feed.url)} />
+            <SettingRow label="Website" value={feed.siteUrl ? bare(feed.siteUrl) : '—'} />
+            <SettingRow label="Followers" value={feed.followerCount.toLocaleString()} />
+            <SettingRow label="Added" value={day(feed.createdAt)} />
+            <SettingRow label="Newest post" value={feed.lastItemAt ? moment(feed.lastItemAt) : '—'} />
+          </div>
+          <CardFooter section>
+            <span>{feed.lastFetchedAt ? `Last checked ${longAgo(feed.lastFetchedAt)}` : 'Not checked yet'}{#if feed.nextFetchAt}{` · next ${moment(feed.nextFetchAt).replace(/^Today, /, 'at ')}`}{/if}</span>
+            <!-- The alert at the top carries this button when waiting is the fix; once is enough. -->
+            {#snippet actions()}{#if diagnosis?.fix !== 'wait'}<Button onclick={refresh} disabled={refreshing}>{refreshing ? 'Checking…' : 'Check again now'}</Button>{/if}{/snippet}
+          </CardFooter>
+          {#if refreshNote && diagnosis?.fix !== 'wait'}
+            <Banner tone={refreshNote.tone} dismissible ondismiss={() => (refreshNote = null)}>{refreshNote.text}</Banner>
+          {/if}
+        </Card>
+
+        <Card kind="section" as="section" class="detail-card" aria-labelledby="checks-h">
+          <h3 class="section-title" id="checks-h">Checks in the last {plural(fetchWindow, 'day')}</h3>
+          {#if fetchesError}
+            <Banner tone="error" title="Couldn’t load recent checks">{fetchesError}</Banner>
+            <div><Button size="sm" onclick={loadFetches} loading={loadingFetches}>Try again</Button></div>
+          {:else if fetches === null}
+            <p class="hint">Loading…</p>
+          {:else if fetches.length === 0}
+            <p class="hint">No checks recorded.</p>
+          {:else}
+            <p class="section-description">{fetches.filter((f) => f.error).length} of {fetches.length === 100 ? 'the latest 100 checks' : plural(fetches.length, 'check')} failed</p>
+            <ul class="list-rows checks">
+              {#each shownFetches as f (f.at)}
+                <li class="row-event" class:bad={!!f.error}>
+                  <span class="when">{moment(f.at)}</span>
+                  <span class="what">{checkLabel(f)}</span>
+                  {#if f.durationMs !== null}<span class="ms">{(f.durationMs / 1000).toFixed(1)}s</span>{/if}
+                </li>
+              {/each}
+            </ul>
+            {#if fetches.length > shownFetches.length}<button class="row-more tap" onclick={() => (fetchesShown = fetches!.length)}>Show {fetches.length - shownFetches.length} more</button>{/if}
+          {/if}
+        </Card>
+
+        <!-- What labels the feed and its posts carry, as stored: groundwork for filtering Explore by them (#189). -->
+        <Card kind="section" as="section" class="detail-card" aria-labelledby="cats-h">
+          <h3 class="section-title" id="cats-h">Categories this feed sends</h3>
+          <div class="cats">
           {#if categories}
-            <p class="hint">On the feed itself, from its last check:</p>
-            <CategoryTerms terms={categories.declared.map((term) => ({ term }))} />
-            <p class="hint">On its posts: {categories.tagged} of {plural(categories.posts, 'stored post')} came with categories{categories.terms.length ? ', most used first' : ''}.</p>
-            {#if categories.terms.length}
-              <CategoryTerms terms={allTerms ? categories.terms : categories.terms.slice(0, TERMS_FIRST)} />
-              {#if !allTerms && categories.terms.length > TERMS_FIRST}
-                <div><Button size="sm" onclick={() => (allTerms = true)}>Show all {categories.terms.length} terms</Button></div>
+            {#if !categories.declared.length && !categories.terms.length}
+              <p class="hint">None. {categories.tagged} of {plural(categories.posts, 'post')} came with categories.</p>
+            {:else}
+              <p class="hint">On the feed itself{categories.declared.length ? ':' : ': none'}</p>
+              {#if categories.declared.length}<CategoryTerms terms={categories.declared.map((term) => ({ term }))} />{/if}
+              <p class="hint">On its posts ({categories.tagged} of {plural(categories.posts, 'post')} have them){categories.terms.length ? ':' : ''}</p>
+              {#if categories.terms.length}
+                <CategoryTerms terms={allTerms ? categories.terms : categories.terms.slice(0, TERMS_FIRST)} />
+                {#if !allTerms && categories.terms.length > TERMS_FIRST}
+                  <button class="row-more tap" onclick={() => (allTerms = true)}>Show {categories.terms.length - TERMS_FIRST} more</button>
+                {/if}
               {/if}
             {/if}
           {:else if categoriesError}
@@ -335,30 +497,67 @@
           {:else}
             <p class="hint" aria-live="polite">Loading…</p>
           {/if}
-        </div>
-      {/if}
-    </div>
-  </details>
+          </div>
+        </Card>
+      </div>
+    </details>
 
-  {#if session.user?.isAdmin}
     <hr />
-    <!-- Admins only, and folded like the troubleshooting above it: what an admin can change about this feed for everyone. First the paywall mark, then removal with what it does. -->
+    <!-- What an admin can change about this feed for everyone. The address is here unless the diagnosis card is already offering it. -->
     <details class="fold" bind:open={adminOpen}>
       <summary class="tap">
         <Icon name="caret" dir={adminOpen ? 'down' : 'right'} size={16} stroke={2.4} />
-        <h2>Admin: change this feed for everyone</h2>
+        <h2>Change this feed for everyone</h2>
       </summary>
       <div class="body admin">
-        <div class="radios">
-          <label>
-            <Checkbox bind:checked={subscriptionChecked} disabled={savingSubscription} onchange={(e) => setRequiresSubscription(e.currentTarget.checked)} />
-            <span><strong>Requires a subscription</strong><small>The site’s posts are behind a paywall. Everyone sees “Requires subscription” next to this feed’s address.</small></span>
-          </label>
-        </div>
-        <p class="hint">Feeds are shared. Removing this one takes it away from everyone on thicket: its posts and its place in every collection. Bookmarks, and the notes on them, keep their saved copy. Use it for spam, abuse, or a feed that should never have been indexed.</p>
-        <Button variant="danger" onclick={askRemove}>Remove from thicket</Button>
+        <Card kind="section" as="section" class="detail-card" aria-labelledby="title-h">
+          <h3 class="section-title" id="title-h">Title</h3>
+          <p class="section-description">What everyone sees, unless they have named the feed themselves. Leave it empty to use the feed’s own title, which comes back on its next check.</p>
+          <form onsubmit={(e) => { e.preventDefault(); void saveTitle(); }}>
+            <Field label="Title" hideLabel error={titleError}>
+              {#snippet children({ id, describedBy, invalid })}
+                <Input {id} aria-describedby={describedBy} {invalid} bind:value={adminTitle} maxlength={200} placeholder={hostOf(feed!.siteUrl ?? feed!.url)} disabled={savingTitle}>
+                  {#snippet trailing()}<Button type="submit" variant="primary" disabled={!titleDirty || savingTitle}>{savingTitle ? 'Saving…' : 'Save'}</Button>{/snippet}
+                </Input>
+              {/snippet}
+            </Field>
+          </form>
+        </Card>
+        <Card kind="section" as="section" class="detail-card" aria-labelledby="address-h">
+          <h3 class="section-title" id="address-h">Feed address</h3>
+          <p class="section-description">{feed.url}</p>
+          <div><Button onclick={openAddress}>Change address</Button></div>
+        </Card>
+        <Card kind="section" as="section" class="detail-card" aria-labelledby="remove-h">
+          <h3 class="section-title" id="remove-h">Remove this feed</h3>
+          <p class="section-description">Removes it and its posts for everyone. Bookmarks keep a saved copy. For spam, abuse, or feeds that don’t belong.</p>
+          <div><Button variant="danger" onclick={askRemove}>Remove from thicket</Button></div>
+        </Card>
       </div>
     </details>
+
+    <Sheet title="Change this feed’s address" lede="Paste the new address or the site’s homepage. If we already have that feed, this one joins it. This can’t be undone." locked={moving} bind:dialog={addressDialog}>
+      <form class="moveform" onsubmit={(e) => { e.preventDefault(); void move(newUrl); }}>
+        <Field label="Feed address" hideLabel>
+          {#snippet children({ id, describedBy, invalid })}
+            <Input {id} aria-describedby={describedBy} {invalid} type="url" bind:element={addressInput} bind:value={newUrl} disabled={moving} autocomplete="off" autocapitalize="none" spellcheck={false} clearable={false} />
+          {/snippet}
+        </Field>
+        {#if moveNote}
+          <Banner tone={moveNote.tone}>{moveNote.text}</Banner>
+        {/if}
+        {#if candidates.length}
+          <ul class="candidates">
+            {#each candidates as c (c.url)}
+              <li><Button size="sm" disabled={moving} onclick={() => { newUrl = c.url; void move(c.url); }}>{c.title ?? c.url}</Button><span class="hint inline">{c.url}</span></li>
+            {/each}
+          </ul>
+        {/if}
+      </form>
+      {#snippet footer()}
+        <Button variant="primary" size="lg" loading={moving} disabled={!newUrl.trim() || newUrl.trim() === feed?.url} onclick={() => move(newUrl)}>Move feed</Button>
+      {/snippet}
+    </Sheet>
 
     <Sheet title="Remove this feed for everyone?" alert locked={removing} bind:dialog={removeDialog}>
       {#if impact}
@@ -405,24 +604,33 @@
   .radios { display: flex; flex-direction: column; gap: var(--space-2); }
   .radios label { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
   .radios label:has(input:checked) { border-color: var(--accent); }
-  .radios input, .radios :global(.checkbox) { margin-top: 3px; }
+  .radios input { margin-top: 3px; }
   /* 2px between a choice and its explanation is optical, not a spacing step. */
   .radios span { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--text-sm) * var(--size-app)); }
   .radios small { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .admin { align-items: flex-start; }
-  .admin .hint { margin: 0; }
-  .admin .radios { align-self: stretch; }
+  /* Each change is its own section card, stacked like the Details cards. */
+  .fold .body.admin { gap: var(--space-3); }
+  .moveform { display: flex; flex-direction: column; gap: var(--space-3); }
+  .candidates { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+  .candidates li { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+  /* Details: three section cards, stacked. */
+  /* The shared card spaces its own heading and description; what follows comes in the card's own flow. */
+  .cats { display: flex; flex-direction: column; gap: var(--space-2); }
+  /* The history runs to the card's edges, like the Admin lists, so its Show more row does too. */
+  /* Shared list rows (row-event), run to the card's edges like the Admin lists; inside each, when, what, and how long, in columns. */
+  .checks { margin: 0 calc(-1 * var(--card-pad)); border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .checks li { display: flex; gap: var(--space-3); }
+  .checks li.bad .what { color: var(--danger); }
+  .checks .when { flex: 0 0 auto; min-width: 16ch; white-space: nowrap; }
+  .checks .what { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .checks .ms { flex: 0 0 auto; }
+  :global(.card.detail-card) .row-more { margin: 0 calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)); width: calc(100% + 2 * var(--card-pad)); }
   .fold summary { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; list-style: none; color: var(--text-2); }
   .fold summary::-webkit-details-marker { display: none; }
   .fold summary h2 { margin: 0; font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--text); }
   .fold .body { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); }
   .fold .row { margin-top: 0; }
-  .facts { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  .facts li { overflow-wrap: anywhere; }
-  .facts strong { color: var(--text); font-weight: 600; }
-  .cats { display: flex; flex-direction: column; gap: var(--space-2); }
-  .cats h3 { margin: var(--space-2) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text); display: flex; align-items: baseline; gap: var(--space-2); }
-  .cats .who { font-weight: 400; color: var(--text-2); }
-  .cats .hint { margin: 0; }
+  /* The alert at the top: what's wrong, then its fix and the way out on one row under the words. */
+  .diagnosis { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-5); }
   .status { text-align: center; color: var(--text-2); padding: var(--space-5) 0; margin: 0; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>

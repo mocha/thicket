@@ -7,12 +7,20 @@
 import { randomBytes } from "node:crypto";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { eq, sql } from "drizzle-orm";
+import { and, desc, eq, gt, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { currentUser, destroyAllSessions, hashPassword } from "../lib/auth.js";
 import { createInvite, getSetting, listInvites, publicStatus, revokeInvite, setSetting, type SignupPolicy } from "../lib/instance.js";
-import { SIGNUPS_DEFAULT } from "../lib/config.js";
+import { RETAIN_FETCH_LOG_DAYS, SIGNUPS_DEFAULT } from "../lib/config.js";
 import { reconcile, recountWindows } from "../lib/counts.js";
+import { feedSlugSql } from "../lib/slug.js";
+import { oneOf } from "../lib/one-of.js";
+import { discover, type Discovery } from "../feeds/discover.js";
+import { explainAddFailure } from "../feeds/explain.js";
+import { isHttpUrl, normalizeFeedUrl } from "../feeds/normalize.js";
+import { existingFeedId } from "../feeds/twins.js";
+import { mergeFeeds } from "../feeds/merge.js";
+import { refreshFeed } from "../feeds/refresh.js";
 import { featuredCollections } from "./explore.js";
 import { likeFor } from "../lib/like.js";
 
@@ -174,6 +182,90 @@ admin.delete("/users/:id", async (c) => {
   return rows.length ? c.body(null, 204) : c.json({ error: "not found" }, 404);
 });
 
+// ---- feeds --------------------------------------------------------------------
+
+/** A feed id from the path, or null for anything that can't be one (so it 404s before reaching the database). */
+function feedIdParam(raw: string): number | null {
+  const id = Number(raw);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+/** How far back a feed's check history goes: two weeks, or less if the fetch log is pruned sooner. */
+export const FAILURE_WINDOW_DAYS = RETAIN_FETCH_LOG_DAYS > 0 ? Math.min(14, RETAIN_FETCH_LOG_DAYS) : 14;
+/** Failed checks in a row before a feed counts as broken rather than having a bad day: with backoff, at least most of a day of failing. */
+export const BROKEN_AFTER = 5;
+
+/** The admin feed list's orders (issue #103). Each reads a column on the feed row, so sorting the whole index is cheap; ties go to the most-followed. */
+export const ADMIN_FEED_SORTS = ["followers", "posts", "failures", "lastPost", "title"] as const;
+const SORT_SQL: Record<(typeof ADMIN_FEED_SORTS)[number], SQL> = {
+  followers: sql`f.follower_count`,
+  posts: sql`f.posts_30d`,
+  // Grouped as the list's Health column words them (broken, failing, OK); within a group the most-followed come first, below.
+  failures: sql`case when f.consecutive_failures >= ${BROKEN_AFTER} then 2 when f.consecutive_failures > 0 then 1 else 0 end`,
+  lastPost: sql`f.last_item_at`,
+  title: sql`lower(coalesce(f.title, f.url))`,
+};
+const sortFrom = oneOf(ADMIN_FEED_SORTS, "followers");
+
+/**
+ * What a search for a feed is matched against. A pasted address loses its
+ * scheme, "www." and trailing slash, so it finds the feed whichever way it was
+ * written; a bare number also finds the feed with that id.
+ */
+export function feedSearch(q: string): SQL | null {
+  const term = q.trim().replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/+$/, "");
+  if (!term) return null;
+  const like = `%${term.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+  const byId = /^\d{1,15}$/.test(term) ? sql` or f.id = ${Number(term)}` : sql``;
+  return sql`(f.title ilike ${like} or f.url ilike ${like} or f.site_url ilike ${like}${byId})`;
+}
+
+/**
+ * Every feed in the index, a page at a time, with what an admin needs to judge
+ * its health at a glance: followers, posts in the last 30 days, its last post,
+ * and its run of failed checks, which the list words as OK, Failing or Broken.
+ * The detail (errors, the check history) is on the feed's Manage page. Who
+ * added a feed is not recorded anywhere, on purpose.
+ */
+admin.get("/feeds", async (c) => {
+  await requireAdmin(c);
+  const sort = sortFrom(c.req.query("sort"));
+  // Title reads A to Z; every other order starts with the biggest or newest.
+  const dir = c.req.query("dir") === "asc" || c.req.query("dir") === "desc" ? c.req.query("dir")! : sort === "title" ? "asc" : "desc";
+  const per = Math.min(500, Math.max(1, Math.trunc(Number(c.req.query("per"))) || 200));
+  const page = Math.max(1, Math.trunc(Number(c.req.query("page"))) || 1);
+  const matched = feedSearch(c.req.query("q") ?? "") ?? sql`true`;
+
+  const [{ total }] = (await db.execute<{ total: number }>(sql`select count(*)::int as total from feeds f where ${matched}`)).rows;
+  const order = sql`${SORT_SQL[sort]} ${sql.raw(dir)} nulls last, f.follower_count desc, f.id`;
+  const rows = await db.execute(sql`
+    select f.id, f.url, f.site_url as "siteUrl", f.title, ${feedSlugSql} as slug,
+           exists(select 1 from feed_icons fi where fi.feed_id = f.id and not fi.generic) as "hasIcon",
+           f.follower_count as "followerCount", f.posts_30d as "posts30d",
+           f.last_fetched_at as "lastFetchedAt", f.last_item_at as "lastItemAt", f.consecutive_failures as "consecutiveFailures"
+    from feeds f where ${matched}
+    order by ${order} limit ${per} offset ${(page - 1) * per}`);
+  const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
+  return c.json({
+    feeds: rows.rows.map((r: any) => ({ ...r, id: Number(r.id), lastFetchedAt: iso(r.lastFetchedAt), lastItemAt: iso(r.lastItemAt) })),
+    total, page, per, sort, dir, brokenAfter: BROKEN_AFTER,
+  });
+});
+
+/** One feed's recent checks, newest first, from the fetch log: when, the answer, how long it took, new posts, and the error if it failed. */
+admin.get("/feeds/:id/fetches", async (c) => {
+  await requireAdmin(c);
+  const id = feedIdParam(c.req.param("id"));
+  if (id === null) return c.json({ error: "not found" }, 404);
+  const rows = await db.select({
+    at: schema.fetchLog.at, status: schema.fetchLog.status, durationMs: schema.fetchLog.durationMs,
+    itemsNew: schema.fetchLog.itemsNew, error: schema.fetchLog.error,
+  }).from(schema.fetchLog)
+    .where(and(eq(schema.fetchLog.feedId, id), gt(schema.fetchLog.at, sql`now() - make_interval(days => ${FAILURE_WINDOW_DAYS})`)))
+    .orderBy(desc(schema.fetchLog.at)).limit(100);
+  return c.json({ fetches: rows.map((r) => ({ ...r, at: r.at.toISOString() })), windowDays: FAILURE_WINDOW_DAYS });
+});
+
 /**
  * Moderation: what removing a feed from the instance would take with it. Feeds
  * are shared, so this is everyone's loss, not one person's; the numbers are
@@ -192,6 +284,9 @@ admin.get("/feeds/:id/impact", async (c) => {
   return row ? c.json(row) : c.json({ error: "not found" }, 404);
 });
 
+/** The longest title an admin can give a feed. */
+export const FEED_TITLE_MAX = 200;
+const PATCH_ERROR = "title (string or null) is required";
 /** How many of a feed's post terms the diagnostics list. More is noise on one screen. */
 const FEED_TERMS_SHOWN = 500;
 
@@ -229,19 +324,88 @@ admin.get("/items/:id/categories", async (c) => {
 });
 
 /**
- * Facts about a feed that hold for everyone, set by an admin. For now only
- * whether its posts are behind a paywall (issue #216), which shows as
- * "Requires subscription" beside the feed's address.
+ * A feed's title for everyone, set by an admin. Fetching only fills
+ * a title in when there is none, so one set here stays. Clearing it hands the
+ * title back to the feed: the next check is made unconditional and soon, so the
+ * feed's own title comes back with it.
  */
 admin.patch("/feeds/:id", async (c) => {
   await requireAdmin(c);
-  const id = Number(c.req.param("id"));
-  if (!Number.isSafeInteger(id) || id <= 0) return c.json({ error: "not found" }, 404);
-  const body = await c.req.json<{ requiresSubscription?: boolean } | null>().catch(() => null);
-  if (typeof body?.requiresSubscription !== "boolean") return c.json({ error: "requiresSubscription (boolean) is required" }, 400);
-  const [row] = await db.update(schema.feeds).set({ requiresSubscription: body.requiresSubscription }).where(eq(schema.feeds.id, id))
-    .returning({ id: schema.feeds.id, requiresSubscription: schema.feeds.requiresSubscription });
+  const id = feedIdParam(c.req.param("id"));
+  if (id === null) return c.json({ error: "not found" }, 404);
+  const body = await c.req.json<unknown>().catch(() => null);
+  if (!body || typeof body !== "object" || Array.isArray(body)) return c.json({ error: PATCH_ERROR }, 400);
+  const { title } = body as { title?: unknown };
+  if (title === undefined || (title !== null && typeof title !== "string")) return c.json({ error: PATCH_ERROR }, 400);
+
+  const trimmed = typeof title === "string" ? title.trim().slice(0, FEED_TITLE_MAX) : "";
+  const set: Partial<typeof schema.feeds.$inferInsert> = { title: trimmed || null, updatedAt: new Date() };
+  if (!trimmed) Object.assign(set, { etag: null, lastModified: null, nextFetchAt: new Date() });
+  const [row] = await db.update(schema.feeds).set(set).where(eq(schema.feeds.id, id))
+    .returning({ id: schema.feeds.id, title: schema.feeds.title });
   return row ? c.json(row) : c.json({ error: "not found" }, 404);
+});
+
+const isUniqueViolation = (e: unknown) => {
+  const err = e as { code?: string; cause?: { code?: string } } | null;
+  return err?.code === "23505" || err?.cause?.code === "23505";
+};
+
+/**
+ * Point a feed at a new address: a site that moved its feed, or a dead address
+ * with a working one beside it. The new address is looked up the way adding a
+ * feed does, so a site's page works as well as its feed, and the answer can be
+ * "this page has several feeds, pick one". If thicket already has a feed at the
+ * new address, this one is folded into it (feeds/merge.ts): its followers,
+ * their settings, and bookmarks all move, so nobody has to follow anything
+ * again. Otherwise the feed keeps its id, takes the new address, starts its
+ * health over, and is fetched straight away.
+ */
+admin.post("/feeds/:id/address", async (c) => {
+  const me = await requireAdmin(c);
+  const id = feedIdParam(c.req.param("id"));
+  if (id === null) return c.json({ error: "not found" }, 404);
+  const body = await c.req.json<{ url?: unknown } | null>().catch(() => null);
+  if (typeof body?.url !== "string" || !body.url.trim()) return c.json({ error: "Enter the feed’s new address." }, 400);
+  let normalized: string;
+  try {
+    normalized = normalizeFeedUrl(body.url);
+  } catch {
+    return c.json({ error: "That doesn’t look like a web address. Check it and try again." }, 400);
+  }
+  if (!isHttpUrl(normalized)) return c.json({ error: "Use an address that starts with http or https." }, 400);
+  const [feed] = await db.select({ id: schema.feeds.id, url: schema.feeds.url }).from(schema.feeds).where(eq(schema.feeds.id, id));
+  if (!feed) return c.json({ error: "not found" }, 404);
+
+  let d: Discovery;
+  try {
+    d = await discover(normalized);
+  } catch (err) {
+    console.error(`[admin] new address for feed ${id}, ${new URL(normalized).hostname}:`, err);
+    return c.json({ error: explainAddFailure(err, normalized) }, 424);
+  }
+  if (d.status === "candidates") return c.json({ status: "choose" as const, candidates: d.candidates });
+  if (d.status === "none") return c.json({ error: "There’s no feed at that address." }, 404);
+  if (d.url === feed.url) return c.json({ error: "That’s already this feed’s address." }, 400);
+
+  const other = await existingFeedId(d.url);
+  if (other !== null && other !== id) {
+    await mergeFeeds(id, other, `@${me.handle} moved it to ${d.url}`);
+    console.log(`[admin] @${me.handle} moved feed ${id} ${feed.url} to ${d.url}, already feed ${other}`);
+    return c.json({ status: "merged" as const, feedId: other });
+  }
+  try {
+    await db.update(schema.feeds).set({
+      url: d.url, etag: null, lastModified: null, consecutiveFailures: 0, lastStatus: null, lastError: null, nextFetchAt: new Date(), updatedAt: new Date(),
+    }).where(eq(schema.feeds.id, id));
+  } catch (e) {
+    if (isUniqueViolation(e)) return c.json({ error: "Another feed took that address a moment ago. Try again to fold this one into it." }, 409);
+    throw e;
+  }
+  console.log(`[admin] @${me.handle} moved feed ${id} from ${feed.url} to ${d.url}`);
+  // Fetched now, so the page shows whether the new address works. A fetch that lands on another feed's address folds this one into it.
+  const r = await refreshFeed(id);
+  return c.json({ status: "moved" as const, feedId: r.feedId, url: d.url, fetch: { status: r.status, itemsNew: r.itemsNew, error: r.error } });
 });
 
 /**

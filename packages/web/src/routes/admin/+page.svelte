@@ -37,10 +37,11 @@
   import SecretValue from '$lib/components/SecretValue.svelte';
   import Sheet from '$lib/components/Sheet.svelte';
   import Tabs from '$lib/components/Tabs.svelte';
+  import AdminFeedList from '$lib/components/admin/AdminFeedList.svelte';
 
   /** Which tab is open, kept in the address so Back and a shared link land on it. Accounts by default. */
-  type Tab = 'accounts' | 'invites' | 'settings';
-  const tab = $derived<Tab>(((t) => (t === 'invites' || t === 'settings' ? t : 'accounts'))(page.url.searchParams.get('tab')));
+  type Tab = 'accounts' | 'feeds' | 'invites' | 'settings';
+  const tab = $derived<Tab>(((t) => (t === 'invites' || t === 'settings' || t === 'feeds' ? t : 'accounts'))(page.url.searchParams.get('tab')));
   function pick(v: string) {
     api.event('admin_tab', { tab: v });
     void goto(v === 'accounts' ? '/admin' : `/admin?tab=${v}`, { replaceState: true, noScroll: true, keepFocus: true });
@@ -51,6 +52,8 @@
   const when = (iso: string) => { const r = relativeTime(iso); return /^\d+[mhd]$|^just now$/.test(r) ? longAgo(iso) : r; };
 
   const me = $derived(session.user);
+  /** How many feeds the index holds, for the Feeds tab's count. */
+  let feedTotal = $state<number | undefined>(undefined);
   let instance = $state<(InstanceStatus & { signupsStored: SignupPolicy | null }) | null>(null);
   let loadError = $state<string | null>(null);
   /** What failed to save, by card, said on that card. */
@@ -132,7 +135,8 @@
 
   async function load() {
     try {
-      const [s, i, u, f] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter()]);
+      const [s, i, u, f, fc] = await Promise.all([adminApi.settings(), adminApi.invites(), adminApi.users(), adminApi.starter(), adminApi.feeds({ per: 1 }).catch(() => null)]);
+      feedTotal = fc?.total;
       instance = s; name = s.name; invites = i.invites;
       users = u.users; next = u.next; total = u.total ?? 0; matched = u.matched ?? 0;
       starterSaved = starter = f.handle ?? ''; offered = f.offered; offeredFrom = f.from;
@@ -233,7 +237,7 @@
   // Invites
   const openInvites = $derived(invites.filter((i) => !i.usedAt && (!i.expiresAt || new Date(i.expiresAt).getTime() > Date.now())));
   const inviteName = (inv: Invite) => inv.note ?? 'Invite';
-  const tabs = $derived([{ value: 'accounts', label: 'Accounts', count: total }, { value: 'invites', label: 'Invites', count: openInvites.length }, { value: 'settings', label: 'Site settings' }]);
+  const tabs = $derived([{ value: 'accounts', label: 'Accounts', count: total }, { value: 'feeds', label: 'Feeds', count: feedTotal }, { value: 'invites', label: 'Invites', count: openInvites.length }, { value: 'settings', label: 'Site settings' }]);
   async function mint() {
     if (minting) return;
     minting = true; errors.invites = null;
@@ -355,16 +359,20 @@
     <Tabs class="scopes" {tabs} value={tab} onchange={pick} label="Parts of Admin" panel="admin-tab" fill />
   </div>
   <div id="admin-tab" role="tabpanel" aria-label={tabs.find((t) => t.value === tab)?.label}>
-  {#if tab === 'accounts'}
+  {#if tab === 'feeds'}
+    <AdminFeedList ontotal={(n) => (feedTotal = n)} />
+  {:else if tab === 'accounts'}
   <Card kind="section" as="section" class="admin-section" aria-label="Accounts">
     <form role="search" onsubmit={(e) => { e.preventDefault(); clearTimeout(typing); void findAccounts(query.trim()); }}>
       <Field label="Search accounts" hideLabel>
         {#snippet children({ id, describedBy, invalid })}
-          <Input {id} aria-describedby={describedBy} {invalid} inset type="search" bind:value={query} oninput={onSearch} placeholder="Search by name or @handle" autocomplete="off" autocapitalize="none" spellcheck={false} />
+          <Input {id} aria-describedby={describedBy} {invalid} inset variant="search" size="lg" enterkeyhint="search" bind:value={query} oninput={onSearch} placeholder="Search by name or @handle" autocomplete="off" autocapitalize="none" spellcheck={false}>
+            {#snippet trailing()}<Button type="submit" variant="primary" disabled={!query.trim() && !searched}>Search</Button>{/snippet}
+          </Input>
         {/snippet}
       </Field>
     </form>
-    <p class="row-details found" role="status">{#if searching}Searching…{:else if searched}{plural(matched, 'account')} {matched === 1 ? 'matches' : 'match'} “{searched}”{:else}Newest first{/if}</p>
+    <p class="row-details found" role="status">{#if searching}Searching…{:else if searched}{plural(matched, 'account')} {matched === 1 ? 'matches' : 'match'} “{searched}”{/if}</p>
     {#if accountsError}<div class="err"><Banner tone="error" title="Couldn’t load accounts">{accountsError}</Banner></div>{/if}
     <div class="rows below">
       {#if users.length}
@@ -580,6 +588,8 @@
   .rows.below { margin-top: var(--space-3); }
   .line { display: block; }
   .found { margin: var(--space-3) 0 0; }
+  /* Before any search it says nothing, and takes no room; it stays on the page so a search's result is still announced. */
+  .found:empty { margin: 0; }
   /* A text box and its button side by side, the field taking the room. */
   .inline { display: flex; gap: var(--space-2); align-items: flex-start; }
   .inline :global(.grow) { flex: 1; min-width: 0; }
