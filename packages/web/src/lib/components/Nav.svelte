@@ -147,7 +147,7 @@
        bottom bar screens the same action sits beside each page's title instead. -->
   {#if me}<button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg><span>Add new feed</span></button>{/if}
   <ul>
-    <!-- Mobile-only tabs. On desktop, New posts and Collections live in the li.collections block below. -->
+    <!-- Bottom bar tabs. On desktop, each place is a Sidebar row in a sidebar-only item instead. -->
     <li class="mobile-only">
       <a href="/new-posts" aria-current={here === '/new-posts' ? 'page' : undefined}><span class="ic">{@render icon(icons.everything)}{#if fresh && rootMark?.count}<Badge variant="dot" class="pin" aria-label="New since your last visit" />{/if}</span><span class="shortl">New posts</span></a>
     </li>
