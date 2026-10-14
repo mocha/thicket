@@ -9,13 +9,13 @@
   import Swap from './Swap.svelte';
 
   const WAITING = [
-    { site: 'Night Sky Notes', time: '18 min', title: 'Finding Andromeda by eye' },
-    { site: 'Small Trains', time: '1 hr', title: 'Rebuilding a 1950s layout' },
-    { site: 'The Plot', time: '2 hr', title: 'What to plant now for spring' }
+    { site: 'Night Sky Notes', time: '18m', title: 'Finding Andromeda by eye' },
+    { site: 'Small Trains', time: '1h', title: 'Rebuilding a 1950s layout' },
+    { site: 'The Plot', time: '2h', title: 'What to plant now for spring' }
   ];
 </script>
 
-{#snippet slowTime()}<Swap from="just now" to="1 min" at={1700} />{/snippet}
+{#snippet slowTime()}<Swap from="just now" to="1m" at={1700} />{/snippet}
 
 <SceneLoop round={6000}>
   <div class="list">

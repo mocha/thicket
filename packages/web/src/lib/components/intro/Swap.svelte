@@ -1,5 +1,5 @@
 <script lang="ts">
-  /** Words in a tour picture that change partway through, "just now" to "1 min". At rest, the second. */
+  /** Words in a tour picture that change partway through, "just now" to "1m". At rest, the second. */
   let { from, to, at }: { from: string; to: string; /** When to change, in ms from the start of the round. */ at: number } = $props();
 </script>
 

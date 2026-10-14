@@ -38,7 +38,7 @@
   /* The way back sits apart from the page it leads out of, over a line of its own. */
   .above { margin-bottom: var(--space-4); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); font-size: calc(var(--text-sm) * var(--size-app)); }
   h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; margin: 0; min-width: 0; text-wrap: balance; overflow-wrap: anywhere; }
-  .desc { margin-top: var(--space-1); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); max-width: 62ch; text-wrap: pretty; }
+  .desc { margin-top: var(--space-1); color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); max-width: 62ch; text-wrap: pretty; }
   .desc :global(p) { margin: 0; }
   .desc :global(a) { color: var(--accent); font-weight: 600; }
   /* The line runs from the left edge to the actions, or the whole width without them. */

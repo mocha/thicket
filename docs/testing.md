@@ -53,8 +53,9 @@ copy, kept up to date by the device with "Use these settings on new devices"
 checked at the top of Settings. Each localhost port counts as a separate
 device to the browser.
 
-- **New-device question:** with the box checked somewhere, open a private
-  window and sign in. Setup asks "Use your saved settings?" first.
+- **New device:** with the box checked somewhere, open a private window and
+  sign in. Setup opens on its list already set to the saved settings, with
+  "These are the settings you saved on another device" under the title.
 - **Older-account default:** make an account look like it's from before saved
   settings existed. The next device it opens gets the box checked
   automatically, with no prompt:

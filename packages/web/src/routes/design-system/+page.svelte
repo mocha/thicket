@@ -580,7 +580,7 @@
       </div>
 
       <h4 class="sub">Section card</h4>
-      <p class="section-lede">A group of settings, or one message standing on its own, like an empty section or who can see a profile tab. 16px of space inside, and nothing in it is cut off at the edge, so a menu or a focus ring can reach past it. It opens with a 21px bold heading in the interface face, and often a short gray description tucked under it; Settings, Account, Admin, and Import all use this same pair. Cards on those pages sit 16px apart.</p>
+      <p class="section-lede">A group of settings, or one message standing on its own, like an empty section or who can see a profile tab. 16px of space inside, and nothing in it is cut off at the edge, so a menu or a focus ring can reach past it. It opens with a 21px bold heading in the interface face, and often a short 16px gray description tucked under it; Settings, Account, Admin, and Import all use this same pair. Cards on those pages sit 16px apart.</p>
       <p class="section-lede">Buttons on a section card follow one rule. A Button beside a text box is the large size, so it’s as tall as the box, on a touchscreen too. A Button that acts on one row of a list is small. The Button that finishes the card’s form, or is the card’s only action, is the regular size.</p>
       <div class="stack">
         <Card kind="section" as="section">
@@ -783,7 +783,7 @@
 
     <section class="entry" id="page-header" aria-labelledby="page-header-h">
       <h3 class="entry-h" id="page-header-h">Page header</h3>
-      <p class="section-lede">The top of every page, in one order: a Back link with a line under it, only on pages that have one; the page’s name; a description in small gray text, ending with a period when it’s a sentence; then a line that closes the header. The page’s own actions sit at the right end of that line, with words, never an icon alone. With no actions, it’s just the line. A post’s own page leaves the line out, so its text follows straight on. Profiles and feeds put a picture beside the name, exactly as tall as the name and the line under it.</p>
+      <p class="section-lede">The top of every page, in one order: a Back link with a line under it, only on pages that have one; the page’s name; a description in 16px gray text, ending with a period when it’s a sentence; then a line that closes the header. The page’s own actions sit at the right end of that line, with words, never an icon alone. With no actions, it’s just the line. A post’s own page leaves the line out, so its text follows straight on. Profiles and feeds put a picture beside the name, exactly as tall as the name and the line under it.</p>
       <div class="demo-pagehead">
         <PageHeader name="Deep engineering">
           {#snippet above()}<BackLink href="#page-header" label="Explore" />{/snippet}
@@ -820,7 +820,7 @@
 
     <section class="entry" id="setting-row" aria-labelledby="setting-row-h">
       <h3 class="entry-h" id="setting-row-h">Setting row</h3>
-      <p class="section-lede">One setting and what it’s set to: the name in bold, the current choice in quieter text, and an arrow at the far end when the row opens something. Rows stack with a thin line between them and read as one list. The whole row is the tap target, at least 48px tall. A setting changed since the list opened gets a check on a light accent-tinted disc beside the arrow. Without an action it only states the value, with no arrow, as the saved-settings offer shows. On a phone the choice moves under the name. Used in setup’s list of display settings.</p>
+      <p class="section-lede">One setting and what it’s set to: the name in bold, the current choice in quieter text, and an arrow at the far end when the row opens something. Rows stack with a thin line between them and read as one list. The whole row is the tap target, at least 48px tall. A setting changed since the list opened gets a check on a light accent-tinted disc beside the arrow. Without an action it only states the value, with no arrow. On a phone the choice moves under the name. Used in setup’s list of display settings.</p>
       <div class="setting-rows">
         <SettingRow label="Light or dark" value="Match my device" onclick={() => {}} />
         <SettingRow label="Color theme" value="Crisp, orange" changed onclick={() => {}} />
@@ -838,7 +838,7 @@
 
     <section class="entry" id="sheet" aria-labelledby="sheet-h">
       <h3 class="entry-h" id="sheet-h">Sheet</h3>
-      <p class="section-lede">Every panel for one task is a Sheet: Add a feed, Visibility, Filters, a delete confirm, all of them. On a phone it rises from the bottom; from 700px up it sits centered, 460px wide. Top to bottom: the title; a short description saying what the panel is for, left off when the title already says it all; the content; and, when the task has an end, one full-width primary Button that finishes it, or a solid danger Button when finishing means deleting something. Any other destructive choice is a red text link under it, never a button beside it. The way out is always last and always in words: a full-width ghost Button, Cancel, under the main one, as easy to hit as the button above it and never mistaken for it. A panel whose choices save as they’re made ends with a full-width primary Done instead. In a delete confirm, focus starts on Cancel. Tapping outside and Escape close it too. Settings stacked one per row get a thin line between rows, each name above its choice. A panel about one thing, like a feed, can swap the title for that thing’s icon and name, with an action about it, like Follow, at the right. A Sheet that’s saving something stays open until it’s done.</p>
+      <p class="section-lede">Every panel for one task is a Sheet: Add a feed, Visibility, Filters, a delete confirm, all of them. On a phone it rises from the bottom; from 700px up it sits centered, 460px wide. Top to bottom: the title; a short 16px gray description saying what the panel is for, left off when the title already says it all; the content; and, when the task has an end, one full-width primary Button that finishes it, or a solid danger Button when finishing means deleting something. Any other destructive choice is a red text link under it, never a button beside it. The way out is always last and always in words: a full-width ghost Button, Cancel, under the main one, as easy to hit as the button above it and never mistaken for it. A panel whose choices save as they’re made ends with a full-width primary Done instead. In a delete confirm, focus starts on Cancel. Tapping outside and Escape close it too. Settings stacked one per row get a thin line between rows, each name above its choice. A panel about one thing, like a feed, can swap the title for that thing’s icon and name, with an action about it, like Follow, at the right. A Sheet that’s saving something stays open until it’s done.</p>
       <div class="row">
         <Button onclick={() => demoSheet?.showModal()}>Open a Sheet</Button>
         <Button variant="danger" onclick={() => demoConfirm?.showModal()}>Open a delete confirm</Button>

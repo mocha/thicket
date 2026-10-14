@@ -145,7 +145,7 @@
   }
   .section :global(.section-description) {
     margin: 0 0 var(--space-3);
-    font-size: calc(var(--text-sm) * var(--size-app));
+    font-size: calc(var(--text-base) * var(--size-app));
     color: var(--text-2);
     line-height: 1.4;
   }

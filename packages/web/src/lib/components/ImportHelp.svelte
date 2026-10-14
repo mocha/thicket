@@ -12,6 +12,7 @@
   import { importApi } from '$lib/api';
   import { imp, readImport } from '$lib/importer.svelte';
   import Tabs from './Tabs.svelte';
+  import Button from './Button.svelte';
 
   /** `errors` off when the page shows the reading error itself, below other ways in. */
   let { via, errors = true }: { via: string; errors?: boolean } = $props();
@@ -50,8 +51,9 @@
     <li>Sign into your reader</li>
     <li>Find Export or OPML in its settings</li>
   {/if}
-  <li>{#if imp.busy}Reading…{:else}Upload the file <button type="button" class="upload tap" onclick={() => fileInput?.click()}>here</button>{/if}</li>
+  <li>Upload the file you downloaded</li>
 </ol>
+<div class="choose"><Button variant="secondary" loading={imp.busy} onclick={() => fileInput?.click()}>Upload your file</Button></div>
 </div>
 <input bind:this={fileInput} type="file" accept=".opml,.xml,text/x-opml,text/xml,application/xml" onchange={onFile} hidden />
 
@@ -59,9 +61,9 @@
 
 <style>
   .steps { margin: var(--space-4) 0 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: var(--space-2); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text); line-height: 1.4; }
-  .steps a, .upload { color: var(--accent); font-weight: 600; }
+  .steps a { color: var(--accent); font-weight: 600; }
   .steps a { overflow-wrap: anywhere; }
-  .upload { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 0.15em; }
-  .upload:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+  .steps a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+  .choose { margin-top: var(--space-4); }
   .bad { color: var(--danger); margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>

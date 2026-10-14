@@ -4,7 +4,7 @@
    * text, and, when it can be opened, an arrow at the far end. Rows stack with
    * a hairline between them, so a few in a row read as one list. Given
    * `onclick`, the whole row is the button (a 44px-plus tap target); without
-   * it, the row only states the value, as the saved-settings offer does.
+   * it, the row only states the value.
    * `changed` adds a check on a light accent-tinted disc beside the arrow, for a
    * setting changed since the list first opened.
    */

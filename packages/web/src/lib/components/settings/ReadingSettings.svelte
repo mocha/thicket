@@ -29,7 +29,7 @@
     const box = e.currentTarget;
     savingDisplay = true;
     const ok = box.checked ? await saveForNewDevices('settings') : await stopBeingSource();
-    if (ok && !box.checked) showToast('New devices will offer the settings saved last');
+    if (ok && !box.checked) showToast('New devices will use the settings saved last');
     savingDisplay = false;
     // A save that didn't go through leaves the box as it was.
     box.checked = isSource();
@@ -57,7 +57,7 @@
     <Checkbox checked={isSource()} disabled={savingDisplay} onchange={toggleSource} />
     <span>
       <strong>Use these settings on new devices</strong>
-      <small>New devices you sign into will offer the display settings below, kept up to date as you change them here. Each device keeps its own settings.</small>
+      <small>New devices you sign into will use the display settings below, kept up to date as you change them here. Each device keeps its own settings.</small>
     </span>
   </label>
 </Card>
