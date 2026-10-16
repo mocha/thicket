@@ -39,8 +39,10 @@
   let picked = $state<number[]>([]);
   let busy = $state(false);
   let saved = $state(false);
-  /** Follow pressed with no collection to put the feed in: said under the new-collection box, which opens for it. Naming one there finishes the follow. */
+  /** Follow pressed with no collection to put the feed in: said under the new-collection box, which opens for it. */
   let noPlace = $state<string | null>(null);
+  /** A first collection's name, sent with the follow so it's only made if the follow works. */
+  let firstName = $state('');
   const following = $derived(ids.length > 0);
 
   $effect(() => { dialog?.showModal(); });
@@ -55,11 +57,12 @@
     if (busy) return;
     noPlace = null;
     await loadCollections();
-    noPlace = needsCollection(picked);
+    const first = picked.length ? undefined : firstName.trim() || undefined;
+    noPlace = first ? null : needsCollection(picked);
     if (noPlace) return;
     busy = true;
     try {
-      const res = picked.length ? await collectionsApi.setFeedCollections(feedId, picked) : await api.follow(feedId);
+      const res = picked.length ? await collectionsApi.setFeedCollections(feedId, picked) : await api.follow(feedId, { newCollection: first });
       ids = res.collectionIds;
       onchange?.(ids);
       api.event('feed_followed', { feedId, collectionIds: ids, via: 'follow_sheet' });
@@ -102,7 +105,7 @@
 
 <Sheet title={adding || !following ? `Follow ${name}` : `Following ${name}`} lede={adding && !collectionStore.loaded ? undefined : lede} dismiss={adding ? undefined : false} bind:dialog {onclose}>
   {#if adding}
-    <CollectionList ids={picked} via="follow_sheet" disabled={busy} error={noPlace} ontoggle={pick} oncreated={(id) => { picked = [...picked, id]; if (noPlace) { noPlace = null; void follow(); } }} />
+    <CollectionList ids={picked} via="follow_sheet" disabled={busy} error={noPlace} ontoggle={pick} oncreated={(id) => (picked = [...picked, id])} bind:draft={firstName} onfirst={() => void follow()} />
   {:else}
     <CollectionCheckList {feedId} bind:ids bind:saved {name} {onchange} showHint={false} />
   {/if}

@@ -19,6 +19,11 @@
    * Below the list, `hint` explains where the feed will go. `error` (say, Follow
    * pressed with no collections to put the feed in) opens the name box and
    * shows the reason under it.
+   *
+   * With `onfirst`, a first collection (you have none yet) isn't made from
+   * the box: what you type stays in `draft`, Enter calls `onfirst`, and the
+   * caller sends the name with the follow, so the collection only exists
+   * once the follow works.
    * Mount it fresh for each use (a `{#key}` block) so the filter starts empty.
    */
   import { tick, untrack } from 'svelte';
@@ -30,7 +35,7 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
 
-  let { ids, ontoggle, oncreated, hint, error = null, via, disabled = false, flash = new Set(), onPage = false }: {
+  let { ids, ontoggle, oncreated, hint, error = null, via, disabled = false, flash = new Set(), onPage = false, draft = $bindable(''), onfirst }: {
     ids: number[];
     ontoggle: (id: number) => void;
     /** A new collection was just made from the row at the bottom. */
@@ -45,11 +50,18 @@
     flash?: Set<number>;
     /** Sits straight on the page rather than inside a Sheet, so the filter and the list take the raised surface color themselves. */
     onPage?: boolean;
+    /** A first collection's name, while it's being typed; sent with the follow when `onfirst` is set. */
+    draft?: string;
+    /** Follow with a first collection's name instead of making it here (see above). */
+    onfirst?: () => void;
   } = $props();
 
   let list = $state<HTMLElement | null>(null);
   let filter = $state('');
   let newName = $state('');
+  /** No collections yet and the caller sends the name itself: the box only collects it. */
+  const deferred = $derived(!!onfirst && collectionStore.loaded && !namedCollections().length);
+  $effect(() => { if (deferred) draft = newName; });
   let creating = $state(false);
   /** The new-collection row is showing its name box. */
   let naming = $state(false);
@@ -152,12 +164,12 @@
               disabled={creating}
               onblur={() => { if (!newName.trim() && !creating && !error) stopNaming(); }}
               onkeydown={(e: KeyboardEvent) => {
-                if (e.key === 'Enter') { e.preventDefault(); void create(); }
+                if (e.key === 'Enter') { e.preventDefault(); if (deferred) onfirst?.(); else void create(); }
                 else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); stopNaming(); }
               }}
             >
               {#snippet trailing()}
-                <Button variant="primary" size="sm" onclick={create} disabled={creating || !newName.trim()}>Create</Button>
+                {#if !deferred}<Button variant="primary" size="sm" onclick={create} disabled={creating || !newName.trim()}>Create</Button>{/if}
               {/snippet}
             </Input>
           {/snippet}
