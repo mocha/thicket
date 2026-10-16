@@ -102,6 +102,7 @@
       const res = await api.follow(feedId, { newCollection });
       ids = res.collectionIds;
       onchange?.(ids);
+      firstName = '';
       await loadCollections(true);
       api.event('feed_followed', { feedId, collectionId: ids[0], via: 'checklist' });
       showToast(`Following ${name} in ${newCollection}`, { label: 'Undo', run: () => void save([]) });

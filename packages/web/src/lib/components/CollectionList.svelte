@@ -65,6 +65,12 @@
   /** No collections yet and the caller sends the name itself: the box only collects it. */
   const deferred = $derived(!!onfirst && collectionStore.loaded && !namedCollections().length);
   $effect(() => { if (deferred) draft = newName; });
+  // The first collection now exists (the follow made it): the box that named it is done.
+  let wasDeferred = false;
+  $effect(() => {
+    if (deferred) wasDeferred = true;
+    else if (wasDeferred) { wasDeferred = false; untrack(stopNaming); }
+  });
   let creating = $state(false);
   /** The new-collection row is showing its name box. */
   let naming = $state(false);
