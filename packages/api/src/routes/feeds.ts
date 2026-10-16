@@ -18,6 +18,7 @@ import { isYouTubeUrl, YOUTUBE_FEED_PATTERN } from "../feeds/youtube.js";
 import { feedSlugSql } from "../lib/slug.js";
 import { PUBLIC_URL } from "../lib/config.js";
 import { sinceIntervalFrom, sinceSql } from "../lib/since.js";
+import { likeFor } from "../lib/like.js";
 
 export const feeds = new Hono();
 
@@ -127,6 +128,31 @@ feeds.get("/", async (c) => {
   const [{ indexTotal }] = (await db.execute<{ indexTotal: number }>(sql`select count(*)::int as "indexTotal" from feeds`)).rows;
   const page = rows.rows.slice(0, limit).map(shape);
   return c.json({ feeds: page, total, indexTotal, nextOffset: rows.rows.length > limit ? offset + limit : null });
+});
+
+/**
+ * Suggestions for the Add a feed box: feeds already on this instance whose
+ * name or address contains what was typed so far. Only ones the caller doesn't
+ * follow yet; following one again would only say so. Trimmed to what a
+ * suggestion row shows, and one statement, since it runs on every pause in
+ * typing. The index above runs three, with a dozen subqueries per row.
+ */
+export const SUGGEST_MIN = 2;
+export const SUGGEST_LIMIT = 6;
+feeds.get("/suggest", async (c) => {
+  const user = currentUser(c);
+  const q = (c.req.query("q") ?? "").trim();
+  if (q.length < SUGGEST_MIN) return c.json({ feeds: [] });
+  const like = likeFor(q);
+  const rows = await db.execute<{ id: number; url: string; siteUrl: string | null; title: string | null }>(sql`
+    select f.id, f.url, f.site_url as "siteUrl", f.title from feeds f
+    where (f.title ilike ${like} or f.url ilike ${like} or f.site_url ilike ${like})
+      and not exists(select 1 from collection_feeds cf join collections col on col.id = cf.collection_id and col.user_id = ${user.id} where cf.feed_id = f.id)
+      and not exists(select 1 from blocks b where b.user_id = ${user.id} and b.feed_id = f.id)
+    order by f.follower_count desc, (f.last_item_at > now() - interval '7 days') desc nulls last, md5(f.id::text)
+    limit ${SUGGEST_LIMIT}
+  `);
+  return c.json({ feeds: rows.rows });
 });
 
 /** Add by URL. This is the endpoint the share target, bookmarklet, or any external tool hits. */
