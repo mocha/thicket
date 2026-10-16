@@ -80,7 +80,7 @@
   <section class="packs" class:compact>
     {#if heading}<h2>{heading}</h2>{/if}
     {#if lede}<p class="lede">{lede}</p>{/if}
-    <ul class:picking>
+    <ul>
       {#each packs as c (c.id)}
         <Card as="li" class="pack{picking && isPicked(c) ? ' picked' : ''}" pad={false}>
           <!-- Laid out like an article card, with the same source line on top:
@@ -92,9 +92,13 @@
             {#if !from}<Dot /><span class="count">{plural(c.feedCount, 'site')}</span>{/if}
           </CardMeta>
           {#if picking}
-            <!-- Picking: the name labels the box, stretched over the whole card, so a tap anywhere ticks it. -->
-            <Checkbox class="tick" id="pack-{c.id}" checked={isPicked(c)} onchange={() => toggle(c)} />
-            <h3 class="card-title"><label class="name" for="pack-{c.id}">{c.name}</label></h3>
+            <!-- Picking: the name labels the box at its line's right end, stretched
+                 over the whole card, so a tap anywhere ticks it. The source line
+                 above keeps its full width for icons, owner, and count. -->
+            <div class="titlerow">
+              <h3 class="card-title"><label class="name" for="pack-{c.id}">{c.name}</label></h3>
+              <Checkbox class="tick" id="pack-{c.id}" checked={isPicked(c)} onchange={() => toggle(c)} />
+            </div>
             {#if c.description}<p class="card-summary">{c.description}</p>{/if}
           {:else}
           <!-- The name is the link, stretched over the whole card, so the card
@@ -149,16 +153,16 @@
      specifically so it outranks the shared title's own zero margin. */
   .packs ul .card-title { margin-top: var(--space-3); }
   .name { color: inherit; text-decoration: none; }
-  /* The article card's cue that the card opens something: the title underlines
+  /* The article card's cue that the card opens something (a name that ticks a box isn't a link, so it doesn't): the title underlines
      softly while the pointer is anywhere on the card but the button. */
-  @media (hover: hover) { .name:hover { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
+  @media (hover: hover) { a.name:hover { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   .name::after { content: ''; position: absolute; inset: 0; }
   .name:focus-visible { outline: none; }
   label.name { cursor: pointer; }
-  /* Room at the right for the box, so a long source line stops short of it. */
-  ul.picking :global(.pack) { padding-right: calc(var(--card-pad) + 16px + var(--space-3)); }
-  /* The box sits at the right end of the source line, like a status at a row's end. */
-  ul :global(.tick) { position: absolute; top: calc(var(--card-pad) + 2px); right: var(--card-pad); }
+  /* The box sits at the right end of the name's line, like a status at a row's end. */
+  .titlerow { display: flex; align-items: baseline; gap: var(--space-3); margin-top: var(--space-3); }
+  .packs ul .titlerow .card-title { margin-top: 0; flex: 1; min-width: 0; }
+  .titlerow :global(.tick) { align-self: center; }
   /* Picked: outlined in the accent, the same green that says "you have this" elsewhere. */
   ul :global(.pack.picked) { outline: 2px solid var(--accent); outline-offset: -1px; }
   ul :global(.pack:has(.tick input:focus-visible)) { outline: 2px solid var(--accent); outline-offset: 2px; }
