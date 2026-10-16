@@ -23,7 +23,8 @@
    * With `onfirst`, a first collection (you have none yet) isn't made from
    * the box: what you type stays in `draft`, Enter calls `onfirst`, and the
    * caller sends the name with the follow, so the collection only exists
-   * once the follow works.
+   * once the follow works. The box's Create button shows then only where
+   * nothing else sends it (`firstButton`); a Sheet's Follow does.
    * Mount it fresh for each use (a `{#key}` block) so the filter starts empty.
    */
   import { tick, untrack } from 'svelte';
@@ -35,7 +36,7 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
 
-  let { ids, ontoggle, oncreated, hint, error = null, via, disabled = false, flash = new Set(), onPage = false, draft = $bindable(''), onfirst }: {
+  let { ids, ontoggle, oncreated, hint, error = null, via, disabled = false, flash = new Set(), onPage = false, draft = $bindable(''), onfirst, firstButton = false }: {
     ids: number[];
     ontoggle: (id: number) => void;
     /** A new collection was just made from the row at the bottom. */
@@ -54,6 +55,8 @@
     draft?: string;
     /** Follow with a first collection's name instead of making it here (see above). */
     onfirst?: () => void;
+    /** Keep the box's Create button for a first collection, sending it through `onfirst`. */
+    firstButton?: boolean;
   } = $props();
 
   let list = $state<HTMLElement | null>(null);
@@ -169,7 +172,8 @@
               }}
             >
               {#snippet trailing()}
-                {#if !deferred}<Button variant="primary" size="sm" onclick={create} disabled={creating || !newName.trim()}>Create</Button>{/if}
+                {#if !deferred}<Button variant="primary" size="sm" onclick={create} disabled={creating || !newName.trim()}>Create</Button>
+                {:else if firstButton}<Button variant="primary" size="sm" onclick={() => onfirst?.()} disabled={disabled || !newName.trim()}>Create</Button>{/if}
               {/snippet}
             </Input>
           {/snippet}
