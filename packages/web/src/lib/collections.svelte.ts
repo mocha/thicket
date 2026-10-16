@@ -48,10 +48,15 @@ export function defaultCollection(): Collection | null {
  */
 export function whereItGoes(ids: number[]): string {
   const nameOf = (id: number) => namedCollections().find((c) => c.id === id)?.name ?? 'a collection';
-  if (!namedCollections().length) return 'You don’t have any collections yet. Following this feed creates one.';
+  if (!namedCollections().length) return 'You don’t have any collections yet.';
   if (ids.length === 1) return `It goes in ${nameOf(ids[0])}. Tick more if it belongs in several.`;
   if (ids.length) return `It goes in ${ids.length} of your collections.`;
   return `Choose where it goes. ${defaultCollection()?.name ?? 'Your first collection'} is the default.`;
+}
+
+/** Following needs somewhere to go: with no collections and none just made, this is why not. */
+export function needsCollection(ids: number[]): string | null {
+  return !ids.length && !namedCollections().length ? 'Add a name for your first collection.' : null;
 }
 
 /** "Tech News" for one collection, "3 collections" for several: for messages about where a feed went. */

@@ -16,7 +16,9 @@
    * can go. Tapping it turns the row into a name box; Enter creates it and hands
    * it to `oncreated`, and Escape or leaving it empty puts the row back. If a
    * filter found nothing, what you typed there becomes the suggested name.
-   * Below the list, `hint` explains where the feed will go.
+   * Below the list, `hint` explains where the feed will go. `error` (say, Follow
+   * pressed with no collections to put the feed in) opens the name box and
+   * shows the reason under it.
    * Mount it fresh for each use (a `{#key}` block) so the filter starts empty.
    */
   import { tick } from 'svelte';
@@ -28,12 +30,14 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
 
-  let { ids, ontoggle, oncreated, hint, via, disabled = false, flash = new Set(), onPage = false }: {
+  let { ids, ontoggle, oncreated, hint, error = null, via, disabled = false, flash = new Set(), onPage = false }: {
     ids: number[];
     ontoggle: (id: number) => void;
     /** A new collection was just made from the row at the bottom. */
     oncreated: (id: number) => void;
     hint?: string;
+    /** Why the feed can't go anywhere yet: opens the new-collection box, with this under it. */
+    error?: string | null;
     /** Where this list is, for the analytics event on create. */
     via: string;
     disabled?: boolean;
@@ -65,6 +69,9 @@
       if (list && row) list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top - (list.clientHeight - row.offsetHeight) / 2;
     });
   });
+
+  // An error is a request to name a collection now: open the box for it.
+  $effect(() => { if (error && !naming) void startNaming(); });
 
   async function startNaming() {
     newName = visible.length ? '' : filter.trim();
@@ -134,7 +141,7 @@
     <div class="new" class:alone={!visible.length && !filter.trim()}>
       {#if naming}
         <span class="plus" aria-hidden="true">+</span>
-        <Field label="New collection name" hideLabel class="grow">
+        <Field label="New collection name" hideLabel class="grow" {error}>
           {#snippet children({ id })}
             <Input
               {id}
@@ -142,7 +149,7 @@
               bind:element={nameEl}
               placeholder="Name it…"
               disabled={creating}
-              onblur={() => { if (!newName.trim() && !creating) stopNaming(); }}
+              onblur={() => { if (!newName.trim() && !creating && !error) stopNaming(); }}
               onkeydown={(e: KeyboardEvent) => {
                 if (e.key === 'Enter') { e.preventDefault(); void create(); }
                 else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); stopNaming(); }

@@ -19,7 +19,7 @@
    * So "Follow" means the same thing in both sheets: press it to start.
    */
   import { api, collectionsApi } from '$lib/api';
-  import { collectionStore, loadCollections, placeName, whereItGoes } from '$lib/collections.svelte';
+  import { collectionStore, loadCollections, needsCollection, placeName, whereItGoes } from '$lib/collections.svelte';
   import { showToast } from '$lib/toast.svelte';
   import Sheet from './Sheet.svelte';
   import CollectionList from './CollectionList.svelte';
@@ -39,17 +39,22 @@
   let picked = $state<number[]>([]);
   let busy = $state(false);
   let saved = $state(false);
+  /** Follow pressed with no collection to put the feed in: said under the new-collection box, which opens for it. */
+  let noPlace = $state<string | null>(null);
   const following = $derived(ids.length > 0);
 
   $effect(() => { dialog?.showModal(); });
 
   function pick(id: number) {
     picked = picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id];
+    noPlace = null;
   }
 
   /** Adding: file it where you picked, or in your default collection if you picked nothing. */
   async function follow() {
     if (busy) return;
+    noPlace = needsCollection(picked);
+    if (noPlace) return;
     busy = true;
     try {
       const res = picked.length ? await collectionsApi.setFeedCollections(feedId, picked) : await api.follow(feedId);
@@ -95,7 +100,7 @@
 
 <Sheet title={adding || !following ? `Follow ${name}` : `Following ${name}`} lede={adding && !collectionStore.loaded ? undefined : lede} dismiss={adding ? undefined : false} bind:dialog {onclose}>
   {#if adding}
-    <CollectionList ids={picked} via="follow_sheet" disabled={busy} ontoggle={pick} oncreated={(id) => (picked = [...picked, id])} />
+    <CollectionList ids={picked} via="follow_sheet" disabled={busy} error={noPlace} ontoggle={pick} oncreated={(id) => { picked = [...picked, id]; noPlace = null; }} />
   {:else}
     <CollectionCheckList {feedId} bind:ids bind:saved {name} {onchange} showHint={false} />
   {/if}

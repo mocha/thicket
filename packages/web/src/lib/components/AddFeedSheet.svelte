@@ -12,7 +12,7 @@
   import { page } from '$app/state';
   import { api, ApiError, feedHref, type Feed, type SubscribeOutcome } from '$lib/api';
   import { addFeed, closeAddFeed } from '$lib/addfeed.svelte';
-  import { loadCollections, whereItGoes } from '$lib/collections.svelte';
+  import { loadCollections, needsCollection, whereItGoes } from '$lib/collections.svelte';
   import { hostOf } from '$lib/time';
   import { showToast } from '$lib/toast.svelte';
   import Checkbox from './Checkbox.svelte';
@@ -35,6 +35,8 @@
   let picked = $state<string[]>([]);
   /** How the last Follow went for each feed, by address: followed, or why not. Shown under that feed. */
   let results = $state<Record<string, { ok: true } | { ok: false; why: string }>>({});
+  /** Follow pressed with no collection to put the feed in: said under the new-collection box, which opens for it. */
+  let noPlace = $state<string | null>(null);
 
   /* The feeds to choose from, for as long as the address box still holds the
      address they came from. Edit the address and Follow looks it up afresh. */
@@ -61,7 +63,7 @@
     const o = addFeed.opts;
     url = o.url ?? '';
     ids = [...(o.collectionIds ?? [])];
-    outcome = null; busy = false; landing = false;
+    outcome = null; busy = false; landing = false; noPlace = null;
     lookedUp = ''; picked = []; results = {};
     // Opened from a collection, that one starts ticked. Opened from Everything,
     // nothing is ticked — leave it and Follow drops the feed in your default
@@ -77,6 +79,7 @@
 
   function toggle(id: number) {
     ids = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+    noPlace = null;
   }
 
   const hint = $derived(whereItGoes(ids));
@@ -86,6 +89,8 @@
     if (candidates) return followPicked(candidates);
     const value = target.trim();
     if (!value || busy) return;
+    noPlace = needsCollection(ids);
+    if (noPlace) return;
     busy = true; outcome = null;
     try {
       const res = await api.addFeed(value, ids);
@@ -225,7 +230,7 @@
 
     <div class="eyebrow">Put it in a collection</div>
     {#key addFeed.nonce}
-      <CollectionList {ids} {hint} via="add_sheet" disabled={busy} ontoggle={toggle} oncreated={(id) => (ids = [...ids, id])} />
+      <CollectionList {ids} {hint} error={noPlace} via="add_sheet" disabled={busy} ontoggle={toggle} oncreated={(id) => { ids = [...ids, id]; noPlace = null; }} />
     {/key}
   </form>
   {#snippet footer()}
