@@ -56,7 +56,7 @@ export function whereItGoes(ids: number[]): string {
 
 /** Following needs somewhere to go: with no collections and none just made, this is why not. */
 export function needsCollection(ids: number[]): string | null {
-  return !ids.length && !namedCollections().length ? 'Add a name for your first collection.' : null;
+  return !ids.length && !namedCollections().length ? 'Add a name for your first collection, and we’ll add your feed to it.' : null;
 }
 
 /** "Tech News" for one collection, "3 collections" for several: for messages about where a feed went. */

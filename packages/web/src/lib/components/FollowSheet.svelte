@@ -39,7 +39,7 @@
   let picked = $state<number[]>([]);
   let busy = $state(false);
   let saved = $state(false);
-  /** Follow pressed with no collection to put the feed in: said under the new-collection box, which opens for it. */
+  /** Follow pressed with no collection to put the feed in: said under the new-collection box, which opens for it. Naming one there finishes the follow. */
   let noPlace = $state<string | null>(null);
   const following = $derived(ids.length > 0);
 
@@ -100,7 +100,7 @@
 
 <Sheet title={adding || !following ? `Follow ${name}` : `Following ${name}`} lede={adding && !collectionStore.loaded ? undefined : lede} dismiss={adding ? undefined : false} bind:dialog {onclose}>
   {#if adding}
-    <CollectionList ids={picked} via="follow_sheet" disabled={busy} error={noPlace} ontoggle={pick} oncreated={(id) => { picked = [...picked, id]; noPlace = null; }} />
+    <CollectionList ids={picked} via="follow_sheet" disabled={busy} error={noPlace} ontoggle={pick} oncreated={(id) => { picked = [...picked, id]; if (noPlace) { noPlace = null; void follow(); } }} />
   {:else}
     <CollectionCheckList {feedId} bind:ids bind:saved {name} {onchange} showHint={false} />
   {/if}

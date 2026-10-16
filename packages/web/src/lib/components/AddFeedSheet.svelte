@@ -35,7 +35,7 @@
   let picked = $state<string[]>([]);
   /** How the last Follow went for each feed, by address: followed, or why not. Shown under that feed. */
   let results = $state<Record<string, { ok: true } | { ok: false; why: string }>>({});
-  /** Follow pressed with no collection to put the feed in: said under the new-collection box, which opens for it. */
+  /** Follow pressed with no collection to put the feed in: said under the new-collection box, which opens for it. Naming one there finishes the follow. */
   let noPlace = $state<string | null>(null);
 
   /* The feeds to choose from, for as long as the address box still holds the
@@ -230,7 +230,7 @@
 
     <div class="eyebrow">Put it in a collection</div>
     {#key addFeed.nonce}
-      <CollectionList {ids} {hint} error={noPlace} via="add_sheet" disabled={busy} ontoggle={toggle} oncreated={(id) => { ids = [...ids, id]; noPlace = null; }} />
+      <CollectionList {ids} {hint} error={noPlace} via="add_sheet" disabled={busy} ontoggle={toggle} oncreated={(id) => { ids = [...ids, id]; if (noPlace) { noPlace = null; void submit(); } }} />
     {/key}
   </form>
   {#snippet footer()}
