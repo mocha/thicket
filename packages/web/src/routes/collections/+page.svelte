@@ -8,7 +8,6 @@
   import { profilesApi, profileHref, type ProfileCollection } from '$lib/api';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
-  import Badge from '$lib/components/Badge.svelte';
   import CollectionTree from '$lib/components/CollectionTree.svelte';
 
   const me = $derived(session.user);
@@ -30,7 +29,7 @@
 
 {#if me}
   <PageHeader>
-    {#snippet title()}<h1 class="pagetitle">Collections {#if cols}<Badge>{cols.length}</Badge>{/if}</h1>{/snippet}
+    {#snippet title()}<h1 class="pagetitle">Collections</h1>{/snippet}
     {#snippet description()}Your feeds, grouped your way. {#if !shared}Only you can see them.{:else}Shown on <a href="{profileHref(me.handle)}/collections">your profile</a>{shared === 'friends' ? ' to the people you follow' : ''}.{/if}{/snippet}
     {#snippet actions()}<AddFeedButton via="collections" bottomBarOnly />{/snippet}
   </PageHeader>
