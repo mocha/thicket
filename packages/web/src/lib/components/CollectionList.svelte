@@ -36,6 +36,8 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
 
+  /** The pinned new-collection row's height as drawn, so the frame's floor grows with it (an error line under the name box made it taller than the floor allowed, and the frame cut it off). */
+  let pinnedHeight = $state(0);
   let { ids, ontoggle, oncreated, hint, error = null, via, disabled = false, flash = new Set(), onPage = false, draft = $bindable(''), onfirst, firstButton = false }: {
     ids: number[];
     ontoggle: (id: number) => void;
@@ -142,7 +144,7 @@
     {/snippet}
   </Field>
 {/if}
-<div class="frame" class:onpage={onPage} style:--floor-rows={visible.length > 2 ? 2.5 : visible.length || (filter.trim() ? 1 : 0)}>
+<div class="frame" class:onpage={onPage} style:--floor-rows={visible.length > 2 ? 2.5 : visible.length || (filter.trim() ? 1 : 0)} style:--pinned="{pinnedHeight}px">
   <div class="scroll" bind:this={list}>
     <ul class="checks">
       {#each visible as c (c.id)}
@@ -160,7 +162,7 @@
     {/if}
   </div>
   {#if collectionStore.loaded}
-    <div class="new" class:alone={!visible.length && !filter.trim()}>
+    <div class="new" class:alone={!visible.length && !filter.trim()} bind:offsetHeight={pinnedHeight}>
       {#if naming}
         <span class="plus" aria-hidden="true">+</span>
         <Field label="New collection name" hideLabel class="grow" {error}>
@@ -199,10 +201,11 @@
   /* The border holds both the scrolling rows and the pinned new-collection row.
      On a short screen (keyboard up, phone on its side) the list gives up height
      so its Sheet fits, but only down to two and a half rows (--floor-rows; 48px
-     is a row, 53px the pinned row and its line): the third row is cut through
-     its name, which says "there's more" the same way the desktop cap below
-     does. Past that, whatever holds it scrolls. */
-  .frame { display: flex; flex-direction: column; min-height: calc(var(--floor-rows) * 48px * var(--size-app) + 53px); flex: 0 1 auto; border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+     is a row) plus the pinned new-collection row at whatever height it is
+     (--pinned, measured; 53px is the row and its line before it's measured):
+     the third row is cut through its name, which says "there's more" the same
+     way the desktop cap below does. Past that, whatever holds it scrolls. */
+  .frame { display: flex; flex-direction: column; min-height: calc(var(--floor-rows) * 48px * var(--size-app) + max(53px, var(--pinned))); flex: 0 1 auto; border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
   .frame.onpage { background: var(--surface); }
   .scroll { overflow-y: auto; min-height: 0; flex: 0 1 auto; max-height: 38vh; padding: 0 var(--space-3); }
   /* Desktop cap. Must come after the base .scroll rule above: same specificity,
@@ -224,8 +227,9 @@
   @keyframes pop { 0% { transform: scale(1.4); } 30% { transform: scale(1); } 100% { transform: scale(1); } }
   .nomatch { margin: 0; padding: var(--space-3) var(--space-2); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .hint { margin: calc(-1 * var(--space-1)) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-  /* Lined up with the rows above: the + sits where a checkbox would. */
-  .new { display: flex; align-items: center; gap: var(--space-3); margin: 0 var(--space-3); padding: var(--space-2) var(--space-1); min-height: 52px; border-top: 1px solid var(--line); }
+  /* Lined up with the rows above: the + sits where a checkbox would. Never
+     shrinks: when the frame gives up height, the list above gives it up. */
+  .new { display: flex; align-items: center; gap: var(--space-3); margin: 0 var(--space-3); padding: var(--space-2) var(--space-1); min-height: 52px; border-top: 1px solid var(--line); flex: none; }
   .new.alone { border-top: 0; }
   .new :global(.grow) { flex: 1; min-width: 0; }
   .start { display: flex; align-items: center; gap: var(--space-3); flex: 1; margin: 0; padding: var(--space-1) 0; border: 0; background: none; font: inherit; color: var(--accent); text-align: left; }
