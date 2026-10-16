@@ -477,9 +477,10 @@ admin.put("/starter", async (c) => {
     // New people only ever see public collections, so a private account would silently fall back to the default set.
     if (!u.shared) return c.json({ error: "That account’s profile or collections aren’t public, so new people couldn’t see them." }, 400);
   }
+  const before = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
   await setSetting("starter_account", handle);
   // Another account's ticks mean nothing here: back to its first six until the admin ticks.
-  await db.delete(schema.instanceSettings).where(eq(schema.instanceSettings.key, "starter_collections"));
+  if (handle !== before) await db.delete(schema.instanceSettings).where(eq(schema.instanceSettings.key, "starter_collections"));
   return c.json(await starterState());
 });
 

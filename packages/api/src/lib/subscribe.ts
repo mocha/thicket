@@ -97,9 +97,9 @@ export type Destination = { id: number } | { name: string };
  * for wins; then a new one by name; then the default. With no collections and
  * no name there is nowhere to put it, and the answer says so.
  */
-export async function destinationFor(user: SessionUser, collectionId: number | undefined, newName: string | undefined): Promise<Destination | { error: string }> {
+export async function destinationFor(user: SessionUser, collectionId: number | undefined, newName: unknown): Promise<Destination | { error: string }> {
   if (collectionId !== undefined) return { id: collectionId };
-  const name = newName?.trim();
+  const name = typeof newName === "string" ? newName.trim() : "";
   if (name) {
     if (await slugTaken(user.id, slugify(name))) return { error: "You already have a collection with that name." };
     return { name };
@@ -111,11 +111,17 @@ export async function destinationFor(user: SessionUser, collectionId: number | u
 /** The collection a follow lands in, making the named one now if that's what was asked for. */
 export async function fileInto(user: SessionUser, dest: Destination): Promise<number> {
   if ("id" in dest) return dest.id;
+  const slug = slugify(dest.name);
   const [made] = await db
     .insert(schema.collections)
-    .values({ userId: user.id, parentId: user.rootCollectionId, name: dest.name, slug: slugify(dest.name) })
+    .values({ userId: user.id, parentId: user.rootCollectionId, name: dest.name, slug })
+    .onConflictDoNothing()
     .returning();
-  return made.id;
+  if (made) return made.id;
+  // Two follows naming the same new collection at once: the second files into the one the first made.
+  const [same] = await db.select({ id: schema.collections.id }).from(schema.collections)
+    .where(and(eq(schema.collections.userId, user.id), eq(schema.collections.slug, slug)));
+  return same.id;
 }
 
 /**

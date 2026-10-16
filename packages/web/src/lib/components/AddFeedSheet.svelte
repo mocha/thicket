@@ -89,6 +89,8 @@
     if (candidates) return followPicked(candidates);
     const value = target.trim();
     if (!value || busy) return;
+    noPlace = null;
+    await loadCollections();
     noPlace = needsCollection(ids);
     if (noPlace) return;
     busy = true; outcome = null;

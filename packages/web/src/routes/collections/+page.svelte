@@ -66,8 +66,11 @@
       }
     }
     picked = [];
-    await Promise.all([load(me.handle), loadCollections(true)]);
-    copying = false;
+    try {
+      await Promise.all([load(me.handle), loadCollections(true)]);
+    } finally {
+      copying = false;
+    }
   }
   const shared = $derived(me?.profileVisibility === 'public' && me.collectionsVisibility !== 'private' ? me.collectionsVisibility : null);
 </script>

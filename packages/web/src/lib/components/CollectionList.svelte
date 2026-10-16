@@ -21,7 +21,7 @@
    * shows the reason under it.
    * Mount it fresh for each use (a `{#key}` block) so the filter starts empty.
    */
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { api, collectionsApi } from '$lib/api';
   import { collectionStore, loadCollections, namedCollections } from '$lib/collections.svelte';
   import { showToast } from '$lib/toast.svelte';
@@ -70,8 +70,9 @@
     });
   });
 
-  // An error is a request to name a collection now: open the box for it.
-  $effect(() => { if (error && !naming) void startNaming(); });
+  // An error arriving is a request to name a collection now: open the box for
+  // it, once. Escape still closes it; the next Follow sets the error afresh.
+  $effect(() => { if (error) untrack(() => void startNaming()); });
 
   async function startNaming() {
     newName = visible.length ? '' : filter.trim();

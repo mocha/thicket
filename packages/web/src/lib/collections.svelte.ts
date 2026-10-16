@@ -34,7 +34,7 @@ export function namedCollections(): Collection[] {
 
 /**
  * Where a feed goes when you press Follow without choosing: your oldest
- * collection, which on a new account is the one you were given. The server
+ * collection. With none, there's nowhere yet (see needsCollection). The server
  * picks the same one; this is so the UI can say its name out loud.
  */
 export function defaultCollection(): Collection | null {
@@ -51,12 +51,17 @@ export function whereItGoes(ids: number[]): string {
   if (!namedCollections().length) return 'You don’t have any collections yet.';
   if (ids.length === 1) return `It goes in ${nameOf(ids[0])}. Tick more if it belongs in several.`;
   if (ids.length) return `It goes in ${ids.length} of your collections.`;
-  return `Choose where it goes. ${defaultCollection()?.name ?? 'Your first collection'} is the default.`;
+  return `Choose where it goes. ${defaultCollection()!.name} is the default.`;
 }
 
-/** Following needs somewhere to go: with no collections and none just made, this is why not. */
+/**
+ * Following needs somewhere to go: with no collections and none just made,
+ * this is why not. Ask only once the list has loaded (`await
+ * loadCollections()`): a shared link presses Follow straight away, and an
+ * unloaded list would look like no collections at all.
+ */
 export function needsCollection(ids: number[]): string | null {
-  return !ids.length && !namedCollections().length ? 'Add a name for your first collection, and we’ll add your feed to it.' : null;
+  return !ids.length && !namedCollections().length ? 'Name your first collection, and we’ll add your feed to it.' : null;
 }
 
 /** "Tech News" for one collection, "3 collections" for several: for messages about where a feed went. */

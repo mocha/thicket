@@ -53,6 +53,8 @@
   /** Adding: file it where you picked, or in your default collection if you picked nothing. */
   async function follow() {
     if (busy) return;
+    noPlace = null;
+    await loadCollections();
     noPlace = needsCollection(picked);
     if (noPlace) return;
     busy = true;
