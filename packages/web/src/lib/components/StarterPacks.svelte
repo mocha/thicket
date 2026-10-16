@@ -14,6 +14,8 @@
    * Copy button goes to Sign up, named for the collection, and the copy is
    * made when you come back (see lib/copyintent.svelte.ts).
    *
+   * `quiet`: under a Welcome, the heading reads like the Welcome's gray line.
+   *
    * With `bind:picked`, the cards are for picking instead (the Collections
    * welcome): each card ticks and unticks as a whole, and the page copies
    * everything picked with one button. `available` says how many there are,
@@ -33,8 +35,8 @@
   import { copyNext } from '$lib/copyintent.svelte';
   import { plural } from '$lib/words';
 
-  let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false, picked = $bindable(), available = $bindable(0) }:
-    { heading?: string; lede?: string; compact?: boolean; picked?: ExploreCollection[]; available?: number } = $props();
+  let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false, quiet = false, picked = $bindable(), available = $bindable(0) }:
+    { heading?: string; lede?: string; compact?: boolean; quiet?: boolean; picked?: ExploreCollection[]; available?: number } = $props();
 
   /** Picking, not copying one at a time: set once, by whether the page bound `picked`. */
   // svelte-ignore state_referenced_locally
@@ -77,7 +79,7 @@
 </script>
 
 {#if packs.length}
-  <section class="packs" class:compact>
+  <section class="packs" class:compact class:quiet>
     {#if heading}<h2>{heading}</h2>{/if}
     {#if lede}<p class="lede">{lede}</p>{/if}
     <ul>
@@ -172,6 +174,9 @@
   .take { margin-top: auto; padding-top: var(--space-3); position: relative; z-index: 1; }
   .from { margin: var(--space-4) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; max-width: 62ch; }
   .from a { color: var(--accent); font-weight: 600; }
+  /* Under a Welcome: its serif is kept for the one headline, and the heading
+     here reads exactly like the gray line under it. */
+  .quiet h2 { font-family: var(--font); font-size: calc(var(--text-xl) * var(--size-app)); font-weight: 400; color: var(--text-2); }
   .compact h2 { font-size: calc(var(--text-xl) * var(--size-app)); }
   .compact .card-summary { display: none; }
   .compact ul { grid-template-columns: 1fr; }

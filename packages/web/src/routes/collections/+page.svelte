@@ -22,6 +22,7 @@
   import Banner from '$lib/components/Banner.svelte';
   import Button from '$lib/components/Button.svelte';
   import Dot from '$lib/components/Dot.svelte';
+  import Welcome from '$lib/components/Welcome.svelte';
 
   const me = $derived(session.user);
   let cols = $state<ProfileCollection[] | null>(null);
@@ -73,10 +74,23 @@
 
 <svelte:head><title>Collections · thicket</title></svelte:head>
 
-{#if me}
+{#if me && cols && !cols.length && !error}
+  <!-- No collections: the welcome, laid out like New posts' own. -->
+  {#if failed.length}{@render failures()}{/if}
+  <Welcome title="Collections" sub="Every site you love, in one place. No algorithm decides what you see." />
+  <StarterPacks heading="If you want an easy way to get started, copy one or more of these Collections. You can delete them at any time." lede="" quiet bind:picked bind:available />
+  <p class="other">Know what you want? <Button link onclick={() => openAddFeed({ via: 'collections_welcome' })}>+ Add new feed</Button><Dot /><Button link href="/import">Import feeds</Button></p>
+  {#if available}
+    <ActionBar>
+      <Button variant="primary" onclick={copyPicked} disabled={copying || !picked.length}>
+        {copying ? 'Copying…' : picked.length === 1 ? 'Copy 1 collection' : picked.length ? `Copy ${picked.length} collections` : 'Copy collections'}
+      </Button>
+    </ActionBar>
+  {/if}
+{:else if me}
   <PageHeader>
     {#snippet title()}<h1 class="pagetitle">Collections</h1>{/snippet}
-    {#snippet description()}{#if cols && !cols.length}Every site you love, in one place. No algorithm decides what you see.{:else}Your feeds, grouped your way. {#if !shared}Only you can see them.{:else}Shown on <a href="{profileHref(me.handle)}/collections">your profile</a>{shared === 'friends' ? ' to the people you follow' : ''}.{/if}{/if}{/snippet}
+    {#snippet description()}Your feeds, grouped your way. {#if !shared}Only you can see them.{:else}Shown on <a href="{profileHref(me.handle)}/collections">your profile</a>{shared === 'friends' ? ' to the people you follow' : ''}.{/if}{/snippet}
     {#snippet actions()}<AddFeedButton via="collections" bottomBarOnly />{/snippet}
   </PageHeader>
   {#if error}
@@ -84,28 +98,19 @@
   {:else if cols === null}
     <p class="status">Loading…</p>
   {:else}
-    {#if failed.length}
-      <div class="failed">
-        <Banner tone="error" title={failed.length === 1 ? `Couldn’t copy ${failed[0].name}` : `Couldn’t copy ${failed.length} collections`}>
-          {#if failed.length === 1}{failed[0].why}{:else}{#each failed as f (f.name)}<span class="line">{f.name}: {f.why}</span>{/each}{/if}
-        </Banner>
-      </div>
-    {/if}
-    {#if cols.length}
-      <CollectionTree collections={cols} handle={me.handle} isMe filterable creatable />
-    {:else}
-      <StarterPacks heading="" lede="If you want an easy way to get started, copy one or more of these Collections. You can delete them at any time." bind:picked bind:available />
-      <p class="other">Know what you want? <Button link onclick={() => openAddFeed({ via: 'collections_welcome' })}>+ Add new feed</Button><Dot /><Button link href="/import">Import feeds</Button></p>
-      {#if available}
-        <ActionBar>
-          <Button variant="primary" onclick={copyPicked} disabled={copying || !picked.length}>
-            {copying ? 'Copying…' : picked.length === 1 ? 'Copy 1 collection' : picked.length ? `Copy ${picked.length} collections` : 'Copy collections'}
-          </Button>
-        </ActionBar>
-      {/if}
-    {/if}
+    {#if failed.length}{@render failures()}{/if}
+    <CollectionTree collections={cols} handle={me.handle} isMe filterable creatable />
   {/if}
 {/if}
+
+<!-- Packs that didn't copy, each with why, above whatever did. -->
+{#snippet failures()}
+  <div class="failed">
+    <Banner tone="error" title={failed.length === 1 ? `Couldn’t copy ${failed[0].name}` : `Couldn’t copy ${failed.length} collections`}>
+      {#if failed.length === 1}{failed[0].why}{:else}{#each failed as f (f.name)}<span class="line">{f.name}: {f.why}</span>{/each}{/if}
+    </Banner>
+  </div>
+{/snippet}
 
 <style>
   /* The page's own title, in the place a page title sits everywhere else. */
@@ -113,6 +118,6 @@
   .failed { margin-bottom: var(--space-4); }
   .line { display: block; }
   /* The other two ways in, after the packs: a gray lead-in, then the two links. */
-  .other { display: flex; flex-wrap: wrap; align-items: center; margin: var(--space-6) 0 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); }
+  .other { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; margin: var(--space-6) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
 </style>

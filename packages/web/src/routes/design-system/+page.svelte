@@ -12,6 +12,7 @@
   import { onMount } from 'svelte';
   import Button from '$lib/components/Button.svelte';
   import ActionBar from '$lib/components/ActionBar.svelte';
+  import Welcome from '$lib/components/Welcome.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import FiltersBox from '$lib/components/FiltersBox.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
@@ -949,6 +950,12 @@
         <Button variant="ghost" onclick={() => showToast('Link copied')}>Show a plain toast</Button>
       </div>
     </section>
+
+    <section class="entry" id="welcome" aria-labelledby="welcome-h">
+      <h3 class="entry-h" id="welcome-h">Welcome</h3>
+      <p class="section-lede">The top of a screen someone sees before they have anything on it: a centered headline in the headings face, a larger gray line under it that wraps evenly, anything the screen offers first (New posts’ big “Add your first feed”), then a short hairline before what follows. The heading over what follows reads like the gray line, not like a second headline. New posts uses it when you follow nothing, and Collections when you have no collections.</p>
+      <div class="welcome-demo"><Welcome title="Collections" sub="Every site you love, in one place. No algorithm decides what you see." /></div>
+    </section>
   </section>
 
   <footer class="ds-foot">
@@ -1132,4 +1139,6 @@
   .demo-check { display: flex; align-items: center; gap: var(--space-2); }
   /* The bar in a box of its own, so here it sits under the demo rather than pinning to the page. */
   .actionbar-demo { border: 1px dashed var(--line); border-radius: var(--radius-sm); padding: 0 var(--space-3); }
+  /* The demo's headline is a page's h1, so it's kept from reading as this page's own. */
+  .welcome-demo { border: 1px dashed var(--line); border-radius: var(--radius-sm); padding: 0 var(--space-3); }
 </style>
