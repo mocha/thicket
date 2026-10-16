@@ -9,7 +9,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import sharp from "sharp";
 import { db, schema } from "../db/client.js";
 import { currentUser } from "../lib/user.js";
-import { subscribe, addFeedToCollection, defaultCollectionFor } from "../lib/subscribe.js";
+import { subscribe, addFeedToCollection, defaultCollectionFor, destinationFor, fileInto } from "../lib/subscribe.js";
 import { explainAddFailure } from "../feeds/explain.js";
 import { refreshFeed } from "../feeds/refresh.js";
 import { isHttpUrl, normalizeFeedUrl } from "../feeds/normalize.js";
@@ -131,7 +131,8 @@ feeds.get("/", async (c) => {
 
 /** Add by URL. This is the endpoint the share target, bookmarklet, or any external tool hits. */
 feeds.post("/", async (c) => {
-  type Body = { url?: string; collectionId?: number; collectionIds?: number[] };
+  // newCollection: a name for a collection to start with this feed, used when none is picked.
+  type Body = { url?: string; collectionId?: number; collectionIds?: number[]; newCollection?: string };
   const body = await c.req.json<Body>().catch(() => ({} as Body));
   if (!body.url) return c.json({ error: "Enter an address to follow." }, 400);
   let normalized: string;
@@ -147,8 +148,10 @@ feeds.post("/", async (c) => {
   const mine = wanted.length
     ? (await db.select({ id: schema.collections.id }).from(schema.collections).where(and(eq(schema.collections.userId, user.id), inArray(schema.collections.id, wanted)))).map((r) => r.id)
     : [];
+  const dest = await destinationFor(user, mine[0], body.newCollection);
+  if ("error" in dest) return c.json({ error: dest.error }, 400);
   try {
-    const outcome = await subscribe(user, normalized, mine[0]);
+    const outcome = await subscribe(user, normalized, dest);
     if (outcome.status === "subscribed") for (const id of mine.slice(1)) await addFeedToCollection(id, outcome.feed.id);
     return c.json(outcome, outcome.status === "none" ? 404 : 200);
   } catch (err) {
@@ -238,12 +241,20 @@ feeds.post("/:id/refresh", async (c) => {
   return c.json(result);
 });
 
-/** Follow = put it in a collection: the one named, or the default. Filing into more is PUT /:id/collections. */
+/**
+ * Follow = put it in a collection: the one given, a new one by name
+ * (newCollection), or the default. Filing into more is PUT /:id/collections.
+ */
 feeds.post("/:id/follow", async (c) => {
   const user = currentUser(c);
   const feedId = Number(c.req.param("id"));
-  const body = await c.req.json<{ collectionId?: number }>().catch(() => ({} as { collectionId?: number }));
-  const target = body.collectionId ?? (await defaultCollectionFor(user));
+  type Body = { collectionId?: number; newCollection?: string };
+  const body = await c.req.json<Body>().catch(() => ({} as Body));
+  const [feed] = await db.select({ id: schema.feeds.id }).from(schema.feeds).where(eq(schema.feeds.id, feedId));
+  if (!feed) return c.json({ error: "not found" }, 404);
+  const dest = await destinationFor(user, body.collectionId, body.newCollection);
+  if ("error" in dest) return c.json({ error: dest.error }, 400);
+  const target = await fileInto(user, dest);
   const [col] = await db.select().from(schema.collections).where(and(eq(schema.collections.id, target), eq(schema.collections.userId, user.id)));
   if (!col) return c.json({ error: "collection not found" }, 404);
   if (col.parentId === null) return c.json({ error: "pick a collection to follow into" }, 400);
@@ -266,7 +277,9 @@ feeds.post("/:id/restore", async (c) => {
   const user = currentUser(c);
   const feedId = Number(c.req.param("id"));
   const body = await c.req.json<{ collectionIds?: number[] }>().catch(() => ({ collectionIds: [] as number[] }));
-  const requested = body.collectionIds?.length ? body.collectionIds : [await defaultCollectionFor(user)];
+  // Nothing named and no collections left: nothing to restore into, and never a made-up one.
+  const fallback = body.collectionIds?.length ? null : await defaultCollectionFor(user);
+  const requested = body.collectionIds?.length ? body.collectionIds : fallback === null ? [] : [fallback];
   // Only the caller's own non-root collections are valid targets. Without this,
   // anyone could restore a feed into someone else's collection by passing its id.
   const mine = await db.select({ id: schema.collections.id, parentId: schema.collections.parentId }).from(schema.collections).where(eq(schema.collections.userId, user.id));

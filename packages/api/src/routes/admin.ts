@@ -22,6 +22,7 @@ import { existingFeedId } from "../feeds/twins.js";
 import { mergeFeeds } from "../feeds/merge.js";
 import { refreshFeed } from "../feeds/refresh.js";
 import { featuredCollections } from "./explore.js";
+import { collectionSample } from "../lib/subtree.js";
 import { likeFor } from "../lib/like.js";
 
 export const admin = new Hono();
@@ -438,14 +439,37 @@ admin.delete("/invites/:code", async (c) => {
  */
 admin.get("/starter", async (c) => {
   await requireAdmin(c);
+  return c.json(await starterState());
+});
+
+/**
+ * What the Starter packs setting shows: the account, what new people are
+ * offered, and (with an account named) every collection of its that could be
+ * offered, for the admin to tick. Shareable means what new people could see:
+ * public, and holding at least one feed.
+ */
+async function starterState() {
   const handle = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
   const featured = await featuredCollections(-1);
-  return c.json({ handle: handle || null, from: featured.from, offered: featured.collections });
-});
+  const choices = featured.from
+    ? (await db.execute(sql`
+        select col.id, col.name, col.slug, col.description, u.handle, col.feed_count as "feedCount", ${collectionSample(sql`col.id`, 5)} as sample
+        from collections col join users u on u.id = col.user_id
+        where u.handle = ${featured.from} and col.parent_id is not null and col.visibility = 'public'
+          and exists(select 1 from collection_feeds cf where cf.collection_id = col.id)
+        order by col.created_at, col.name`)).rows.map((r: any) => ({ ...r, id: Number(r.id) }))
+    : [];
+  return { handle: handle || null, from: featured.from, offered: featured.collections, choices };
+}
 
 admin.put("/starter", async (c) => {
   await requireAdmin(c);
-  const body = await c.req.json<{ handle?: unknown }>().catch(() => ({}) as { handle?: unknown });
+  const body = await c.req.json<{ handle?: unknown; collectionIds?: unknown }>().catch(() => ({}) as { handle?: unknown; collectionIds?: unknown });
+  // Ticking which of the account's collections are offered: saved as given, the account unchanged.
+  if (Array.isArray(body.collectionIds)) {
+    await setSetting("starter_collections", body.collectionIds.map(Number).filter(Number.isFinite));
+    return c.json(await starterState());
+  }
   const handle = typeof body.handle === "string" ? body.handle.trim().toLowerCase().replace(/^@/, "") : "";
   if (handle) {
     const [u] = (await db.execute<{ shared: boolean }>(sql`select (profile_visibility = 'public' and collections_visibility = 'public') as shared from users where handle = ${handle}`)).rows;
@@ -453,9 +477,11 @@ admin.put("/starter", async (c) => {
     // New people only ever see public collections, so a private account would silently fall back to the default set.
     if (!u.shared) return c.json({ error: "That account’s profile or collections aren’t public, so new people couldn’t see them." }, 400);
   }
+  const before = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
   await setSetting("starter_account", handle);
-  const featured = await featuredCollections(-1);
-  return c.json({ handle: handle || null, from: featured.from, offered: featured.collections });
+  // Another account's ticks mean nothing here: back to its first six until the admin ticks.
+  if (handle !== before) await db.delete(schema.instanceSettings).where(eq(schema.instanceSettings.key, "starter_collections"));
+  return c.json(await starterState());
 });
 
 // ---- maintenance --------------------------------------------------------------

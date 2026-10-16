@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ActionBar from '$lib/components/ActionBar.svelte';
   import Checkbox from '$lib/components/Checkbox.svelte';
   import Badge from '$lib/components/Badge.svelte';
   import Card from '$lib/components/Card.svelte';
@@ -231,14 +232,14 @@
 
   {#if imp.error}<p class="bad" role="alert">{imp.error}</p>{/if}
 
-  <div class="footer">
+  <ActionBar>
     <Button onclick={startOver} disabled={imp.busy}>Upload a different file</Button>
     <Button variant="primary" onclick={() => commitImport(kept)} disabled={imp.busy || imp.checking || !kept.length}>
       {#if imp.busy}Importing…
       {:else if imp.checking}Checking feeds…
       {:else}{kept.length === 1 ? 'Import collection' : `Import ${kept.length} collections`}{/if}
     </Button>
-  </div>
+  </ActionBar>
 {:else if imp.step === 'done'}
   <Card kind="section" as="section" class="import-section">
     <h2 class="section-title">Done</h2>
@@ -299,18 +300,4 @@
   .made-name { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
   .made-name small { font-weight: 400; }
   .count { flex: none; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
-
-  /* Pinned to the bottom while a long review scrolls, so the main action is always in reach. On a
-     phone it sits on top of the tab bar; where the sidebar shows there is no tab bar. */
-  .footer {
-    position: sticky; bottom: calc(var(--nav-h) + var(--safe-b, 0px)); z-index: 5;
-    display: flex; justify-content: flex-end; gap: var(--space-2);
-    padding: var(--space-3) 0; margin-top: var(--space-2);
-    background: var(--bg);
-  }
-  @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) { .footer { bottom: 0; padding-bottom: calc(var(--space-3) + var(--safe-b, 0px)); } }
-  @media (max-width: 520px) {
-    /* Two long labels don't fit side by side on a phone: stack them, main action on top. */
-    .footer { flex-direction: column-reverse; }
-  }
 </style>

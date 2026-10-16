@@ -88,12 +88,39 @@
     }
   }
 
+  /**
+   * No collections yet: the name goes with the follow, so the collection is
+   * only made if following works, and a failure leaves nothing behind.
+   */
+  let firstName = $state('');
+  let following = $state(false);
+  async function followIntoFirst() {
+    const newCollection = firstName.trim();
+    if (!newCollection || following) return;
+    following = true;
+    try {
+      const res = await api.follow(feedId, { newCollection });
+      ids = res.collectionIds;
+      onchange?.(ids);
+      firstName = '';
+      await loadCollections(true);
+      api.event('feed_followed', { feedId, collectionId: ids[0], via: 'checklist' });
+      showToast(`Following ${name} in ${newCollection}`, { label: 'Undo', run: () => void save([]) });
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      showToast(`Couldn’t follow ${name}: ${reason}`);
+      api.event('feed_follow_failed', { feedId, reason, via: 'checklist' });
+    } finally {
+      following = false;
+    }
+  }
+
   const hint = $derived(namedCollections().length ? 'Every feed you follow lives in at least one collection.' : 'You have no collections yet. Start one below to file this feed.');
 </script>
 
 <!-- A column that can shrink inside a Sheet, so the list scrolls rather than the Sheet overflowing. -->
 <div class="col">
-  <CollectionList {ids} {flash} {onPage} hint={showHint ? hint : undefined} via="checklist" ontoggle={(id) => void toggle(id)} oncreated={(id) => void toggle(id)} />
+  <CollectionList {ids} {flash} {onPage} hint={showHint ? hint : undefined} via="checklist" disabled={following} ontoggle={(id) => void toggle(id)} oncreated={(id) => void toggle(id)} bind:draft={firstName} onfirst={() => void followIntoFirst()} firstButton />
 </div>
 
 <style>

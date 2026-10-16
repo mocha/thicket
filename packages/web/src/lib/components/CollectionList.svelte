@@ -16,10 +16,18 @@
    * can go. Tapping it turns the row into a name box; Enter creates it and hands
    * it to `oncreated`, and Escape or leaving it empty puts the row back. If a
    * filter found nothing, what you typed there becomes the suggested name.
-   * Below the list, `hint` explains where the feed will go.
+   * Below the list, `hint` explains where the feed will go. `error` (say, Follow
+   * pressed with no collections to put the feed in) opens the name box and
+   * shows the reason under it.
+   *
+   * With `onfirst`, a first collection (you have none yet) isn't made from
+   * the box: what you type stays in `draft`, Enter calls `onfirst`, and the
+   * caller sends the name with the follow, so the collection only exists
+   * once the follow works. The box's Create button shows then only where
+   * nothing else sends it (`firstButton`); a Sheet's Follow does.
    * Mount it fresh for each use (a `{#key}` block) so the filter starts empty.
    */
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { api, collectionsApi } from '$lib/api';
   import { collectionStore, loadCollections, namedCollections } from '$lib/collections.svelte';
   import { showToast } from '$lib/toast.svelte';
@@ -28,12 +36,14 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
 
-  let { ids, ontoggle, oncreated, hint, via, disabled = false, flash = new Set(), onPage = false }: {
+  let { ids, ontoggle, oncreated, hint, error = null, via, disabled = false, flash = new Set(), onPage = false, draft = $bindable(''), onfirst, firstButton = false }: {
     ids: number[];
     ontoggle: (id: number) => void;
     /** A new collection was just made from the row at the bottom. */
     oncreated: (id: number) => void;
     hint?: string;
+    /** Why the feed can't go anywhere yet: opens the new-collection box, with this under it. */
+    error?: string | null;
     /** Where this list is, for the analytics event on create. */
     via: string;
     disabled?: boolean;
@@ -41,11 +51,26 @@
     flash?: Set<number>;
     /** Sits straight on the page rather than inside a Sheet, so the filter and the list take the raised surface color themselves. */
     onPage?: boolean;
+    /** A first collection's name, while it's being typed; sent with the follow when `onfirst` is set. */
+    draft?: string;
+    /** Follow with a first collection's name instead of making it here (see above). */
+    onfirst?: () => void;
+    /** Keep the box's Create button for a first collection, sending it through `onfirst`. */
+    firstButton?: boolean;
   } = $props();
 
   let list = $state<HTMLElement | null>(null);
   let filter = $state('');
   let newName = $state('');
+  /** No collections yet and the caller sends the name itself: the box only collects it. */
+  const deferred = $derived(!!onfirst && collectionStore.loaded && !namedCollections().length);
+  $effect(() => { if (deferred) draft = newName; });
+  // The first collection now exists (the follow made it): the box that named it is done.
+  let wasDeferred = false;
+  $effect(() => {
+    if (deferred) wasDeferred = true;
+    else if (wasDeferred) { wasDeferred = false; untrack(stopNaming); }
+  });
   let creating = $state(false);
   /** The new-collection row is showing its name box. */
   let naming = $state(false);
@@ -65,6 +90,10 @@
       if (list && row) list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top - (list.clientHeight - row.offsetHeight) / 2;
     });
   });
+
+  // An error arriving is a request to name a collection now: open the box for
+  // it, once. Escape still closes it; the next Follow sets the error afresh.
+  $effect(() => { if (error) untrack(() => void startNaming()); });
 
   async function startNaming() {
     newName = visible.length ? '' : filter.trim();
@@ -134,7 +163,7 @@
     <div class="new" class:alone={!visible.length && !filter.trim()}>
       {#if naming}
         <span class="plus" aria-hidden="true">+</span>
-        <Field label="New collection name" hideLabel class="grow">
+        <Field label="New collection name" hideLabel class="grow" {error}>
           {#snippet children({ id })}
             <Input
               {id}
@@ -142,14 +171,15 @@
               bind:element={nameEl}
               placeholder="Name it…"
               disabled={creating}
-              onblur={() => { if (!newName.trim() && !creating) stopNaming(); }}
+              onblur={() => { if (!newName.trim() && !creating && !error) stopNaming(); }}
               onkeydown={(e: KeyboardEvent) => {
-                if (e.key === 'Enter') { e.preventDefault(); void create(); }
+                if (e.key === 'Enter') { e.preventDefault(); if (deferred) onfirst?.(); else void create(); }
                 else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); stopNaming(); }
               }}
             >
               {#snippet trailing()}
-                <Button variant="primary" size="sm" onclick={create} disabled={creating || !newName.trim()}>Create</Button>
+                {#if !deferred}<Button variant="primary" size="sm" onclick={create} disabled={creating || !newName.trim()}>Create</Button>
+                {:else if firstButton}<Button variant="primary" size="sm" onclick={() => onfirst?.()} disabled={disabled || !newName.trim()}>Create</Button>{/if}
               {/snippet}
             </Input>
           {/snippet}

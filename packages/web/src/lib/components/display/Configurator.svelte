@@ -223,6 +223,10 @@
     // even while it's still being read: the import page picks up the reading
     // and shows the feeds when it finishes.
     if (importing || (withImport && imp.busy)) void goto('/import');
+    // A first setup that didn't import ends on Collections, where a new person
+    // starts (issue #289): starter packs if they have nothing yet, or the
+    // collection a shared copy link just gave them.
+    else if (withImport) void goto('/collections');
   }
 </script>
 

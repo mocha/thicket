@@ -11,6 +11,8 @@
    */
   import { onMount } from 'svelte';
   import Button from '$lib/components/Button.svelte';
+  import ActionBar from '$lib/components/ActionBar.svelte';
+  import Welcome from '$lib/components/Welcome.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import FiltersBox from '$lib/components/FiltersBox.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
@@ -454,6 +456,12 @@
     <h2 id="components-h">Components</h2>
     <p class="section-lede">The parts every screen is assembled from, one of each, A to Z.</p>
 
+    <section class="entry" id="action-bar" aria-labelledby="action-bar-h">
+      <h3 class="entry-h" id="action-bar-h">Action bar</h3>
+      <p class="section-lede">A page’s main action, pinned to the bottom of the screen while a long list above it scrolls, so it’s always in reach. Its buttons line up at the right, main action last; on a phone it sits just above the bottom bar, and two long labels stack with the main action on top. A button that acts on what you’ve ticked counts it in its label (“Copy 3 collections”) and is grayed out until something is ticked. Import’s review and the Collections welcome use it.</p>
+      <div class="actionbar-demo"><ActionBar><Button>Upload a different file</Button><Button variant="primary">Import 3 collections</Button></ActionBar></div>
+    </section>
+
     <section class="entry" id="add-new-feed" aria-labelledby="add-new-feed-h">
       <h3 class="entry-h" id="add-new-feed-h">Add new feed</h3>
       <p class="section-lede">The app’s main action, which opens the Add a feed Sheet. Where it sits, and how it looks, depends on the screen. Wherever the left menu shows, it’s the menu’s first row, under the logo and a thin line: a plus in a thin-lined circle and its label, both in the accent color, with no fill. It stays put while the menu scrolls, so it’s one click from every page. New posts, Explore, and Collections then leave it out of their titles. On phones, upright iPads, and in the paged layout, which have the bottom bar instead, it’s a small primary Button beside the title on those three pages. Your own collection’s page keeps it beside the title at every size, because only that one adds the feed straight into the collection. It never shows to someone signed out, and a new account’s welcome screen has its own large “Add your first feed” instead.</p>
@@ -750,7 +758,7 @@
       <p class="section-lede">A feed, a person, a collection, or a post: something you can open. A 40px picture leads (a feed’s icon, a person’s picture, or for a collection a few of its feeds’ icons, overlapped), then the name in 16px bold, with the details under it in 14px gray. Used on Explore, a collection’s feeds, Collections, and the people someone follows. Import’s review list uses the same spacing and text, with each feed’s icon (its initial, for a feed thicket hasn’t saved).</p>
       <p class="section-lede">A feed is always the one Feed row, wherever feeds are listed: its name (with a Failing badge when its checks fail) and its site under it in dark, then its description, close under the site, and the facts about it (how often it posts, its latest post, its followers) in gray. Its icon, name, and site are their own piece, FeedLine, which the Import review uses for feeds thicket hasn’t saved yet, with their status at the right end instead of Follow.</p>
       <p class="section-lede">A person is always the one Person row, the same way: their name with their @handle beside it in gray, as a note names its writer (Priya Nair (@priya)), then their bio, close under the name, and the facts about them (feeds, public collections) in gray, with Follow at the right where the screen offers it. When a search finds you, your own row has a soft “It’s you!” Badge there instead, since there’s no following yourself. Admin's accounts use the same row with their status pills (Admin, Private, You) after the name, the facts an admin needs in gray, and Manage account at the right in place of Follow.</p>
-      <p class="section-lede">A collection is always the one Collection row: its name with any badges after it (Yours, Copied, who can see it, how many new posts) and “by” whose it is under it in dark, then its description, close under the name, and how many feeds it holds in gray, ending in an arrow since the whole row opens it. On a search, the line saying why it was found comes last, in green, the same as on feed and person rows.</p>
+      <p class="section-lede">A collection is always the one Collection row: its name with any badges after it (Yours, Copied, who can see it, how many new posts) and “by” whose it is under it in dark, then its description, close under the name, and how many feeds it holds in gray, ending in an arrow since the whole row opens it. On a search, the line saying why it was found comes last, in green, the same as on feed and person rows. For choosing instead of opening (Admin’s Starter packs), the arrow becomes a checkbox and the whole row is its label.</p>
       <div class="stack">
         <!-- The real rows, with made-up data, so this entry can't drift from the app. -->
         <Card kind="list" as="ul" class="list-rows">
@@ -766,6 +774,7 @@
           <CollectionRow href="#list-row" name="Small Web" description="A sample of the Kagi Small Web list." feedCount={32} owner="Christie" sample={demoSample}>
             {#snippet badges()}<Badge tone="soft">36 new</Badge>{/snippet}
           </CollectionRow>
+          <CollectionRow href="#list-row" name="Food & Cooking" description="Recipes, technique, and food culture." feedCount={41} sample={demoSample} picked onpick={() => {}} />
         </Card>
       </div>
 
@@ -941,6 +950,12 @@
         <Button variant="ghost" onclick={() => showToast('Feed removed', { label: 'Undo', run: () => showToast('Feed restored') })}>Show a toast</Button>
         <Button variant="ghost" onclick={() => showToast('Link copied')}>Show a plain toast</Button>
       </div>
+    </section>
+
+    <section class="entry" id="welcome" aria-labelledby="welcome-h">
+      <h3 class="entry-h" id="welcome-h">Welcome</h3>
+      <p class="section-lede">The top of a screen someone sees before they have anything on it: a centered headline in the headings face, a larger gray line under it that wraps evenly, anything the screen offers first (New posts’ big “Add your first feed”), then a short hairline before what follows. The heading over what follows reads like the gray line, not like a second headline. New posts uses it when you follow nothing, and Collections when you have no collections.</p>
+      <div class="welcome-demo"><Welcome title="Collections" sub="If you want an easy way to get started, copy one or more of these Collections." /></div>
     </section>
   </section>
 
@@ -1123,4 +1138,8 @@
   .setting-rows { max-width: 520px; }
   .demo-line { display: block; }
   .demo-check { display: flex; align-items: center; gap: var(--space-2); }
+  /* The bar in a box of its own, so here it sits under the demo rather than pinning to the page. */
+  .actionbar-demo { border: 1px dashed var(--line); border-radius: var(--radius-sm); padding: 0 var(--space-3); }
+  /* The demo's headline is a page's h1, so it's kept from reading as this page's own. */
+  .welcome-demo { border: 1px dashed var(--line); border-radius: var(--radius-sm); padding: 0 var(--space-3); }
 </style>

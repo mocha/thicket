@@ -170,8 +170,9 @@ export const api = {
   /** My settings on a feed. Send only what changes. */
   /** hideShorts: true hides them on this channel, false shows them, null follows my default. */
   feedSettings: (id: number, patch: { displayName?: string | null; hideShorts?: boolean | null }) => j<FeedSettings>(`/api/feeds/${id}/settings`, { method: 'PUT', body: JSON.stringify(patch) }),
-  follow: (id: number, collectionId?: number) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${id}/follow`, { method: 'POST', body: JSON.stringify({ collectionId }) }),
-  addFeed: (url: string, collectionIds: number[] = []) => j<SubscribeOutcome>('/api/feeds', { method: 'POST', body: JSON.stringify({ url, collectionIds }) }),
+  /** `newCollection`: a name for a collection to start with this feed, when none is picked. Someone with no collections must give one. */
+  follow: (id: number, to: { collectionId?: number; newCollection?: string } = {}) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${id}/follow`, { method: 'POST', body: JSON.stringify(to) }),
+  addFeed: (url: string, collectionIds: number[] = [], newCollection?: string) => j<SubscribeOutcome>('/api/feeds', { method: 'POST', body: JSON.stringify({ url, collectionIds, newCollection }) }),
   unfollow: (id: number) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${id}`, { method: 'DELETE' }),
   restore: (id: number, collectionIds: number[]) => j<{ feedId: number; collectionIds: number[] }>(`/api/feeds/${id}/restore`, { method: 'POST', body: JSON.stringify({ collectionIds }) }),
   /** Refresh is rate-limited per feed; a 429 comes back as { cooldown: seconds } instead of throwing. */
@@ -562,8 +563,11 @@ export const adminApi = {
   createInvite: (note?: string) => j<Invite>('/api/admin/invites', { method: 'POST', body: JSON.stringify({ note }) }),
   revokeInvite: (code: string) => j<void>(`/api/admin/invites/${encodeURIComponent(code)}`, { method: 'DELETE' }),
   /** Starter packs: whose public collections a newcomer is offered. */
-  starter: () => j<{ handle: string | null; from: string | null; offered: ExploreCollection[] }>('/api/admin/starter'),
-  setStarter: (handle: string | null) => j<{ handle: string | null; from: string | null; offered: ExploreCollection[] }>('/api/admin/starter', { method: 'PUT', body: JSON.stringify({ handle: handle ?? '' }) })
+  /** `choices`: with an account named, every collection of its that new people could be offered, for ticking. */
+  starter: () => j<StarterSetting>('/api/admin/starter'),
+  setStarter: (handle: string | null) => j<StarterSetting>('/api/admin/starter', { method: 'PUT', body: JSON.stringify({ handle: handle ?? '' }) }),
+  /** Which of the account's collections are offered, by id. */
+  setStarterPicks: (collectionIds: number[]) => j<StarterSetting>('/api/admin/starter', { method: 'PUT', body: JSON.stringify({ collectionIds }) })
 };
 
 export const feedbackApi = {
@@ -632,8 +636,7 @@ export const profilesApi = {
   follow: (handle: string) => j<{ handle: string; isFollowing: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/follow`, { method: 'POST' }),
   unfollow: (handle: string) => j<{ handle: string; isFollowing: boolean }>(`/api/profiles/${encodeURIComponent(handle)}/follow`, { method: 'DELETE' }),
   collection: (handle: string, slug: string) => j<PublicCollection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}`),
-  /** `replaceStarter`: this copy finishes signing up to get it, so an untouched, empty "My first collection" goes. */
-  copyCollection: (handle: string, slug: string, opts: { replaceStarter?: boolean } = {}) => j<Collection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/copy`, { method: 'POST', body: JSON.stringify(opts) }),
+  copyCollection: (handle: string, slug: string) => j<Collection>(`/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/copy`, { method: 'POST' }),
   opmlUrl: (handle: string, slug: string) => `/api/profiles/${encodeURIComponent(handle)}/collections/${encodeURIComponent(slug)}/opml`,
   /**
    * Their bookmarks, newest activity first. `notes`: only the ones with a note
@@ -666,6 +669,7 @@ export type ActivityEntry =
   | { kind: 'bookmark'; at: string; id: number; payload: { url: string; title: string | null; siteTitle: string | null; feedId: number | null; hasIcon: boolean } }
   | { kind: 'note'; at: string; id: number; payload: { body: string; itemId: number; url: string; title: string | null; siteTitle: string | null; feedId: number; hasIcon: boolean } };
 
+export type StarterSetting = { handle: string | null; from: string | null; offered: ExploreCollection[]; choices: ExploreCollection[] };
 export type ExploreCollection = {
   id: number; name: string; slug: string; description: string | null; handle: string; displayName: string | null; feedCount: number;
   sample: CollectionSample[];

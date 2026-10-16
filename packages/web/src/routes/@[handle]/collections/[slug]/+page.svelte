@@ -79,16 +79,16 @@
     if (!col || copying) return;
     copying = true;
     try {
-      // Copied on arrival: a brand-new account's empty starter collection goes (the server checks it's untouched).
-      const mine = await profilesApi.copyCollection(handle, slug, { replaceStarter: !!after });
+      const mine = await profilesApi.copyCollection(handle, slug);
       justCopied = { slug: mine.slug, name: mine.name };
       // `after` is set when this copy finished a sign-up or log-in, so we can count the accounts shared collections bring in.
       api.event('collection_copied', { from: `${handle}/${slug}`, collectionId: mine.id, feeds: mine.feedCount, ...(after ? { after } : {}) });
       void loadCollections(true);
       if (after) {
         // Copied on arrival: go to the copy itself, so it's what's behind the
-        // welcome tour and what's left when the tour closes. The tour names it;
-        // without the tour (logging in on a screen that has seen it), a note does.
+        // welcome tour. The tour names it, and a new account's setup then ends
+        // on Collections with the copy in the list; without the tour (logging
+        // in on a screen that has seen it), a note does and you stay here.
         welcome.copied = mine.name;
         await goto(collectionHref(session.user!.handle, mine.slug), { replaceState: true });
         if (!welcome.open) showToast(`Copied “${mine.name}” to your collections`);

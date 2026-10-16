@@ -34,9 +34,6 @@ async function main() {
   const user = { id: account.id, handle: account.handle, displayName: account.displayName, rootCollectionId, defaultCollectionId: null, trackActivity: false };
   console.log(`user #${user.id}, root collection #${user.rootCollectionId}`);
 
-  const ars = await subscribe(user, "https://feeds.arstechnica.com/arstechnica/index");
-  console.log("ars:", ars.status, ars.status === "subscribed" ? `${ars.feed.title} (#${ars.feed.id})` : "");
-
   // Ten collections, all top-level. Sub-collections are on hold (see the note
   // in web collections.svelte.ts), so this seed deliberately doesn't nest — it
   // just gives a realistic, slightly crowded list to work against, e.g. for the
@@ -63,8 +60,10 @@ async function main() {
     { name: "Longreads", slug: "longreads", description: "Save the big ones for later", feeds: ["https://longreads.com/feed/", "https://aeon.co/feed.rss", "https://www.theatlantic.com/feed/all/"] },
   ];
 
+  const made = new Map<string, number>();
   for (const spec of seedCollections) {
     const col = await ensureCollection(spec.name, spec.slug, user.rootCollectionId, spec.description);
+    made.set(spec.slug, col.id);
     for (const url of spec.feeds) {
       try {
         const feed = await ensureFeedLazy(url);
@@ -75,6 +74,11 @@ async function main() {
     }
   }
   console.log(`collections: ${seedCollections.length} top-level under root`);
+
+  // One feed fetched for real, so there is something to read straight away.
+  // After the collections: a new account has none to follow it into.
+  const ars = await subscribe(user, "https://feeds.arstechnica.com/arstechnica/index", { id: made.get("technology")! });
+  console.log("ars:", ars.status, ars.status === "subscribed" ? `${ars.feed.title} (#${ars.feed.id})` : "");
 
   if (count > 0) {
     const all = readFileSync(SMALLWEB, "utf8").split("\n").map((l) => l.trim()).filter((l) => l.startsWith("http"));

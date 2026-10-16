@@ -225,11 +225,9 @@ export function trackingEnabled(): boolean {
 // ---- users ----------------------------------------------------------------
 
 /**
- * Create a user, the structural root of their collection tree, and the one
- * collection they start with. Every feed a person follows lives in a
- * collection, so an account with none would have nowhere to put its first
- * feed; "My first collection" is an ordinary collection from the moment it
- * exists — rename it, delete it once there is another, share it.
+ * Create a user and the structural root of their collection tree. A new
+ * account has no collections: Collections welcomes them with starter packs,
+ * and following a first feed names a collection for it (lib/subscribe.ts).
  */
 export async function createUser(input: { handle: string; password: string; displayName?: string | null; email?: string | null }) {
   const passwordHash = await hashPassword(input.password);
@@ -241,8 +239,7 @@ export async function createUser(input: { handle: string; password: string; disp
       // A new account saves its first setup for new devices, and never needs the one-time offer made to older accounts (issue #186).
       saveFirstDisplay: true, displayOfferAnsweredAt: new Date(),
     }).returning();
-    const [root] = await tx.insert(schema.collections).values({ userId: user.id, parentId: null, name: "All collections", slug: ROOT_SLUG }).returning();
-    await tx.insert(schema.collections).values({ userId: user.id, parentId: root.id, name: FIRST_COLLECTION_NAME, slug: FIRST_COLLECTION_SLUG });
+    await tx.insert(schema.collections).values({ userId: user.id, parentId: null, name: "All collections", slug: ROOT_SLUG });
     return user;
   });
 }
@@ -257,13 +254,10 @@ export async function deleteUser(userId: number): Promise<void> {
   await db.delete(schema.users).where(eq(schema.users.id, userId));
 }
 
-/** The collection a brand-new account starts with. Also the rescue name when someone deletes their last one. */
 /** The root is never rendered and never addressed. A leading double dash is
  * something slugify() cannot produce, so no name anyone types can collide. */
 export const ROOT_SLUG = "--root";
 
-export const FIRST_COLLECTION_NAME = "My first collection";
-export const FIRST_COLLECTION_SLUG = "my-first-collection";
 
 export async function rootCollectionOf(userId: number): Promise<number | null> {
   const [root] = await db.select({ id: schema.collections.id }).from(schema.collections).where(and(eq(schema.collections.userId, userId), isNull(schema.collections.parentId)));

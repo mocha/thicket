@@ -139,7 +139,7 @@
       feedTotal = fc?.total;
       instance = s; name = s.name; invites = i.invites;
       users = u.users; next = u.next; total = u.total ?? 0; matched = u.matched ?? 0;
-      starterSaved = starter = f.handle ?? ''; offered = f.offered; offeredFrom = f.from;
+      starterSaved = starter = f.handle ?? ''; offered = f.offered; offeredFrom = f.from; starterChoices = f.choices;
       starterPick = starterSaved ? 'account' : 'default';
       void loadStarterPerson(starterSaved);
     } catch (e) {
@@ -213,13 +213,29 @@
     savingStarter = true; errors.starter = null;
     try {
       const r = await adminApi.setStarter(handle);
-      starterSaved = starter = r.handle ?? ''; offered = r.offered; offeredFrom = r.from;
+      starterSaved = starter = r.handle ?? ''; offered = r.offered; offeredFrom = r.from; starterChoices = r.choices;
       changingStarter = false;
       await loadStarterPerson(starterSaved);
       return true;
     } catch (e) {
       errors.starter = say(e);
       return false;
+    } finally {
+      savingStarter = false;
+    }
+  }
+  /** With an account named, all of its collections that could be offered; the ticked ones are `offered`. */
+  let starterChoices = $state<ExploreCollection[]>([]);
+  /** A tick saves at once, like the choices above it, and goes back if saving fails. */
+  async function pickStarter(id: number) {
+    if (savingStarter) return;
+    const ids = offered.some((c) => c.id === id) ? offered.filter((c) => c.id !== id).map((c) => c.id) : [...offered.map((c) => c.id), id];
+    savingStarter = true; errors.starter = null;
+    try {
+      const r = await adminApi.setStarterPicks(ids);
+      offered = r.offered; starterChoices = r.choices;
+    } catch (e) {
+      errors.starter = say(e);
     } finally {
       savingStarter = false;
     }
@@ -457,7 +473,7 @@
 
   <Card kind="section" as="section" class="admin-section" aria-labelledby="starter-h">
     <h2 class="section-title" id="starter-h">Starter packs</h2>
-    <p class="section-description">To get users started, their New posts page offers a set of “Starter pack” collections they can copy. Choose what you want to display.</p>
+    <p class="section-description">To get users started, their New posts and Collections pages offer a set of “Starter pack” collections they can copy. Choose what you want to display.</p>
     <fieldset class="choices" aria-labelledby="starter-h">
       <label class="choice"><input type="radio" name="starter" checked={starterPick === 'default'} disabled={savingStarter} onchange={pickDefault} /><span><strong>Highest volume feeds</strong><small>The six public collections with the most feeds, from any account on your site.</small></span></label>
       <label class="choice"><input type="radio" name="starter" checked={starterPick === 'account'} disabled={savingStarter} onchange={pickAccount} /><span><strong>One account’s collections</strong><small>You might choose your own account, or create an account just for this purpose.</small></span></label>
@@ -489,7 +505,17 @@
     {#if errors.starter && !(starterPick === 'account' && (!starterSaved || changingStarter))}
       <div class="err"><Banner tone="error" title="Couldn’t save that">{errors.starter}</Banner></div>
     {/if}
-    {#if offered.length}
+    {#if offeredFrom && starterChoices.length && !changingStarter}
+      <!-- One account's: every collection of its new people could see, ticked for the ones they do. -->
+      <h3 class="row-name offered-h">Feeds new people see:</h3>
+      <div class="rows">
+        <ul class="list-rows">
+          {#each starterChoices as c (c.id)}
+            <CollectionRow href={collectionHref(c.handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} sample={c.sample} picked={offered.some((o) => o.id === c.id)} disabled={savingStarter} onpick={() => void pickStarter(c.id)} />
+          {/each}
+        </ul>
+      </div>
+    {:else if offered.length}
       <!-- The field label's look (the shared row-name style), so it reads like "Account" above the box. -->
       <h3 class="row-name offered-h">Feeds new people see:</h3>
       <div class="rows">
