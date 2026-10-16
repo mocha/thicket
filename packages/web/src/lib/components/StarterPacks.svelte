@@ -17,8 +17,8 @@
    * `quiet`: under a Welcome, the heading reads like the Welcome's gray line.
    *
    * With `bind:picked`, the cards are for picking instead (the Collections
-   * welcome): each card's button selects it, and the page copies everything
-   * selected with one button. The card itself still opens the collection. `available` says how many there are,
+   * welcome): a checkbox in each card's top right corner, the whole card its
+   * label, and the page copies everything ticked with one button. `available` says how many there are,
    * so the page knows whether to offer that button at all.
    */
   import { onMount } from 'svelte';
@@ -31,6 +31,7 @@
   import CardMeta from './CardMeta.svelte';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
+  import Checkbox from './Checkbox.svelte';
   import { copyNext } from '$lib/copyintent.svelte';
   import { plural } from '$lib/words';
 
@@ -92,17 +93,19 @@
             {#snippet icon()}<span class="icons" aria-hidden="true">{#each c.sample as f (f.id)}<SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title} size={20} />{/each}</span>{/snippet}
             {#if !from}<Dot /><span class="count">{plural(c.feedCount, 'site')}</span>{/if}
           </CardMeta>
+          {#if picking}
+            <!-- Picking: the box in the card's top right corner, and the name its
+                 label, stretched over the whole card, so a tap anywhere ticks it. -->
+            <Checkbox class="tick" id="pack-{c.id}" checked={isPicked(c)} onchange={() => toggle(c)} />
+            <h3 class="card-title"><label class="name" for="pack-{c.id}">{c.name}</label></h3>
+            {#if c.description}<p class="card-summary">{c.description}</p>{/if}
+          {:else}
           <!-- The name is the link, stretched over the whole card, so the card
                still opens the collection while the button below stays its own control. -->
           <h3 class="card-title"><a class="name" href={collectionHref(c.handle, c.slug)}>{c.name}</a></h3>
           {#if c.description}<p class="card-summary">{c.description}</p>{/if}
           <div class="take">
-            {#if picking}
-              <!-- Picking: plain until pressed, then the pale green "you have this" look, like Follow. -->
-              <Button size="sm" variant={isPicked(c) ? 'secondary' : 'ghost'} aria-pressed={isPicked(c)} onclick={() => toggle(c)}>
-                {#if isPicked(c)}<Icon name="check" size={16} />Selected{:else}Select{/if}
-              </Button>
-            {:else if session.user}
+            {#if session.user}
               <Button variant="secondary" size="sm" loading={copying === c.id} disabled={copied.has(c.id)} onclick={() => void copy(c)}>
                 {#if copied.has(c.id)}Added{:else if copying === c.id}Copying…{:else}<Icon name="copy" size={16} />Copy to my collections{/if}
               </Button>
@@ -112,6 +115,7 @@
               </Button>
             {/if}
           </div>
+          {/if}
         </Card>
       {/each}
     </ul>
@@ -148,11 +152,17 @@
      specifically so it outranks the shared title's own zero margin. */
   .packs ul .card-title { margin-top: var(--space-3); }
   .name { color: inherit; text-decoration: none; }
-  /* The article card's cue that the card opens something: the title underlines
+  /* The article card's cue that the card opens something (a name that ticks a box isn't a link, so it doesn't): the title underlines
      softly while the pointer is anywhere on the card but the button. */
-  @media (hover: hover) { .name:hover { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
+  @media (hover: hover) { a.name:hover { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   .name::after { content: ''; position: absolute; inset: 0; }
   .name:focus-visible { outline: none; }
+  label.name { cursor: pointer; }
+  /* The box in the card's top right corner, in line with the source line,
+     which stops short of it. */
+  ul :global(.tick) { position: absolute; top: calc(var(--card-pad) + 2px); right: var(--card-pad); }
+  ul :global(.pack:has(.tick) .meta) { padding-right: calc(16px + var(--space-3)); }
+  ul :global(.pack:has(.tick input:focus-visible)) { outline: 2px solid var(--accent); outline-offset: 2px; }
   /* Picked: outlined in the accent, the same green that says "you have this" elsewhere. */
   ul :global(.pack.picked) { outline: 2px solid var(--accent); outline-offset: -1px; }
   ul :global(.pack:has(.name:focus-visible)) { outline: 2px solid var(--accent); outline-offset: 2px; }
