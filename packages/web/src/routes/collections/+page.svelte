@@ -79,7 +79,7 @@
   {#if failed.length}{@render failures()}{/if}
   <Welcome title="Collections" sub="If you want an easy way to get started, copy one or more of these Collections." />
   <StarterPacks heading="" lede="" bind:picked bind:available />
-  <p class="other">Already know what you want? <Button link onclick={() => openAddFeed({ via: 'collections_welcome' })}>+ Add new feed</Button><Dot /><Button link href="/import">Import feeds</Button></p>
+  <p class="other"><span>Already know what you want?</span><span class="ways"><Button link onclick={() => openAddFeed({ via: 'collections_welcome' })}>+ Add new feed</Button><Dot /><Button link href="/import">Import feeds</Button></span></p>
   {#if available}
     <ActionBar>
       <Button variant="primary" onclick={copyPicked} disabled={copying || !picked.length}>
@@ -115,9 +115,12 @@
 <style>
   /* The page's own title, in the place a page title sits everywhere else. */
   .pagetitle { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.15; margin: 0; }
+  .ways { display: inline-flex; align-items: center; white-space: nowrap; }
   .failed { margin-bottom: var(--space-4); }
   .line { display: block; }
-  /* The other two ways in, after the packs: a gray lead-in, then the two links. */
+  /* The other two ways in, after the packs: a gray lead-in, then the two
+     links. The links stay together, so a narrow screen puts them on the line
+     under the question rather than splitting them. */
   .other { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; margin: var(--space-6) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .status { color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); padding: var(--space-2) 0; margin: 0; }
 </style>
