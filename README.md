@@ -140,8 +140,8 @@ each bookmark field may be. Past a limit the answer is `429` with
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/api/feeds` `{url}` | Follow any URL: page or feed. Returns `subscribed`, `choose` (several candidates), or `none` |
-| POST | `/api/feeds/:id/follow` | Follow into your first collection, or `{collectionId}` |
+| POST | `/api/feeds` `{url}` | Follow any URL: page or feed. Returns `subscribed`, `choose` (several candidates), or `none`. `{newCollection}` names a collection to start with it, needed when you have none |
+| POST | `/api/feeds/:id/follow` | Follow into `{collectionId}`, a new `{newCollection}`, or your oldest collection |
 | DELETE | `/api/feeds/:id` | Unfollow; returns what was removed, for undo |
 | POST | `/api/feeds/:id/restore` | Undo an unfollow |
 | POST/DELETE | `/api/feeds/:id/block` | Block / unblock a feed (no UI yet) |
@@ -170,7 +170,7 @@ each bookmark field may be. Past a limit the answer is `429` with
 | GET | `/api/profiles/:handle/bookmarks?before=` | Someone's public bookmarks, with whether I already have each |
 | GET | `/api/explore/collections?q=&network=1` | Public collections on this instance |
 | GET | `/api/explore/users?q=` | People with public profiles |
-| GET | `/api/explore/featured` | The instance's starter packs: one account's public collections |
+| GET | `/api/explore/featured` | The instance's starter packs: one account's public collections (the ones the admin ticked) |
 
 **Bookmarks and notes**
 

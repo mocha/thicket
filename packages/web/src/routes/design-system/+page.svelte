@@ -758,7 +758,7 @@
       <p class="section-lede">A feed, a person, a collection, or a post: something you can open. A 40px picture leads (a feed’s icon, a person’s picture, or for a collection a few of its feeds’ icons, overlapped), then the name in 16px bold, with the details under it in 14px gray. Used on Explore, a collection’s feeds, Collections, and the people someone follows. Import’s review list uses the same spacing and text, with each feed’s icon (its initial, for a feed thicket hasn’t saved).</p>
       <p class="section-lede">A feed is always the one Feed row, wherever feeds are listed: its name (with a Failing badge when its checks fail) and its site under it in dark, then its description, close under the site, and the facts about it (how often it posts, its latest post, its followers) in gray. Its icon, name, and site are their own piece, FeedLine, which the Import review uses for feeds thicket hasn’t saved yet, with their status at the right end instead of Follow.</p>
       <p class="section-lede">A person is always the one Person row, the same way: their name with their @handle beside it in gray, as a note names its writer (Priya Nair (@priya)), then their bio, close under the name, and the facts about them (feeds, public collections) in gray, with Follow at the right where the screen offers it. When a search finds you, your own row has a soft “It’s you!” Badge there instead, since there’s no following yourself. Admin's accounts use the same row with their status pills (Admin, Private, You) after the name, the facts an admin needs in gray, and Manage account at the right in place of Follow.</p>
-      <p class="section-lede">A collection is always the one Collection row: its name with any badges after it (Yours, Copied, who can see it, how many new posts) and “by” whose it is under it in dark, then its description, close under the name, and how many feeds it holds in gray, ending in an arrow since the whole row opens it. On a search, the line saying why it was found comes last, in green, the same as on feed and person rows.</p>
+      <p class="section-lede">A collection is always the one Collection row: its name with any badges after it (Yours, Copied, who can see it, how many new posts) and “by” whose it is under it in dark, then its description, close under the name, and how many feeds it holds in gray, ending in an arrow since the whole row opens it. On a search, the line saying why it was found comes last, in green, the same as on feed and person rows. For choosing instead of opening (Admin’s Starter packs), the arrow becomes a checkbox and the whole row is its label.</p>
       <div class="stack">
         <!-- The real rows, with made-up data, so this entry can't drift from the app. -->
         <Card kind="list" as="ul" class="list-rows">
@@ -774,6 +774,7 @@
           <CollectionRow href="#list-row" name="Small Web" description="A sample of the Kagi Small Web list." feedCount={32} owner="Christie" sample={demoSample}>
             {#snippet badges()}<Badge tone="soft">36 new</Badge>{/snippet}
           </CollectionRow>
+          <CollectionRow href="#list-row" name="Food & Cooking" description="Recipes, technique, and food culture." feedCount={41} sample={demoSample} picked onpick={() => {}} />
         </Card>
       </div>
 
