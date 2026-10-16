@@ -41,6 +41,8 @@
   import CollectionRow from '$lib/components/CollectionRow.svelte';
   import NoteBlock from '$lib/components/NoteBlock.svelte';
   import SettingRow from '$lib/components/SettingRow.svelte';
+  import SidebarRow from '$lib/components/SidebarRow.svelte';
+  import { MENU_ICONS } from '$lib/menu-icons';
   import Sheet from '$lib/components/Sheet.svelte';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import { showToast } from '$lib/toast.svelte';
@@ -244,6 +246,7 @@
         { id: 'select', label: 'Select' },
         { id: 'setup-tour', label: 'Setup tour' },
         { id: 'sheet', label: 'Sheet' },
+        { id: 'sidebar-row', label: 'Sidebar row' },
         { id: 'tabs', label: 'Tabs' },
         { id: 'textarea', label: 'Textarea' },
         { id: 'toast', label: 'Toast' }
@@ -879,6 +882,25 @@
       </Sheet>
     </section>
 
+    <section class="entry" id="sidebar-row" aria-labelledby="sidebar-row-h">
+      <h3 class="entry-h" id="sidebar-row-h">Sidebar row</h3>
+      <p class="section-lede">One place in the left menu. Every row there is one of these, in one of three kinds. The main places (New posts, Collections, Bookmarks, Explore) have an icon and the name. Your collections, under Collections, are the name alone in smaller text, cut short with “…” when it’s long, with a collection inside another set further in. Notifications, at the foot above your account, is smaller and bold, its icon centered over your picture so the two rows line up. The page you’re on is shaded and bold. A count of what’s new is a soft Badge at the row’s far end, and a collection with something new also turns its name bold. With a mouse, a row shades as you point at it; tabbing to it draws the accent ring just inside its edge. A row with things under it, like Collections, gets a caret at its end that folds them away, while the name still opens its page. The phone’s bottom bar has no room for counts, so it marks what’s new with a dot on the tab instead.</p>
+      <div class="sidebar-demo">
+        <SidebarRow href="#sidebar-row" icon={MENU_ICONS.everything} label="New posts" count="12" />
+        <SidebarRow href="#sidebar-row" icon={MENU_ICONS.collections} label="Collections" toggle={{ open: true, onclick: () => {}, label: 'Hide your collections' }} />
+        <div class="sidebar-demo-cols">
+          <SidebarRow kind="collection" href="#sidebar-row" label="Design" />
+          <SidebarRow kind="collection" href="#sidebar-row" label="Long reads" count="3" isNew />
+          <SidebarRow kind="collection" href="#sidebar-row" label="Cities" indent current />
+        </div>
+        <SidebarRow href="#sidebar-row" icon={MENU_ICONS.bookmarks} label="Bookmarks" current />
+        <SidebarRow href="#sidebar-row" icon={MENU_ICONS.explore} label="Explore" />
+        <div class="sidebar-demo-foot">
+          <SidebarRow kind="account" href="#sidebar-row" icon={MENU_ICONS.notifications} label="Notifications" count="2" countLabel="2 new" />
+        </div>
+      </div>
+    </section>
+
     <section class="entry" id="tabs" aria-labelledby="tabs-h">
       <h3 class="entry-h" id="tabs-h">Tabs</h3>
       <p class="section-lede">Switch what you're looking at. Pressing a tab swaps the content below it. A tab can carry a count in parentheses, tucked close to its name so it reads as part of that tab. Counts over a thousand are rounded, like 1.8K, so a long row still fits.</p>
@@ -1083,6 +1105,10 @@
   .tour-demo { position: relative; width: min(420px, 100%); height: 260px; overflow: hidden; border-radius: var(--radius-lg); background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 16%, var(--surface-2)), var(--surface-2)); mask-image: linear-gradient(to bottom, #000 75%, transparent); }
   .menu-demo { width: 240px; padding: var(--space-4) var(--space-3); border-right: 1px solid var(--line); }
   .menu-demo-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); }
+  /* The Sidebar row entry, at the left menu's width and spacing. */
+  .sidebar-demo { display: flex; flex-direction: column; gap: 2px; width: 240px; padding: var(--space-4) var(--space-3); border-right: 1px solid var(--line); }
+  .sidebar-demo-cols { display: flex; flex-direction: column; gap: 1px; padding-left: calc(var(--space-5) + var(--space-3)); }
+  .sidebar-demo-foot { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
   .title-demo { justify-content: space-between; max-width: 460px; }
   .title-demo-h { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); }
   .plus { font-size: 1.3em; line-height: 1; }

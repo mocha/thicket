@@ -15,8 +15,9 @@
   import Field from './Field.svelte';
   import Input from './Input.svelte';
   import Badge from './Badge.svelte';
+  import SidebarRow from './SidebarRow.svelte';
   import { display } from '$lib/display.svelte';
-  import { marks, badge, anyNew, countText } from '$lib/marks.svelte';
+  import { marks, anyNew, countText } from '$lib/marks.svelte';
   import { notifs, notifText } from '$lib/notifications.svelte';
   import { untrack } from 'svelte';
   import { navWidth, loadNavWidth, setNavWidth, NAV_W_MIN, NAV_W_MAX, NAV_W_DEFAULT } from '$lib/navwidth.svelte';
@@ -130,9 +131,9 @@
   const icons = MENU_ICONS;
 </script>
 
-{#snippet row(c: { id: number; name: string; slug: string })}
-  {@const b = fresh ? badge(marks.byId[c.id]) : { kind: 'none' as const }}
-  <a href={colHref(c.slug)} aria-current={onCollection(c.slug) ? 'page' : undefined} class:new={b.kind !== 'none'}><span class="name">{c.name}</span>{#if b.kind === 'count'}<Badge tone="soft">{b.text}</Badge>{/if}</a>
+{#snippet row(c: { id: number; name: string; slug: string }, indent = false)}
+  {@const count = fresh ? countText(marks.byId[c.id]) : ''}
+  <SidebarRow kind="collection" href={colHref(c.slug)} label={c.name} current={onCollection(c.slug)} {count} isNew={!!count} {indent} />
 {/snippet}
 
 {#snippet icon(d: string)}
@@ -146,25 +147,26 @@
        bottom bar screens the same action sits beside each page's title instead. -->
   {#if me}<button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg><span>Add new feed</span></button>{/if}
   <ul>
-    <!-- Mobile-only tabs. On desktop, New posts and Collections live in the li.collections block below. -->
+    <!-- Bottom bar tabs. On desktop, each place is a Sidebar row in a sidebar-only item instead. -->
     <li class="mobile-only">
       <a href="/new-posts" aria-current={here === '/new-posts' ? 'page' : undefined}><span class="ic">{@render icon(icons.everything)}{#if fresh && rootMark?.count}<Badge variant="dot" class="pin" aria-label="New since your last visit" />{/if}</span><span class="shortl">New posts</span></a>
     </li>
     <li class="mobile-only">
       <a href="/collections" aria-current={onAnyCollection ? 'page' : undefined}><span class="ic">{@render icon(icons.collections)}{#if anyColNew}<Badge variant="dot" class="pin" aria-label="New posts" />{/if}</span><span class="shortl">Collections</span></a>
     </li>
-    <li class="collections">
+    <li class="sidebar-only">
       <!-- New posts: every post you follow, its own item now — the job the old italic "All collections" row did. -->
-      <a class="readall" href="/new-posts" aria-current={here === '/new-posts' ? 'page' : undefined}>{@render icon(icons.everything)}<span>New posts</span>{#if fresh && rootMark?.count}<Badge tone="soft" class="tail">{countText(rootMark)}</Badge>{/if}</a>
+      <SidebarRow href="/new-posts" icon={icons.everything} label="New posts" current={here === '/new-posts'} count={fresh ? countText(rootMark) : ''} />
       <!-- My collections: a group you can fold away. Your collections sit under it.
            The word opens the Collections screen (the same one the bottom bar's
            tab opens on a phone); the caret beside it folds the list. -->
-      <div class="heading" class:current={collectionsHeadingCurrent}>
-        <a class="headlink" href="/collections" aria-current={collectionsHeadingCurrent ? 'page' : undefined}>{@render icon(icons.collections)}<span>Collections</span></a>
-        <button type="button" class="groupcaret" aria-expanded={collectionsOpen.open} aria-controls="my-collections" aria-label={collectionsOpen.open ? 'Hide your collections' : 'Show your collections'} onclick={toggleCollectionsOpen}>
-          <Icon name="caret" size={14} stroke={2.5} dir={collectionsOpen.open ? 'down' : 'right'} />
-        </button>
-      </div>
+      <SidebarRow
+        href="/collections"
+        icon={icons.collections}
+        label="Collections"
+        current={collectionsHeadingCurrent}
+        toggle={{ open: collectionsOpen.open, onclick: toggleCollectionsOpen, controls: 'my-collections', label: collectionsOpen.open ? 'Hide your collections' : 'Show your collections' }}
+      />
       {#if collectionsOpen.open}
       <ul class="cols" id="my-collections" aria-label="Your collections">
         {#each topLevelCollections() as c (c.id)}
@@ -179,7 +181,7 @@
           </li>
           {#if kids.length && isOpen(c)}
             {#each kids as k (k.id)}
-              <li class="child">{@render row(k)}</li>
+              <li>{@render row(k, true)}</li>
             {/each}
           {/if}
         {/each}
@@ -211,11 +213,13 @@
       {/if}
     </li>
 
-    <li>
-      <a href="/bookmarks" aria-current={current('/bookmarks') ? 'page' : undefined}>{@render icon(icons.bookmarks)}<span class="long">Bookmarks</span><span class="shortl">Bookmarks</span></a>
+    <li class="sidebar-only"><SidebarRow href="/bookmarks" icon={icons.bookmarks} label="Bookmarks" current={current('/bookmarks')} /></li>
+    <li class="sidebar-only"><SidebarRow href="/explore" icon={icons.explore} label="Explore" current={current('/explore')} /></li>
+    <li class="mobile-only">
+      <a href="/bookmarks" aria-current={current('/bookmarks') ? 'page' : undefined}>{@render icon(icons.bookmarks)}<span class="shortl">Bookmarks</span></a>
     </li>
-    <li>
-      <a href="/explore" aria-current={current('/explore') ? 'page' : undefined}>{@render icon(icons.explore)}<span class="long">Explore</span><span class="shortl">Explore</span></a>
+    <li class="mobile-only">
+      <a href="/explore" aria-current={current('/explore') ? 'page' : undefined}>{@render icon(icons.explore)}<span class="shortl">Explore</span></a>
     </li>
     <!-- Mobile: you. Opens the account menu — your profile, settings, and log out. -->
     {#if me}
@@ -228,7 +232,7 @@
   {#if me}
     <div class="account">
       <!-- Notifications belong to you, not to your reading, so they sit with your account rather than in the list above. On a phone the bottom bar is full: they're in the You menu, and the You tab carries the dot. -->
-      <a class="notifrow" href="/notifications" aria-current={current('/notifications') ? 'page' : undefined}><span class="slot">{@render icon(icons.notifications)}</span><span class="label">Notifications</span>{#if notifText()}<Badge tone="soft" class="tail" aria-label="{notifText()} new">{notifText()}</Badge>{/if}</a>
+      <SidebarRow kind="account" href="/notifications" icon={icons.notifications} label="Notifications" current={current('/notifications')} count={notifText()} countLabel="{notifText()} new" />
       <div class="split" role="presentation"></div>
       <button type="button" class="who" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}>
         <Avatar handle={me.handle} name={me.displayName ?? me.handle} size={34} v={me.avatarUpdatedAt} />
@@ -275,7 +279,7 @@
     background: var(--surface);
     border-top: 1px solid var(--line);
   }
-  .brand, .addfeed, .account, .long, li.collections, .resize { display: none; }
+  .brand, .addfeed, .account, li.sidebar-only, .resize { display: none; }
   ul { list-style: none; margin: 0; padding: 0; display: flex; height: var(--nav-h); }
   /* Each tab is as wide as its label plus an even share of the spare room, so
      "Collections" gets more than "You" and none of them touch. Never narrower
@@ -325,52 +329,25 @@
     nav:not(.paged) .addfeed { display: flex; flex: none; align-items: center; gap: var(--space-3); margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     /* The same accent ring, drawn just inside, as the rows below it. */
     nav:not(.paged) .addfeed:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-    nav:not(.paged) .long { display: inline; }
     nav:not(.paged) .shortl, nav:not(.paged) li.mobile-only { display: none; }
     /* The only scrolling part, so the account block below it never drifts up into the list. */
     nav:not(.paged) ul { flex-direction: column; height: auto; /* 2px is an optical hairline between rows, not spacing. */ gap: 2px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     nav:not(.paged) li { flex: none; }
-    nav:not(.paged) li > a { flex-direction: row; justify-content: flex-start; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); white-space: normal; }
-    nav:not(.paged) li > a[aria-current='page'] { background: var(--surface-2); color: var(--text); font-weight: 600; }
 
-    nav:not(.paged) li.collections { display: block; }
+    nav:not(.paged) li.sidebar-only { display: block; }
     /* Breathing room under the expanded list only; collapsed, the row spaces like its neighbors. */
-    nav:not(.paged) li.collections .cols { margin-bottom: var(--space-2); }
-    /* "Collections": a row you can click to fold the list away. */
-    /* One row, two things to press: the word is a link, the caret folds the list. */
-    /* Styled like its neighbors, so it only looks current on the Collections screen. */
-    nav:not(.paged) .heading { display: flex; align-items: center; width: 100%; border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
-    nav:not(.paged) .heading.current { background: var(--surface-2); color: var(--text); font-weight: 600; }
-    nav:not(.paged) .headlink { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0 var(--space-2) var(--space-3); border-radius: var(--radius-sm); color: inherit; }
-    nav:not(.paged) .groupcaret { flex: none; display: grid; place-items: center; width: 32px; align-self: stretch; margin-right: var(--space-1); border-radius: var(--radius-sm); color: var(--text-3); }
-    /* The Everything row is a normal-height row: undo the full-height stretch the bottom-bar tabs use. */
-    nav:not(.paged) .readall { height: auto; }
-    /* It carries the whole stream's "what's new" count, pushed to the row's end. */
-    nav:not(.paged) .readall :global(.tail) { margin-left: auto; }
+    nav:not(.paged) li.sidebar-only .cols { margin-bottom: var(--space-2); }
     nav:not(.paged) .cols { display: flex; flex-direction: column; /* 1px is a hairline between child rows. */ gap: 1px; /* Lines the child rows up under a parent's label: the row's own padding plus its icon column. */ padding-left: calc(var(--space-5) + var(--space-3)); height: auto; }
-    nav:not(.paged) .cols li > a { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
     /* A parent: the name is the link, the caret beside it opens the group. Children sit indented under it. */
     nav:not(.paged) .cols li.parent { display: flex; align-items: center; /* 2px is an optical gap: the caret tucks against the name. */ gap: 2px; }
-    nav:not(.paged) .cols li.parent > a { flex: 1; min-width: 0; }
+    nav:not(.paged) .cols li.parent > :global(.row) { flex: 1; min-width: 0; }
     nav:not(.paged) .cols .caret { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: var(--radius-sm); color: var(--text-3); }
-    nav:not(.paged) .cols li.child > a { padding-left: var(--space-5); }
-    nav:not(.paged) .cols .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    /* Something new: the name goes bold, the count or dot sits beside it. Bold reads in grayscale where a color would not. */
-    nav:not(.paged) .cols a.new .name { font-weight: 500; color: var(--text); }
-
     nav:not(.paged) .cols .new button { display: flex; align-items: center; gap: var(--space-2); width: 100%; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }
     nav:not(.paged) .plus { font-size: calc(var(--text-base) * var(--size-app)); line-height: 1; width: 10px; }
 
     nav:not(.paged) .account { display: flex; flex: none; flex-direction: column; align-items: stretch; gap: 2px; padding: var(--space-3) 0 var(--space-4); border-top: 1px solid var(--line); background: var(--bg); }
-    /* Lined up with the account row under it: the bell centered in the picture's
-       column, the label on the name's edge in the name's type, the count where the caret ends. */
-    nav:not(.paged) .notifrow { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text-2); }
-    nav:not(.paged) .notifrow .slot { flex: none; display: grid; place-items: center; width: 34px; }
-    nav:not(.paged) .notifrow[aria-current='page'] { background: var(--surface-2); color: var(--text); }
     /* A hairline between the two rows, inset so it stops short of the sidebar's edges. */
     nav:not(.paged) .split { height: 1px; margin: var(--space-1) var(--space-3); background: var(--line); }
-    nav:not(.paged) .notifrow :global(.tail) { margin-left: auto; }
-    nav:not(.paged) .notifrow:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
     nav:not(.paged) .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); text-align: left; }
     nav:not(.paged) .names { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
     nav:not(.paged) .dn { font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -380,9 +357,8 @@
     /* Hover shading only where there's a mouse. A tap on a touchscreen leaves
        hover stuck on, so the row you last tapped stays shaded like the current page. */
     @media (hover: hover) {
-      nav:not(.paged) .addfeed:hover, nav:not(.paged) li > a:hover, nav:not(.paged) .notifrow:hover, nav:not(.paged) .heading:hover,
-      nav:not(.paged) .cols .caret:hover, nav:not(.paged) .cols .new button:hover, nav:not(.paged) .who:hover { background: var(--surface-2); }
-      nav:not(.paged) .groupcaret:hover, nav:not(.paged) .cols .caret:hover { color: var(--text); }
+      nav:not(.paged) .addfeed:hover, nav:not(.paged) .cols .caret:hover, nav:not(.paged) .cols .new button:hover, nav:not(.paged) .who:hover { background: var(--surface-2); }
+      nav:not(.paged) .cols .caret:hover { color: var(--text); }
     }
 
     /* The drag handle: an 8px strip along the sidebar's edge. The edge's own
