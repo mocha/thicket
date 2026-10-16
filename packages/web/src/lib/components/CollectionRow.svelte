@@ -12,11 +12,16 @@
    * name sits quieter, so the tree reads at a glance. Anything more a screen
    * wants to say (why a search found it) goes in `children`, in place of the
    * plain feed count on the facts line, so the count isn't said twice.
+   *
+   * With `onpick`, the row is for ticking instead of opening (Admin's Starter
+   * packs): the whole row is the checkbox's label, and the box sits at the
+   * row's right end where the arrow would be.
    */
   import type { Snippet } from 'svelte';
   import type { CollectionSample } from '$lib/api';
   import { plural } from '$lib/words';
   import SourceIcon from './SourceIcon.svelte';
+  import Checkbox from './Checkbox.svelte';
 
   interface Props {
     href: string;
@@ -30,13 +35,17 @@
     depth?: number;
     badges?: Snippet;
     children?: Snippet;
+    /** Ticking, not opening: whether it's ticked, and what a tick does. */
+    picked?: boolean;
+    onpick?: () => void;
+    disabled?: boolean;
   }
 
-  let { href, name, description, feedCount, owner, sample, depth = 0, badges, children }: Props = $props();
+  let { href, name, description, feedCount, owner, sample, depth = 0, badges, children, picked = false, onpick, disabled = false }: Props = $props();
 </script>
 
 <li class="colrow" class:nested={depth > 0}>
-  <a class="row-link" {href} style:--depth={depth}>
+  <svelte:element this={onpick ? 'label' : 'a'} class="row-link" class:pick={!!onpick} href={onpick ? undefined : href} style:--depth={depth}>
     {#if sample}
       <span class="stack" aria-hidden="true">
         {#each sample.slice(0, 3) as s (s.id)}<SourceIcon feedId={s.id} hasIcon={s.hasIcon} name={s.title ?? '?'} size={22} />{/each}
@@ -48,12 +57,12 @@
       {#if description}<span class="row-details desc">{description}</span>{/if}
       <span class="row-details facts">{#if children}{@render children()}{:else}{plural(feedCount, 'feed')}{/if}</span>
     </span>
-    <span class="chev" aria-hidden="true">›</span>
-  </a>
+    {#if onpick}<Checkbox checked={picked} {disabled} onchange={onpick} />{:else}<span class="chev" aria-hidden="true">›</span>{/if}
+  </svelte:element>
 </li>
 
 <style>
-  .colrow a { padding-left: calc(var(--card-pad, var(--space-4)) + var(--depth, 0) * var(--space-5)); }
+  .colrow .row-link { padding-left: calc(var(--card-pad, var(--space-4)) + var(--depth, 0) * var(--space-5)); }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .named { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
   .named :global(.badge) { flex: none; }
@@ -68,7 +77,8 @@
   /* A step more room above the facts than between the other lines, so the description and the numbers read as two groups. */
   .facts { margin-top: var(--space-2); }
   .chev { flex: none; color: var(--text-3); font-size: calc(var(--text-xl) * var(--size-app)); }
-  @media (hover: hover) { .row-link:hover .title { text-decoration: underline; text-underline-offset: 3px; } }
+  .pick { cursor: pointer; }
+  @media (hover: hover) { a.row-link:hover .title { text-decoration: underline; text-underline-offset: 3px; } }
   .stack { display: inline-flex; flex: none; width: 40px; height: 40px; position: relative; }
   /* The overlapped icons are placed, not spaced: 9px centers them in the 40px box and steps each one across. */
   .stack :global(> *) { position: absolute; top: 9px; }

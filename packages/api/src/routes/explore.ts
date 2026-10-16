@@ -113,6 +113,10 @@ explore.get("/collections", async (c) => {
  * Public on purpose: the sign-up page shows these before anyone has an
  * account, so "here, copy mine" works as a link you can send to a friend.
  *
+ * With an account named, the admin can tick which of its collections are
+ * offered (`starter_collections`, a list of ids). Until they do, it's the
+ * first six the account made.
+ *
  * `viewerId`'s own collections are left out, since they can't copy their
  * own. Admin's preview asks with no viewer, so it shows exactly what a
  * brand-new account gets.
@@ -124,7 +128,11 @@ export async function featuredCollections(viewerId: number) {
   const curated = handle
     ? (await db.execute<{ id: number }>(sql`select id from users where handle = ${handle} and profile_visibility = 'public' and collections_visibility = 'public'`)).rows[0]
     : undefined;
-  const where = sql`${visible} and col.user_id <> ${viewerId} ${curated ? sql`and col.user_id = ${curated.id}` : sql``}`;
+  // Ticked by the admin: only those, however many. Never ticked: the first six.
+  const picked = curated ? await getSetting<number[]>("starter_collections") : null;
+  const ids = Array.isArray(picked) ? picked.map(Number).filter(Number.isFinite) : null;
+  const only = ids ? (ids.length ? sql`and col.id in (${sql.join(ids.map((id) => sql`${id}`), sql`, `)})` : sql`and false`) : sql``;
+  const where = sql`${visible} and col.user_id <> ${viewerId} ${curated ? sql`and col.user_id = ${curated.id} ${only}` : sql``}`;
   // A curated account's order is the order it built them in, so the curator
   // controls what leads by adding in the order they want — no separate ranking
   // to keep in sync. Left to size, the biggest collection wins, and the biggest
@@ -137,7 +145,7 @@ export async function featuredCollections(viewerId: number) {
            ${collectionSample(sql`col.id`, 5)} as sample
     from collections col join users u on u.id = col.user_id
     where ${where}
-    order by ${order} limit 6
+    order by ${order} limit ${ids ? 100 : 6}
   `);
   return { from: curated ? handle : null, collections: rows.rows.map((r: any) => ({ ...r, id: Number(r.id) })) };
 }
