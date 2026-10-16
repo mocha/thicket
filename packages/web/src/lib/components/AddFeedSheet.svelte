@@ -9,7 +9,7 @@
    * in your default collection. Success lands on the feed's own page. Nothing
    * is saved until Follow, so closing is a true cancel.
    */
-  import { untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { api, ApiError, feedHref, type Feed, type FeedSuggestion, type SubscribeOutcome } from '$lib/api';
@@ -89,11 +89,20 @@
     }, 200);
   }
 
-  /** Put the suggested feed's address in the box. Nothing is followed until Follow. */
-  function pick(f: FeedSuggestion) {
+  /**
+   * Put the suggested feed's address in the box. Nothing is followed until
+   * Follow. With no collection to put it in, the next step is naming one, so
+   * the cursor moves to the name box with the same reminder Follow would give.
+   */
+  async function pick(f: FeedSuggestion) {
     url = f.url; pickedUrl = f.url; suggestions = []; active = -1; outcome = null;
     api.event('feed_suggestion_picked', { feedId: f.id });
-    input?.focus();
+    await loadCollections();
+    // Cleared first so the reminder arriving is what opens and focuses the name box, even if it was already showing.
+    noPlace = null;
+    await tick();
+    noPlace = needsCollection(ids);
+    if (!noPlace) input?.focus();
   }
 
   /** With suggestions showing, the arrow keys walk them, Enter takes the one they're on, and Escape closes the list rather than the sheet. */
