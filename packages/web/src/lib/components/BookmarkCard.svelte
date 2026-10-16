@@ -33,7 +33,7 @@
   import IconButton from './IconButton.svelte';
   import NoteBlock from './NoteBlock.svelte';
   import NoteEditor from './NoteEditor.svelte';
-  import { isPixel } from '$lib/pixel';
+  import { tooSmallForPicture } from '$lib/pixel';
 
   /*
    * `fresh`: new since I last looked, the same small New as on an article card.
@@ -146,7 +146,7 @@
       {#if marks?.summary}<p class="card-summary found">{#if cut}… {/if}<Marked text={marks.summary} /></p>
       {:else if b.summary}<p class="card-summary">{b.summary}</p>{/if}
     </div>
-    {#if b.imageUrl}<img class="thumb" src={b.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onload={(e) => ((e.currentTarget as HTMLImageElement).hidden = isPixel(e))} onerror={(e) => ((e.currentTarget as HTMLImageElement).hidden = true)} />{/if}
+    {#if b.imageUrl}<img class="thumb" src={b.imageUrl} alt="" loading="lazy" referrerpolicy="no-referrer" onload={(e) => ((e.currentTarget as HTMLImageElement).hidden = tooSmallForPicture(e))} onerror={(e) => ((e.currentTarget as HTMLImageElement).hidden = true)} />{/if}
   </a>
   {#if webHref(b.linkUrl) && b.linkLabel}
     <!-- The source post's discussion-style link (e.g. Hacker News's "Comments"), outside the body's own link. -->

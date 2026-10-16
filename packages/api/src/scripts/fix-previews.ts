@@ -9,10 +9,13 @@
  * treated as the declared picture here: if it is small, the body's first
  * image stands in, exactly as a fresh parse would now decide. A tracking
  * pixel with nothing to replace it is cleared, so the card shows no picture.
+ * When the stored picture is one of the body's own images, the size the body
+ * gives it counts, so a small icon picked before that was ruled out is
+ * replaced by the body's first large image, or cleared.
  */
 import { sql } from "drizzle-orm";
 import { db, endPools } from "../db/client.js";
-import { choosePreview } from "../feeds/images.js";
+import { choosePreview, repickPreview } from "../feeds/images.js";
 import { isBeaconImage } from "../lib/sanitize.js";
 
 const dry = process.argv.includes("--dry");
@@ -29,8 +32,10 @@ for (;;) {
   for (const r of rows) {
     seen++;
     after = Number(r.id);
-    const next = choosePreview(r.imageUrl, r.content, r.url);
-    if (next === r.imageUrl || (!next && !isBeaconImage(r.imageUrl))) continue;
+    const next = repickPreview(r.imageUrl, r.content, r.url);
+    // Cleared only when it is a tracking pixel, or a small body image the stored picture alone would have kept.
+    const smallInBody = !next && choosePreview(r.imageUrl, r.content, r.url) !== null;
+    if (next === r.imageUrl || (!next && !isBeaconImage(r.imageUrl) && !smallInBody)) continue;
     changed++;
     if (!next) {
       cleared++;
@@ -45,6 +50,6 @@ for (;;) {
   }
   if (seen % 20000 < BATCH) console.log(`  ${seen} looked at, ${changed} changed`);
 }
-console.log(`${dry ? "dry run: " : ""}${seen} posts with a picture; ${changed} changed (${upsized} asked for the large version of the same file, ${swapped} swapped for the body's first image, ${cleared} tracking pixels cleared)`);
+console.log(`${dry ? "dry run: " : ""}${seen} posts with a picture; ${changed} changed (${upsized} asked for the large version of the same file, ${swapped} swapped for the body's first image, ${cleared} tracking pixels and small icons cleared)`);
 console.log("by host:", [...hosts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([h, n]) => `${h} ${n}`).join(", "));
 await endPools();
