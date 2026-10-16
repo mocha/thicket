@@ -86,8 +86,9 @@
       void loadCollections(true);
       if (after) {
         // Copied on arrival: go to the copy itself, so it's what's behind the
-        // welcome tour and what's left when the tour closes. The tour names it;
-        // without the tour (logging in on a screen that has seen it), a note does.
+        // welcome tour. The tour names it, and a new account's setup then ends
+        // on Collections with the copy in the list; without the tour (logging
+        // in on a screen that has seen it), a note does and you stay here.
         welcome.copied = mine.name;
         await goto(collectionHref(session.user!.handle, mine.slug), { replaceState: true });
         if (!welcome.open) showToast(`Copied “${mine.name}” to your collections`);

@@ -11,6 +11,7 @@
    */
   import { onMount } from 'svelte';
   import Button from '$lib/components/Button.svelte';
+  import ActionBar from '$lib/components/ActionBar.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import FiltersBox from '$lib/components/FiltersBox.svelte';
   import IconButton from '$lib/components/IconButton.svelte';
@@ -453,6 +454,12 @@
   <section class="group" id="components" aria-labelledby="components-h">
     <h2 id="components-h">Components</h2>
     <p class="section-lede">The parts every screen is assembled from, one of each, A to Z.</p>
+
+    <section class="entry" id="action-bar" aria-labelledby="action-bar-h">
+      <h3 class="entry-h" id="action-bar-h">Action bar</h3>
+      <p class="section-lede">A page’s main action, pinned to the bottom of the screen while a long list above it scrolls, so it’s always in reach. Its buttons line up at the right, main action last; on a phone it sits just above the bottom bar, and two long labels stack with the main action on top. A button that acts on what you’ve ticked counts it in its label (“Copy 3 collections”) and is grayed out until something is ticked. Import’s review and the Collections welcome use it.</p>
+      <div class="actionbar-demo"><ActionBar><Button>Upload a different file</Button><Button variant="primary">Import 3 collections</Button></ActionBar></div>
+    </section>
 
     <section class="entry" id="add-new-feed" aria-labelledby="add-new-feed-h">
       <h3 class="entry-h" id="add-new-feed-h">Add new feed</h3>
@@ -1123,4 +1130,6 @@
   .setting-rows { max-width: 520px; }
   .demo-line { display: block; }
   .demo-check { display: flex; align-items: center; gap: var(--space-2); }
+  /* The bar in a box of its own, so here it sits under the demo rather than pinning to the page. */
+  .actionbar-demo { border: 1px dashed var(--line); border-radius: var(--radius-sm); padding: 0 var(--space-3); }
 </style>
