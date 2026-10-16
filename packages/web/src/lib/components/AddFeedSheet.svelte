@@ -285,10 +285,12 @@
       <!-- Rows, not a floating menu: inside a sheet on a phone, with the keyboard up, there's no room to float anything. -->
       <ul class="suggestions" id={listId} role="listbox" aria-label="Feeds already on thicket">
         {#each suggestions as f, i (f.id)}
-          <!-- The keyboard works the list from the box (aria-activedescendant), so a row itself only needs the pointer. -->
+          <!-- The keyboard works the list from the box (aria-activedescendant), so a row itself only needs the pointer.
+               A row goes active when the pointer moves over it, not merely by being under it: the list appears under the
+               box, where the pointer often rests after opening the sheet, and Enter would then pick that row instead of following. -->
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <li id="{listId}-{i}" role="option" aria-selected={i === active} class:active={i === active}
-            onmousedown={(e) => e.preventDefault()} onclick={() => pick(f)} onmouseenter={() => (active = i)}>
+            onmousedown={(e) => e.preventDefault()} onclick={() => pick(f)} onmousemove={() => (active = i)}>
             <strong>{f.title ?? hostOf(f.siteUrl ?? f.url)}</strong>
             <span>{f.url}</span>
           </li>

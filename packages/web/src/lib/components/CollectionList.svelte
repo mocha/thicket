@@ -21,7 +21,8 @@
    * shows the reason under it.
    *
    * With `onfirst`, a first collection (you have none yet) isn't made from
-   * the box: what you type stays in `draft`, Enter calls `onfirst`, and the
+   * the box, and the box is already open, since naming one is the only next
+   * step: what you type stays in `draft`, Enter calls `onfirst`, and the
    * caller sends the name with the follow, so the collection only exists
    * once the follow works. The box's Create button shows then only where
    * nothing else sends it (`firstButton`); a Sheet's Follow does.
@@ -74,8 +75,12 @@
     else if (wasDeferred) { wasDeferred = false; untrack(stopNaming); }
   });
   let creating = $state(false);
-  /** The new-collection row is showing its name box. */
+  /** The new-collection row is showing its name box because it was asked to. */
   let naming = $state(false);
+  /* With no collections, naming one is the only next step, so the box is open
+     from the start rather than after a Follow that had nowhere to go. It stays
+     open through blur and Escape; those only clear what was typed. */
+  const showBox = $derived(naming || deferred);
   let nameEl = $state<HTMLInputElement | null>(null);
 
   const showFilter = $derived(namedCollections().length > 6);
@@ -163,7 +168,7 @@
   </div>
   {#if collectionStore.loaded}
     <div class="new" class:alone={!visible.length && !filter.trim()} bind:offsetHeight={pinnedHeight}>
-      {#if naming}
+      {#if showBox}
         <span class="plus" aria-hidden="true">+</span>
         <Field label="New collection name" hideLabel class="grow" {error}>
           {#snippet children({ id })}
