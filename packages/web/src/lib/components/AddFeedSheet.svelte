@@ -2,7 +2,9 @@
   /**
    * Add a feed, in a sheet you can flick away. Top to bottom, in the order you
    * decide things: the address, which of your collections it goes in, then
-   * Follow. Opened from a collection, that one is ticked; opened from
+   * Follow. As you type, feeds already on this site whose name or address
+   * matches are listed under the box; picking one fills in its address and
+   * leaves Follow to you. Opened from a collection, that one is ticked; opened from
    * Everything, none is — and if you leave it that way, Follow drops the feed
    * in your default collection. Success lands on the feed's own page. Nothing
    * is saved until Follow, so closing is a true cancel.
@@ -10,7 +12,7 @@
   import { untrack } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { api, ApiError, feedHref, type Feed, type SubscribeOutcome } from '$lib/api';
+  import { api, ApiError, feedHref, type Feed, type FeedSuggestion, type SubscribeOutcome } from '$lib/api';
   import { addFeed, closeAddFeed } from '$lib/addfeed.svelte';
   import { loadCollections, namedCollections, needsCollection, whereItGoes } from '$lib/collections.svelte';
   import { hostOf } from '$lib/time';
@@ -39,6 +41,14 @@
   let noPlace = $state<string | null>(null);
   /** A first collection's name, sent with the follow so it's only made if the follow works. */
   let firstName = $state('');
+  /** Feeds already here that match what's typed, and the row the arrow keys are on (-1: none, so Enter follows as usual). */
+  let suggestions = $state<FeedSuggestion[]>([]);
+  let active = $state(-1);
+  /** The address a suggestion filled in. It isn't searched for again as if it were still being typed. */
+  let pickedUrl = $state<string | null>(null);
+  let suggestTimer: ReturnType<typeof setTimeout> | undefined;
+  let suggestAbort: AbortController | null = null;
+  const listId = 'add-feed-suggestions';
 
   /* The feeds to choose from, for as long as the address box still holds the
      address they came from. Edit the address and Follow looks it up afresh. */
@@ -59,6 +69,49 @@
         : null
   );
 
+  /* Suggestions have no place while a lookup runs or once an address has turned up several feeds to choose from. */
+  const showSuggestions = $derived(suggestions.length > 0 && !busy && !candidates);
+
+  /** On each pause in typing, ask what's already here. Not for one letter, and not for an address a suggestion filled in. */
+  function typed() {
+    clearTimeout(suggestTimer);
+    suggestAbort?.abort();
+    active = -1;
+    const q = url.trim();
+    if (q.length < 2 || q === pickedUrl) { suggestions = []; return; }
+    suggestTimer = setTimeout(async () => {
+      const ctl = new AbortController();
+      suggestAbort = ctl;
+      try {
+        const res = await api.suggestFeeds(q, ctl.signal);
+        if (!ctl.signal.aborted && url.trim() === q) suggestions = res.feeds;
+      } catch { /* A stale or failed lookup: the box works without suggestions. */ }
+    }, 200);
+  }
+
+  /** Put the suggested feed's address in the box. Nothing is followed until Follow. */
+  function pick(f: FeedSuggestion) {
+    url = f.url; pickedUrl = f.url; suggestions = []; active = -1; outcome = null;
+    api.event('feed_suggestion_picked', { feedId: f.id });
+    input?.focus();
+  }
+
+  /** With suggestions showing, the arrow keys walk them, Enter takes the one they're on, and Escape closes the list rather than the sheet. */
+  function keys(e: KeyboardEvent) {
+    if (!showSuggestions) return;
+    const n = suggestions.length;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      active = e.key === 'ArrowDown' ? (active + 1) % n : active < 0 ? n - 1 : (active - 1 + n) % n;
+    } else if (e.key === 'Enter' && active >= 0) {
+      e.preventDefault();
+      pick(suggestions[active]);
+    } else if (e.key === 'Escape') {
+      e.preventDefault(); e.stopPropagation();
+      suggestions = []; active = -1;
+    }
+  }
+
   // Each open() resets the form from the options it was opened with.
   $effect(() => {
     void addFeed.nonce;
@@ -67,6 +120,7 @@
     ids = [...(o.collectionIds ?? [])];
     outcome = null; busy = false; landing = false; noPlace = null; firstName = '';
     lookedUp = ''; picked = []; results = {};
+    clearTimeout(suggestTimer); suggestAbort?.abort(); suggestions = []; active = -1; pickedUrl = null;
     // Opened from a collection, that one starts ticked. Opened from Everything,
     // nothing is ticked — leave it and Follow drops the feed in your default
     // collection, which the hint below spells out.
@@ -102,7 +156,7 @@
       outcome = res;
       if ('status' in res && res.status === 'choose') { lookedUp = value; picked = []; results = {}; }
       if ('status' in res && res.status === 'subscribed') {
-        api.event('feed_added', { feedId: res.feed.id, alreadyFollowed: res.alreadyFollowed, collectionIds: ids, via: addFeed.opts.via ?? 'sheet' });
+        api.event('feed_added', { feedId: res.feed.id, alreadyFollowed: res.alreadyFollowed, collectionIds: ids, via: addFeed.opts.via ?? 'sheet', suggested: value === pickedUrl });
         const name = res.feed.title ?? hostOf(res.feed.url);
         // A YouTube channel followed while its feed wasn't answering: say why its page is empty for now.
         if (res.waiting) showToast(`Following ${name}. YouTube’s feeds aren’t answering right now, so its videos will show up once they are.`, undefined, 10000);
@@ -192,10 +246,12 @@
 </script>
 
 <Sheet title="Add a feed" lede="Enter the address of a site, blog, subreddit, or YouTube channel or video, and thicket finds the feed for you. You can also enter the feed itself." bind:dialog {onclose}>
-  <!-- novalidate: the browser's own URL check rejects "example.com" (it wants
-       https:// in front), yet that is how people type an address and what the
-       box suggests. The server adds https:// itself, and says so under the box
-       if there's really nothing there. -->
+  <!-- A plain text box with the URL keyboard, not type="url": the browser's own
+       URL check rejects "example.com" (it wants https:// in front), yet that is
+       how people type an address and what the box suggests, and a box that
+       suggests from a list is a combobox, which only a text box can be. The
+       server adds https:// itself, and says so under the box if there's really
+       nothing there. novalidate keeps the browser from blocking Enter on "required". -->
   <form id="add-feed" class="form" novalidate onsubmit={(e) => { e.preventDefault(); void submit(); }}>
     <Field label="Address" hideLabel error={urlError}>
       {#snippet children({ id, describedBy, invalid })}
@@ -206,8 +262,15 @@
           bind:element={input}
           bind:value={url}
           inset
-          type="url"
+          type="text"
           inputmode="url"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={showSuggestions}
+          aria-controls={listId}
+          aria-activedescendant={showSuggestions && active >= 0 ? `${listId}-${active}` : undefined}
+          oninput={typed}
+          onkeydown={keys}
           autocapitalize="off"
           autocomplete="off"
           spellcheck="false"
@@ -217,6 +280,21 @@
         />
       {/snippet}
     </Field>
+
+    {#if showSuggestions}
+      <!-- Rows, not a floating menu: inside a sheet on a phone, with the keyboard up, there's no room to float anything. -->
+      <ul class="suggestions" id={listId} role="listbox" aria-label="Feeds already on thicket">
+        {#each suggestions as f, i (f.id)}
+          <!-- The keyboard works the list from the box (aria-activedescendant), so a row itself only needs the pointer. -->
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <li id="{listId}-{i}" role="option" aria-selected={i === active} class:active={i === active}
+            onmousedown={(e) => e.preventDefault()} onclick={() => pick(f)} onmouseenter={() => (active = i)}>
+            <strong>{f.title ?? hostOf(f.siteUrl ?? f.url)}</strong>
+            <span>{f.url}</span>
+          </li>
+        {/each}
+      </ul>
+    {/if}
 
     {#if candidates}
       <div class="result" role="group" aria-labelledby="add-feed-pick">
@@ -262,5 +340,11 @@
   .which strong { color: var(--text); }
   .which span { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
   .which .pick-error { color: var(--danger); }
+  /* The same rows as the candidates above, minus the tick box: pressing one is the choice. */
+  .suggestions { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+  .suggestions li { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); cursor: pointer; }
+  .suggestions li.active { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); }
+  .suggestions strong { color: var(--text); font-size: calc(var(--text-sm) * var(--size-app)); }
+  .suggestions span { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); overflow-wrap: anywhere; }
   .eyebrow { font-size: calc(var(--text-xs) * var(--size-app)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); margin-top: var(--space-1); }
 </style>

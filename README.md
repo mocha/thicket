@@ -131,6 +131,7 @@ each bookmark field may be. Past a limit the answer is `429` with
 | GET | `/api/river?before=&limit=&collection=&feed=` | Newest posts across followed feeds (or one collection, or one feed), keyset paginated. A public collection works signed out |
 | GET | `/api/river/stats` | What you follow and what arrived in the last day |
 | GET | `/api/feeds?q=&sort=&following=1\|0&offset=` | Instance index: every feed, with stats and my collection membership |
+| GET | `/api/feeds/suggest?q=` | Up to 6 feeds already here whose name or address contains `q`, not yet followed, most followed first; for the Add a feed box |
 | GET | `/api/feeds/:id` | One feed with stats and my membership |
 | GET | `/api/feeds/:id/icon` | Cached site icon, or 404 (the UI shows a monogram) |
 | POST | `/api/feeds/:id/icon/refresh` | Re-run icon discovery now |

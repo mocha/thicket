@@ -76,6 +76,8 @@ export type Feed = {
   etag: string | null; lastModified: string | null;
 };
 export type FeedSettings = { feedId: number; displayName: string | null; hideShorts: boolean; hideShortsSetting: boolean | null };
+/** A feed as the Add a feed box suggests it: just enough for a row to name it. */
+export type FeedSuggestion = Pick<Feed, 'id' | 'url' | 'siteUrl' | 'title'>;
 export type FeedIndexPage = { feeds: Feed[]; total: number; indexTotal: number; nextOffset: number | null };
 
 export type Collection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; feedCount: number; visibility: ShareLevel };
@@ -166,6 +168,8 @@ export const api = {
     if (opts.offset) q.set('offset', String(opts.offset));
     return j<FeedIndexPage>(`/api/feeds?${q}`);
   },
+  /** Feeds already here whose name or address contains what was typed, for the Add a feed box. `signal` drops a lookup the next keystroke made stale. */
+  suggestFeeds: (q: string, signal?: AbortSignal) => j<{ feeds: FeedSuggestion[] }>(`/api/feeds/suggest?q=${encodeURIComponent(q)}`, { signal }),
   feed: (id: number) => j<Feed>(`/api/feeds/${id}`),
   /** My settings on a feed. Send only what changes. */
   /** hideShorts: true hides them on this channel, false shows them, null follows my default. */
