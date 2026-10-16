@@ -1,6 +1,7 @@
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
-import { FIRST_COLLECTION_NAME, FIRST_COLLECTION_SLUG, type SessionUser } from "./auth.js";
+import type { SessionUser } from "./auth.js";
+import { slugify, slugTaken } from "./slug.js";
 import { discover, type Discovery } from "../feeds/discover.js";
 import { normalizeFeedUrl } from "../feeds/normalize.js";
 import { storeItems, chooseInterval } from "../feeds/refresh.js";
@@ -69,12 +70,11 @@ export async function ensureFeedLazy(url: string) {
 }
 
 /**
- * Where a bare "Follow" files a feed: the person's oldest collection, which for
- * a new account is the one they were given. Following has no unfiled state, so
- * this can never answer "nowhere" — if every collection has been deleted, the
- * first one comes back.
+ * Where a bare "Follow" files a feed: the person's oldest collection. Null
+ * when they have none: a new account starts with no collections, and the
+ * follow then names one for the feed to start (see destinationFor).
  */
-export async function defaultCollectionFor(user: SessionUser): Promise<number> {
+export async function defaultCollectionFor(user: SessionUser): Promise<number | null> {
   if (user.defaultCollectionId !== null) return user.defaultCollectionId;
   const [existing] = await db
     .select({ id: schema.collections.id })
@@ -82,10 +82,38 @@ export async function defaultCollectionFor(user: SessionUser): Promise<number> {
     .where(and(eq(schema.collections.userId, user.id), isNotNull(schema.collections.parentId)))
     .orderBy(schema.collections.id)
     .limit(1);
-  if (existing) return existing.id;
+  return existing?.id ?? null;
+}
+
+/**
+ * Where a follow goes: a collection of mine, or a new one I'm naming now.
+ * A new one is only made once the feed is found (fileInto), so a follow that
+ * fails leaves no empty collection behind.
+ */
+export type Destination = { id: number } | { name: string };
+
+/**
+ * Settle where a follow goes before anything is fetched. The collection asked
+ * for wins; then a new one by name; then the default. With no collections and
+ * no name there is nowhere to put it, and the answer says so.
+ */
+export async function destinationFor(user: SessionUser, collectionId: number | undefined, newName: string | undefined): Promise<Destination | { error: string }> {
+  if (collectionId !== undefined) return { id: collectionId };
+  const name = newName?.trim();
+  if (name) {
+    if (await slugTaken(user.id, slugify(name))) return { error: "You already have a collection with that name." };
+    return { name };
+  }
+  const fallback = await defaultCollectionFor(user);
+  return fallback === null ? { error: "Name a collection to follow this feed into." } : { id: fallback };
+}
+
+/** The collection a follow lands in, making the named one now if that's what was asked for. */
+export async function fileInto(user: SessionUser, dest: Destination): Promise<number> {
+  if ("id" in dest) return dest.id;
   const [made] = await db
     .insert(schema.collections)
-    .values({ userId: user.id, parentId: user.rootCollectionId, name: FIRST_COLLECTION_NAME, slug: FIRST_COLLECTION_SLUG })
+    .values({ userId: user.id, parentId: user.rootCollectionId, name: dest.name, slug: slugify(dest.name) })
     .returning();
   return made.id;
 }
@@ -115,13 +143,12 @@ export type SubscribeOutcome =
   | { status: "none"; pageUrl: string };
 
 /** The one acquisition path: any URL in, a followed feed (or a choice) out. */
-export async function subscribe(user: SessionUser, input: string, collectionId?: number): Promise<SubscribeOutcome> {
+export async function subscribe(user: SessionUser, input: string, dest: Destination): Promise<SubscribeOutcome> {
   const d = await discover(input);
   if (d.status === "candidates") return { status: "choose", candidates: d.candidates };
   if (d.status === "none") return { status: "none", pageUrl: d.pageUrl };
   const { categories: _adminOnly, ...feed } = await ensureFeedFromDiscovery(d);
-  const target = collectionId ?? (await defaultCollectionFor(user));
   const [before] = await db.select({ n: sql<number>`count(*)::int` }).from(schema.collectionFeeds).where(eq(schema.collectionFeeds.feedId, feed.id));
-  await addFeedToCollection(target, feed.id);
+  await addFeedToCollection(await fileInto(user, dest), feed.id);
   return { status: "subscribed", feed, alreadyFollowed: before.n > 0, waiting: d.waiting === true && feed.lastFetchedAt === null };
 }

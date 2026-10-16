@@ -79,8 +79,7 @@
     if (!col || copying) return;
     copying = true;
     try {
-      // Copied on arrival: a brand-new account's empty starter collection goes (the server checks it's untouched).
-      const mine = await profilesApi.copyCollection(handle, slug, { replaceStarter: !!after });
+      const mine = await profilesApi.copyCollection(handle, slug);
       justCopied = { slug: mine.slug, name: mine.name };
       // `after` is set when this copy finished a sign-up or log-in, so we can count the accounts shared collections bring in.
       api.event('collection_copied', { from: `${handle}/${slug}`, collectionId: mine.id, feeds: mine.feedCount, ...(after ? { after } : {}) });
