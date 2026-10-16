@@ -254,7 +254,8 @@
   .names { flex: 1; min-width: 0; }
   /* The page header stays on one line, always; a name too long to fit ends in an ellipsis (full name on hover). */
   /* The name and handle are trimmed to their letters, top of the capitals to the baseline, so the picture beside them can match what you see: the name from the top of its capitals, the handle down to the bottom of letters like y and p. */
-  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: 0 0 -0.2em; padding-bottom: 0.2em; line-height: 1.15; text-box: trim-both cap alphabetic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* The name clips itself (for the ellipsis), so it keeps a little room above and below the trimmed box, pulled back with matching negative margins: letters taller than a capital (h, l, the round tops of G and O) and descenders (g, p) still show. */
+  h1 { font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); margin: -0.2em 0; padding: 0.2em 0; line-height: 1.15; text-box: trim-both cap alphabetic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .handle { margin: var(--space-2) 0 0; line-height: 1.3; text-box: trim-both cap text; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); }
   .site { color: var(--accent); font-weight: 600; }
   /* Editing name, bio and homepage right in the header. */
