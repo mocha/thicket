@@ -954,7 +954,7 @@
     <section class="entry" id="welcome" aria-labelledby="welcome-h">
       <h3 class="entry-h" id="welcome-h">Welcome</h3>
       <p class="section-lede">The top of a screen someone sees before they have anything on it: a centered headline in the headings face, a larger gray line under it that wraps evenly, anything the screen offers first (New posts’ big “Add your first feed”), then a short hairline before what follows. The heading over what follows reads like the gray line, not like a second headline. New posts uses it when you follow nothing, and Collections when you have no collections.</p>
-      <div class="welcome-demo"><Welcome title="Collections" sub="Every site you love, in one place. No algorithm decides what you see." /></div>
+      <div class="welcome-demo"><Welcome title="Collections" sub="If you want an easy way to get started, copy one or more of these Collections." /></div>
     </section>
   </section>
 

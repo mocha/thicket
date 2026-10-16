@@ -77,8 +77,8 @@
 {#if me && cols && !cols.length && !error}
   <!-- No collections: the welcome, laid out like New posts' own. -->
   {#if failed.length}{@render failures()}{/if}
-  <Welcome title="Collections" sub="Every site you love, in one place. No algorithm decides what you see." />
-  <StarterPacks heading="If you want an easy way to get started, copy one or more of these Collections. You can delete them at any time." lede="" quiet bind:picked bind:available />
+  <Welcome title="Collections" sub="If you want an easy way to get started, copy one or more of these Collections." />
+  <StarterPacks heading="You can delete them at any time." lede="" quiet bind:picked bind:available />
   <p class="other">Know what you want? <Button link onclick={() => openAddFeed({ via: 'collections_welcome' })}>+ Add new feed</Button><Dot /><Button link href="/import">Import feeds</Button></p>
   {#if available}
     <ActionBar>
