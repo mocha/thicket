@@ -65,16 +65,43 @@ export function upsizeImageUrl(url: string): string {
   return url;
 }
 
-/** The body's first image that isn't a tracking pixel: a known beacon, or 2 pixels or smaller on a side. */
-export function firstImg(html: string | undefined | null): string | null {
-  if (!html) return null;
+/** Each <img> in the body with the size its attributes give, in order. A percentage is not a size. */
+function* bodyImages(html: string): Generator<{ src: string; width?: string; height?: string }> {
   for (const [tag] of html.matchAll(/<img\b[^>]*>/gi)) {
     const src = /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1];
-    if (!src || isBeaconImage(src)) continue;
-    if (isPixelSize(/\swidth=["']?(\d+)/i.exec(tag)?.[1], /\sheight=["']?(\d+)/i.exec(tag)?.[1])) continue;
+    if (src) yield { src, width: /\swidth=["']?(\d+)(?![\d%])/i.exec(tag)?.[1], height: /\sheight=["']?(\d+)(?![\d%])/i.exec(tag)?.[1] };
+  }
+}
+
+/**
+ * The body's first image that could be a post's picture. Not a tracking pixel
+ * (a known beacon, or 2 pixels or smaller on a side), and not small: an icon,
+ * emoji or avatar beside the text, like the 17-pixel user icon Dreamwidth puts
+ * by every name, fills a card's frame as a blur.
+ */
+export function firstImg(html: string | undefined | null): string | null {
+  if (!html) return null;
+  for (const { src, width, height } of bodyImages(html)) {
+    if (isBeaconImage(src) || isPixelSize(width, height) || isSmallImage(src, width, height)) continue;
     return src;
   }
   return null;
+}
+
+/**
+ * The card's picture again, for a post already stored. The stored picture is
+ * taken as the declared one, unless it is one of the body's own images: then
+ * the size the body gives it counts, and if that makes it a pixel or small
+ * (an icon picked before body images had to be large), it is judged as a
+ * fresh parse judges body images, with no small last resort to fall back to.
+ */
+export function repickPreview(stored: string, body: string | null | undefined, base?: string | null): string | null {
+  for (const img of body ? bodyImages(body) : []) {
+    if (webUrl(img.src, base) !== stored) continue;
+    if (isPixelSize(img.width, img.height) || isSmallImage(stored, img.width, img.height)) return choosePreview(null, body, base);
+    break;
+  }
+  return choosePreview(stored, body, base);
 }
 
 /**
