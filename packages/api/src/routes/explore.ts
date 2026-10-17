@@ -163,6 +163,12 @@ explore.get("/featured", async (c) => {
  * by the name people go by, the same as a searched list's "name", with nobody
  * moved up for being followed (Show: People I follow narrows to them instead).
  * "newest" is the newest to join. Never most followed: see below.
+ *
+ * One exception to every order: the starter packs account (`starter_account`,
+ * the same setting featuredCollections reads) is always the first row, so the
+ * account whose collections newcomers are handed is the first person they see
+ * to follow. It is still subject to the filters: narrowed to people you follow,
+ * or to a joining window, it appears only if it qualifies.
  */
 export const BROWSE_PEOPLE_SORTS = ["name", "newest"] as const;
 export type BrowsePeopleSort = (typeof BROWSE_PEOPLE_SORTS)[number];
@@ -180,7 +186,8 @@ const BROWSE_PEOPLE_ORDER: Record<BrowsePeopleSort, SQL> = {
  * only (this is for following, and a visitor has the homepage). Never the
  * viewer themself. network=1 keeps only people the viewer follows; since= keeps
  * people who joined in the window. `total` counts what the filters leave.
- * Follower counts are deliberately absent: no vanity metric.
+ * Follower counts are deliberately absent: no vanity metric. The starter
+ * packs account leads the list in every order (see BROWSE_PEOPLE_ORDER).
  */
 explore.get("/users", async (c) => {
   const viewer = c.get("user");
@@ -191,6 +198,8 @@ explore.get("/users", async (c) => {
   const sort = browsePeopleSortFrom(c.req.query("sort"));
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 30)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
+  const starter = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
+  const pinned = starter ? sql`(u.handle = ${starter}) desc, ` : sql``;
   const where = [sql`u.profile_visibility = 'public' and u.id <> ${viewer.id}`];
   if (q) {
     const like = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
@@ -207,7 +216,7 @@ explore.get("/users", async (c) => {
            case when u.notes_visibility = 'public' then (select count(*)::int from bookmarks n where n.user_id = u.id and n.note is not null) else null end as notes,
            exists(select 1 from user_follows uf where uf.follower_id = ${viewer.id} and uf.followee_id = u.id) as "isFollowing"
     from users u where ${sql.join(where, sql` and `)}
-    order by ${BROWSE_PEOPLE_ORDER[sort]} limit ${limit + 1} offset ${offset}
+    order by ${pinned}${BROWSE_PEOPLE_ORDER[sort]} limit ${limit + 1} offset ${offset}
   `);
   const page = rows.rows.slice(0, limit);
   return c.json({ users: page.map((r: any) => ({ ...r, createdAt: new Date(r.createdAt).toISOString() })), sort, total, nextOffset: rows.rows.length > limit ? offset + limit : null });
