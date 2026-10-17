@@ -48,8 +48,10 @@
   let impact = $state<Awaited<ReturnType<typeof adminApi.feedImpact>> | null>(null);
   let removing = $state(false);
   let adminOpen = $state(false);
-  /** Reached from the admin feed list (its links carry ?admin), as opposed to from the feed itself. */
+  /** Reached from the admin feed list (only its links carry ?admin), as opposed to from the feed itself. */
   const fromAdmin = $derived(page.url.searchParams.has('admin'));
+  /** An address change folded this feed into another: the next load keeps the admin section open, whatever the address says. */
+  let reopenAdmin = false;
   async function askRemove() {
     if (!feed) return;
     impact = null;
@@ -131,7 +133,8 @@
       api.event('admin_feed_moved', { feedId: target.id, result: r.status, into: r.feedId });
       if (r.status === 'merged' || r.feedId !== target.id) {
         showToast(`${feedName(target)} was folded into the feed already at that address`);
-        return void goto(`/feeds/${r.feedId}/settings?admin`, { replaceState: true });
+        reopenAdmin = true;
+        return void goto(`/feeds/${r.feedId}/settings${fromAdmin ? '?admin' : ''}`, { replaceState: true });
       }
       const next = await api.feed(target.id);
       if (feed !== target) return;
@@ -201,8 +204,9 @@
     displayName = feed.displayName ?? '';
     adminTitle = feed.title ?? '';
     newUrl = feed.url;
-    // Arriving from the admin feed list opens the admin section.
-    adminOpen = !!session.user?.isAdmin && page.url.searchParams.has('admin');
+    // Arriving from the admin feed list opens the admin section, as does landing here after an address change merged two feeds.
+    adminOpen = !!session.user?.isAdmin && (fromAdmin || reopenAdmin);
+    reopenAdmin = false;
   }
 
   /* Display name: a field with Save inside it, which wakes up once something changed. Saving it empty goes back to the feed's own title. */
