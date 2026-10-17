@@ -32,6 +32,7 @@
   import Badge from '$lib/components/Badge.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { recall, keepOnLeave } from '$lib/listmemory';
+  import { loadCollections } from '$lib/collections.svelte';
 
   /**
    * Explore is one search box and four tabs: Posts, Feeds, Collections,
@@ -285,6 +286,32 @@
       });
   }
 
+  /* ---- copying a collection from its row ---- */
+  /**
+   * Copy on a collection's row (issue #289 follow-up): the same copy as the
+   * collection's own page, without leaving the list. The browse list leaves
+   * out what's already yours, so a row only turns to "Copied" here, in this
+   * visit; a search result says it from the API (`copiedByMe`).
+   */
+  let copyBusy = $state<number | null>(null);
+  let copiedIds = $state<Set<number>>(new Set());
+  async function copyCol(c: ExploreCollection) {
+    if (copyBusy !== null || !session.user) return;
+    copyBusy = c.id;
+    try {
+      const mine = await profilesApi.copyCollection(c.handle, c.slug);
+      copiedIds = new Set([...copiedIds, c.id]);
+      api.event('collection_copied', { from: `${c.handle}/${c.slug}`, collectionId: mine.id, feeds: mine.feedCount, via: 'explore' });
+      // Forced: the left menu's list is already loaded, and without it the copy wouldn't show there until a reload.
+      void loadCollections(true);
+      showToast(`Copied “${mine.name}” to your collections`, { label: 'Open', run: () => goto(collectionHref(session.user!.handle, mine.slug)) });
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'That didn’t work. Try again in a moment.');
+    } finally {
+      copyBusy = null;
+    }
+  }
+
   /* ---- browse: collections ---- */
   let cols = $state<ExploreCollection[]>([]);
   let colsTotal = $state(0);
@@ -345,14 +372,18 @@
     cols: ExploreCollection[]; colsTotal: number; colsNext: number | null;
     users: ExploreUser[]; usersTotal: number; usersNext: number | null;
     followsAnyone: boolean | null; loadedKey: string | undefined; opened: Opened | null;
+    /** The collections copied from their rows, so Back doesn't offer to copy them again. */
+    copied: number[];
   }>('explore');
   function restore(b: NonNullable<typeof back>) {
     ({ res, more, moreNext, moreScope, feeds, feedsTotal, feedsAll, feedsNext, cols, colsTotal, colsNext, users, usersTotal, usersNext, followsAnyone, loadedKey } = b);
+    copiedIds = new Set(b.copied ?? []);
     if (b.opened) void refreshOpened(b.opened);
   }
   if (back) restore(back);
   keepOnLeave(() => 'explore', () => ({
-    res, more, moreNext, moreScope, feeds, feedsTotal, feedsAll, feedsNext, cols, colsTotal, colsNext, users, usersTotal, usersNext, followsAnyone, loadedKey, opened
+    res, more, moreNext, moreScope, feeds, feedsTotal, feedsAll, feedsNext, cols, colsTotal, colsNext, users, usersTotal, usersNext, followsAnyone, loadedKey, opened,
+    copied: [...copiedIds]
   }));
 
   async function refreshOpened(o: Opened) {
@@ -567,9 +598,11 @@
       {plural(c.feedCount, 'feed')}{'\u00a0'}<Dot />{' '}Matches the name
     {/if}
   {/snippet}
-  <!-- The same pills as a profile's Collections: whose it is shows beside the name, not only in the byline. -->
-  {#snippet badges()}{#if ev?.isMine}<Badge>Yours</Badge>{:else if ev?.copiedByMe}<Badge>Copied</Badge>{/if}{/snippet}
-  <CollectionRow href={collectionHref(c.handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} owner={c.displayName ?? `@${c.handle}`} sample={c.sample} {badges} children={ev ? why : undefined} />
+  <!-- The same Yours pill as a profile's Collections: whose it is shows beside the name, not only in the byline.
+       "Copied" is said by the button at the row's end instead, so it isn't said twice. -->
+  {#snippet badges()}{#if ev?.isMine}<Badge>Yours</Badge>{/if}{/snippet}
+  <CollectionRow href={collectionHref(c.handle, c.slug)} name={c.name} description={c.description} feedCount={c.feedCount} owner={c.displayName ?? `@${c.handle}`} sample={c.sample} {badges} children={ev ? why : undefined}
+    copied={copiedIds.has(c.id) || !!ev?.copiedByMe} busy={copyBusy === c.id} oncopy={session.user && !ev?.isMine ? () => void copyCol(c) : undefined} />
 {/snippet}
 
 {#snippet personRow(u: ExploreUser | SearchPerson, ev: SearchPerson | null)}

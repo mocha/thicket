@@ -6,8 +6,10 @@
    * under the name; what it says about itself; then the facts about how it
    * behaves, run together with dots. The name and site are the feed itself
    * and read dark; the description and facts are about it and read gray.
-   * Follow sits at the right, and drops under the text on a phone. The icon,
-   * name and site are the shared FeedLine, which the Import review uses too.
+   * Follow sits at the right; on a phone, where it would squeeze the
+   * description, it shares the facts line (the shared row-ended layout in
+   * app.css). The icon, name and site are the
+   * shared FeedLine, which the Import review uses too.
    *
    * Each fact shows only when the screen has it: how often it posts, when it
    * last did (`latest` off where a list is sorted by something else and the
@@ -56,42 +58,39 @@
   const name = $derived(f.title ?? hostOf(f.url));
 </script>
 
-<li class="feedrow">
-  <a class="row tap" href={feedHref(f)} onclick={() => onopen?.()}>
+<li class="feedrow row-ended wide beside">
+  <a class="row row-main" href={feedHref(f)} onclick={() => onopen?.()}>
     <FeedLine feedId={f.id} hasIcon={f.hasIcon} {name} label={feedListName(f)} origin={feedOrigin(f)}>
       {#snippet badge()}{#if failing}<Badge tone="danger">Failing</Badge>{/if}{/snippet}
       {#if f.description}<span class="row-details desc">{f.description}</span>{/if}
+    </FeedLine>
+  </a>
+  {#if facts.length || network || children || follow}
+    <div class="row-foot">
       {#if facts.length || network || children}
-        <span class="facts">
+        <span class="facts row-facts">
           {#if facts.length || network}
             <span class="row-details">{#each facts as fact, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}<span class="fact">{i === 0 ? fact[0].toUpperCase() + fact.slice(1) : fact}</span>{/each}{#if network}{#if facts.length}{' '}<Dot />{' '}{/if}<span class="net">{plural(network, 'person', 'people')} you follow</span>{/if}</span>
           {/if}
           {#if children}<span class="row-details">{@render children()}</span>{/if}
         </span>
       {/if}
-    </FeedLine>
-  </a>
-  {#if follow}
-    <FollowControl feedId={f.id} ids={f.myCollectionIds} {name} small {onchange} />
+      {#if follow}
+        <FollowControl feedId={f.id} ids={f.myCollectionIds} {name} small {onchange} class="row-end" />
+      {/if}
+    </div>
   {/if}
 </li>
 
 <style>
-  .feedrow { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-  .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
   /* Close under the name, so the two read as a pair, as on the Person and Collection rows. */
   .desc { margin-top: -2px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-  /* A step more room above the facts than between the other lines, so the description and the numbers read as two groups. */
-  .facts { margin-top: var(--space-2); display: flex; flex-direction: column; }
+  /* The facts, then the search's own line under them. */
+  .facts { display: flex; flex-direction: column; }
   /* A long line breaks at a dot, never inside a fact ("latest 5 / hours ago"). */
   .fact { white-space: nowrap; }
   .net { color: var(--accent); font-weight: 600; }
-  /* Last, so it wins over the row's own sizing above. On a phone the button would squeeze the description into a column four
-     words wide, so it drops to its own line, at the right, and the text gets
-     the row. */
-  @media (max-width: 560px) {
-    .row { flex-basis: 100%; }
-    .feedrow > :global(.follow) { margin-left: auto; }
-  }
+  /* On a phone the facts wrap beside Follow (`beside`), so a fact may break inside itself. */
+  @media (max-width: 560px) { .fact { white-space: normal; } }
   @media (hover: hover) { .row:hover :global(.title) { text-decoration: underline; text-underline-offset: 3px; } }
 </style>

@@ -434,4 +434,38 @@ input[type="radio"]:focus-visible { outline: 2px solid var(--accent); outline-of
 .row-details, .row-event { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
 .row-more { display: block; width: 100%; padding: var(--space-3) var(--card-pad, var(--space-4)); border-top: 1px solid var(--line); text-align: center; color: var(--accent); font-weight: 600; font-size: calc(var(--text-sm) * var(--size-app)); }
 .row-more:disabled { opacity: 0.6; }
+
+/* A row with a control at its end (Follow on a feed or person, Copy on a
+   collection): `row-ended` on the li, `row-main` on the link (the picture
+   and the text block, `meta`), then a `row-foot` holding the facts line
+   (`row-facts`) and the control (`row-end`). The row is one grid of picture,
+   text, facts and control; the link spans the picture and text cells (a
+   subgrid, so its two children sit on the row's own tracks) and the facts
+   cell too, so tapping anywhere but the control opens the thing. The picture
+   is centered on the text and the facts together, as it always was.
+
+   The control sits at the right, centered on the row, and a row whose text
+   is short (a person: a name, a line of bio) keeps that on a phone too. A
+   row with a description to read (`wide`: a feed, a collection) would have
+   it squeezed into a column a few words wide there, so on a phone its facts
+   and control share one line under the text instead. A feed's facts
+   (`beside`) wrap beside Follow, which is short; a collection's control is
+   wide, so its facts stay on one line and the control wraps under them, in
+   line with the text, when the two don't fit (a search's sentence, a small
+   phone, large text). */
+.list-rows > li.row-ended { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: var(--space-3); align-items: center; }
+.row-ended > .row-main { grid-column: 1 / span 2; grid-row: 1 / span 2; display: grid; grid-template-columns: subgrid; grid-template-rows: subgrid; align-items: center; min-width: 0; }
+.row-ended > .row-main > :not(.meta) { grid-column: 1; grid-row: 1 / span 2; }
+.row-ended > .row-main > .meta { grid-column: 2; grid-row: 1; min-width: 0; }
+.row-ended > .row-foot { display: contents; }
+/* The facts sit over the link's cell, so a press on them falls through to the link; only the control catches its own. */
+.row-ended .row-facts { grid-column: 2; grid-row: 2; min-width: 0; margin-top: var(--space-2); pointer-events: none; }
+.row-ended .row-end { grid-column: 3; grid-row: 1 / span 2; position: relative; z-index: 1; pointer-events: auto; }
+@media (max-width: 560px) {
+  .list-rows > li.row-ended.wide { grid-template-columns: 40px minmax(0, 1fr); }
+  .row-ended.wide > .row-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); grid-column: 2; grid-row: 2; min-width: 0; margin-top: var(--space-2); pointer-events: none; }
+  .row-ended.wide .row-facts { flex: 1 1 auto; margin-top: 0; }
+  .row-ended.wide.beside .row-facts { flex-basis: 0; }
+  .row-ended.wide .row-end { flex: none; }
+}
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
