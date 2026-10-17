@@ -215,6 +215,8 @@
       if (u.saveFirstDisplay) void saveForNewDevices('setup', { quiet: true });
       else if (!u.displayOfferAnsweredAt) void saveForNewDevices('first-device', { quiet: true });
     }
+    // Read before it's cleared: a copy made on arrival decides where this ends.
+    const copiedOnArrival = !!welcome.copied;
     open = false;
     welcome.open = false;
     welcome.copied = null;
@@ -223,10 +225,11 @@
     // even while it's still being read: the import page picks up the reading
     // and shows the feeds when it finishes.
     if (importing || (withImport && imp.busy)) void goto('/import');
-    // A first setup that didn't import ends on Collections, where a new person
-    // starts (issue #289): starter packs if they have nothing yet, or the
-    // collection a shared copy link just gave them.
-    else if (withImport) void goto('/collections');
+    // A first setup that didn't import ends where a new person can find
+    // something to read: Explore's Collections, every public collection with
+    // Copy on its row. Unless a shared copy link just gave them one, in which
+    // case Collections, with the copy in the list.
+    else if (withImport) void goto(copiedOnArrival ? '/collections' : '/explore?scope=collections');
   }
 </script>
 
