@@ -5,8 +5,10 @@
    * row: their name with their @handle beside it in gray, as a note names its
    * writer; then their bio and the facts about them (feeds, public
    * collections), gray. Follow sits at the right when the screen offers it,
-   * and drops under the text on a phone. On your own row (`me`) an "It's you!"
-   * Badge sits there instead, in Following's soft green, with nothing to press.
+   * centered on the row, on a phone too: the text here is short, so it has
+   * the room (the shared row-ended layout in app.css). On your own row
+   * (`me`) an "It's you!" Badge sits there instead, in Following's soft
+   * green, with nothing to press.
    *
    * Each fact shows only when the screen has it. Anything more a screen wants
    * to say (why a search found them) goes in `children`, on a line of its own
@@ -15,8 +17,7 @@
    * Status pills (Admin, Private, You) go in `badges`, after the name, as on
    * the Collection and Feed rows. A screen that acts on the person instead of
    * following them (Admin's accounts) puts its one action in `end`,
-   * which sits where Follow would: at the right, dropping under the text on a
-   * phone.
+   * which sits where Follow would.
    */
   import type { Snippet } from 'svelte';
   import { profileHref } from '$lib/api';
@@ -54,33 +55,35 @@
   );
 </script>
 
-<li class="personrow">
-  <a class="row tap" href={profileHref(u.handle)} onclick={() => onopen?.()}>
+<li class="personrow row-ended" class:nobio={!u.bio}>
+  <a class="row row-main" href={profileHref(u.handle)} onclick={() => onopen?.()}>
     <Avatar handle={u.handle} name={u.displayName ?? u.handle} size={40} v={u.avatarUpdatedAt} />
     <div class="meta">
       <!-- Name and handle as a note heads them: "Priya Nair (@priya)", or just the handle when they gave no name. -->
       <span class="named"><span class="title row-name">{#if u.displayName}{u.displayName} <span class="handle">(@{u.handle})</span>{:else}@{u.handle}{/if}</span>{@render badges?.()}</span>
       {#if u.bio}<span class="row-details bio">{u.bio}</span>{/if}
+    </div>
+  </a>
+  {#if facts.length || children || me || following !== undefined || end}
+    <div class="row-foot">
       {#if facts.length || children}
-        <span class="facts">
+        <span class="facts row-facts">
           {#if facts.length}<span class="row-details">{#each facts as fact, i (i)}{#if i > 0}{' '}<Dot />{' '}{/if}{fact}{/each}</span>{/if}
           {#if children}<span class="row-details">{@render children()}</span>{/if}
         </span>
       {/if}
+      {#if me}
+        <Badge tone="soft" class="me row-end">It’s you!</Badge>
+      {:else if following !== undefined}
+        <FollowButton {following} {busy} onclick={onfollow} class="row-end" />
+      {:else if end}
+        <div class="end row-end">{@render end()}</div>
+      {/if}
     </div>
-  </a>
-  {#if me}
-    <Badge tone="soft" class="me">It’s you!</Badge>
-  {:else if following !== undefined}
-    <FollowButton {following} {busy} onclick={onfollow} />
-  {:else if end}
-    <div class="end">{@render end()}</div>
   {/if}
 </li>
 
 <style>
-  .personrow { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-  .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); }
   .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .named { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
   .named :global(.badge) { flex: none; }
@@ -88,15 +91,11 @@
   .handle { font-weight: 400; color: var(--text-2); }
   /* Close under the name, so the two read as a pair, as on the Collection row. */
   .bio { margin-top: -2px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-  /* A step more room above the facts than between the other lines, so the description and the numbers read as two groups. */
-  .facts { margin-top: var(--space-2); display: flex; flex-direction: column; }
-  /* Last, so it wins over the row's own sizing above. On a phone the button
-     would squeeze the bio into a column four words wide, so it drops to its
-     own line, at the right, and the text gets the row. */
-  .end { flex: none; }
-  @media (max-width: 560px) {
-    .row { flex-basis: 100%; }
-    .personrow > :global(.follow), .personrow > :global(.me), .end { margin-left: auto; }
-  }
+  /* The facts, then the search's own line under them. */
+  .facts { display: flex; flex-direction: column; }
+  /* With no bio the facts are the line under the name, so they sit tight
+     under it like a byline (the same -2px optical pull-up as the bio),
+     rather than a step away as if something were missing between. */
+  .nobio .facts { margin-top: -2px; }
   @media (hover: hover) { .row:hover .title { text-decoration: underline; text-underline-offset: 3px; } }
 </style>
