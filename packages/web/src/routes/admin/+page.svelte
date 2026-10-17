@@ -383,7 +383,7 @@
       <Field label="Search accounts" hideLabel>
         {#snippet children({ id, describedBy, invalid })}
           <Input {id} aria-describedby={describedBy} {invalid} inset variant="search" size="lg" enterkeyhint="search" bind:value={query} oninput={onSearch} placeholder="Search by name or @handle" autocomplete="off" autocapitalize="none" spellcheck={false}>
-            {#snippet trailing()}<Button type="submit" variant="primary" disabled={!query.trim() && !searched}>Search</Button>{/snippet}
+            {#snippet trailing()}<Button type="submit" variant="secondary" disabled={!query.trim() && !searched}>Search</Button>{/snippet}
           </Input>
         {/snippet}
       </Field>

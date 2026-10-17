@@ -485,7 +485,7 @@
           onclear={clearSearch}
           placeholder="Search {SCOPES.find((s) => s.id === scope)?.label.toLowerCase()}"
         >
-          {#snippet trailing()}<Button type="submit" variant="primary" disabled={!draft.trim() && !q}>Search</Button>{/snippet}
+          {#snippet trailing()}<Button type="submit" variant="secondary" disabled={!draft.trim() && !q}>Search</Button>{/snippet}
         </Input>
       {/snippet}
     </Field>

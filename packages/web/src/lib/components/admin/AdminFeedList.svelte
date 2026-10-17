@@ -119,7 +119,7 @@
   <Field label="Search feeds" hideLabel>
     {#snippet children({ id })}
       <Input {id} variant="search" size="lg" enterkeyhint="search" bind:value={draft} onclear={() => go({ q: '' })} placeholder="Title, feed address, or site" autocomplete="off" autocapitalize="none" spellcheck={false}>
-        {#snippet trailing()}<Button type="submit" variant="primary" disabled={!draft.trim() && !q}>Search</Button>{/snippet}
+        {#snippet trailing()}<Button type="submit" variant="secondary" disabled={!draft.trim() && !q}>Search</Button>{/snippet}
       </Input>
     {/snippet}
   </Field>
