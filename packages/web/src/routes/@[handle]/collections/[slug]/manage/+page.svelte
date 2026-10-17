@@ -46,7 +46,7 @@
       await load();
       api.event('collection_manage_view', { collectionId: id });
     } catch {
-      await goto(session.user ? profileHref(session.user.handle) : '/', { replaceState: true });
+      await goto('/collections', { replaceState: true });
     }
   }
   async function load() {
@@ -140,16 +140,23 @@
     confirmEl?.showModal();
     orphans = (await collectionsApi.orphans(col.id)).feeds;
   }
+  /** Where a deleted collection leaves you: the list it was in. A sub-collection's is its parent; a top-level one's is Collections. */
+  const afterDelete = $derived.by(() => {
+    const parentId = col?.parentId;
+    const parent = collectionStore.list.find((c) => c.id === parentId);
+    return parent && parent.parentId !== null ? collectionHref(handle, parent.slug) : '/collections';
+  });
   async function deleteCollection() {
     if (!col || deleting) return;
     deleting = true;
+    const back = afterDelete;
     try {
       await collectionsApi.remove(col.id);
       api.event('collection_deleted', { collectionId: col.id, orphaned: orphans?.length ?? null });
       confirmEl?.close();
       await loadCollections(true);
       showToast(`Deleted “${col.name}”`);
-      await goto(profileHref(handle));
+      await goto(back);
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e));
     } finally {

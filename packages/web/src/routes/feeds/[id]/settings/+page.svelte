@@ -48,6 +48,8 @@
   let impact = $state<Awaited<ReturnType<typeof adminApi.feedImpact>> | null>(null);
   let removing = $state(false);
   let adminOpen = $state(false);
+  /** Reached from the admin feed list (its links carry ?admin), as opposed to from the feed itself. */
+  const fromAdmin = $derived(page.url.searchParams.has('admin'));
   async function askRemove() {
     if (!feed) return;
     impact = null;
@@ -63,7 +65,8 @@
       removeDialog?.close();
       showToast(`Removed ${feedName(feed)} from thicket`);
       await loadCollections(true);
-      await goto('/admin?tab=feeds', { replaceState: true });
+      // Back to the list the feed was reached from: Admin's feeds when it was, otherwise Explore's, where its page would now send anyone.
+      await goto(fromAdmin ? '/admin?tab=feeds' : '/explore?scope=feeds', { replaceState: true });
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e));
     } finally {
