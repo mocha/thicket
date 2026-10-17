@@ -458,12 +458,12 @@ input[type="radio"]:focus-visible { outline: 2px solid var(--accent); outline-of
 .row-ended > .row-main > :not(.meta) { grid-column: 1; grid-row: 1 / span 2; }
 .row-ended > .row-main > .meta { grid-column: 2; grid-row: 1; min-width: 0; }
 .row-ended > .row-foot { display: contents; }
-.row-ended .row-facts { grid-column: 2; grid-row: 2; min-width: 0; margin-top: var(--space-2); }
-/* Above the link, which spans its cell too, so the press lands on the control. */
-.row-ended .row-end { grid-column: 3; grid-row: 1 / span 2; position: relative; z-index: 1; }
+/* The facts sit over the link's cell, so a press on them falls through to the link; only the control catches its own. */
+.row-ended .row-facts { grid-column: 2; grid-row: 2; min-width: 0; margin-top: var(--space-2); pointer-events: none; }
+.row-ended .row-end { grid-column: 3; grid-row: 1 / span 2; position: relative; z-index: 1; pointer-events: auto; }
 @media (max-width: 560px) {
   .list-rows > li.row-ended.wide { grid-template-columns: 40px minmax(0, 1fr); }
-  .row-ended.wide > .row-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); grid-column: 2; grid-row: 2; min-width: 0; margin-top: var(--space-2); }
+  .row-ended.wide > .row-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); grid-column: 2; grid-row: 2; min-width: 0; margin-top: var(--space-2); pointer-events: none; }
   .row-ended.wide .row-facts { flex: 1 1 auto; margin-top: 0; }
   .row-ended.wide.beside .row-facts { flex-basis: 0; }
   .row-ended.wide .row-end { flex: none; }

@@ -372,14 +372,18 @@
     cols: ExploreCollection[]; colsTotal: number; colsNext: number | null;
     users: ExploreUser[]; usersTotal: number; usersNext: number | null;
     followsAnyone: boolean | null; loadedKey: string | undefined; opened: Opened | null;
+    /** The collections copied from their rows, so Back doesn't offer to copy them again. */
+    copied: number[];
   }>('explore');
   function restore(b: NonNullable<typeof back>) {
     ({ res, more, moreNext, moreScope, feeds, feedsTotal, feedsAll, feedsNext, cols, colsTotal, colsNext, users, usersTotal, usersNext, followsAnyone, loadedKey } = b);
+    copiedIds = new Set(b.copied ?? []);
     if (b.opened) void refreshOpened(b.opened);
   }
   if (back) restore(back);
   keepOnLeave(() => 'explore', () => ({
-    res, more, moreNext, moreScope, feeds, feedsTotal, feedsAll, feedsNext, cols, colsTotal, colsNext, users, usersTotal, usersNext, followsAnyone, loadedKey, opened
+    res, more, moreNext, moreScope, feeds, feedsTotal, feedsAll, feedsNext, cols, colsTotal, colsNext, users, usersTotal, usersNext, followsAnyone, loadedKey, opened,
+    copied: [...copiedIds]
   }));
 
   async function refreshOpened(o: Opened) {
