@@ -33,6 +33,7 @@
   import { showToast } from '$lib/toast.svelte';
   import { recall, keepOnLeave } from '$lib/listmemory';
   import { loadCollections } from '$lib/collections.svelte';
+  import { followsNothing, firstCopyToast } from '$lib/firstcopy';
 
   /**
    * Explore is one search box and four tabs: Posts, Feeds, Collections,
@@ -56,7 +57,7 @@
    */
   const SCOPES: { id: SearchScope; label: string }[] = [
     { id: 'posts', label: 'Posts' },
-    { id: 'feeds', label: 'Feeds' },
+    { id: 'feeds', label: 'Sites' },
     { id: 'collections', label: 'Collections' },
     { id: 'people', label: 'People' }
   ];
@@ -65,9 +66,9 @@
    * per scope, on every view — the tabs pick the view, this says what it is.
    */
   const SCOPE_BLURB: Record<SearchScope, string> = {
-    feeds: 'Sites that publish a feed. Follow one and you’ll see every new post it publishes.',
-    collections: 'Topical sets of feeds people share, so you can follow along.',
-    posts: 'Individual posts from across every feed on thicket.',
+    feeds: 'Sites people here follow. Follow one and you’ll see every new post it publishes.',
+    collections: 'Topical sets of sites people share, so you can follow along.',
+    posts: 'Individual posts from across every site on thicket.',
     people: 'Public profiles you can browse and follow.'
   };
   const q = $derived((page.url.searchParams.get('q') ?? '').trim());
@@ -122,7 +123,7 @@
     ];
     if (scope === 'collections') return [
       ...(searching ? [{ id: 'relevance', label: 'Best match' }] : []),
-      { id: 'feeds', label: 'Most feeds' },
+      { id: 'feeds', label: 'Most sites' },
       { id: 'newest', label: 'Newest here' },
       ...(searching ? [] : [{ id: 'name', label: 'A to Z' }])
     ];
@@ -304,13 +305,23 @@
       api.event('collection_copied', { from: `${c.handle}/${c.slug}`, collectionId: mine.id, feeds: mine.feedCount, via: 'explore' });
       // Forced: the left menu's list is already loaded, and without it the copy wouldn't show there until a reload.
       void loadCollections(true);
-      showToast(`Copied “${mine.name}” to your collections`, { label: 'Open', run: () => goto(collectionHref(session.user!.handle, mine.slug)) });
+      // A first copy points to New posts, where its posts now are; any later one to the copy itself.
+      if (newcomer) { newcomer = false; firstCopyToast([mine.name]); }
+      else showToast(`Copied “${mine.name}” to your collections`, { label: 'Open', run: () => goto(collectionHref(session.user!.handle, mine.slug)) });
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'That didn’t work. Try again in a moment.');
     } finally {
       copyBusy = null;
     }
   }
+
+  /**
+   * Following nothing yet (issue #308): first-run setup ends here, on the
+   * Collections tab, so the tab says what to do with it, and a first copy
+   * says where its posts went. Asked on every visit, not kept for Back: a
+   * copy made anywhere else ends it.
+   */
+  let newcomer = $state(false);
 
   /* ---- browse: collections ---- */
   let cols = $state<ExploreCollection[]>([]);
@@ -402,6 +413,7 @@
 
   onMount(() => {
     api.event('feeds_view'); draft = q;
+    if (session.user) void followsNothing().then((v) => (newcomer = v));
     if (back && back.followsAnyone !== null) return;
     if (session.user) profilesApi.get(session.user.handle).then((p) => { followsAnyone = !p.private && p.people.follows > 0; }).catch(() => (followsAnyone = false));
     else followsAnyone = false;
@@ -455,7 +467,7 @@
    * and of what. The results redraw as you type, and without this nothing says
    * so. Empty while a search is still on its way, so only the answer is read.
    */
-  const KINDS: Record<SearchScope, [string, string]> = { feeds: ['feed', 'feeds'], collections: ['collection', 'collections'], posts: ['post', 'posts'], people: ['person', 'people'] };
+  const KINDS: Record<SearchScope, [string, string]> = { feeds: ['site', 'sites'], collections: ['collection', 'collections'], posts: ['post', 'posts'], people: ['person', 'people'] };
   const said = $derived.by(() => {
     if (!searching || loading || !res || total === null) return '';
     return total === 0 ? `No ${KINDS[scope][1]} match “${q}”.` : `${plural(total, ...KINDS[scope])} for “${q}”.`;
@@ -465,7 +477,7 @@
 <svelte:head><title>{searching ? `${q} · Explore` : 'Explore'} · thicket</title></svelte:head>
 
 <PageHeader name="Explore">
-  {#snippet description()}Find feeds, collections, posts, and people.{/snippet}
+  {#snippet description()}Find sites, collections, posts, and people.{/snippet}
   {#snippet actions()}<AddFeedButton via="explore" bottomBarOnly />{/snippet}
 </PageHeader>
 
@@ -593,9 +605,9 @@
 {#snippet colRow(c: ExploreCollection | SearchCollection, ev: SearchCollection | null)}
   {#snippet why()}
     {#if ev && ev.matches > 0}
-      {ev.matchingFeeds.toLocaleString()} of {plural(c.feedCount, 'feed')} {ev.matchingFeeds === 1 ? 'has' : 'have'} posted about {@render searched()}{#if ev.lastMatchAt}{'\u00a0'}<Dot />{' '}most recent {longAgo(ev.lastMatchAt)}{/if}
+      {ev.matchingFeeds.toLocaleString()} of {plural(c.feedCount, 'site')} {ev.matchingFeeds === 1 ? 'has' : 'have'} posted about {@render searched()}{#if ev.lastMatchAt}{'\u00a0'}<Dot />{' '}most recent {longAgo(ev.lastMatchAt)}{/if}
     {:else}
-      {plural(c.feedCount, 'feed')}{'\u00a0'}<Dot />{' '}Matches the name
+      {plural(c.feedCount, 'site')}{'\u00a0'}<Dot />{' '}Matches the name
     {/if}
   {/snippet}
   <!-- The same Yours pill as a profile's Collections: whose it is shows beside the name, not only in the byline.
@@ -623,10 +635,10 @@
     {:else if scope === 'posts'}
       {#if feedsNetwork}<p>Nothing new from the feeds the people you follow read. <button class="link" onclick={() => setParams({ by: null })}>Show everyone’s</button>.</p>
       {:else if sortId === 'bookmarked' || sortId === 'noted'}<p>Nobody has {sortId === 'noted' ? 'written a note on' : 'bookmarked'} a post yet. <button class="link" onclick={() => setSort('newest')}>Show the newest posts</button>.</p>
-      {:else}<p>No posts yet. Follow a feed and its posts will turn up here.</p>{/if}
+      {:else}<p>No posts yet. Follow a site and its posts will turn up here.</p>{/if}
     {:else if browseAs === 'feeds'}
       {#if feedsNetwork}<p>The people you follow haven’t followed anything you don’t already. <button class="link" onclick={() => setParams({ by: null })}>Show the whole index</button>.</p>
-      {:else}<p>Nobody has added a feed yet. Be the first: press <strong>Add a new feed</strong> and paste a site’s address.</p>{/if}
+      {:else}<p>Nobody has added a site yet. Be the first: press <strong>Add a site</strong> and paste its address.</p>{/if}
     {:else if browseAs === 'collections'}
       {#if narrowToNetwork}<p>The people you follow haven’t shared any collections yet. <button class="link" onclick={() => setParams({ by: null })}>Show everyone’s</button>.</p>
       {:else}<p>No one has shared a public collection yet. Yours could be first: open a collection, Manage, and set it to Public.</p>{/if}
@@ -637,6 +649,11 @@
     {/if}
   </div>
 {/snippet}
+
+<!-- Following nothing yet: the one thing to do on this tab, and where it leads. The Collections page's welcome, in a line. -->
+{#if newcomer && scope === 'collections' && !searching}
+  <p class="newcomer">Copy a collection to start reading. Its posts will show up in <a href="/new-posts">New posts</a>.</p>
+{/if}
 
 <!-- What the tabs above switch between. -->
 <div id="explore-results" role="tabpanel" aria-label={scopeLabel}>
@@ -684,6 +701,8 @@
 
 <style>
   .pane { margin-bottom: var(--space-2); }
+  .newcomer { margin: var(--space-3) 0 var(--space-4); text-align: center; color: var(--text); font-size: calc(var(--text-base) * var(--size-app)); text-wrap: balance; }
+  .newcomer a { color: var(--accent); font-weight: 600; }
   .head { margin-bottom: var(--space-5); }
   .pane :global(.scopes) { margin-bottom: var(--space-1); }
   /* The per-view explainer: the caption above the filters, saying what this

@@ -2,17 +2,17 @@
   import { openAddFeed } from '$lib/addfeed.svelte';
   import Button from '$lib/components/Button.svelte';
 
-  /** The primary "Add new feed" call to action. One button, one look, beside
+  /** The primary "Add a site" call to action. One button, one look, beside
       every page title. `via` names the place it was pressed, for analytics; pass
       `collectionIds` to drop the new feed straight into a collection.
       `bottomBarOnly` hides it wherever the left menu shows, because the menu
-      has its own Add new feed row at the top. */
+      has its own Add a site row at the top. */
   let { via, collectionIds, bottomBarOnly = false }: { via: string; collectionIds?: number[]; bottomBarOnly?: boolean } = $props();
 </script>
 
 <span class="add-feed-cta" class:bottom-bar-only={bottomBarOnly}>
   <Button variant="primary" size="sm" onclick={() => openAddFeed(collectionIds ? { via, collectionIds } : { via })}>
-    <span class="plus" aria-hidden="true">+</span> Add new feed
+    <span class="plus" aria-hidden="true">+</span> Add a site
   </Button>
 </span>
 

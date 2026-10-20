@@ -19,7 +19,8 @@
   /** Kept for Back like the list below it, so the line under the title is the same height when the scroll is put back. */
   let stats = $state<Stats | null>(recall<Stats>('everything-stats') ?? null);
   keepOnLeave(() => 'everything-stats', () => stats);
-  onMount(() => { if (session.user) { api.event('river_view'); void loadCollections(); api.riverStats().then((s) => (stats = s)).catch(() => {}); } });
+  const loadStats = () => api.riverStats().then((s) => (stats = s)).catch(() => {});
+  onMount(() => { if (session.user) { api.event('river_view'); void loadCollections(); void loadStats(); } });
   const n = (v: number, one: string, many: string) => `${v} ${v === 1 ? one : many}`;
   /** Following nothing is a different page, not an empty one: the first screen has to offer a first move. */
   const brandNew = $derived(stats !== null && stats.feeds === 0);
@@ -44,13 +45,14 @@
 {#if brandNew}
   <!-- Following nothing: one centered call to add a first feed, as tall as
        Explore's search box, then the starter collections as the other way in. -->
-  <Welcome title="Welcome{session.user?.displayName ? `, ${session.user.displayName}` : ''}" sub="Add a feed to start seeing posts here">
+  <Welcome title="Welcome{session.user?.displayName ? `, ${session.user.displayName}` : ''}" sub="Add a site to start seeing posts here">
     <div class="first">
-      <Button variant="primary" size="lg" onclick={() => openAddFeed({ via: 'welcome' })}><span class="plus" aria-hidden="true">+</span> Add your first feed</Button>
+      <Button variant="primary" size="lg" onclick={() => openAddFeed({ via: 'welcome' })}><span class="plus" aria-hidden="true">+</span> Add your first site</Button>
     </div>
     <p class="switch">Switching readers? <a href="/import">Import feeds</a></p>
   </Welcome>
-  <StarterPacks heading="… or get started by copying a collection" lede="" quiet />
+  <!-- A copy fills this page, so it turns from the welcome into the posts the copy brought. -->
+  <StarterPacks heading="… or get started by copying a collection" lede="" quiet oncopied={loadStats} />
 {:else}
   <PageHeader name="New posts">
     {#snippet description()}

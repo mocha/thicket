@@ -223,7 +223,7 @@
       id: 'components',
       label: 'Components',
       items: [
-        { id: 'add-new-feed', label: 'Add new feed' },
+        { id: 'add-new-feed', label: 'Add a site' },
         { id: 'avatar', label: 'Avatar' },
         { id: 'back-link', label: 'Back link' },
         { id: 'badge', label: 'Badge' },
@@ -463,14 +463,14 @@
     </section>
 
     <section class="entry" id="add-new-feed" aria-labelledby="add-new-feed-h">
-      <h3 class="entry-h" id="add-new-feed-h">Add new feed</h3>
-      <p class="section-lede">The app’s main action, which opens the Add a feed Sheet. Where it sits, and how it looks, depends on the screen. Wherever the left menu shows, it’s the menu’s first row, under the logo and a thin line: a plus in a thin-lined circle and its label, both in the accent color, with no fill. It stays put while the menu scrolls, so it’s one click from every page. New posts, Explore, and Collections then leave it out of their titles. On phones, upright iPads, and in the paged layout, which have the bottom bar instead, it’s a small primary Button beside the title on those three pages. Your own collection’s page keeps it beside the title at every size, because only that one adds the feed straight into the collection. It never shows to someone signed out, and a new account’s welcome screen has its own large “Add your first feed” instead.</p>
+      <h3 class="entry-h" id="add-new-feed-h">Add a site</h3>
+      <p class="section-lede">The app’s main action, which opens the Add a site Sheet. Newcomer-facing words say sites and posts, never feeds (issue #308); “feed” stays on power-user screens like Import and a feed’s own page. Where it sits, and how it looks, depends on the screen. Wherever the left menu shows, it’s the menu’s first row, under the logo and a thin line: a plus in a thin-lined circle and its label, both in the accent color, with no fill. It stays put while the menu scrolls, so it’s one click from every page. New posts, Explore, and Collections then leave it out of their titles. On phones, upright iPads, and in the paged layout, which have the bottom bar instead, it’s a small primary Button beside the title on those three pages. Your own collection’s page keeps it beside the title at every size, because only that one adds the site straight into the collection. It never shows to someone signed out, and a new account’s welcome screen has its own large “Add your first site” instead.</p>
       <div class="row">
-        <div class="menu-demo"><span class="menu-demo-row"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg>Add new feed</span></div>
+        <div class="menu-demo"><span class="menu-demo-row"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg>Add a site</span></div>
       </div>
       <div class="row title-demo">
         <span class="title-demo-h">New posts</span>
-        <Button variant="primary" size="sm"><span class="plus" aria-hidden="true">+</span> Add new feed</Button>
+        <Button variant="primary" size="sm"><span class="plus" aria-hidden="true">+</span> Add a site</Button>
       </div>
     </section>
 
@@ -631,7 +631,7 @@
 
     <section class="entry" id="checkbox" aria-labelledby="checkbox-h">
       <h3 class="entry-h" id="checkbox-h">Checkbox</h3>
-      <p class="section-lede">Drawn by thicket, not the browser, so it looks the same in Chrome, Safari, and Firefox: a 16px box with softly rounded corners, outlined like a text field, filled with the accent and a check once ticked. 16px is the height of a line of body text, so a box sits evenly beside its label. It is still a real checkbox underneath, for the keyboard and screen readers. The option button (pick one of a few) is its round partner, drawn the same way, with an accent ring and dot. A screen only lines either one up with its label. Settings, Admin, Manage collection, Manage feed, the Add a feed sheet, Send feedback, and Import use them.</p>
+      <p class="section-lede">Drawn by thicket, not the browser, so it looks the same in Chrome, Safari, and Firefox: a 16px box with softly rounded corners, outlined like a text field, filled with the accent and a check once ticked. 16px is the height of a line of body text, so a box sits evenly beside its label. It is still a real checkbox underneath, for the keyboard and screen readers. The option button (pick one of a few) is its round partner, drawn the same way, with an accent ring and dot. A screen only lines either one up with its label. Settings, Admin, Manage collection, Manage feed, the Add a site sheet, Send feedback, and Import use them.</p>
       <div class="stack">
         <label class="demo-check"><Checkbox checked /> Checked</label>
         <label class="demo-check"><Checkbox /> Not checked</label>
@@ -863,7 +863,7 @@
 
     <section class="entry" id="setup-tour" aria-labelledby="setup-tour-h">
       <h3 class="entry-h" id="setup-tour-h">Setup tour</h3>
-      <p class="section-lede">Five screens at the end of first-run setup that explain thicket: New posts, Add new feed and Explore, Bookmarks, Collections, and Profile. The setup window grows when the tour starts, and a tinted stage across its top holds the picture. Each screen opens with the menu item it’s about, drawn with the menu’s own icon and words, then a serif headline and a line on how to use it. The picture is a miniature of the real thing built from the real colors, cards, and choice group, never a screenshot, so it repaints with every theme. It acts its idea out, rests a few seconds, fades, and plays again. When a device asks for less motion, or the theme is Black and white, the finished picture shows and stays still. Skip this tour sits bottom left on every screen but the last, the dots jump between screens, and the last button is Start reading, or Review your feeds after an import. It shows once per account. In development, adding ?setup to an address brings setup back with the tour, for review.</p>
+      <p class="section-lede">Five screens at the end of first-run setup that explain thicket: New posts, Add a site and Explore, Bookmarks, Collections, and Profile. The setup window grows when the tour starts, and a tinted stage across its top holds the picture. Each screen opens with the menu item it’s about, drawn with the menu’s own icon and words, then a serif headline and a line on how to use it. The picture is a miniature of the real thing built from the real colors, cards, and choice group, never a screenshot, so it repaints with every theme. It acts its idea out, rests a few seconds, fades, and plays again. When a device asks for less motion, or the theme is Black and white, the finished picture shows and stays still. Skip this tour sits bottom left on every screen but the last, the dots jump between screens, and the last button is Start reading, or Review your feeds after an import. It shows once per account. In development, adding ?setup to an address brings setup back with the tour, for review.</p>
       <div class="row">
         <div class="tour-demo" aria-hidden="true"><NewPostsScene /></div>
       </div>
@@ -871,7 +871,7 @@
 
     <section class="entry" id="sheet" aria-labelledby="sheet-h">
       <h3 class="entry-h" id="sheet-h">Sheet</h3>
-      <p class="section-lede">Every panel for one task is a Sheet: Add a feed, Visibility, Filters, a delete confirm, all of them. On a phone it rises from the bottom; from 700px up it sits centered, 460px wide. Top to bottom: the title; a short 16px gray description saying what the panel is for, left off when the title already says it all; the content; and, when the task has an end, one full-width primary Button that finishes it, or a solid danger Button when finishing means deleting something. Any other destructive choice is a red text link under it, never a button beside it. The way out is always last and always in words: a full-width ghost Button, Cancel, under the main one, as easy to hit as the button above it and never mistaken for it. A panel whose choices save as they’re made ends with a full-width primary Done instead. In a delete confirm, focus starts on Cancel. Tapping outside and Escape close it too. Settings stacked one per row get a thin line between rows, each name above its choice. A panel about one thing, like a feed, can swap the title for that thing’s icon and name, with an action about it, like Follow, at the right. A Sheet that’s saving something stays open until it’s done.</p>
+      <p class="section-lede">Every panel for one task is a Sheet: Add a site, Visibility, Filters, a delete confirm, all of them. On a phone it rises from the bottom; from 700px up it sits centered, 460px wide. Top to bottom: the title; a short 16px gray description saying what the panel is for, left off when the title already says it all; the content; and, when the task has an end, one full-width primary Button that finishes it, or a solid danger Button when finishing means deleting something. Any other destructive choice is a red text link under it, never a button beside it. The way out is always last and always in words: a full-width ghost Button, Cancel, under the main one, as easy to hit as the button above it and never mistaken for it. A panel whose choices save as they’re made ends with a full-width primary Done instead. In a delete confirm, focus starts on Cancel. Tapping outside and Escape close it too. Settings stacked one per row get a thin line between rows, each name above its choice. A panel about one thing, like a feed, can swap the title for that thing’s icon and name, with an action about it, like Follow, at the right. A Sheet that’s saving something stays open until it’s done.</p>
       <div class="row">
         <Button onclick={() => demoSheet?.showModal()}>Open a Sheet</Button>
         <Button variant="danger" onclick={() => demoConfirm?.showModal()}>Open a delete confirm</Button>
@@ -956,7 +956,7 @@
 
     <section class="entry" id="welcome" aria-labelledby="welcome-h">
       <h3 class="entry-h" id="welcome-h">Welcome</h3>
-      <p class="section-lede">The top of a screen someone sees before they have anything on it: a centered headline in the headings face, a larger gray line under it that wraps evenly, anything the screen offers first (New posts’ big “Add your first feed”), then a short hairline before what follows. The heading over what follows reads like the gray line, not like a second headline. New posts uses it when you follow nothing, and Collections when you have no collections.</p>
+      <p class="section-lede">The top of a screen someone sees before they have anything on it: a centered headline in the headings face, a larger gray line under it that wraps evenly, anything the screen offers first (New posts’ big “Add your first site”), then a short hairline before what follows. The heading over what follows reads like the gray line, not like a second headline. New posts uses it when you follow nothing, and Collections when you have no collections.</p>
       <div class="welcome-demo"><Welcome title="Collections" sub="If you want an easy way to get started, copy one or more of these Collections." /></div>
     </section>
   </section>
@@ -1118,7 +1118,7 @@
   .strip-demo { position: relative; display: grid; place-items: center; width: var(--pager-w); height: 160px; border: 1px solid var(--line); }
   .stack { display: flex; flex-direction: column; gap: var(--space-4); max-width: 460px; }
   .prefix { color: var(--text-2); }
-  /* Add new feed as it sits in the left menu, and beside a page title. */
+  /* Add a site as it sits in the left menu, and beside a page title. */
   .tour-demo { position: relative; width: min(420px, 100%); height: 260px; overflow: hidden; border-radius: var(--radius-lg); background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 16%, var(--surface-2)), var(--surface-2)); mask-image: linear-gradient(to bottom, #000 75%, transparent); }
   .menu-demo { width: 240px; padding: var(--space-4) var(--space-3); border-right: 1px solid var(--line); }
   .menu-demo-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); }

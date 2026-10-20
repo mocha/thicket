@@ -40,7 +40,11 @@ const BROWSE_COLLECTION_ORDER: Record<BrowseCollectionSort, SQL> = {
 /**
  * GET /api/explore/collections?q=&network=&since=&sort=&offset=&limit=
  *
- * `total` counts what the filters leave.
+ * `total` counts what the filters leave. The starter packs account's
+ * collections lead the list in every order, as that account leads People
+ * (issue #308): on a busy instance the biggest collections would otherwise
+ * push the admin's picks for newcomers out of sight. Each is still subject to
+ * the filters, and to being left out once it's on the viewer's shelf.
  */
 explore.get("/collections", async (c) => {
   const viewer = c.get("user");
@@ -51,6 +55,8 @@ explore.get("/collections", async (c) => {
   const sort = browseCollectionSortFrom(c.req.query("sort"));
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 6)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
+  const starter = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
+  const pinned = starter ? sql`(u.handle = ${starter}) desc, ` : sql``;
   const filters = [sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public' and u.collections_visibility = 'public'
       and exists(select 1 from collection_feeds cf where cf.collection_id = col.id)`];
   if (q) {
@@ -86,7 +92,7 @@ explore.get("/collections", async (c) => {
            ${collectionSample(sql`col.id`, 4)} as sample
     from collections col join users u on u.id = col.user_id
     where col.id in (select id from shown)
-    order by ${BROWSE_COLLECTION_ORDER[sort]} limit ${limit + 1} offset ${offset}
+    order by ${pinned}${BROWSE_COLLECTION_ORDER[sort]} limit ${limit + 1} offset ${offset}
   `);
   // The answer depends on who is asking, so a shared cache must key on the cookie.
   c.header("vary", "cookie");

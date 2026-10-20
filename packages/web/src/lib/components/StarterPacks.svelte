@@ -20,6 +20,9 @@
    * welcome): a checkbox in each card's top right corner, the whole card its
    * label, and the page copies everything ticked with one button. `available` says how many there are,
    * so the page knows whether to offer that button at all.
+   *
+   * `oncopied`: after a Copy button's copy, so a page can show what it brought
+   * (New posts turns from its welcome into the posts, issue #308).
    */
   import { onMount } from 'svelte';
   import { api, exploreApi, profilesApi, collectionHref, profileHref, type ExploreCollection } from '$lib/api';
@@ -35,8 +38,8 @@
   import { copyNext } from '$lib/copyintent.svelte';
   import { plural } from '$lib/words';
 
-  let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false, quiet = false, picked = $bindable(), available = $bindable(0) }:
-    { heading?: string; lede?: string; compact?: boolean; quiet?: boolean; picked?: ExploreCollection[]; available?: number } = $props();
+  let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false, quiet = false, picked = $bindable(), available = $bindable(0), oncopied }:
+    { heading?: string; lede?: string; compact?: boolean; quiet?: boolean; picked?: ExploreCollection[]; available?: number; oncopied?: () => void } = $props();
 
   /** Picking, not copying one at a time: set once, by whether the page bound `picked`. */
   // svelte-ignore state_referenced_locally
@@ -70,6 +73,7 @@
       await loadCollections(true);
       api.event('starter_pack_copied', { collectionId: c.id });
       showToast(`${c.name} is now in your collections.`);
+      oncopied?.();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'That didn’t work. Try again in a moment.');
     } finally {

@@ -83,7 +83,7 @@
   {/if}
 </li>
 
-{#snippet factsLine()}{#if children}{@render children()}{:else}{plural(feedCount, 'feed')}{/if}{/snippet}
+{#snippet factsLine()}{#if children}{@render children()}{:else}{plural(feedCount, 'site')}{/if}{/snippet}
 
 <style>
   .colrow .row-link { padding-left: calc(var(--card-pad, var(--space-4)) + var(--depth, 0) * var(--space-5)); }

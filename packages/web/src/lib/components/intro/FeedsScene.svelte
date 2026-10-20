@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * The tour's Add new feed and Explore picture, side by side as the two ways
+   * The tour's Add a site and Explore picture, side by side as the two ways
    * in: on the left a web address types itself in and the site is followed; on
    * the right, feeds other readers follow drift up and one gets followed.
    */
@@ -22,7 +22,7 @@
 <SceneLoop round={6500}>
   <div class="pair">
     <div class="panel">
-      {@render head(MENU_ICONS.addFeed, 'Add new feed', true)}
+      {@render head(MENU_ICONS.addFeed, 'Add a site', true)}
       <div class="field"><span class="typed">slowkitchen.blog</span></div>
       <div class="found">
         <Monogram name="Slow Kitchen" size={16} /><span class="site">Slow Kitchen</span>

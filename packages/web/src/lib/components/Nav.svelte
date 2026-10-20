@@ -145,7 +145,7 @@
   <a class="brand" href="/new-posts"><img src="/icon.svg" alt="" width="28" height="28" /><Wordmark height={23} /></a>
   <!-- Sidebar only, above the scrolling list so it never scrolls away. On
        bottom bar screens the same action sits beside each page's title instead. -->
-  {#if me}<button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg><span>Add new feed</span></button>{/if}
+  {#if me}<button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg><span>Add a site</span></button>{/if}
   <ul>
     <!-- Bottom bar tabs. On desktop, each place is a Sidebar row in a sidebar-only item instead. -->
     <li class="mobile-only">
@@ -323,7 +323,7 @@
       display: flex; flex-direction: column;
       border-top: 0; border-right: 1px solid var(--line); background: var(--bg);
     }
-    /* A hairline under the logo sets it apart from Add new feed and the rows below. */
+    /* A hairline under the logo sets it apart from Add a site and the rows below. */
     nav:not(.paged) .brand { display: flex; flex: none; align-items: center; gap: var(--space-2); color: var(--text); padding: var(--space-1) var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
     /* A row like the ones below it, in the accent color, its circle drawn a touch finer than their icons, so it reads as the one action in a list of places. */
     nav:not(.paged) .addfeed { display: flex; flex: none; align-items: center; gap: var(--space-3); margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: calc(var(--text-base) * var(--size-app)); font-weight: 600; color: var(--accent); text-align: left; }

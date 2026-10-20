@@ -28,8 +28,8 @@
       <p class="title">Collections <span class="count">2</span></p>
       <div class="panel">
         <div class="strip"><span class="label">Who sees this</span><MiniChoice from="Anyone" to="People I follow" at={2000} /></div>
-        <div class="row"><span>Cooking</span><span class="feeds">3 feeds ›</span></div>
-        <div class="row"><span>Tech</span><span class="feeds">3 feeds ›</span></div>
+        <div class="row"><span>Cooking</span><span class="feeds">3 sites ›</span></div>
+        <div class="row"><span>Tech</span><span class="feeds">3 sites ›</span></div>
       </div>
     </section>
 

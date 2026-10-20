@@ -23,6 +23,7 @@
   import Button from '$lib/components/Button.svelte';
   import Dot from '$lib/components/Dot.svelte';
   import Welcome from '$lib/components/Welcome.svelte';
+  import { followsNothing, firstCopyToast } from '$lib/firstcopy';
 
   const me = $derived(session.user);
   let cols = $state<ProfileCollection[] | null>(null);
@@ -54,9 +55,13 @@
   async function copyPicked() {
     if (copying || !picked.length || !me) return;
     copying = true; failed = [];
+    // No collections usually means following nothing, but not always: asked, so only a real first copy points to New posts.
+    const first = await followsNothing();
+    const copied: string[] = [];
     for (const c of picked) {
       try {
-        await profilesApi.copyCollection(c.handle, c.slug);
+        const mine = await profilesApi.copyCollection(c.handle, c.slug);
+        copied.push(mine.name);
         api.event('starter_pack_copied', { collectionId: c.id, via: 'collections_welcome' });
       } catch (e) {
         const why = e instanceof Error ? e.message : String(e);
@@ -66,6 +71,7 @@
       }
     }
     picked = [];
+    if (first && copied.length) firstCopyToast(copied);
     try {
       await Promise.all([load(me.handle), loadCollections(true)]);
     } finally {
@@ -82,7 +88,7 @@
   {#if failed.length}{@render failures()}{/if}
   <Welcome title="Collections" sub="If you want an easy way to get started, copy one or more of these Collections." />
   <StarterPacks heading="" lede="" bind:picked bind:available />
-  <p class="other"><span>Already know what you want?</span><span class="ways"><Button link onclick={() => openAddFeed({ via: 'collections_welcome' })}>+ Add new feed</Button><Dot /><Button link href="/import">Import feeds</Button></span></p>
+  <p class="other"><span>Already know what you want?</span><span class="ways"><Button link onclick={() => openAddFeed({ via: 'collections_welcome' })}>+ Add a site</Button><Dot /><Button link href="/import">Import feeds</Button></span></p>
   {#if available}
     <ActionBar>
       <Button variant="primary" onclick={copyPicked} disabled={copying || !picked.length}>

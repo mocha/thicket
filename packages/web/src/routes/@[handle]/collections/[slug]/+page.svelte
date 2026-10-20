@@ -20,6 +20,7 @@
   import River from '$lib/components/River.svelte';
   import Sheet from '$lib/components/Sheet.svelte';
   import { showToast } from '$lib/toast.svelte';
+  import { followsNothing, firstCopyToast } from '$lib/firstcopy';
   import { COPY_PARAM, copyNext, welcome } from '$lib/copyintent.svelte';
 
   /**
@@ -79,6 +80,8 @@
     if (!col || copying) return;
     copying = true;
     try {
+      // Copied on arrival goes through setup, which ends where it should; a Copy pressed here asks.
+      const first = !after && (await followsNothing());
       const mine = await profilesApi.copyCollection(handle, slug);
       justCopied = { slug: mine.slug, name: mine.name };
       // `after` is set when this copy finished a sign-up or log-in, so we can count the accounts shared collections bring in.
@@ -92,6 +95,8 @@
         welcome.copied = mine.name;
         await goto(collectionHref(session.user!.handle, mine.slug), { replaceState: true });
         if (!welcome.open) showToast(`Copied “${mine.name}” to your collections`);
+      } else if (first) {
+        firstCopyToast([mine.name]);
       } else {
         showToast(`Copied “${mine.name}” to your collections`, { label: 'Open', run: () => goto(collectionHref(session.user!.handle, mine.slug)) });
       }

@@ -14,9 +14,14 @@
    * A new account's first setup becomes its saved settings, however it ends.
    *
    * A new account (under a day old), or anyone who follows nothing yet, gets
-   * an import step first, because bringing their feeds is the thing that
-   * matters most on day one. A new account counts even if it already follows
-   * feeds: one shared collection copied on sign-up says nothing about the
+   * a first step about reading (issue #308): what thicket is, then the ways
+   * in, copying a collection or adding a site. Many people arrive from social
+   * feeds and have never used a feed reader, so this step uses the words the
+   * landing page uses, sites and posts, never "feeds". Under the ways in, one
+   * line names Feedly and Inoreader, for the people leaving another reader:
+   * they recognize themselves in it, and everyone else reads past it. It
+   * opens the import steps. A new account counts even if it already follows
+   * sites: one shared collection copied on sign-up says nothing about the
    * reader they came from. When that copy is what brought them, the first
    * step says so at the top, and the page behind is their copy. Picking a
    * file says what was found, then the rest goes by while the feeds are
@@ -56,8 +61,8 @@
   import { saveForNewDevices, setupVisit } from '$lib/saved-display.svelte';
 
   type Setting = 'appearance' | 'theme' | 'fonts' | 'reading' | 'layout' | 'fresh';
-  /** Where setup is: import, the list, one setting opened from it, or the tour. */
-  type View = 'import' | 'list' | Setting | 'tour';
+  /** Where setup is: the first step, import (opened from it), the list, one setting opened from it, or the tour. */
+  type View = 'start' | 'import' | 'list' | Setting | 'tour';
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let open = $state(false);
@@ -72,15 +77,24 @@
     fresh: { title: 'Unread posts', lead: 'A count of new posts in the sidebar' }
   };
   /**
+   * The first step's ways in, each led by the menu item it uses, drawn as the
+   * tour draws them. Copying comes first: it fills New posts in one tap, and
+   * setup ends on the collections people here share.
+   */
+  const WAYS_IN = [
+    { icon: MENU_ICONS.collections, label: 'Copy a collection', lead: 'People here group the sites they read into collections. Copy one, and its posts start arriving in New posts. Setup ends with a list of them.' },
+    { icon: MENU_ICONS.addFeed, label: 'Add a site', lead: 'Already have a favorite? Add it by its web address, and every new post it publishes comes to you.' }
+  ];
+  /**
    * The tour. Each screen starts with the menu item it's about, drawn as the
    * menu draws it, so people can find it again; the headline says why it
    * matters and the line under it how to use it.
    */
   const INTRO = [
-    { key: 'intro-new', items: [{ icon: MENU_ICONS.everything, label: 'New posts' }], title: 'Everything you follow, in order', lead: 'Every post from every feed, newest first. No algorithm decides what you see, so nothing gets buried.' },
-    { key: 'intro-feeds', items: [{ icon: MENU_ICONS.addFeed, label: 'Add new feed', accent: true }, { icon: MENU_ICONS.explore, label: 'Explore' }], title: 'Bring in the sites you love', lead: 'Already know a site? Add it with its web address. Looking for something new? Explore to see what other readers here follow.' },
+    { key: 'intro-new', items: [{ icon: MENU_ICONS.everything, label: 'New posts' }], title: 'Everything you follow, in order', lead: 'Every post from every site you follow, newest first. No algorithm decides what you see, so nothing gets buried.' },
+    { key: 'intro-feeds', items: [{ icon: MENU_ICONS.addFeed, label: 'Add a site', accent: true }, { icon: MENU_ICONS.explore, label: 'Explore' }], title: 'Bring in the sites you love', lead: 'Already know a site? Add it with its web address. Looking for something new? Explore to see what other readers here follow.' },
     { key: 'intro-bookmarks', items: [{ icon: MENU_ICONS.bookmarks, label: 'Bookmarks' }], title: 'Keep what’s worth coming back to', lead: 'Bookmark a post to save it for later, and add a note with your thoughts. You choose who sees your notes.' },
-    { key: 'intro-collections', items: [{ icon: MENU_ICONS.collections, label: 'Collections' }], title: 'Read one topic at a time', lead: 'Group your feeds into collections, like Cooking or Tech, and read just that topic. Share a collection, and others can copy it to follow the same feeds.' },
+    { key: 'intro-collections', items: [{ icon: MENU_ICONS.collections, label: 'Collections' }], title: 'Read one topic at a time', lead: 'Group the sites you follow into collections, like Cooking or Tech, and read just that topic. Share a collection, and others can copy it to follow the same sites.' },
     { key: 'intro-profile', items: [{ icon: MENU_ICONS.profile, label: 'Profile' }], title: 'Your corner of thicket', lead: 'This is the page other people see. You decide who sees each part of it: anyone, people you follow, or only you.' }
   ];
   /** The pictures short enough to sit in the middle of the stage; the others fill it and fade at the bottom. */
@@ -119,7 +133,8 @@
   const importing = $derived(withImport && imp.step === 'review');
   const header = $derived(
     // Once a file is read, the question under the title has been answered, so it goes.
-    view === 'import' ? { title: 'Import your feeds', lead: importing ? '' : 'Coming from another reader?' }
+    view === 'start' ? { title: 'Welcome to thicket', lead: 'Follow the sites you like and read all their new posts in one place, newest first' }
+    : view === 'import' ? { title: 'Import your feeds', lead: importing ? '' : 'Bring everything you follow from the reader you’re leaving' }
     : view === 'list' ? { title: 'Set up your device', lead: fromSaved ? 'These are the settings you saved on another device' : 'You can update your choices at any time in Settings' }
     : view === 'tour' ? { title: '', lead: '' }
     : SETTINGS[view]
@@ -168,7 +183,7 @@
     else markConfigured();
     initial = Object.fromEntries(describeDisplay(display).map((r) => [r.key, r.value]));
     welcome.open = true;
-    // Ask about importing on a new account, or when nothing is followed yet.
+    // The first step, about reading and importing, on a new account or when nothing is followed yet.
     // If that can't be found out, the dialog opens without it rather than not at all.
     const created = session.user ? new Date(session.user.createdAt).getTime() : 0;
     const newAccount = Date.now() - created < 24 * 60 * 60 * 1000;
@@ -177,14 +192,14 @@
       .catch(() => {})
       .finally(() => {
         starting = false;
-        view = withImport ? 'import' : tourOnly ? 'tour' : 'list';
+        view = withImport ? 'start' : tourOnly ? 'tour' : 'list';
         open = true;
         api.event('display_setup_shown', { withImport, fromSaved, tourOnly });
         queueMicrotask(() => { dialog?.showModal(); heading?.focus(); });
       });
   }
 
-  /** On from import: the list, or straight to the tour (or out) when the list is skipped. */
+  /** On from the first step or import: the list, or straight to the tour (or out) when the list is skipped. */
   function afterImport() {
     if (!tourOnly) view = 'list';
     else if (withTour) view = 'tour';
@@ -278,13 +293,24 @@
         </footer>
       {:else}
       <header>
-        {#if welcome.copied && (view === 'import' || (view === 'list' && !withImport))}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
+        {#if welcome.copied && (view === 'start' || view === 'import' || (view === 'list' && !withImport))}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
         <h2 id="setup-title" tabindex="-1" bind:this={heading}>{header.title}</h2>
         {#if header.lead}<p class="lead">{header.lead}</p>{/if}
       </header>
 
       <div class="body">
-        {#if view === 'import'}
+        {#if view === 'start'}
+          <ul class="ways">
+            {#each WAYS_IN as w (w.label)}
+              <li>
+                <span class="item"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={w.icon} /></svg>{w.label}</span>
+                <p>{w.lead}</p>
+              </li>
+            {/each}
+          </ul>
+          <!-- For people leaving another reader: one line, named for the readers they'd be leaving. -->
+          <p class="switch">Switching from Feedly or Inoreader? <button type="button" class="link" onclick={() => (view = 'import')}>Import your feeds</button></p>
+        {:else if view === 'import'}
           {#if importing && imp.preview}
             {@const feeds = new Set(imp.groups.flatMap((g) => g.feeds.map((f) => f.url))).size}
             <div class="found" role="status">
@@ -322,10 +348,14 @@
 
       <footer>
         <span class="spacer"></span>
-        {#if view === 'import'}
-          <Button variant={importing ? 'primary' : 'ghost'} onclick={afterImport}>{importing ? 'Next' : 'Skip this step'}</Button>
+        {#if view === 'start'}
+          <Button variant="primary" onclick={afterImport}>Next</Button>
+        {:else if view === 'import'}
+          <!-- Once a file is read, the import is settled: on to the rest of setup, not back to choosing. -->
+          {#if !importing}<Button onclick={() => (view = 'start')}>Back</Button>{/if}
+          <Button variant={importing ? 'primary' : 'ghost'} onclick={afterImport}>{importing ? 'Next' : 'Skip import'}</Button>
         {:else if view === 'list'}
-          {#if withImport}<Button onclick={() => { cameFrom = null; view = 'import'; }}>Back</Button>{/if}
+          {#if withImport}<Button onclick={() => { cameFrom = null; view = importing ? 'import' : 'start'; }}>Back</Button>{/if}
           <Button variant="primary" onclick={afterList}>{withTour ? 'Next' : importing ? 'Review your feeds' : 'Start reading'}</Button>
         {:else}
           <Button variant="primary" onclick={closeSetting}>Back</Button>
@@ -364,6 +394,13 @@
   .found .then { margin-top: var(--space-1); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
   .status { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .spacer { flex: 1; }
+  /* The first step's ways in: each menu item as a label, the line under it saying what it does. */
+  .ways { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+  .ways p { margin: var(--space-2) 0 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.45; max-width: 56ch; }
+  .switch { margin: var(--space-5) 0 0; padding-top: var(--space-4); border-top: 1px solid var(--line); color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
+  /* Inline in the sentence, like New posts' "Switching readers? Import feeds". */
+  .switch .link { color: var(--accent); font-weight: 600; font-size: inherit; padding: 0; border: 0; background: none; cursor: pointer; }
+  .switch .link:hover { text-decoration: underline; text-underline-offset: 0.2em; }
 
   /* The tour: the window grows, and a stage for the picture fills its top. */
   .box { transition: width 450ms cubic-bezier(0.2, 0.8, 0.2, 1); }

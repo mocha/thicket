@@ -254,7 +254,7 @@
   }
 </script>
 
-<Sheet title="Add a feed" lede="Enter the address of a site, blog, subreddit, or YouTube channel or video, and thicket finds the feed for you. You can also enter the feed itself." bind:dialog {onclose}>
+<Sheet title="Add a site" lede="Enter the address of a site, blog, subreddit, or YouTube channel or video, and thicket finds the feed for you. You can also enter the feed itself." bind:dialog {onclose}>
   <!-- A plain text box with the URL keyboard, not type="url": the browser's own
        URL check rejects "example.com" (it wants https:// in front), yet that is
        how people type an address and what the box suggests, and a box that

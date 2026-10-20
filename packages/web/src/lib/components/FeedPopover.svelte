@@ -90,7 +90,7 @@
       <div><dt>Followers</dt><dd>{feed.followerCount}</dd></div>
     </dl>
   {:else if missing === 'gone'}
-    <p class="desc">To get new posts from this site, use Add new feed.</p>
+    <p class="desc">To get new posts from this site, use Add a site.</p>
   {:else if !missing}
     <p class="loading">Loading…</p>
   {/if}

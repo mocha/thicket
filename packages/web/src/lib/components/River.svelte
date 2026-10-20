@@ -25,7 +25,7 @@
   import Button from '$lib/components/Button.svelte';
   import { recall, keepOnLeave } from '$lib/listmemory';
 
-  let { collection = null, feed = null, showSource = true, emptyTitle = 'Nothing here yet', emptyBody = 'thicket shows the posts of sites you follow, newest first, with nothing in between. Add a site by its address and its posts start arriving here, or look through Explore to see what other people here read.', emptyHref = null, emptyCta = 'Add a feed', emptyAction = () => openAddFeed({ via: 'empty_river' }), emptyPoll = false }: {
+  let { collection = null, feed = null, showSource = true, emptyTitle = 'Nothing here yet', emptyBody = 'thicket shows the posts of sites you follow, newest first, with nothing in between. Add a site by its address and its posts start arriving here, or look through Explore to see what other people here read.', emptyHref = null, emptyCta = 'Add a site', emptyAction = () => openAddFeed({ via: 'empty_river' }), emptyPoll = false }: {
     collection?: number | null; feed?: number | null; showSource?: boolean;
     emptyTitle?: string; emptyBody?: string; emptyHref?: string | null; emptyCta?: string;
     /** null = no call to action. Default opens the Add sheet. */

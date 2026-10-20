@@ -56,7 +56,7 @@
   .actions:empty { display: none; }
   .noline::before { border-top: 0; }
   .actions { display: flex; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-2); max-width: 100%; margin-left: auto; }
-  /* Where the left menu holds Add new feed, a page whose only action is that button has no actions to show, so the line runs the full width. The same condition as in Nav.svelte. */
+  /* Where the left menu holds Add a site, a page whose only action is that button has no actions to show, so the line runs the full width. The same condition as in Nav.svelte. */
   @media (min-width: 900px) and (min-height: 501px), (min-width: 900px) and (pointer: fine) {
     :global(main:not(.paged)) .actions:has(> :global(.bottom-bar-only:only-child)) { display: none; }
     :global(main:not(.paged)) .rule:has(> .actions > :global(.bottom-bar-only:only-child)) { margin-top: var(--space-4); }
