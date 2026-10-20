@@ -332,7 +332,7 @@
         <p>{emptyBody}</p>
         <div class="ctas">
           {#if emptyHref}<Button variant="primary" size="lg" href={emptyHref}>{emptyCta}</Button>{:else if emptyAction}<Button variant="primary" size="lg" onclick={emptyAction}>{emptyCta}</Button>{/if}
-          {#if collection === null && feed === null}<Button size="lg" href="/explore?scope=feeds">Explore feeds</Button>{/if}
+          {#if collection === null && feed === null}<Button size="lg" href="/explore?scope=feeds">Explore sites</Button>{/if}
         </div>
       </div>
     {/if}
@@ -369,7 +369,7 @@
         <p>{emptyBody}</p>
         <div class="ctas">
           {#if emptyHref}<Button variant="primary" size="lg" href={emptyHref}>{emptyCta}</Button>{:else if emptyAction}<Button variant="primary" size="lg" onclick={emptyAction}>{emptyCta}</Button>{/if}
-          {#if collection === null && feed === null}<Button size="lg" href="/explore?scope=feeds">Explore feeds</Button>{/if}
+          {#if collection === null && feed === null}<Button size="lg" href="/explore?scope=feeds">Explore sites</Button>{/if}
         </div>
       </div>
     {/if}
