@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "thicket",
+  "version": "0.1.0",
+  "description": "Find feeds and save pages to your thicket. Firefox prototype.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "extension@readthicket.com",
+      "strict_min_version": "128.0"
+    }
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "scripts": [
+      "automatic.js",
+      "background.js"
+    ]
+  },
+  "action": {
+    "default_title": "thicket",
+    "default_popup": "popup.html",
+    "default_icon": "icon-grey.svg"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}
