@@ -25,3 +25,27 @@ test("each people order is read as itself, anything else is by name", () => {
   for (const v of [undefined, null, "", "followers", "relevance"]) assert.equal(browsePeopleSortFrom(v), "name");
   assert.equal(DEFAULT_BROWSE_PEOPLE_SORT, "name");
 });
+
+const { starterPin } = await import("./explore.js");
+const { PgDialect } = await import("drizzle-orm/pg-core");
+const render = (s: ReturnType<typeof starterPin>) => new PgDialect().sqlToQuery(s);
+
+test("with no starter account named, the collections list keeps its own order", () => {
+  assert.equal(render(starterPin(null)).sql, "");
+});
+
+test("the starter account's collections lead the list until the admin ticks some", () => {
+  const q = render(starterPin({ accountId: 7, ids: null }));
+  assert.match(q.sql, /col\.user_id = \$1\) desc, $/);
+  assert.deepEqual(q.params, [7]);
+});
+
+test("once the admin ticks starter collections, those lead the list", () => {
+  const q = render(starterPin({ accountId: 7, ids: [3, 9] }));
+  assert.match(q.sql, /col\.id in \(\$1, \$2\)\) desc, $/);
+  assert.deepEqual(q.params, [3, 9]);
+});
+
+test("ticking none pins nothing", () => {
+  assert.equal(render(starterPin({ accountId: 7, ids: [] })).sql, "");
+});

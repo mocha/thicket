@@ -40,7 +40,9 @@ const BROWSE_COLLECTION_ORDER: Record<BrowseCollectionSort, SQL> = {
 /**
  * GET /api/explore/collections?q=&network=&since=&sort=&offset=&limit=
  *
- * `total` counts what the filters leave.
+ * `total` counts what the filters leave. The starter packs lead in every
+ * order, the way the starter account leads People (see starterPin), so the
+ * admin's picks reach newcomers however many collections the instance has.
  */
 explore.get("/collections", async (c) => {
   const viewer = c.get("user");
@@ -86,7 +88,7 @@ explore.get("/collections", async (c) => {
            ${collectionSample(sql`col.id`, 4)} as sample
     from collections col join users u on u.id = col.user_id
     where col.id in (select id from shown)
-    order by ${BROWSE_COLLECTION_ORDER[sort]} limit ${limit + 1} offset ${offset}
+    order by ${starterPin(await starterChoice())}${BROWSE_COLLECTION_ORDER[sort]} limit ${limit + 1} offset ${offset}
   `);
   // The answer depends on who is asking, so a shared cache must key on the cookie.
   c.header("vary", "cookie");
@@ -94,6 +96,34 @@ explore.get("/collections", async (c) => {
   const page = rows.rows.slice(0, limit);
   return c.json({ collections: page.map((r: any) => ({ ...r, id: Number(r.id) })), sort, total, nextOffset: rows.rows.length > limit ? offset + limit : null });
 });
+
+/**
+ * Which collections are the starter packs: the named account (`starter_account`,
+ * while its profile and collections are public), and the ones the admin ticked
+ * (`starter_collections`), or null for "not ticked yet". No account, or a
+ * private one: null, and starter packs fall back to the fullest collections.
+ */
+async function starterChoice(): Promise<{ accountId: number; handle: string; ids: number[] | null } | null> {
+  const handle = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
+  if (!handle) return null;
+  const account = (await db.execute<{ id: number }>(sql`select id from users where handle = ${handle} and profile_visibility = 'public' and collections_visibility = 'public'`)).rows[0];
+  if (!account) return null;
+  const picked = await getSetting<number[]>("starter_collections");
+  return { accountId: Number(account.id), handle, ids: Array.isArray(picked) ? picked.map(Number).filter(Number.isFinite) : null };
+}
+
+/**
+ * The start of an ORDER BY that lifts the starter packs to the top of a
+ * collections list: the ticked ones, or the whole starter account's until
+ * any are ticked. Empty when there's nothing to lift, so the list keeps its
+ * own order. The fallback (the fullest collections) needs no lift: the
+ * default order already leads with them.
+ */
+export function starterPin(choice: { accountId: number; ids: number[] | null } | null): SQL {
+  if (!choice || choice.ids?.length === 0) return sql``;
+  if (choice.ids) return sql`(col.id in (${sql.join(choice.ids.map((id) => sql`${id}`), sql`, `)})) desc, `;
+  return sql`(col.user_id = ${choice.accountId}) desc, `;
+}
 
 /**
  * Starter packs: the collections this instance puts in front of someone who
@@ -122,15 +152,12 @@ explore.get("/collections", async (c) => {
  * brand-new account gets.
  */
 export async function featuredCollections(viewerId: number) {
-  const handle = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
   const visible = sql`col.parent_id is not null and col.visibility = 'public' and u.profile_visibility = 'public'
     and u.collections_visibility = 'public' and exists(select 1 from collection_feeds cf where cf.collection_id = col.id)`;
-  const curated = handle
-    ? (await db.execute<{ id: number }>(sql`select id from users where handle = ${handle} and profile_visibility = 'public' and collections_visibility = 'public'`)).rows[0]
-    : undefined;
+  const choice = await starterChoice();
+  const curated = choice ? { id: choice.accountId, handle: choice.handle } : undefined;
   // Ticked by the admin: only those, however many. Never ticked: the first six.
-  const picked = curated ? await getSetting<number[]>("starter_collections") : null;
-  const ids = Array.isArray(picked) ? picked.map(Number).filter(Number.isFinite) : null;
+  const ids = choice?.ids ?? null;
   const only = ids ? (ids.length ? sql`and col.id in (${sql.join(ids.map((id) => sql`${id}`), sql`, `)})` : sql`and false`) : sql``;
   const where = sql`${visible} and col.user_id <> ${viewerId} ${curated ? sql`and col.user_id = ${curated.id} ${only}` : sql``}`;
   // A curated account's order is the order it built them in, so the curator
@@ -147,7 +174,7 @@ export async function featuredCollections(viewerId: number) {
     where ${where}
     order by ${order} limit ${ids ? 100 : 6}
   `);
-  return { from: curated ? handle : null, collections: rows.rows.map((r: any) => ({ ...r, id: Number(r.id) })) };
+  return { from: curated ? curated.handle : null, collections: rows.rows.map((r: any) => ({ ...r, id: Number(r.id) })) };
 }
 
 explore.get("/featured", async (c) => {
