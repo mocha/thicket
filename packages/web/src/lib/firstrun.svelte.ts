@@ -15,30 +15,21 @@
  */
 import { api, profilesApi, type ExploreCollection } from './api';
 import { session } from './session.svelte';
-import { welcome } from './copyintent.svelte';
 
+/** Open while it shows. The tour starts itself (Tour.svelte); setting this is only for the dev's ?tour and ?setup. */
 export const tour = $state({ open: false });
 
-/** A new account: made in the last day and hasn't seen the tour. It skips the setup dialog; New posts and the tour take its place. */
-export function isNewcomer(): boolean {
+/** Made in the last day. */
+export function accountIsNew(): boolean {
   const u = session.user;
-  if (!u || u.tourSeenAt) return false;
-  return Date.now() - new Date(u.createdAt).getTime() < 24 * 60 * 60 * 1000;
+  return !!u && Date.now() - new Date(u.createdAt).getTime() < 24 * 60 * 60 * 1000;
 }
+
+/** A new account that hasn't seen the tour. It skips the setup dialog; New posts and the tour take its place. */
+export const isNewcomer = () => accountIsNew() && !session.user?.tourSeenAt;
 
 /** The account still owes the tour. */
 export const tourOwed = () => !!session.user && !session.user.tourSeenAt;
-
-/**
- * Start the tour if it's owed, not already showing, and the setup dialog
- * isn't open (that starts it itself when it closes). True if it started.
- * `again`: the dev reopening it with ?tour or ?setup.
- */
-export function startTour(again = false): boolean {
-  if (tour.open || welcome.open || (!again && !tourOwed())) return false;
-  tour.open = true;
-  return true;
-}
 
 const NOTE_KEY = 'thicket:appearance-note';
 /** The appearance note on New posts: 'show' after the tour, 'done' once it's used or closed. */

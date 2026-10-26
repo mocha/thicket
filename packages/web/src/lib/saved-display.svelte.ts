@@ -77,6 +77,19 @@ export async function saveForNewDevices(via: SaveVia, { quiet = false } = {}): P
   }
 }
 
+/**
+ * As first setup ends, however it ends: a new account's settings become the
+ * ones its new devices take, and so do an older account's on its first
+ * device since saved settings existed. The setup dialog and the tour (which
+ * stands in for the dialog on a new account) both end here.
+ */
+export function saveFirstSetup() {
+  const u = session.user;
+  if (!u || u.savedDisplay) return;
+  if (u.saveFirstDisplay) void saveForNewDevices('setup', { quiet: true });
+  else if (!u.displayOfferAnsweredAt) void saveForNewDevices('first-device', { quiet: true });
+}
+
 /** Stop this device keeping the saved settings up to date. True if it stopped. */
 export async function stopBeingSource(): Promise<boolean> {
   try {

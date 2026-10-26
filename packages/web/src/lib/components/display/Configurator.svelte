@@ -49,8 +49,8 @@
   import { imp, startOverImport } from '$lib/importer.svelte';
   import { session } from '$lib/session.svelte';
   import { welcome } from '$lib/copyintent.svelte';
-  import { saveForNewDevices, setupVisit } from '$lib/saved-display.svelte';
-  import { choices, isNewcomer, startTour } from '$lib/firstrun.svelte';
+  import { saveFirstSetup, setupVisit } from '$lib/saved-display.svelte';
+  import { accountIsNew, choices, isNewcomer, tour } from '$lib/firstrun.svelte';
 
   type Setting = 'appearance' | 'theme' | 'fonts' | 'reading' | 'layout' | 'fresh';
   /** Where setup is: import, the list, or one setting opened from it. */
@@ -68,7 +68,7 @@
     layout: { title: 'Scrolling or pages', lead: 'Scroll through posts, or turn a page at a time' },
     fresh: { title: 'Unread posts', lead: 'A count of new posts in the sidebar' }
   };
-  /** The tour is owed once this closes: decided when setup opens, so nothing partway can reshuffle it. */
+  /** The tour follows (it starts itself as this closes): decided when setup opens, for the last button's word. */
   let withTour = $state(false);
   /**
    * Skip the list: a device that's already set up opening for an account that
@@ -170,15 +170,13 @@
     welcome.open = true;
     // Ask about importing on a new account, or when nothing is followed yet.
     // If that can't be found out, the dialog opens without it rather than not at all.
-    const created = session.user ? new Date(session.user.createdAt).getTime() : 0;
-    const newAccount = Date.now() - created < 24 * 60 * 60 * 1000;
     api.riverStats()
-      .then((s) => { withImport = review || newAccount || s.feeds === 0; })
+      .then((s) => { withImport = review || accountIsNew() || s.feeds === 0; })
       .catch(() => {})
       .finally(() => {
         starting = false;
-        // Nothing left to ask before the tour: straight to it.
-        if (tourOnly && !withImport) { welcome.open = false; startTour(review); return; }
+        // Nothing left to ask: no dialog, and the tour starts itself.
+        if (tourOnly && !withImport) { welcome.open = false; if (review) tour.open = true; return; }
         view = withImport ? 'import' : 'list';
         open = true;
         api.event('display_setup_shown', { withImport, fromSaved, tourOnly });
@@ -197,13 +195,7 @@
 
   function finish(how: 'done' | 'dismissed') {
     api.event('display_setup_closed', { how, step: view, withImport, importing, listOnly });
-    // A new account's first setup becomes its saved settings, however it ends.
-    // So does an older account's first device since saved settings existed.
-    const u = session.user;
-    if (u && !u.savedDisplay) {
-      if (u.saveFirstDisplay) void saveForNewDevices('setup', { quiet: true });
-      else if (!u.displayOfferAnsweredAt) void saveForNewDevices('first-device', { quiet: true });
-    }
+    saveFirstSetup();
     // Read before it's cleared: a copy made on arrival decides where this ends.
     const copiedOnArrival = !!welcome.copied;
     open = false;
@@ -211,18 +203,17 @@
     welcome.copied = null;
     dialog?.close();
     if (listOnly) return;
+    // The tour, if it's owed, starts itself now that this is closed (once
+    // something is followed). Reviewing in development, it starts regardless.
+    if (reviewing) tour.open = true;
     // Once a file has been picked, every way out leads to choosing its feeds,
     // even while it's still being read: the import page picks up the reading
-    // and shows the feeds when it finishes. The tour waits for New posts to
-    // have posts (New posts starts it).
+    // and shows the feeds when it finishes.
     if (importing || (withImport && imp.busy)) void goto('/import');
-    else {
-      // A setup that didn't import ends where someone following nothing picks
-      // something to read: New posts. Unless a shared copy link just gave them
-      // one, in which case Collections, with the copy in the list.
-      if (withImport) void goto(copiedOnArrival ? '/collections' : '/new-posts');
-      if (withTour) startTour(reviewing);
-    }
+    // A setup that didn't import ends where someone following nothing picks
+    // something to read: New posts. Unless a shared copy link just gave them
+    // one, in which case Collections, with the copy in the list.
+    else if (withImport) void goto(copiedOnArrival ? '/collections' : '/new-posts');
   }
 </script>
 

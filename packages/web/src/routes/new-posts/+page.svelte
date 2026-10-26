@@ -1,7 +1,7 @@
 <script lang="ts">
   import Dot from '$lib/components/Dot.svelte';
   /** New posts (once "Everything", issue #173): every post from every feed you follow. The front door lives at /, for everyone. */
-  import { onMount, untrack } from 'svelte';
+  import { onMount } from 'svelte';
   import { api, type ExploreCollection } from '$lib/api';
   import River from '$lib/components/River.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
@@ -16,7 +16,8 @@
   import { site, loadSite } from '$lib/site.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import ActionBar from '$lib/components/ActionBar.svelte';
-  import { tour, startTour, appearanceNote, setAppearanceNote, choices, copyPacks } from '$lib/firstrun.svelte';
+  import CopyFailures from '$lib/components/CopyFailures.svelte';
+  import { tour, appearanceNote, setAppearanceNote, choices, copyPacks } from '$lib/firstrun.svelte';
   type Stats = { feeds: number; collections: number; posts24h: number; feeds24h: number };
   /** Kept for Back like the list below it, so the line under the title is the same height when the scroll is put back. */
   let stats = $state<Stats | null>(recall<Stats>('everything-stats') ?? null);
@@ -45,16 +46,15 @@
     failed = await copyPacks(picked, 'new_posts_welcome');
     picked = [];
     try {
-      await loadCollections(true);
-      stats = await api.riverStats();
+      // The fresh collections are also what starts a new account's tour.
+      await Promise.all([loadCollections(true), api.riverStats().then((s) => (stats = s))]);
     } catch (e) {
       console.error('[new posts] reloading after copying starter packs failed:', e);
     } finally {
       copying = false;
     }
   }
-  // Once there are posts here, a new account's tour starts over them.
-  $effect(() => { if (stats && stats.feeds > 0) untrack(() => startTour()); });
+
   /**
    * readthicket.com: an account without a confirmed email can't get back in
    * after a forgotten password, so say so here until it has one. Accounts from
@@ -74,13 +74,7 @@
 {/if}
 
 {#if brandNew}
-  {#if failed.length}
-    <div class="nudge">
-      <Banner tone="error" title={failed.length === 1 ? `Couldn’t copy ${failed[0].name}` : `Couldn’t copy ${failed.length} collections`}>
-        {#if failed.length === 1}{failed[0].why}{:else}{#each failed as f (f.name)}<span class="line">{f.name}: {f.why}</span>{/each}{/if}
-      </Banner>
-    </div>
-  {/if}
+  {#if failed.length}<div class="nudge"><CopyFailures {failed} /></div>{/if}
   <Welcome title="Welcome{session.user?.displayName ? `, ${session.user.displayName}` : ''}" sub={noPacks ? 'Add a site to start reading' : 'Pick a few to start reading'}>
     <p class="switch">Switching from Feedly or Inoreader? <a href="/import">Import</a></p>
     {#if noPacks}
@@ -123,7 +117,6 @@
 <style>
   .nudge { margin-bottom: var(--space-4); }
   .first { margin-top: var(--space-5); }
-  .line { display: block; }
   .switch { margin: var(--space-3) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
   .switch a { color: var(--accent); font-weight: 600; }
   .plus { font-size: 1.3em; line-height: 1; }

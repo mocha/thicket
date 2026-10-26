@@ -20,7 +20,7 @@
   import CollectionTree from '$lib/components/CollectionTree.svelte';
   import StarterPacks from '$lib/components/StarterPacks.svelte';
   import ActionBar from '$lib/components/ActionBar.svelte';
-  import Banner from '$lib/components/Banner.svelte';
+  import CopyFailures from '$lib/components/CopyFailures.svelte';
   import Button from '$lib/components/Button.svelte';
   import Dot from '$lib/components/Dot.svelte';
   import Welcome from '$lib/components/Welcome.svelte';
@@ -69,7 +69,7 @@
 
 {#if me && cols && !cols.length && !error}
   <!-- No collections: the welcome, laid out like New posts' own. -->
-  {#if failed.length}{@render failures()}{/if}
+  {#if failed.length}<div class="failed"><CopyFailures {failed} /></div>{/if}
   <Welcome title="Collections" sub="If you want an easy way to get started, copy one or more of these Collections." />
   <StarterPacks heading="" lede="" bind:picked bind:available />
   <p class="other"><span>Already know what you want?</span><span class="ways"><Button link onclick={() => openAddFeed({ via: 'collections_welcome' })}>+ Add new feed</Button><Dot /><Button link href="/import">Import feeds</Button></span></p>
@@ -91,26 +91,17 @@
   {:else if cols === null}
     <p class="status">Loading…</p>
   {:else}
-    {#if failed.length}{@render failures()}{/if}
+    {#if failed.length}<div class="failed"><CopyFailures {failed} /></div>{/if}
     <CollectionTree collections={cols} handle={me.handle} isMe filterable creatable />
   {/if}
 {/if}
 
-<!-- Packs that didn't copy, each with why, above whatever did. -->
-{#snippet failures()}
-  <div class="failed">
-    <Banner tone="error" title={failed.length === 1 ? `Couldn’t copy ${failed[0].name}` : `Couldn’t copy ${failed.length} collections`}>
-      {#if failed.length === 1}{failed[0].why}{:else}{#each failed as f (f.name)}<span class="line">{f.name}: {f.why}</span>{/each}{/if}
-    </Banner>
-  </div>
-{/snippet}
 
 <style>
   /* The page's own title, in the place a page title sits everywhere else. */
   .pagetitle { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.15; margin: 0; }
   .ways { display: inline-flex; align-items: center; white-space: nowrap; }
   .failed { margin-bottom: var(--space-4); }
-  .line { display: block; }
   /* The other two ways in, after the packs: a gray lead-in, then the two
      links. The links stay together, so a narrow screen puts them on the line
      under the question rather than splitting them. */

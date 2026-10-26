@@ -8,18 +8,25 @@
    * below the header for Add new feed. Each card keeps a picture of the place
    * that plays on a loop.
    *
-   * It runs once there are posts to look at (lib/firstrun.svelte.ts says
-   * when). Leaving it any way at all counts as seeing it. A new account's
+   * It starts itself, for an account that hasn't seen it, the first time the
+   * account follows something: picking on New posts, a copy made on sign-up,
+   * an import, anything. Never over the setup dialog; it waits for that to
+   * close. Leaving it any way at all counts as seeing it. A new account's
    * first device saves its settings for new devices here, since it skipped
    * the setup dialog that would have, and New posts then offers the
    * appearance choices that dialog would have shown.
+   *
+   * Not a Sheet: the dim has to leave one menu item lit and the card has to
+   * sit beside it, so it's its own full-screen dialog.
    */
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { page } from '$app/state';
   import { api, authApi } from '$lib/api';
   import { session } from '$lib/session.svelte';
-  import { tour, startTour, isNewcomer, setAppearanceNote } from '$lib/firstrun.svelte';
-  import { saveForNewDevices } from '$lib/saved-display.svelte';
+  import { tour, tourOwed, isNewcomer, setAppearanceNote } from '$lib/firstrun.svelte';
+  import { saveFirstSetup } from '$lib/saved-display.svelte';
+  import { collectionStore, loadCollections } from '$lib/collections.svelte';
+  import { welcome } from '$lib/copyintent.svelte';
   import Button from '$lib/components/Button.svelte';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import FeedsScene from '$lib/components/intro/FeedsScene.svelte';
@@ -56,14 +63,23 @@
   type Place = { hole: Box | null; top: number; left: number; side: 'left' | 'top' | 'bottom' | null; at: number };
   let place = $state<Place | null>(null);
 
+  // Owed, the setup dialog closed, and something followed: it starts.
+  $effect(() => {
+    if (tour.open || welcome.open || !tourOwed()) return;
+    if (!collectionStore.loaded) { void loadCollections(); return; }
+    if (collectionStore.list.some((c) => c.feedCount > 0)) tour.open = true;
+  });
+
   // In development, ?tour shows it again on an account that has seen it.
-  $effect(() => { if (import.meta.env.DEV && page.url.searchParams.has('tour')) startTour(true); });
+  $effect(() => { if (import.meta.env.DEV && page.url.searchParams.has('tour')) tour.open = true; });
 
   $effect(() => {
     if (!tour.open) return;
-    step = 0;
-    newcomer = isNewcomer();
-    api.event('tour_shown', { newcomer });
+    untrack(() => {
+      step = 0;
+      newcomer = isNewcomer();
+      api.event('tour_shown', { newcomer });
+    });
     tick().then(() => dialog?.showModal());
   });
 
@@ -123,12 +139,7 @@
       u.tourSeenAt = new Date().toISOString();
       authApi.tourSeen();
     }
-    // A new account's first device: its settings become the ones new devices
-    // take, as the setup dialog does for everyone else.
-    if (u && !u.savedDisplay) {
-      if (u.saveFirstDisplay) void saveForNewDevices('setup', { quiet: true });
-      else if (!u.displayOfferAnsweredAt) void saveForNewDevices('first-device', { quiet: true });
-    }
+    saveFirstSetup();
     if (newcomer) setAppearanceNote('show');
     tour.open = false;
     place = null;

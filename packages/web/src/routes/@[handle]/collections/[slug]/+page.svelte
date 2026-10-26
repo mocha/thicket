@@ -21,7 +21,6 @@
   import Sheet from '$lib/components/Sheet.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { COPY_PARAM, copyNext, welcome } from '$lib/copyintent.svelte';
-  import { startTour } from '$lib/firstrun.svelte';
 
   /**
    * A collection, mine or anyone's, at its one address. The owner reads it
@@ -86,13 +85,13 @@
       api.event('collection_copied', { from: `${handle}/${slug}`, collectionId: mine.id, feeds: mine.feedCount, ...(after ? { after } : {}) });
       void loadCollections(true);
       if (after) {
-        // Copied on arrival: go to the copy itself. A new account has posts
-        // now, so its tour starts over the copy; an older account on a new
-        // device has the setup dialog, which names the copy and then ends on
-        // Collections. Otherwise a note names it and you stay here.
+        // Copied on arrival: go to the copy itself. A new account follows
+        // something now, so its tour starts over the copy; an older account on
+        // a new device has the setup dialog, which names the copy and then ends
+        // on Collections. Otherwise a note names it and you stay here.
         welcome.copied = mine.name;
         await goto(collectionHref(session.user!.handle, mine.slug), { replaceState: true });
-        if (!welcome.open) { showToast(`Copied “${mine.name}” to your collections`); startTour(); }
+        if (!welcome.open) showToast(`Copied “${mine.name}” to your collections`);
       } else {
         showToast(`Copied “${mine.name}” to your collections`, { label: 'Open', run: () => goto(collectionHref(session.user!.handle, mine.slug)) });
       }

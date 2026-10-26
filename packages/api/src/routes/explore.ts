@@ -80,7 +80,10 @@ explore.get("/collections", async (c) => {
         and not exists(select 1 from shelf m where m.copied_from_id = l.id or m.id = l.copied_from_id or m.copied_from_id = l.copied_from_id)
         and ${notARepeatOf("l", "listed")}
     )`;
-  const [{ total }] = (await db.execute<{ total: number }>(sql`${shown(filters)} select count(*)::int as total from shown`)).rows;
+  const [[{ total }], starters] = await Promise.all([
+    db.execute<{ total: number }>(sql`${shown(filters)} select count(*)::int as total from shown`).then((r) => r.rows),
+    starterChoice(),
+  ]);
   const rows = await db.execute(sql`
     ${shown(filters)}
     select col.id, col.name, col.slug, col.description, u.handle, u.display_name as "displayName",
@@ -88,7 +91,7 @@ explore.get("/collections", async (c) => {
            ${collectionSample(sql`col.id`, 4)} as sample
     from collections col join users u on u.id = col.user_id
     where col.id in (select id from shown)
-    order by ${starterPin(await starterChoice())}${BROWSE_COLLECTION_ORDER[sort]} limit ${limit + 1} offset ${offset}
+    order by ${starterPin(starters)}${BROWSE_COLLECTION_ORDER[sort]} limit ${limit + 1} offset ${offset}
   `);
   // The answer depends on who is asking, so a shared cache must key on the cookie.
   c.header("vary", "cookie");
@@ -97,6 +100,9 @@ explore.get("/collections", async (c) => {
   return c.json({ collections: page.map((r: any) => ({ ...r, id: Number(r.id) })), sort, total, nextOffset: rows.rows.length > limit ? offset + limit : null });
 });
 
+/** The starter packs account's handle (`starter_account`), as stored handles are: trimmed and lowercase. Empty when none is named. */
+const starterHandle = async () => ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
+
 /**
  * Which collections are the starter packs: the named account (`starter_account`,
  * while its profile and collections are public), and the ones the admin ticked
@@ -104,11 +110,13 @@ explore.get("/collections", async (c) => {
  * private one: null, and starter packs fall back to the fullest collections.
  */
 async function starterChoice(): Promise<{ accountId: number; handle: string; ids: number[] | null } | null> {
-  const handle = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
+  const handle = await starterHandle();
   if (!handle) return null;
-  const account = (await db.execute<{ id: number }>(sql`select id from users where handle = ${handle} and profile_visibility = 'public' and collections_visibility = 'public'`)).rows[0];
+  const [account, picked] = await Promise.all([
+    db.execute<{ id: number }>(sql`select id from users where handle = ${handle} and profile_visibility = 'public' and collections_visibility = 'public'`).then((r) => r.rows[0]),
+    getSetting<number[]>("starter_collections"),
+  ]);
   if (!account) return null;
-  const picked = await getSetting<number[]>("starter_collections");
   return { accountId: Number(account.id), handle, ids: Array.isArray(picked) ? picked.map(Number).filter(Number.isFinite) : null };
 }
 
@@ -225,7 +233,7 @@ explore.get("/users", async (c) => {
   const sort = browsePeopleSortFrom(c.req.query("sort"));
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 30)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
-  const starter = ((await getSetting<string>("starter_account")) ?? "").trim().toLowerCase();
+  const starter = await starterHandle();
   const pinned = starter ? sql`(u.handle = ${starter}) desc, ` : sql``;
   const where = [sql`u.profile_visibility = 'public' and u.id <> ${viewer.id}`];
   if (q) {
