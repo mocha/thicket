@@ -92,7 +92,7 @@
     </ActionBar>
   {/if}
 {:else}
-  {#if appearanceNote.state === 'show' && !tour.open}
+  {#if appearanceNote() === 'show' && !tour.open}
     <!-- After a new account's tour: the appearance choices it skipped, until they're used or this is closed. -->
     <div class="nudge">
       <Banner tone="info" title="Make it yours" dismissible ondismiss={() => setAppearanceNote('done')}>

@@ -8,7 +8,8 @@
  *    the real item with the rest of the screen dimmed (Tour.svelte). Once per
  *    account, as before.
  * 3. After the tour, a note on New posts offers the appearance choices, until
- *    it's used or closed. That's kept on the device, like the choices are.
+ *    it's used or closed. That's kept on the device, like the choices are,
+ *    and for that account only, so someone else signing in here never sees it.
  *
  * Accounts that existed before this, and second devices, keep the setup
  * dialog they had (Configurator.svelte); only its tour moved here.
@@ -31,15 +32,25 @@ export const isNewcomer = () => accountIsNew() && !session.user?.tourSeenAt;
 /** The account still owes the tour. */
 export const tourOwed = () => !!session.user && !session.user.tourSeenAt;
 
-const NOTE_KEY = 'thicket:appearance-note';
-/** The appearance note on New posts: 'show' after the tour, 'done' once it's used or closed. */
-export const appearanceNote = $state<{ state: 'show' | 'done' | null }>({ state: read() });
-function read(): 'show' | 'done' | null {
-  try { const v = localStorage.getItem(NOTE_KEY); return v === 'show' || v === 'done' ? v : null; } catch { return null; }
+type Note = 'show' | 'done';
+const noteKey = (id: number) => `thicket:appearance-note:${id}`;
+/** This visit's answers, for when storage is blocked; `changed` makes readers look again after a write. */
+const visit = new Map<number, Note>();
+let changed = $state(0);
+/** The appearance note on New posts, for whoever is signed in: 'show' after their tour, 'done' once it's used or closed. */
+export function appearanceNote(): Note | null {
+  void changed;
+  const id = session.user?.id;
+  if (id == null) return null;
+  if (visit.has(id)) return visit.get(id)!;
+  try { const v = localStorage.getItem(noteKey(id)); return v === 'show' || v === 'done' ? v : null; } catch { return null; }
 }
-export function setAppearanceNote(state: 'show' | 'done') {
-  appearanceNote.state = state;
-  try { localStorage.setItem(NOTE_KEY, state); } catch { /* Blocked storage: it lasts this visit. */ }
+export function setAppearanceNote(state: Note) {
+  const id = session.user?.id;
+  if (id == null) return;
+  visit.set(id, state);
+  changed++;
+  try { localStorage.setItem(noteKey(id), state); } catch { /* Blocked storage: it lasts this visit. */ }
 }
 
 /** Asks the setup dialog to open on its list of appearance choices alone (the note's Choose). */

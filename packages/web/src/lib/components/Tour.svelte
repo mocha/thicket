@@ -63,9 +63,11 @@
   type Place = { hole: Box | null; top: number; left: number; side: 'left' | 'top' | 'bottom' | null; at: number };
   let place = $state<Place | null>(null);
 
-  // Owed, the setup dialog closed, and something followed: it starts.
+  // Owed, the setup dialog closed, and something followed: it starts. Not
+  // on Import, where someone is in the middle of choosing feeds; it waits
+  // for them to leave.
   $effect(() => {
-    if (tour.open || welcome.open || !tourOwed()) return;
+    if (tour.open || welcome.open || !tourOwed() || page.url.pathname.startsWith('/import')) return;
     if (!collectionStore.loaded) { void loadCollections(); return; }
     if (collectionStore.list.some((c) => c.feedCount > 0)) tour.open = true;
   });
@@ -141,6 +143,8 @@
     }
     saveFirstSetup();
     if (newcomer) setAppearanceNote('show');
+    // A copy made on sign-up has been seen by now; it mustn't turn up later in the appearance choices.
+    welcome.copied = null;
     tour.open = false;
     place = null;
     dialog?.close();

@@ -3,12 +3,19 @@ import { api, type Collection } from './api';
 
 export const collectionStore = $state<{ list: Collection[]; rootId: number | null; loaded: boolean }>({ list: [], rootId: null, loaded: false });
 
-/** Two things wanting the list at once (the river and its counts do) is one request, not two. */
+/**
+ * Two things wanting the list at once (the river and its counts do) is one
+ * request, not two. Except when forced: something just changed the list, so
+ * a request already on its way may predate the change. A forced load waits
+ * for it, then asks again.
+ */
 let inflight: Promise<typeof collectionStore> | null = null;
 
-export async function loadCollections(force = false) {
+export async function loadCollections(force = false): Promise<typeof collectionStore> {
   if (collectionStore.loaded && !force) return collectionStore;
-  if (inflight) return inflight;
+  if (inflight && !force) return inflight;
+  if (inflight) await inflight.catch(() => {});
+  if (inflight) return loadCollections(true);
   inflight = api.collections()
     .then((res) => {
       collectionStore.list = res.collections;
