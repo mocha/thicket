@@ -11,7 +11,7 @@
 </script>
 
 <span class="add-feed-cta" class:bottom-bar-only={bottomBarOnly}>
-  <Button variant="primary" size="sm" onclick={() => openAddFeed(collectionIds ? { via, collectionIds } : { via })}>
+  <Button variant="primary" size="sm" data-tour="add" onclick={() => openAddFeed(collectionIds ? { via, collectionIds } : { via })}>
     <span class="plus" aria-hidden="true">+</span> Add new feed
   </Button>
 </span>

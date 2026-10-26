@@ -25,15 +25,17 @@
    * device a day or more later only asks when there is still nothing
    * followed.
    *
-   * After the list, the window grows and turns into a short tour of how
-   * thicket works, once per account: one screen per thing in the menu, each
-   * with a picture of it that plays on a loop. Skip this tour leaves from any
-   * of them and lands where the last one would.
+   * After the list comes the tour, once per account (Tour.svelte).
+   *
+   * A brand-new account skips all of this (THICKET-34): New posts is where it
+   * picks something to read, the tour follows once there are posts, and
+   * New posts then offers these same choices in a note, whose Choose opens
+   * this dialog on the list alone (lib/firstrun.svelte.ts).
    */
   import { onMount, tick } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { api, authApi } from '$lib/api';
+  import { api } from '$lib/api';
   import { display, describeDisplay, markConfigured, setDisplay, useDisplay, APPEARANCES, READING_MODES, LAYOUTS, FRESH_OPTIONS } from '$lib/display.svelte';
   import Tiles from './Tiles.svelte';
   import ThemePicker from './ThemePicker.svelte';
@@ -44,20 +46,15 @@
   import Icon from '$lib/components/Icon.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import SettingRow from '$lib/components/SettingRow.svelte';
-  import { MENU_ICONS } from '$lib/menu-icons';
-  import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
-  import FeedsScene from '$lib/components/intro/FeedsScene.svelte';
-  import BookmarksScene from '$lib/components/intro/BookmarksScene.svelte';
-  import CollectionsScene from '$lib/components/intro/CollectionsScene.svelte';
-  import ProfileScene from '$lib/components/intro/ProfileScene.svelte';
   import { imp, startOverImport } from '$lib/importer.svelte';
   import { session } from '$lib/session.svelte';
   import { welcome } from '$lib/copyintent.svelte';
   import { saveForNewDevices, setupVisit } from '$lib/saved-display.svelte';
+  import { choices, isNewcomer, startTour } from '$lib/firstrun.svelte';
 
   type Setting = 'appearance' | 'theme' | 'fonts' | 'reading' | 'layout' | 'fresh';
-  /** Where setup is: import, the list, one setting opened from it, or the tour. */
-  type View = 'import' | 'list' | Setting | 'tour';
+  /** Where setup is: import, the list, or one setting opened from it. */
+  type View = 'import' | 'list' | Setting;
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let open = $state(false);
@@ -71,47 +68,30 @@
     layout: { title: 'Scrolling or pages', lead: 'Scroll through posts, or turn a page at a time' },
     fresh: { title: 'Unread posts', lead: 'A count of new posts in the sidebar' }
   };
-  /**
-   * The tour. Each screen starts with the menu item it's about, drawn as the
-   * menu draws it, so people can find it again; the headline says why it
-   * matters and the line under it how to use it.
-   */
-  const INTRO = [
-    { key: 'intro-new', items: [{ icon: MENU_ICONS.everything, label: 'New posts' }], title: 'Everything you follow, in order', lead: 'Every post from every feed, newest first. No algorithm decides what you see, so nothing gets buried.' },
-    { key: 'intro-feeds', items: [{ icon: MENU_ICONS.addFeed, label: 'Add new feed', accent: true }, { icon: MENU_ICONS.explore, label: 'Explore' }], title: 'Bring in the sites you love', lead: 'Already know a site? Add it with its web address. Looking for something new? Explore to see what other readers here follow.' },
-    { key: 'intro-bookmarks', items: [{ icon: MENU_ICONS.bookmarks, label: 'Bookmarks' }], title: 'Keep what’s worth coming back to', lead: 'Bookmark a post to save it for later, and add a note with your thoughts. You choose who sees your notes.' },
-    { key: 'intro-collections', items: [{ icon: MENU_ICONS.collections, label: 'Collections' }], title: 'Read one topic at a time', lead: 'Group your feeds into collections, like Cooking or Tech, and read just that topic. Share a collection, and others can copy it to follow the same feeds.' },
-    { key: 'intro-profile', items: [{ icon: MENU_ICONS.profile, label: 'Profile' }], title: 'Your corner of thicket', lead: 'This is the page other people see. You decide who sees each part of it: anyone, people you follow, or only you.' }
-  ];
-  /** The pictures short enough to sit in the middle of the stage; the others fill it and fade at the bottom. */
-  const FITS = ['intro-feeds', 'intro-bookmarks', 'intro-collections'];
-  let tourStep = $state(0);
-  const scene = $derived(INTRO[tourStep]);
-  const touring = $derived(view === 'tour');
-  const lastScene = $derived(tourStep === INTRO.length - 1);
-  /** The tour shows once per account: decided when setup opens, so recording it partway can't reshuffle the steps. */
+  /** The tour is owed once this closes: decided when setup opens, so nothing partway can reshuffle it. */
   let withTour = $state(false);
   /**
    * Skip the list: a device that's already set up opening for an account that
    * hasn't seen the tour. Only import (if it applies) and the tour are left.
    */
   let tourOnly = $state(false);
+  /** Opened from New posts' appearance note: the list alone, then out. */
+  let listOnly = $state(false);
+  /** The dev reopening with ?setup: the tour runs after, even for an account that has seen it. */
+  let reviewing = false;
   /** This device just took on the account's saved settings. */
   let fromSaved = $state(false);
-  let nextButton = $state<HTMLElement | null>(null);
   let heading = $state<HTMLElement | null>(null);
   let rows = $state<HTMLElement | null>(null);
   /** What each setting was when setup opened; a row whose choice differs since gets a check. */
   let initial = $state<Record<string, string>>({});
   /** The setting just closed, so the keyboard lands back on its row. */
   let cameFrom: Setting | null = null;
-  // Each new screen moves the keyboard to its heading, or back to the row it came from, or the tour's main button.
+  // Each new screen moves the keyboard to its heading, or back to the row it came from.
   $effect(() => {
     const v = view;
-    void tourStep;
     tick().then(() => {
-      if (v === 'tour') nextButton?.querySelector('button')?.focus();
-      else if (v === 'list' && cameFrom) rows?.querySelector<HTMLElement>(`[data-key="${cameFrom}"]`)?.focus();
+      if (v === 'list' && cameFrom) rows?.querySelector<HTMLElement>(`[data-key="${cameFrom}"]`)?.focus();
       else heading?.focus();
     });
   });
@@ -121,7 +101,6 @@
     // Once a file is read, the question under the title has been answered, so it goes.
     view === 'import' ? { title: 'Import your feeds', lead: importing ? '' : 'Coming from another reader?' }
     : view === 'list' ? { title: 'Set up your device', lead: fromSaved ? 'These are the settings you saved on another device' : 'You can update your choices at any time in Settings' }
-    : view === 'tour' ? { title: '', lead: '' }
     : SETTINGS[view]
   );
 
@@ -129,6 +108,19 @@
   // that hasn't seen the tour: display settings belong to the device, so a
   // second account made on a set-up device would otherwise never get it.
   onMount(() => { if (!display.configured || (session.user && !session.user.tourSeenAt)) start(); });
+
+  // New posts' appearance note asks for the list alone.
+  $effect(() => {
+    if (!choices.requested) return;
+    choices.requested = false;
+    if (open || starting) return;
+    listOnly = true; withImport = false; withTour = false; tourOnly = false; fromSaved = false; cameFrom = null;
+    initial = Object.fromEntries(describeDisplay(display).map((r) => [r.key, r.value]));
+    view = 'list';
+    open = true;
+    api.event('display_setup_shown', { listOnly });
+    queueMicrotask(() => { dialog?.showModal(); heading?.focus(); });
+  });
 
   // In development, ?setup opens the walkthrough again on a screen that has
   // already seen it. Watched rather than read once: signing in lands on the
@@ -152,14 +144,22 @@
    */
   function start(again = false) {
     if (starting || open) return;
+    // A new account: nothing to set up first. Its device counts as set up, and
+    // its settings are saved for new devices when the tour ends.
+    if (!again && isNewcomer()) {
+      setupVisit.opened = true;
+      markConfigured();
+      return;
+    }
     starting = true;
     setupVisit.opened = true;
-    tourStep = 0;
+    listOnly = false;
     cameFrom = null;
     // ?setup in development always includes import and the tour, also when it's
     // this device's real first setup (a new dev port is a new device to the
     // browser), so the whole walkthrough can be reviewed on any account.
     const review = again || (import.meta.env.DEV && page.url.searchParams.has('setup'));
+    reviewing = review;
     withTour = review || !session.user?.tourSeenAt;
     const saved = !again && !display.configured ? session.user?.savedDisplay ?? null : null;
     fromSaved = !!saved;
@@ -177,37 +177,26 @@
       .catch(() => {})
       .finally(() => {
         starting = false;
-        view = withImport ? 'import' : tourOnly ? 'tour' : 'list';
+        // Nothing left to ask before the tour: straight to it.
+        if (tourOnly && !withImport) { welcome.open = false; startTour(review); return; }
+        view = withImport ? 'import' : 'list';
         open = true;
         api.event('display_setup_shown', { withImport, fromSaved, tourOnly });
         queueMicrotask(() => { dialog?.showModal(); heading?.focus(); });
       });
   }
 
-  /** On from import: the list, or straight to the tour (or out) when the list is skipped. */
+  /** On from import: the list, or out (to the tour, if it's owed) when the list is skipped. */
   function afterImport() {
     if (!tourOnly) view = 'list';
-    else if (withTour) view = 'tour';
-    else finish('done');
-  }
-
-  /** On from the list: the tour if it's owed, otherwise out. */
-  function afterList() {
-    if (withTour) view = 'tour';
     else finish('done');
   }
 
   function openSetting(key: Setting) { cameFrom = null; view = key; }
   function closeSetting() { cameFrom = view as Setting; view = 'list'; }
 
-  function finish(how: 'done' | 'dismissed', skipped = false) {
-    const intro = !withTour ? 'already seen' : !touring ? 'not reached' : skipped ? 'skipped' : lastScene && how !== 'dismissed' ? 'finished' : 'left';
-    api.event('display_setup_closed', { how, step: touring ? scene.key : view, withImport, importing, intro });
-    // Reaching the tour and leaving it any way at all counts as seeing it.
-    if (touring && session.user && !session.user.tourSeenAt) {
-      session.user.tourSeenAt = new Date().toISOString();
-      authApi.tourSeen();
-    }
+  function finish(how: 'done' | 'dismissed') {
+    api.event('display_setup_closed', { how, step: view, withImport, importing, listOnly });
     // A new account's first setup becomes its saved settings, however it ends.
     // So does an older account's first device since saved settings existed.
     const u = session.user;
@@ -221,62 +210,25 @@
     welcome.open = false;
     welcome.copied = null;
     dialog?.close();
+    if (listOnly) return;
     // Once a file has been picked, every way out leads to choosing its feeds,
     // even while it's still being read: the import page picks up the reading
-    // and shows the feeds when it finishes.
+    // and shows the feeds when it finishes. The tour waits for New posts to
+    // have posts (New posts starts it).
     if (importing || (withImport && imp.busy)) void goto('/import');
-    // A first setup that didn't import ends where a new person can find
-    // something to read: Explore's Collections, every public collection with
-    // Copy on its row. Unless a shared copy link just gave them one, in which
-    // case Collections, with the copy in the list.
-    else if (withImport) void goto(copiedOnArrival ? '/collections' : '/explore?scope=collections');
+    else {
+      // A setup that didn't import ends where someone following nothing picks
+      // something to read: New posts. Unless a shared copy link just gave them
+      // one, in which case Collections, with the copy in the list.
+      if (withImport) void goto(copiedOnArrival ? '/collections' : '/new-posts');
+      if (withTour) startTour(reviewing);
+    }
   }
 </script>
 
 {#if open}
   <dialog bind:this={dialog} onclose={() => { if (open) finish('dismissed'); }} onclick={(e) => { if (e.target === dialog) finish('dismissed'); }} aria-labelledby="setup-title">
-    <div class="box" class:tour={touring}>
-      {#if touring}
-        <div class="stage" aria-hidden="true">
-          {#key scene.key}
-            <div class="scene" class:fit={FITS.includes(scene.key)}>
-              {#if scene.key === 'intro-new'}<NewPostsScene />
-              {:else if scene.key === 'intro-feeds'}<FeedsScene />
-              {:else if scene.key === 'intro-bookmarks'}<BookmarksScene />
-              {:else if scene.key === 'intro-collections'}<CollectionsScene />
-              {:else}<ProfileScene />{/if}
-            </div>
-          {/key}
-        </div>
-        <div class="words" aria-live="polite">
-          {#key scene.key}
-            <div class="enter">
-              <p class="items">
-                {#each scene.items as m (m.label)}
-                  <span class="item" class:accent={m.accent}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width={m.accent ? 1.5 : 2} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={m.icon} /></svg>{m.label}</span>
-                {/each}
-              </p>
-              <h2 id="setup-title">{scene.title}</h2>
-              <p class="lead">{scene.lead}</p>
-            </div>
-          {/key}
-        </div>
-        <footer class="tourfoot">
-          <span class="skip">{#if !lastScene}<Button link onclick={() => finish('done', true)}>Skip this tour</Button>{/if}</span>
-          <span class="dots">
-            {#each INTRO as s, i (s.key)}
-              <button type="button" class="dot" class:on={tourStep === i} aria-label={s.items.map((m) => m.label).join(' and ')} aria-current={tourStep === i ? 'step' : undefined} onclick={() => (tourStep = i)}></button>
-            {/each}
-          </span>
-          <span class="go" bind:this={nextButton}>
-            {#if !lastScene}
-              <Button variant="primary" onclick={() => tourStep++}>Next</Button>
-            {:else}
-              <Button variant="primary" onclick={() => finish('done')}>{importing ? 'Review your feeds' : 'Start reading'}</Button>
-            {/if}
-          </span>
-        </footer>
-      {:else}
+    <div class="box">
       <header>
         {#if welcome.copied && (view === 'import' || (view === 'list' && !withImport))}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
         <h2 id="setup-title" tabindex="-1" bind:this={heading}>{header.title}</h2>
@@ -326,12 +278,11 @@
           <Button variant={importing ? 'primary' : 'ghost'} onclick={afterImport}>{importing ? 'Next' : 'Skip this step'}</Button>
         {:else if view === 'list'}
           {#if withImport}<Button onclick={() => { cameFrom = null; view = 'import'; }}>Back</Button>{/if}
-          <Button variant="primary" onclick={afterList}>{withTour ? 'Next' : importing ? 'Review your feeds' : 'Start reading'}</Button>
+          <Button variant="primary" onclick={() => finish('done')}>{listOnly ? 'Done' : withTour ? 'Next' : importing ? 'Review your feeds' : 'Start reading'}</Button>
         {:else}
           <Button variant="primary" onclick={closeSetting}>Back</Button>
         {/if}
       </footer>
-      {/if}
     </div>
   </dialog>
 {/if}
@@ -365,50 +316,4 @@
   .status { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .spacer { flex: 1; }
 
-  /* The tour: the window grows, and a stage for the picture fills its top. */
-  .box { transition: width 450ms cubic-bezier(0.2, 0.8, 0.2, 1); }
-  @media (min-width: 700px) { .box.tour { width: min(800px, calc(100vw - 48px)); } }
-  .stage {
-    position: relative; flex: none; height: clamp(190px, 36vh, 300px); overflow: hidden;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 16%, var(--surface-2)), var(--surface-2));
-    border-bottom: 1px solid var(--line);
-    animation: stage 500ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
-  }
-  @keyframes stage { from { height: 0; } }
-  /* The picture fades out at the bottom edge rather than being cut off. */
-  .scene { position: absolute; inset: 0; mask-image: linear-gradient(to bottom, #000 70%, transparent); animation: scene 420ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
-  .scene.fit { mask-image: none; }
-  .scene.fit :global(.loop) { display: grid; align-content: center; }
-  @keyframes scene { from { opacity: 0; transform: translateX(28px); } }
-  .words { padding: var(--space-5) var(--space-5) 0; min-height: 0; overflow-y: auto; }
-  .enter { animation: words 380ms ease-out 80ms backwards; }
-  @keyframes words { from { opacity: 0; transform: translateY(6px); } }
-  /* The menu item a screen is about, as a small label in the menu's own icon and words. */
-  .items { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-3); }
-  .item {
-    display: inline-flex; align-items: center; gap: 6px; padding: 4px var(--space-3) 4px var(--space-2);
-    border-radius: var(--radius-pill); background: var(--surface-2); border: var(--card-border, 0);
-    font-size: calc(var(--text-sm) * var(--size-app)); font-weight: 600; color: var(--text);
-  }
-  .item svg { color: var(--text-2); }
-  .item.accent, .item.accent svg { color: var(--accent); }
-  .words .lead { font-size: calc(var(--text-base) * var(--size-app)); margin-top: var(--space-2); line-height: 1.45; }
-  .tourfoot { display: grid; grid-template-columns: 1fr auto 1fr; border-top: 0; }
-  .tourfoot .go { justify-self: end; }
-  /* Holds the row's height when the last screen drops Skip this tour, so the window doesn't shift. */
-  .tourfoot .skip { min-height: 44px; display: flex; align-items: center; }
-  /* A wide window has room to show the pictures a size up. */
-  @media (min-width: 700px) { .scene { zoom: 1.2; } }
-  .dots { display: flex; align-items: center; }
-  /* Each dot is a 44px-tall tap area with the small mark drawn in its middle, so a thumb can hit it. */
-  footer .dot {
-    display: grid; place-items: center; min-width: 20px; height: 44px; padding: 0 3px; border: 0; border-radius: 0; background: none;
-  }
-  footer .dot::before {
-    content: ''; width: 8px; height: 8px; border-radius: 4px; background: var(--text-3);
-    transition: width 300ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 300ms;
-  }
-  footer .dot.on::before { width: 22px; background: var(--accent); }
-  footer .dot:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; border-radius: var(--radius-sm); }
 </style>

@@ -19,7 +19,8 @@
    * With `bind:picked`, the cards are for picking instead (the Collections
    * welcome): a checkbox in each card's top right corner, the whole card its
    * label, and the page copies everything ticked with one button. `available` says how many there are,
-   * so the page knows whether to offer that button at all.
+   * so the page knows whether to offer that button at all, and `loaded` that
+   * the answer is in (so "none" isn't said while they're still on the way).
    */
   import { onMount } from 'svelte';
   import { api, exploreApi, profilesApi, collectionHref, profileHref, type ExploreCollection } from '$lib/api';
@@ -35,8 +36,8 @@
   import { copyNext } from '$lib/copyintent.svelte';
   import { plural } from '$lib/words';
 
-  let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false, quiet = false, picked = $bindable(), available = $bindable(0) }:
-    { heading?: string; lede?: string; compact?: boolean; quiet?: boolean; picked?: ExploreCollection[]; available?: number } = $props();
+  let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false, quiet = false, picked = $bindable(), available = $bindable(0), loaded = $bindable(false) }:
+    { heading?: string; lede?: string; compact?: boolean; quiet?: boolean; picked?: ExploreCollection[]; available?: number; loaded?: boolean } = $props();
 
   /** Picking, not copying one at a time: set once, by whether the page bound `picked`. */
   // svelte-ignore state_referenced_locally
@@ -57,7 +58,7 @@
       packs = r.collections.filter((c) => !c.isMine);
       from = r.from;
       available = packs.length;
-    }).catch(() => {});
+    }).catch((e) => console.error('[starter packs] loading failed:', e)).finally(() => { loaded = true; });
   });
 
   async function copy(c: ExploreCollection) {

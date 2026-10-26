@@ -8,6 +8,8 @@
   import Monogram from '$lib/components/Monogram.svelte';
   import SceneLoop from './SceneLoop.svelte';
 
+  let { only }: { only?: 'add' | 'explore' } = $props();
+
   const EXPLORE = [
     { site: 'Crumb', readers: '41 readers' },
     { site: 'Tides', readers: '28 readers', follow: true },
@@ -20,7 +22,8 @@
 {/snippet}
 
 <SceneLoop round={6500}>
-  <div class="pair">
+  <div class="pair" class:one={!!only}>
+    {#if only !== 'explore'}
     <div class="panel">
       {@render head(MENU_ICONS.addFeed, 'Add new feed', true)}
       <div class="field"><span class="typed">slowkitchen.blog</span></div>
@@ -29,6 +32,8 @@
         <span class="pill on">Following</span>
       </div>
     </div>
+    {/if}
+    {#if only !== 'add'}
     <div class="panel">
       {@render head(MENU_ICONS.explore, 'Explore')}
       {#each EXPLORE as f, i (f.site)}
@@ -39,11 +44,13 @@
         </div>
       {/each}
     </div>
+    {/if}
   </div>
 </SceneLoop>
 
 <style>
   .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 210px)); gap: var(--space-3); justify-content: center; padding: 0 var(--space-4); }
+  .pair.one { grid-template-columns: minmax(0, 240px); }
   .panel { container-type: inline-size; background: var(--surface); border-radius: var(--radius-sm); box-shadow: var(--shadow); border: var(--card-border, 0); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); }
   .head { display: flex; align-items: center; gap: 6px; margin: 0 0 var(--space-1); font-size: 12px; font-weight: 600; color: var(--text); }
   .head svg { color: var(--text-2); }

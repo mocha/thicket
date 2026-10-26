@@ -33,6 +33,10 @@
    * own page. Mobile has no room for the list, so its Collections tab opens
    * your profile, which lists them.
    *
+   * Each place carries `data-tour`, so the tour can find it and sit beside
+   * it (lib/firstrun.svelte.ts); a place has one on the sidebar and one on
+   * the bottom bar, and the tour uses whichever is showing.
+   *
    * On desktop the list scrolls and the account block stays put at the bottom:
    * nav is a flex column whose middle child is the only thing that scrolls.
    */
@@ -145,23 +149,24 @@
   <a class="brand" href="/new-posts"><img src="/icon.svg" alt="" width="28" height="28" /><Wordmark height={23} /></a>
   <!-- Sidebar only, above the scrolling list so it never scrolls away. On
        bottom bar screens the same action sits beside each page's title instead. -->
-  {#if me}<button type="button" class="addfeed" onclick={() => openAddFeed({ via: 'sidebar' })}><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg><span>Add new feed</span></button>{/if}
+  {#if me}<button type="button" class="addfeed" data-tour="add" onclick={() => openAddFeed({ via: 'sidebar' })}><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg><span>Add new feed</span></button>{/if}
   <ul>
     <!-- Bottom bar tabs. On desktop, each place is a Sidebar row in a sidebar-only item instead. -->
     <li class="mobile-only">
-      <a href="/new-posts" aria-current={here === '/new-posts' ? 'page' : undefined}><span class="ic">{@render icon(icons.everything)}{#if fresh && rootMark?.count}<Badge variant="dot" class="pin" aria-label="New since your last visit" />{/if}</span><span class="shortl">New posts</span></a>
+      <a href="/new-posts" data-tour="new-posts" aria-current={here === '/new-posts' ? 'page' : undefined}><span class="ic">{@render icon(icons.everything)}{#if fresh && rootMark?.count}<Badge variant="dot" class="pin" aria-label="New since your last visit" />{/if}</span><span class="shortl">New posts</span></a>
     </li>
     <li class="mobile-only">
-      <a href="/collections" aria-current={onAnyCollection ? 'page' : undefined}><span class="ic">{@render icon(icons.collections)}{#if anyColNew}<Badge variant="dot" class="pin" aria-label="New posts" />{/if}</span><span class="shortl">Collections</span></a>
+      <a href="/collections" data-tour="collections" aria-current={onAnyCollection ? 'page' : undefined}><span class="ic">{@render icon(icons.collections)}{#if anyColNew}<Badge variant="dot" class="pin" aria-label="New posts" />{/if}</span><span class="shortl">Collections</span></a>
     </li>
     <li class="sidebar-only">
       <!-- New posts: every post you follow, its own item now — the job the old italic "All collections" row did. -->
-      <SidebarRow href="/new-posts" icon={icons.everything} label="New posts" current={here === '/new-posts'} count={fresh ? countText(rootMark) : ''} />
+      <SidebarRow href="/new-posts" data-tour="new-posts" icon={icons.everything} label="New posts" current={here === '/new-posts'} count={fresh ? countText(rootMark) : ''} />
       <!-- My collections: a group you can fold away. Your collections sit under it.
            The word opens the Collections screen (the same one the bottom bar's
            tab opens on a phone); the caret beside it folds the list. -->
       <SidebarRow
         href="/collections"
+        data-tour="collections"
         icon={icons.collections}
         label="Collections"
         current={collectionsHeadingCurrent}
@@ -213,18 +218,18 @@
       {/if}
     </li>
 
-    <li class="sidebar-only"><SidebarRow href="/bookmarks" icon={icons.bookmarks} label="Bookmarks" current={current('/bookmarks')} /></li>
-    <li class="sidebar-only"><SidebarRow href="/explore" icon={icons.explore} label="Explore" current={current('/explore')} /></li>
+    <li class="sidebar-only"><SidebarRow href="/bookmarks" data-tour="bookmarks" icon={icons.bookmarks} label="Bookmarks" current={current('/bookmarks')} /></li>
+    <li class="sidebar-only"><SidebarRow href="/explore" data-tour="explore" icon={icons.explore} label="Explore" current={current('/explore')} /></li>
     <li class="mobile-only">
-      <a href="/bookmarks" aria-current={current('/bookmarks') ? 'page' : undefined}>{@render icon(icons.bookmarks)}<span class="shortl">Bookmarks</span></a>
+      <a href="/bookmarks" data-tour="bookmarks" aria-current={current('/bookmarks') ? 'page' : undefined}>{@render icon(icons.bookmarks)}<span class="shortl">Bookmarks</span></a>
     </li>
     <li class="mobile-only">
-      <a href="/explore" aria-current={current('/explore') ? 'page' : undefined}>{@render icon(icons.explore)}<span class="shortl">Explore</span></a>
+      <a href="/explore" data-tour="explore" aria-current={current('/explore') ? 'page' : undefined}>{@render icon(icons.explore)}<span class="shortl">Explore</span></a>
     </li>
     <!-- Mobile: you. Opens the account menu — your profile, settings, and log out. -->
     {#if me}
       <li class="mobile-only you">
-        <button type="button" class="tab" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}><span class="mono ic"><Avatar handle={me.handle} name={me.displayName ?? me.handle} size={24} v={me.avatarUpdatedAt} />{#if notifs.count}<Badge variant="dot" class="pin" aria-label="New notifications" />{/if}</span><span class="shortl">You</span></button>
+        <button type="button" class="tab" data-tour="you" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}><span class="mono ic"><Avatar handle={me.handle} name={me.displayName ?? me.handle} size={24} v={me.avatarUpdatedAt} />{#if notifs.count}<Badge variant="dot" class="pin" aria-label="New notifications" />{/if}</span><span class="shortl">You</span></button>
       </li>
     {/if}
   </ul>
@@ -234,7 +239,7 @@
       <!-- Notifications belong to you, not to your reading, so they sit with your account rather than in the list above. On a phone the bottom bar is full: they're in the You menu, and the You tab carries the dot. -->
       <SidebarRow kind="account" href="/notifications" icon={icons.notifications} label="Notifications" current={current('/notifications')} count={notifText()} countLabel="{notifText()} new" />
       <div class="split" role="presentation"></div>
-      <button type="button" class="who" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}>
+      <button type="button" class="who" data-tour="you" onclick={openMenu} aria-haspopup="menu" aria-expanded={menuOpen}>
         <Avatar handle={me.handle} name={me.displayName ?? me.handle} size={34} v={me.avatarUpdatedAt} />
         <span class="names"><span class="dn">{me.displayName ?? me.handle}</span><span class="h">@{me.handle}</span></span>
         <span class="chev"><Icon name="caret" dir={menuOpen ? 'up' : 'right'} size={16} stroke={2.5} /></span>

@@ -8,6 +8,7 @@
   import AddFeedSheet from '$lib/components/AddFeedSheet.svelte';
   import Reader from '$lib/components/Reader.svelte';
   import Configurator from '$lib/components/display/Configurator.svelte';
+  import Tour from '$lib/components/Tour.svelte';
   import { keepSavedInStep } from '$lib/saved-display.svelte';
   import { addFeed } from '$lib/addfeed.svelte';
   import FeedbackSheet from '$lib/components/FeedbackSheet.svelte';
@@ -115,7 +116,7 @@
   </main>
   {#if inApp && addFeed.open}<AddFeedSheet />{/if}
   {#if inApp && feedback.open}<FeedbackSheet />{/if}
-  {#if inApp}<Reader /><Configurator />{/if}
+  {#if inApp}<Reader /><Configurator /><Tour />{/if}
 {/if}
 <Toast sidebar={inApp && !bare && display.layout !== 'paged'} />
 

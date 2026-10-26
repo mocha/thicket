@@ -40,7 +40,8 @@
     isNew = false,
     indent = false,
     toggle,
-    class: klass = ''
+    class: klass = '',
+    ...rest
   }: {
     href: string;
     label: string;
@@ -56,6 +57,8 @@
     indent?: boolean;
     toggle?: Toggle;
     class?: string;
+    /** Anything else lands on the row itself, like the menu's `data-tour`. */
+    [attr: `data-${string}`]: string | undefined;
   } = $props();
 
   const ariaCurrent = $derived(current ? ('page' as const) : undefined);
@@ -72,14 +75,14 @@
 {/snippet}
 
 {#if toggle}
-  <div class="row {kind} {klass}" class:current>
+  <div class="row {kind} {klass}" class:current {...rest}>
     <a class="link" {href} aria-current={ariaCurrent}>{@render inner()}</a>
     <button type="button" class="toggle" aria-expanded={toggle.open} aria-controls={toggle.controls} aria-label={toggle.label} onclick={toggle.onclick}>
       <Icon name="caret" size={14} stroke={2.5} dir={toggle.open ? 'down' : 'right'} />
     </button>
   </div>
 {:else}
-  <a class="row link {kind} {klass}" class:current class:new={isNew} class:indent {href} aria-current={ariaCurrent}>{@render inner()}</a>
+  <a class="row link {kind} {klass}" class:current class:new={isNew} class:indent {href} aria-current={ariaCurrent} {...rest}>{@render inner()}</a>
 {/if}
 
 <style>

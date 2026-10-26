@@ -11,9 +11,10 @@
    * delete every collection.
    */
   import { session } from '$lib/session.svelte';
-  import { api, profilesApi, profileHref, type ExploreCollection, type ProfileCollection } from '$lib/api';
+  import { profilesApi, profileHref, type ExploreCollection, type ProfileCollection } from '$lib/api';
   import { openAddFeed } from '$lib/addfeed.svelte';
   import { loadCollections } from '$lib/collections.svelte';
+  import { copyPacks } from '$lib/firstrun.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
   import CollectionTree from '$lib/components/CollectionTree.svelte';
@@ -50,21 +51,10 @@
   /** Packs that didn't copy, each with the reason, said above whatever did. */
   let failed = $state<{ name: string; why: string }[]>([]);
 
-  /** One at a time, so each copy's name is checked against the ones before it. A failure doesn't stop the rest. */
   async function copyPicked() {
     if (copying || !picked.length || !me) return;
     copying = true; failed = [];
-    for (const c of picked) {
-      try {
-        await profilesApi.copyCollection(c.handle, c.slug);
-        api.event('starter_pack_copied', { collectionId: c.id, via: 'collections_welcome' });
-      } catch (e) {
-        const why = e instanceof Error ? e.message : String(e);
-        console.error(`[starter packs] copying @${c.handle}/${c.slug} failed:`, e);
-        api.event('starter_pack_copy_failed', { collectionId: c.id, reason: why });
-        failed = [...failed, { name: c.name, why }];
-      }
-    }
+    failed = await copyPacks(picked, 'collections_welcome');
     picked = [];
     try {
       await Promise.all([load(me.handle), loadCollections(true)]);
