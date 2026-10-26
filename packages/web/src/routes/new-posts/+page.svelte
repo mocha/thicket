@@ -16,6 +16,8 @@
   import { site, loadSite } from '$lib/site.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import ActionBar from '$lib/components/ActionBar.svelte';
+  import Card from '$lib/components/Card.svelte';
+  import Icon from '$lib/components/Icon.svelte';
   import CopyFailures from '$lib/components/CopyFailures.svelte';
   import { tour, appearanceNote, setAppearanceNote, choices, copyPacks } from '$lib/firstrun.svelte';
   type Stats = { feeds: number; collections: number; posts24h: number; feeds24h: number };
@@ -76,7 +78,14 @@
 {#if brandNew}
   {#if failed.length}<div class="nudge"><CopyFailures {failed} /></div>{/if}
   <Welcome title="Welcome{session.user?.displayName ? `, ${session.user.displayName}` : ''}" sub={noPacks ? 'Add a site to start reading' : 'Pick a few to start reading'}>
-    <p class="switch">Switching from Feedly or Inoreader? <a href="/import">Import</a></p>
+    <!-- Its own card, not a line: people leaving Feedly are an audience thicket is courting. -->
+    <div class="switch">
+      <Card kind="section">
+        <h2 class="section-title">Switching from Feedly or another reader?</h2>
+        <p class="section-description">Bring your sites and folders with you</p>
+        <div class="go"><Button variant="secondary" href="/import"><Icon name="import" size={16} />Import</Button></div>
+      </Card>
+    </div>
     {#if noPacks}
       <div class="first">
         <Button variant="primary" size="lg" onclick={() => openAddFeed({ via: 'welcome' })}><span class="plus" aria-hidden="true">+</span> Add your first site</Button>
@@ -117,7 +126,8 @@
 <style>
   .nudge { margin-bottom: var(--space-4); }
   .first { margin-top: var(--space-5); }
-  .switch { margin: var(--space-3) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .switch a { color: var(--accent); font-weight: 600; }
+  /* The import card under the welcome's lines: left-aligned like every card, though the welcome above it is centered. */
+  .switch { margin: var(--space-5) 0 0; text-align: left; }
+  .switch .go { margin-top: var(--space-3); }
   .plus { font-size: 1.3em; line-height: 1; }
 </style>
