@@ -8,13 +8,8 @@
    * below the header for Add new feed. Each card keeps a picture of the place
    * that plays on a loop.
    *
-   * It starts itself, for an account that hasn't seen it, the first time the
-   * account follows something: picking on New posts, a copy made on sign-up,
-   * an import, anything. Never over the setup dialog; it waits for that to
-   * close. Leaving it any way at all counts as seeing it. A new account's
-   * first device saves its settings for new devices here, since it skipped
-   * the setup dialog that would have, and New posts then offers the
-   * appearance choices that dialog would have shown.
+   * It's the setup dialog's last step: the dialog closes and this opens
+   * (lib/firstrun.svelte.ts). Leaving it any way at all counts as seeing it.
    *
    * Not a Sheet: the dim has to leave one menu item lit and the card has to
    * sit beside it, so it's its own full-screen dialog.
@@ -23,10 +18,7 @@
   import { page } from '$app/state';
   import { api, authApi } from '$lib/api';
   import { session } from '$lib/session.svelte';
-  import { tour, tourOwed, isNewcomer, setAppearanceNote } from '$lib/firstrun.svelte';
-  import { saveFirstSetup } from '$lib/saved-display.svelte';
-  import { collectionStore, loadCollections } from '$lib/collections.svelte';
-  import { welcome } from '$lib/copyintent.svelte';
+  import { tour } from '$lib/firstrun.svelte';
   import Button from '$lib/components/Button.svelte';
   import NewPostsScene from '$lib/components/intro/NewPostsScene.svelte';
   import FeedsScene from '$lib/components/intro/FeedsScene.svelte';
@@ -55,22 +47,11 @@
   let dialog = $state<HTMLDialogElement | null>(null);
   let card = $state<HTMLElement | null>(null);
   let next = $state<HTMLElement | null>(null);
-  /** Decided as it opens: a new account gets the appearance note after. */
-  let newcomer = false;
 
   /** Where things are drawn: the lit-up item, the card, and the pointer's side and offset along it. */
   type Box = { top: number; left: number; width: number; height: number };
   type Place = { hole: Box | null; top: number; left: number; side: 'left' | 'top' | 'bottom' | null; at: number };
   let place = $state<Place | null>(null);
-
-  // Owed, the setup dialog closed, and something followed: it starts. Not
-  // on Import, where someone is in the middle of choosing feeds; it waits
-  // for them to leave.
-  $effect(() => {
-    if (tour.open || welcome.open || !tourOwed() || page.url.pathname.startsWith('/import')) return;
-    if (!collectionStore.loaded) { void loadCollections(); return; }
-    if (collectionStore.list.some((c) => c.feedCount > 0)) tour.open = true;
-  });
 
   // In development, ?tour shows it again on an account that has seen it.
   $effect(() => { if (import.meta.env.DEV && page.url.searchParams.has('tour')) tour.open = true; });
@@ -79,8 +60,7 @@
     if (!tour.open) return;
     untrack(() => {
       step = 0;
-      newcomer = isNewcomer();
-      api.event('tour_shown', { newcomer });
+      api.event('tour_shown', {});
     });
     tick().then(() => dialog?.showModal());
   });
@@ -135,19 +115,19 @@
 
   function finish(how: 'done' | 'dismissed' | 'skipped') {
     if (!tour.open) return;
-    api.event('tour_closed', { how, step: s.key, newcomer });
+    api.event('tour_closed', { how, step: s.key });
     const u = session.user;
     if (u && !u.tourSeenAt) {
       u.tourSeenAt = new Date().toISOString();
       authApi.tourSeen();
     }
-    saveFirstSetup();
-    if (newcomer) setAppearanceNote('show');
-    // A copy made on sign-up has been seen by now; it mustn't turn up later in the appearance choices.
-    welcome.copied = null;
     tour.open = false;
     place = null;
     dialog?.close();
+    const after = tour.after;
+    tour.after = null;
+    tour.done = 'Start reading';
+    after?.();
   }
 </script>
 
@@ -189,7 +169,7 @@
         </span>
         <span class="go" bind:this={next}>
           {#if !last}<Button variant="primary" onclick={() => step++}>Next</Button>
-          {:else}<Button variant="primary" onclick={() => finish('done')}>Start reading</Button>{/if}
+          {:else}<Button variant="primary" onclick={() => finish('done')}>{tour.done}</Button>{/if}
         </span>
       </footer>
     </div>

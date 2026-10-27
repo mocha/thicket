@@ -246,7 +246,7 @@
         { id: 'page-header', label: 'Page header' },
         { id: 'secret-value', label: 'Secret value' },
         { id: 'select', label: 'Select' },
-        { id: 'setup-tour', label: 'Tour' },
+        { id: 'setup-tour', label: 'Setup tour' },
         { id: 'sheet', label: 'Sheet' },
         { id: 'sidebar-row', label: 'Sidebar row' },
         { id: 'tabs', label: 'Tabs' },
@@ -862,8 +862,8 @@
     </section>
 
     <section class="entry" id="setup-tour" aria-labelledby="setup-tour-h">
-      <h3 class="entry-h" id="setup-tour-h">Tour</h3>
-      <p class="section-lede">Six cards that explain thicket, one per place in the menu and in the menu’s order: New posts, Collections, Bookmarks, Explore, Add new feed, and Profile. Each card sits beside the real menu item it’s about, with a small pointer at it, and everything else on screen is dimmed so only that item stays lit. Beside the sidebar on a computer; on a phone above its tab in the bottom bar, or below the header for Add new feed. Profile has no tab of its own on a phone, so its card points at You. A tinted stage across the card’s top holds the picture, then a serif headline and a line on what you can do there. The picture is a miniature of the real thing built from the real colors, cards, and choice group, never a screenshot, so it repaints with every theme. It acts its idea out, rests a few seconds, fades, and plays again. When a device asks for less motion, or the theme is Black and white, the finished picture shows and stays still. Skip this tour sits bottom left on every card but the last, the dots jump between cards, and the last button is Start reading. It shows once per account: for a new account, as soon as it has posts to read. In development, adding ?tour to an address brings it back, for review.</p>
+      <h3 class="entry-h" id="setup-tour-h">Setup tour</h3>
+      <p class="section-lede">Five screens at the end of first-run setup that explain thicket: New posts, Add new feed and Explore, Bookmarks, Collections, and Profile. The setup window grows when the tour starts, and a tinted stage across its top holds the picture. Each screen opens with the menu item it’s about, drawn with the menu’s own icon and words, then a serif headline and a line on how to use it. The picture is a miniature of the real thing built from the real colors, cards, and choice group, never a screenshot, so it repaints with every theme. It acts its idea out, rests a few seconds, fades, and plays again. When a device asks for less motion, or the theme is Black and white, the finished picture shows and stays still. Skip this tour sits bottom left on every screen but the last, the dots jump between screens, and the last button is Start reading, or Review your feeds after an import. It shows once per account. In development, adding ?setup to an address brings setup back with the tour, for review.</p>
       <div class="row">
         <div class="tour-demo" aria-hidden="true"><NewPostsScene /></div>
       </div>

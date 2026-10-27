@@ -25,12 +25,9 @@
    * device a day or more later only asks when there is still nothing
    * followed.
    *
-   * After the list comes the tour, once per account (Tour.svelte).
-   *
-   * A brand-new account skips all of this (THICKET-34): New posts is where it
-   * picks something to read, the tour follows once there are posts, and
-   * New posts then offers these same choices in a note, whose Choose opens
-   * this dialog on the list alone (lib/firstrun.svelte.ts).
+   * After the list comes the tour, once per account: the dialog closes and
+   * the tour opens by the real menu (Tour.svelte). Setup ends where it would
+   * have once the tour closes, however it closes.
    */
   import { onMount, tick } from 'svelte';
   import { goto } from '$app/navigation';
@@ -49,8 +46,8 @@
   import { imp, startOverImport } from '$lib/importer.svelte';
   import { session } from '$lib/session.svelte';
   import { welcome } from '$lib/copyintent.svelte';
-  import { saveFirstSetup, setupVisit } from '$lib/saved-display.svelte';
-  import { accountIsNew, choices, isNewcomer, tour } from '$lib/firstrun.svelte';
+  import { saveForNewDevices, setupVisit } from '$lib/saved-display.svelte';
+  import { tour } from '$lib/firstrun.svelte';
 
   type Setting = 'appearance' | 'theme' | 'fonts' | 'reading' | 'layout' | 'fresh';
   /** Where setup is: import, the list, or one setting opened from it. */
@@ -68,17 +65,13 @@
     layout: { title: 'Scrolling or pages', lead: 'Scroll through posts, or turn a page at a time' },
     fresh: { title: 'Unread posts', lead: 'A count of new posts in the sidebar' }
   };
-  /** The tour follows (it starts itself as this closes): decided when setup opens, for the last button's word. */
+  /** The tour shows once per account: decided when setup opens, so recording it partway can't reshuffle the steps. */
   let withTour = $state(false);
   /**
    * Skip the list: a device that's already set up opening for an account that
    * hasn't seen the tour. Only import (if it applies) and the tour are left.
    */
   let tourOnly = $state(false);
-  /** Opened from New posts' appearance note: the list alone, then out. */
-  let listOnly = $state(false);
-  /** The dev reopening with ?setup: the tour runs after, even for an account that has seen it. */
-  let reviewing = false;
   /** This device just took on the account's saved settings. */
   let fromSaved = $state(false);
   let heading = $state<HTMLElement | null>(null);
@@ -109,19 +102,6 @@
   // second account made on a set-up device would otherwise never get it.
   onMount(() => { if (!display.configured || (session.user && !session.user.tourSeenAt)) start(); });
 
-  // New posts' appearance note asks for the list alone.
-  $effect(() => {
-    if (!choices.requested) return;
-    choices.requested = false;
-    if (open || starting) return;
-    listOnly = true; withImport = false; withTour = false; tourOnly = false; fromSaved = false; cameFrom = null;
-    initial = Object.fromEntries(describeDisplay(display).map((r) => [r.key, r.value]));
-    view = 'list';
-    open = true;
-    api.event('display_setup_shown', { listOnly });
-    queueMicrotask(() => { dialog?.showModal(); heading?.focus(); });
-  });
-
   // In development, ?setup opens the walkthrough again on a screen that has
   // already seen it. Watched rather than read once: signing in lands on the
   // address without reloading the page, after this has already started.
@@ -144,22 +124,13 @@
    */
   function start(again = false) {
     if (starting || open) return;
-    // A new account: nothing to set up first. Its device counts as set up, and
-    // its settings are saved for new devices when the tour ends.
-    if (!again && isNewcomer()) {
-      setupVisit.opened = true;
-      markConfigured();
-      return;
-    }
     starting = true;
     setupVisit.opened = true;
-    listOnly = false;
     cameFrom = null;
     // ?setup in development always includes import and the tour, also when it's
     // this device's real first setup (a new dev port is a new device to the
     // browser), so the whole walkthrough can be reviewed on any account.
     const review = again || (import.meta.env.DEV && page.url.searchParams.has('setup'));
-    reviewing = review;
     withTour = review || !session.user?.tourSeenAt;
     const saved = !again && !display.configured ? session.user?.savedDisplay ?? null : null;
     fromSaved = !!saved;
@@ -170,16 +141,18 @@
     welcome.open = true;
     // Ask about importing on a new account, or when nothing is followed yet.
     // If that can't be found out, the dialog opens without it rather than not at all.
+    const created = session.user ? new Date(session.user.createdAt).getTime() : 0;
+    const newAccount = Date.now() - created < 24 * 60 * 60 * 1000;
     api.riverStats()
-      .then((s) => { withImport = review || accountIsNew() || s.feeds === 0; })
+      .then((s) => { withImport = review || newAccount || s.feeds === 0; })
       .catch(() => {})
       .finally(() => {
         starting = false;
-        // Nothing left to ask: no dialog, and the tour starts itself.
-        if (tourOnly && !withImport) { welcome.open = false; if (review) tour.open = true; return; }
+        api.event('display_setup_shown', { withImport, fromSaved, tourOnly });
+        // Only the tour left: no dialog, straight to it.
+        if (tourOnly && !withImport) return finish('done');
         view = withImport ? 'import' : 'list';
         open = true;
-        api.event('display_setup_shown', { withImport, fromSaved, tourOnly });
         queueMicrotask(() => { dialog?.showModal(); heading?.focus(); });
       });
   }
@@ -193,27 +166,44 @@
   function openSetting(key: Setting) { cameFrom = null; view = key; }
   function closeSetting() { cameFrom = view as Setting; view = 'list'; }
 
+  /**
+   * Out of the dialog. Moving on from the last screen goes to the tour when
+   * it's owed; closing the dialog any other way skips it for now (it's
+   * offered again next time, as setup is). Setup ends where it would have
+   * once the tour closes.
+   */
   function finish(how: 'done' | 'dismissed') {
-    api.event('display_setup_closed', { how, step: view, withImport, importing, listOnly });
-    saveFirstSetup();
+    const toTour = how === 'done' && withTour;
+    api.event('display_setup_closed', { how, step: view, withImport, importing, toTour });
+    // A new account's first setup becomes its saved settings, however it ends.
+    // So does an older account's first device since saved settings existed.
+    const u = session.user;
+    if (u && !u.savedDisplay) {
+      if (u.saveFirstDisplay) void saveForNewDevices('setup', { quiet: true });
+      else if (!u.displayOfferAnsweredAt) void saveForNewDevices('first-device', { quiet: true });
+    }
     // Read before it's cleared: a copy made on arrival decides where this ends.
     const copiedOnArrival = !!welcome.copied;
     open = false;
     welcome.open = false;
     welcome.copied = null;
     dialog?.close();
-    if (listOnly) return;
-    // The tour, if it's owed, starts itself now that this is closed (once
-    // something is followed). Reviewing in development, it starts regardless.
-    if (reviewing) tour.open = true;
-    // Once a file has been picked, every way out leads to choosing its feeds,
-    // even while it's still being read: the import page picks up the reading
-    // and shows the feeds when it finishes.
-    if (importing || (withImport && imp.busy)) void goto('/import');
-    // A setup that didn't import ends where someone following nothing picks
-    // something to read: New posts. Unless a shared copy link just gave them
-    // one, in which case Collections, with the copy in the list.
-    else if (withImport) void goto(copiedOnArrival ? '/collections' : '/new-posts');
+    const toImport = importing || (withImport && imp.busy);
+    const end = () => {
+      // Once a file has been picked, every way out leads to choosing its feeds,
+      // even while it's still being read: the import page picks up the reading
+      // and shows the feeds when it finishes.
+      if (toImport) void goto('/import');
+      // A first setup that didn't import ends where a new person can find
+      // something to read: Explore's Collections, every public collection with
+      // Copy on its row. Unless a shared copy link just gave them one, in which
+      // case Collections, with the copy in the list.
+      else if (withImport) void goto(copiedOnArrival ? '/collections' : '/explore?scope=collections');
+    };
+    if (!toTour) return end();
+    tour.done = toImport ? 'Review your feeds' : 'Start reading';
+    tour.after = end;
+    tour.open = true;
   }
 </script>
 
@@ -221,7 +211,7 @@
   <dialog bind:this={dialog} onclose={() => { if (open) finish('dismissed'); }} onclick={(e) => { if (e.target === dialog) finish('dismissed'); }} aria-labelledby="setup-title">
     <div class="box">
       <header>
-        {#if welcome.copied && !listOnly && (view === 'import' || (view === 'list' && !withImport))}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
+        {#if welcome.copied && (view === 'import' || (view === 'list' && !withImport))}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
         <h2 id="setup-title" tabindex="-1" bind:this={heading}>{header.title}</h2>
         {#if header.lead}<p class="lead">{header.lead}</p>{/if}
       </header>
@@ -269,7 +259,7 @@
           <Button variant={importing ? 'primary' : 'ghost'} onclick={afterImport}>{importing ? 'Next' : 'Skip this step'}</Button>
         {:else if view === 'list'}
           {#if withImport}<Button onclick={() => { cameFrom = null; view = 'import'; }}>Back</Button>{/if}
-          <Button variant="primary" onclick={() => finish('done')}>{listOnly ? 'Done' : withTour ? 'Next' : importing ? 'Review your feeds' : 'Start reading'}</Button>
+          <Button variant="primary" onclick={() => finish('done')}>{withTour ? 'Next' : importing ? 'Review your feeds' : 'Start reading'}</Button>
         {:else}
           <Button variant="primary" onclick={closeSetting}>Back</Button>
         {/if}
@@ -306,5 +296,4 @@
   .found .then { margin-top: var(--space-1); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
   .status { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .spacer { flex: 1; }
-
 </style>

@@ -85,10 +85,10 @@
       api.event('collection_copied', { from: `${handle}/${slug}`, collectionId: mine.id, feeds: mine.feedCount, ...(after ? { after } : {}) });
       void loadCollections(true);
       if (after) {
-        // Copied on arrival: go to the copy itself. A new account follows
-        // something now, so its tour starts over the copy; an older account on
-        // a new device has the setup dialog, which names the copy and then ends
-        // on Collections. Otherwise a note names it and you stay here.
+        // Copied on arrival: go to the copy itself, so it's what's behind the
+        // welcome tour. The tour names it, and a new account's setup then ends
+        // on Collections with the copy in the list; without the tour (logging
+        // in on a screen that has seen it), a note does and you stay here.
         welcome.copied = mine.name;
         await goto(collectionHref(session.user!.handle, mine.slug), { replaceState: true });
         if (!welcome.open) showToast(`Copied “${mine.name}” to your collections`);
