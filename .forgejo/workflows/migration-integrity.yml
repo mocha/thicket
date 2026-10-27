@@ -1,0 +1,27 @@
+# The Forge copy of .github/workflows/migration-integrity.yml. Forgejo reads
+# .forgejo/workflows and ignores .github/workflows once this directory exists;
+# the GitHub copy stays for pull requests opened on the GitHub mirror. Both run
+# the same script.
+
+name: Migration integrity
+
+on:
+  pull_request:
+
+jobs:
+  immutable-sql:
+    runs-on: docker
+
+    container:
+      image: node:22-bookworm
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check that existing migrations are unchanged
+        env:
+          MIGRATION_BASE_COMMIT: ${{ github.event.pull_request.base.sha }}
+          MIGRATION_HEAD_COMMIT: ${{ github.event.pull_request.head.sha }}
+        run: bash .github/scripts/check-migration-history.sh

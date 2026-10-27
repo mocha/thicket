@@ -1,0 +1,46 @@
+# Deploy readthicket.com: every push to main on Forge goes to the Railway
+# service "thicket" (project Thicket, environment production).
+#
+# `railway up` uploads the checkout and Railway builds the Dockerfile, as it
+# did when the service deployed from GitHub. --ci streams the build log and
+# fails this job if the build fails.
+#
+# Prerequisites:
+#   - Repo secret RAILWAY_TOKEN: a Railway project token for Thicket/production
+#   - The Railway service has no GitHub source connected. With one connected,
+#     a release pushed to the GitHub mirror would redeploy that older commit.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: railway-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: docker
+
+    container:
+      image: node:22-bookworm
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo 'RAILWAY_TOKEN is not set; add a Railway project token as a repo secret.' >&2
+            exit 1
+          fi
+          npx --yes @railway/cli@5.64.1 up --ci --service thicket --environment production
