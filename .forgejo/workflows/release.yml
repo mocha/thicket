@@ -1,0 +1,78 @@
+# Publish a release to the public GitHub mirror (github.com/mocha/thicket):
+# main as of the tag, plus the tag. Day-to-day work stays on Forge.
+#
+# Triggered by pushing a v* tag that matches package.json; see "Cutting a
+# release" in CONTRIBUTING.md. To publish an existing tag again, run this
+# workflow by hand with that tag.
+#
+# Prerequisites:
+#   - Repo secret GH_MIRROR_DEPLOY_KEY: the private half of a deploy key with
+#     write access on mocha/thicket
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to publish, e.g. v0.2.0
+        required: true
+
+concurrency:
+  group: github-mirror
+  cancel-in-progress: false
+
+env:
+  GITHUB_MIRROR: git@github.com:mocha/thicket.git
+  # github.com's ed25519 host key, as published at https://api.github.com/meta
+  GITHUB_HOST_KEY: github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+
+jobs:
+  publish:
+    runs-on: docker
+
+    container:
+      image: node:22-bookworm
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          persist-credentials: false
+
+      - name: Check the tag
+        env:
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "v$version" ]; then
+            echo "Tag $TAG does not match package.json version $version." >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$TAG^{commit}" origin/main; then
+            echo "$TAG is not on main." >&2
+            exit 1
+          fi
+
+      - name: Push main and the tag to GitHub
+        env:
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+          DEPLOY_KEY: ${{ secrets.GH_MIRROR_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DEPLOY_KEY" ]; then
+            echo 'GH_MIRROR_DEPLOY_KEY is not set; add the deploy key as a repo secret.' >&2
+            exit 1
+          fi
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/github_mirror
+          chmod 600 ~/.ssh/github_mirror
+          printf '%s\n' "$GITHUB_HOST_KEY" > ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND='ssh -i ~/.ssh/github_mirror -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes'
+          # Fast-forward only. A rejected push means GitHub has commits Forge
+          # doesn't (a PR merged on the mirror): bring them to Forge first.
+          git push "$GITHUB_MIRROR" "$TAG^{commit}:refs/heads/main" "refs/tags/$TAG"

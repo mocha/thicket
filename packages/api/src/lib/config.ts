@@ -29,7 +29,7 @@ export const INSTANCE_NAME = env("INSTANCE_NAME") ?? new URL(PUBLIC_URL).hostnam
 export const HOSTED = env("HOSTED") === "true";
 /**
  * readthicket.com only: the private address of its own site (the landing page
- * and, in time, pricing and legal pages; github.com/mocha/readthicket-com).
+ * and, in time, pricing and legal pages; a separate private repository).
  * Set, this server hands that site the paths it owns (SITE_PATHS in index.ts)
  * and serves everything else itself, so both share one domain. Unset, as on
  * every self-hosted copy, there is no such site: / goes straight into the app.
