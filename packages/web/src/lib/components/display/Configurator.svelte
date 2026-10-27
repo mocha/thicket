@@ -30,9 +30,9 @@
    * have once the tour closes, however it closes.
    *
    * When more than one of those three applies, setup opens on a welcome that
-   * asks about each as a question, all ticked to start (THICKET-34). Only the
-   * ticked ones follow, in that order, so what's optional is clear up front.
-   * Unticking the tour counts as seeing it.
+   * asks about each as a question, each answered Yes to start (THICKET-34). Only
+   * the ones left at Yes follow, in that order, so what's optional is clear up front.
+   * No to the tour counts as seeing it.
    */
   import { onMount, tick } from 'svelte';
   import { goto } from '$app/navigation';
@@ -48,7 +48,7 @@
   import Icon from '$lib/components/Icon.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import SettingRow from '$lib/components/SettingRow.svelte';
-  import Checkbox from '$lib/components/Checkbox.svelte';
+  import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
   import { imp, startOverImport } from '$lib/importer.svelte';
   import { session } from '$lib/session.svelte';
   import { welcome } from '$lib/copyintent.svelte';
@@ -65,7 +65,8 @@
     { key: 'looks', question: 'Want to change how thicket looks?', line: 'Light or dark, colors, and fonts' },
     { key: 'tour', question: 'Want a quick tour?', line: 'See where everything is in the menu' }
   ];
-  /** The welcome's answers. Only ticked parts run. */
+  const YES_NO = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }];
+  /** The welcome's answers, Yes to start. Only parts answered Yes run. */
   let want = $state<Record<Part, boolean>>({ import: true, looks: true, tour: true });
   /** Whether this visit asks the welcome's questions at all: more than one part applies. */
   let asked = $state(false);
@@ -177,11 +178,11 @@
       });
   }
 
-  /** The parts this visit has, before any are unticked. */
+  /** The parts this visit has, before any are answered No. */
   function parts(): Part[] {
     return QUESTIONS.map((q) => q.key).filter((k) => k === 'import' ? withImport : k === 'looks' ? !tourOnly : withTour);
   }
-  /** The parts that run: all of them, or the ticked ones when the welcome asked. */
+  /** The parts that run: all of them, or the ones answered Yes when the welcome asked. */
   const running = () => parts().filter((k) => !asked || want[k]);
 
   /** On to the next part that runs after `from` (the welcome when null), or out. The tour is last, and runs as setup closes. */
@@ -265,10 +266,10 @@
         {#if view === 'welcome'}
           <div class="rows">
             {#each QUESTIONS.filter((q) => parts().includes(q.key)) as q (q.key)}
-              <label class="ask">
-                <span class="text"><span class="q">{q.question}</span><span class="line">{q.line}</span></span>
-                <Checkbox bind:checked={want[q.key]} />
-              </label>
+              <div class="ask">
+                <span class="text"><span class="q" id="ask-{q.key}">{q.question}</span><span class="line">{q.line}</span></span>
+                <ChoiceGroup size="sm" options={YES_NO} value={want[q.key] ? 'yes' : 'no'} onchange={(v) => (want[q.key] = v === 'yes')} label={q.question} />
+              </div>
             {/each}
           </div>
         {:else if view === 'import'}
@@ -340,8 +341,8 @@
   .copied { margin-bottom: var(--space-4); }
   h2:focus { outline: none; }
   .rows { display: flex; flex-direction: column; }
-  /* A welcome question: the question in bold with its line under it in gray, and the box at the row's right end; the whole row is its label. */
-  .ask { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+  /* A welcome question: the question in bold with its line under it in gray, and Yes or No at the row's right end. */
+  .ask { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }
   .ask:last-child { border-bottom: 0; }
   .ask .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .ask .q { font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text); }
