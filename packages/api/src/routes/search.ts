@@ -118,6 +118,21 @@ const userInNetwork = (userIdCol: string, ids: number[]) =>
 const ownerInNetwork = (ids: number[]) => userInNetwork("col.user_id", ids);
 
 /**
+ * Plan the fulltext lookup without a chronological ordering requirement.
+ * OFFSET 0 is an optimization barrier, not pagination: without it a flattened
+ * query can choose items_published_idx and reject most of the corpus before
+ * filling the sample. NOT MATERIALIZED streams into top-N sorting instead of
+ * spooling every match of a ubiquitous term to disk.
+ */
+const matchingPosts = (q: string) => sql`
+  matching_posts as not materialized (
+    select i.id, i.feed_id, i.published_at
+    from items i
+    where i.search @@ websearch_to_tsquery('english', ${q})
+    offset 0
+  )`;
+
+/**
  * The bounded sample of matching posts that every aggregation is built on, each
  * tagged with *where* in the post the match landed: 1 = title, 2 = summary,
  * 3 = body only. ts_filter reads the weights already stored in the tsvector, so
@@ -131,10 +146,17 @@ const hits = (q: string) => sql`
              when ts_filter(i.search, '{b}') @@ websearch_to_tsquery('english', ${q}) then 2
              else 3
            end as w
-    from items i
-    where i.search @@ websearch_to_tsquery('english', ${q})
-    order by i.published_at desc
-    limit ${HIT_CAP}
+    from (
+      select m.id from matching_posts m
+      order by m.published_at desc
+      limit ${HIT_CAP}
+    ) sampled
+    -- OFFSET 0 keeps this lookup correlated: hashing the sampled IDs against
+    -- another full items scan would read every search vector, not just 4000.
+    cross join lateral (
+      select i.id, i.feed_id, i.published_at, i.search
+      from items i where i.id = sampled.id offset 0
+    ) i
   )`;
 
 /**
@@ -173,7 +195,7 @@ const EVIDENCE = sql`(
  * every post stored.
  */
 const feedEvidence = (q: string) => sql`
-  ${hits(q)}
+  ${matchingPosts(q)}, ${hits(q)}
   , agg as (
     select feed_id, count(*)::int as matches, max(published_at) as last_match,
            count(*) filter (where w = 1)::numeric as t_hits,
@@ -204,22 +226,24 @@ export const DEFAULT_FEED_SORT: FeedSort = "about";
 export const feedSortFrom = oneOf(FEED_SORTS, DEFAULT_FEED_SORT);
 
 /**
- * Posts in the last 90 days that mention the words, per feed, and the 30-day
- * share of them. One pass over the matching posts, bounded by date: the text
- * index finds the matches and the date bound cuts them to the window, so no
- * feed's older history is read. Exact, not sampled: it isn't capped like hits.
+ * Exact 90/30-day counts and latest mention, grouped over fulltext matches.
+ * Keeping the fulltext lookup separate from ORDER BY/LIMIT prevents a planner
+ * choice that walks the timestamp index rejecting most of the corpus. Grouping
+ * its narrow result also avoids per-feed latest-match walks (especially costly
+ * for a name-only match with no post mentioning the words).
  *
  * `n30` is what each row says ("about N a week"). It used to be counted per
  * row by walking the feed's last 30 days, which for a news feed meant reading
  * 400-odd posts' search vectors per row: 450 ms of a 950 ms search for "news".
  */
-const recentMentions = (q: string) => sql`
+const recentMentions = () => sql`
   recent as (
-    select i.feed_id, count(*)::int as n,
-           count(*) filter (where i.published_at > now() - interval '30 days')::int as n30
-    from items i
-    where i.search @@ websearch_to_tsquery('english', ${q}) and i.published_at > now() - interval '90 days'
-    group by i.feed_id
+    select m.feed_id,
+           count(*) filter (where m.published_at > now() - interval '90 days')::int as n,
+           count(*) filter (where m.published_at > now() - interval '30 days')::int as n30,
+           max(m.published_at) as latest_match
+    from matching_posts m
+    group by m.feed_id
   )`;
 
 /**
@@ -232,7 +256,7 @@ const recentMentions = (q: string) => sql`
  *    feed found by name that never mentions the words, that lookup would
  *    read the feed's whole history.
  *  - posted: a column on the feed, kept current as posts arrive.
- *  - about: the date-bounded tally above, joined in.
+ *  - about: the exact 90-day tally above, joined in.
  *  - active: the feed's stored 90-day count (feeds.posts_90d, recounted hourly
  *    by lib/counts.ts), rather than counting it for every candidate here.
  */
@@ -291,7 +315,7 @@ function paged(rows: any[], limit: number, offset: number) {
  * order at all to the people using it (issue 182), so the list is sorted by a
  * plain fact the reader picks (see FeedSort) and the score only breaks ties.
  */
-async function searchFeeds(x: Exec, q: string, userId: number, limit: number, offset: number, net: number[] | null = null, sort: FeedSort = DEFAULT_FEED_SORT, since: string | null = null) {
+export async function searchFeeds(x: Exec, q: string, userId: number, limit: number, offset: number, net: number[] | null = null, sort: FeedSort = DEFAULT_FEED_SORT, since: string | null = null) {
   const like = likeFor(q);
   const named = sql`coalesce((f.title ilike ${like} or f.description ilike ${like} or f.url ilike ${like} or f.site_url ilike ${like} or ${q} <% coalesce(f.title, '')), false)`;
   /** 0 to 1. The title is worth most; a description or URL hit is weaker evidence. */
@@ -301,10 +325,10 @@ async function searchFeeds(x: Exec, q: string, userId: number, limit: number, of
     (case when f.description ilike ${like} then 0.35 else 0 end)::real,
     (case when f.url ilike ${like} or f.site_url ilike ${like} then 0.3 else 0 end)::real)`;
   const base = sql`
-    with ${feedEvidence(q)}, ${recentMentions(q)}
+    with ${feedEvidence(q)}, ${recentMentions()}
     , cand as (
       select f.id, coalesce(a.matches, 0) as matches, coalesce(a.weight, 0) as weight, a.last_match,
-             f.item_count::numeric as posts, coalesce(r.n30, 0) as n30,
+             f.item_count::numeric as posts, coalesce(r.n30, 0) as n30, r.latest_match,
              ${named} as name_match,
              ${strength} as name_score,
              ${SORT_KEY[sort]} as sort_key
@@ -327,11 +351,9 @@ async function searchFeeds(x: Exec, q: string, userId: number, limit: number, of
            -- What the row says in words, counted exactly rather than read off the
            -- capped sample: the ranking can live with an approximation, but a
            -- number shown to a person has to be true. The 30-day count comes from
-           -- the uncapped pass above; the latest mention walks this one feed's
-           -- posts newest first and stops at the first, so it stays cheap.
+           -- the uncapped match set above, as does the latest mention.
            s.n30 as "matchesLast30d",
-           (select i.published_at from items i where i.feed_id = f.id and i.search @@ websearch_to_tsquery('english', ${q})
-              order by i.published_at desc limit 1) as "lastMatchAt",
+           s.latest_match as "lastMatchAt",
            f.id, f.url, f.site_url as "siteUrl", f.title, f.description,
            (select fs.display_name from feed_settings fs where fs.user_id = ${userId} and fs.feed_id = f.id) as "displayName",
            coalesce(
@@ -377,7 +399,7 @@ const COLLECTION_ORDER: Record<CollectionSort, SQL> = {
  * so a friends-only collection shows to a friend. Only a *feed document*, which
  * has no reader, is restricted to what is public to everyone.
  */
-async function searchCollections(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null = null,
+export async function searchCollections(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null = null,
   sort: CollectionSort = DEFAULT_COLLECTION_SORT, since: string | null = null) {
   const like = likeFor(q);
   const me = viewerId ?? -1;
@@ -503,14 +525,20 @@ const saves = (sort: "bookmarked" | "noted") => sql`
  * matches someone saved, looked up by address against the sample alone, so
  * their total can be capped too: older saved posts past the sample are missed.
  */
-async function searchPosts(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null, sort: PostSort, since: string | null = null) {
+export async function searchPosts(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null, sort: PostSort, since: string | null = null) {
   const me = viewerId ?? -1;
+  // Like matchingPosts, keep matching separate from chronological ordering,
+  // but apply viewer/network/time predicates before the 4000-row sample.
   const matched = sql`
-    matched as materialized (
+    matching_posts as not materialized (
       select i.id, i.published_at, i.feed_id, i.url from items i
       where i.search @@ websearch_to_tsquery('english', ${q}) and ${notBlocked(me)} and ${sinceSql("i.published_at", since)}
         ${net ? sql`and ${feedInNetwork("i.feed_id", net)}` : sql``}
-      order by i.published_at desc, i.id desc
+      offset 0
+    ),
+    matched as materialized (
+      select m.* from matching_posts m
+      order by m.published_at desc, m.id desc
       limit ${HIT_CAP}
     )`;
   const saved = sort === "bookmarked" || sort === "noted";

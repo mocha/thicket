@@ -16,6 +16,7 @@
     "passwd": "tsx --env-file=../../.env src/scripts/passwd.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/**/*.test.ts",
+    "benchmark:search": "tsx src/scripts/search-perf-benchmark.ts",
     "ingest": "tsx --env-file=../../.env src/scripts/ingest.ts",
     "drop-feeds": "tsx --env-file=../../.env src/scripts/drop-feeds.ts",
     "recount": "tsx --env-file=../../.env src/scripts/recount.ts",
