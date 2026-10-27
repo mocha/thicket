@@ -33,7 +33,7 @@
     { key: 'bookmarks', label: 'Bookmarks', title: 'Save posts for later', lead: 'Bookmark a post to keep it, and add a note with your thoughts. You choose who sees your notes.' },
     { key: 'explore', label: 'Explore', title: 'See what people here read', lead: 'Browse the sites and collections others follow, and copy any you like.' },
     { key: 'add', label: 'Add new feed', title: 'Follow any site you like', lead: 'Paste its address, and thicket finds its posts. Blogs, news sites, subreddits, and YouTube all work.' },
-    { key: 'you', label: 'Profile', title: 'Your page on thicket', lead: 'Profile is in this menu. It’s what others see, and you choose who sees each part.' }
+    { key: 'you', label: 'Profile', title: 'Your page on thicket', lead: 'Your profile is in this menu. It’s what others see, and you choose who sees each part.' }
   ];
   /** The pictures short enough to sit in the middle of the stage; the others fill it and fade at the bottom. */
   const FITS = ['add', 'explore', 'bookmarks', 'collections'];
