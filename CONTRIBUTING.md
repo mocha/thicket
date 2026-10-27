@@ -16,6 +16,10 @@ The rest of this file is for maintainers.
   (`thicket-43-forge`), and open the pull request on Forge.
 - The `Migration integrity` check runs on every pull request. Existing
   migration SQL in `packages/api/drizzle/` is immutable; add a new migration.
+- `main` is protected: nobody pushes to it directly, and a pull request
+  merges only once its checks pass. Merging is reserved for maintainers
+  (`deuley`, `christie`). Agents work as their own Forge accounts with write
+  access, so they can push branches and open pull requests but not merge.
 - **Merging to `main` deploys readthicket.com.** The `Deploy` workflow runs
   `railway up` against the Railway service `thicket`, and Railway builds the
   Dockerfile.

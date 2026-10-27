@@ -18,7 +18,8 @@ production and to a release.
 
 - Never edit, rename or delete an existing migration in
   `packages/api/drizzle/`; add a new one. A PR check enforces it.
-- Merging to `main` on Forge deploys readthicket.com. Treat `main` as
-  production.
+- `main` is protected and deploys readthicket.com when it changes. Agents
+  never push to it or merge into it: open a pull request, make the checks
+  pass, and leave the merge to a maintainer.
 - Planning notes, decision records and scratch work live outside this
   repository (see `.gitignore`); everything committed here is published.
