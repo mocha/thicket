@@ -4,7 +4,7 @@
    * new, so logging in is a quiet link under the button, to the log-in page.
    *
    * Two homes, one form: straight on the landing page's green (now a copy in
-   * readthicket.com's own site, mocha/readthicket-com; keep the two alike), and on the
+   * readthicket.com's own site, a separate private repository; keep the two alike), and on the
    * plain background of the sign-up page that every other page's Sign up
    * leads to. That one passes `next`, the page to go back to afterward (a
    * shared collection, say); the landing page lands you on Everything.
