@@ -209,6 +209,10 @@ thing you can file is what confused you: the shape of the product is still
 moving, and a paragraph about what you expected to happen is worth more than
 a patch.
 
+This GitHub repository is updated at each release, so `main` here is the
+latest release rather than the latest commit. Pull requests against it are
+still welcome; they are carried into development by hand.
+
 ## License
 
 [GNU Affero General Public License v3.0](LICENSE). The network clause is the
