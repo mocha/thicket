@@ -28,11 +28,16 @@
    * After the list comes the tour, once per account: the dialog closes and
    * the tour opens by the real menu (Tour.svelte). Setup ends where it would
    * have once the tour closes, however it closes.
+   *
+   * When more than one of those three applies, setup opens on a welcome that
+   * asks about each as a question, all ticked to start (THICKET-34). Only the
+   * ticked ones follow, in that order, so what's optional is clear up front.
+   * Unticking the tour counts as seeing it.
    */
   import { onMount, tick } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { api } from '$lib/api';
+  import { api, authApi } from '$lib/api';
   import { display, describeDisplay, markConfigured, setDisplay, useDisplay, APPEARANCES, READING_MODES, LAYOUTS, FRESH_OPTIONS } from '$lib/display.svelte';
   import Tiles from './Tiles.svelte';
   import ThemePicker from './ThemePicker.svelte';
@@ -43,6 +48,7 @@
   import Icon from '$lib/components/Icon.svelte';
   import Banner from '$lib/components/Banner.svelte';
   import SettingRow from '$lib/components/SettingRow.svelte';
+  import Checkbox from '$lib/components/Checkbox.svelte';
   import { imp, startOverImport } from '$lib/importer.svelte';
   import { session } from '$lib/session.svelte';
   import { welcome } from '$lib/copyintent.svelte';
@@ -50,8 +56,19 @@
   import { tour } from '$lib/firstrun.svelte';
 
   type Setting = 'appearance' | 'theme' | 'fonts' | 'reading' | 'layout' | 'fresh';
-  /** Where setup is: import, the list, or one setting opened from it. */
-  type View = 'import' | 'list' | Setting;
+  /** Where setup is: the welcome, import, the list, or one setting opened from it. */
+  type View = 'welcome' | 'import' | 'list' | Setting;
+  /** The three parts of setup, in the order they run. */
+  type Part = 'import' | 'looks' | 'tour';
+  const QUESTIONS: { key: Part; question: string; line: string }[] = [
+    { key: 'import', question: 'Moving from Feedly or another reader?', line: 'Bring your sites and folders with you' },
+    { key: 'looks', question: 'Want to change how thicket looks?', line: 'Light or dark, colors, and fonts' },
+    { key: 'tour', question: 'Want a quick tour?', line: 'See where everything is in the menu' }
+  ];
+  /** The welcome's answers. Only ticked parts run. */
+  let want = $state<Record<Part, boolean>>({ import: true, looks: true, tour: true });
+  /** Whether this visit asks the welcome's questions at all: more than one part applies. */
+  let asked = $state(false);
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let open = $state(false);
@@ -93,6 +110,7 @@
   const header = $derived(
     // Once a file is read, the question under the title has been answered, so it goes.
     view === 'import' ? { title: 'Import your feeds', lead: importing ? '' : 'Coming from another reader?' }
+    : view === 'welcome' ? { title: 'Welcome to thicket', lead: 'A few questions before you start reading' }
     : view === 'list' ? { title: 'Set up your device', lead: fromSaved ? 'These are the settings you saved on another device' : 'You can update your choices at any time in Settings' }
     : SETTINGS[view]
   );
@@ -134,7 +152,8 @@
     withTour = review || !session.user?.tourSeenAt;
     const saved = !again && !display.configured ? session.user?.savedDisplay ?? null : null;
     fromSaved = !!saved;
-    tourOnly = !again && display.configured && withTour;
+    tourOnly = !review && display.configured && withTour;
+    want = { import: true, looks: true, tour: true };
     if (saved) useDisplay(saved);
     else markConfigured();
     initial = Object.fromEntries(describeDisplay(display).map((r) => [r.key, r.value]));
@@ -151,17 +170,37 @@
         api.event('display_setup_shown', { withImport, fromSaved, tourOnly });
         // Only the tour left: no dialog, straight to it.
         if (tourOnly && !withImport) return finish('done');
-        view = withImport ? 'import' : 'list';
+        asked = parts().length > 1;
+        view = asked ? 'welcome' : withImport ? 'import' : 'list';
         open = true;
         queueMicrotask(() => { dialog?.showModal(); heading?.focus(); });
       });
   }
 
-  /** On from import: the list, or out (to the tour, if it's owed) when the list is skipped. */
-  function afterImport() {
-    if (!tourOnly) view = 'list';
+  /** The parts this visit has, before any are unticked. */
+  function parts(): Part[] {
+    return QUESTIONS.map((q) => q.key).filter((k) => k === 'import' ? withImport : k === 'looks' ? !tourOnly : withTour);
+  }
+  /** The parts that run: all of them, or the ticked ones when the welcome asked. */
+  const running = () => parts().filter((k) => !asked || want[k]);
+
+  /** On to the next part that runs after `from` (the welcome when null), or out. The tour is last, and runs as setup closes. */
+  function onFrom(from: Part | null) {
+    const rest = running();
+    const next = rest[from ? rest.indexOf(from) + 1 : 0];
+    if (next === 'import') view = 'import';
+    else if (next === 'looks') view = 'list';
     else finish('done');
   }
+  /** Back from a part: the one before it, or the welcome. */
+  function backFrom(from: Part) {
+    const rest = running();
+    const prev = rest[rest.indexOf(from) - 1];
+    cameFrom = null;
+    view = prev === 'import' ? 'import' : asked ? 'welcome' : view;
+  }
+  /** Moving on from this part ends setup (the tour, if it runs, opens as setup closes). */
+  const endsSetup = (p: Part) => { const r = running(); return r[r.length - 1] === p; };
 
   function openSetting(key: Setting) { cameFrom = null; view = key; }
   function closeSetting() { cameFrom = view as Setting; view = 'list'; }
@@ -173,8 +212,14 @@
    * once the tour closes.
    */
   function finish(how: 'done' | 'dismissed') {
-    const toTour = how === 'done' && withTour;
-    api.event('display_setup_closed', { how, step: view, withImport, importing, toTour });
+    const toTour = how === 'done' && withTour && (!asked || want.tour);
+    api.event('display_setup_closed', { how, step: view, withImport, importing, toTour, ...(asked ? { want } : {}) });
+    // Answering no to the tour is the same as seeing it: it doesn't come back.
+    const me = session.user;
+    if (how === 'done' && asked && withTour && !want.tour && me && !me.tourSeenAt) {
+      me.tourSeenAt = new Date().toISOString();
+      authApi.tourSeen();
+    }
     // A new account's first setup becomes its saved settings, however it ends.
     // So does an older account's first device since saved settings existed.
     const u = session.user;
@@ -211,13 +256,22 @@
   <dialog bind:this={dialog} onclose={() => { if (open) finish('dismissed'); }} onclick={(e) => { if (e.target === dialog) finish('dismissed'); }} aria-labelledby="setup-title">
     <div class="box">
       <header>
-        {#if welcome.copied && (view === 'import' || (view === 'list' && !withImport))}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
+        {#if welcome.copied && (view === 'welcome' || (!asked && (view === 'import' || (view === 'list' && !withImport))))}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
         <h2 id="setup-title" tabindex="-1" bind:this={heading}>{header.title}</h2>
         {#if header.lead}<p class="lead">{header.lead}</p>{/if}
       </header>
 
       <div class="body">
-        {#if view === 'import'}
+        {#if view === 'welcome'}
+          <div class="rows">
+            {#each QUESTIONS.filter((q) => parts().includes(q.key)) as q (q.key)}
+              <label class="ask">
+                <span class="text"><span class="q">{q.question}</span><span class="line">{q.line}</span></span>
+                <Checkbox bind:checked={want[q.key]} />
+              </label>
+            {/each}
+          </div>
+        {:else if view === 'import'}
           {#if importing && imp.preview}
             {@const feeds = new Set(imp.groups.flatMap((g) => g.feeds.map((f) => f.url))).size}
             <div class="found" role="status">
@@ -255,11 +309,14 @@
 
       <footer>
         <span class="spacer"></span>
-        {#if view === 'import'}
-          <Button variant={importing ? 'primary' : 'ghost'} onclick={afterImport}>{importing ? 'Next' : 'Skip this step'}</Button>
+        {#if view === 'welcome'}
+          <Button variant="primary" onclick={() => onFrom(null)}>{running().length ? 'Next' : 'Start reading'}</Button>
+        {:else if view === 'import'}
+          {#if asked}<Button onclick={() => backFrom('import')}>Back</Button>{/if}
+          <Button variant={importing ? 'primary' : 'ghost'} onclick={() => onFrom('import')}>{importing ? 'Next' : 'Skip this step'}</Button>
         {:else if view === 'list'}
-          {#if withImport}<Button onclick={() => { cameFrom = null; view = 'import'; }}>Back</Button>{/if}
-          <Button variant="primary" onclick={() => finish('done')}>{withTour ? 'Next' : importing ? 'Review your feeds' : 'Start reading'}</Button>
+          {#if asked || withImport}<Button onclick={() => backFrom('looks')}>Back</Button>{/if}
+          <Button variant="primary" onclick={() => onFrom('looks')}>{!endsSetup('looks') ? 'Next' : importing ? 'Review your feeds' : 'Start reading'}</Button>
         {:else}
           <Button variant="primary" onclick={closeSetting}>Back</Button>
         {/if}
@@ -283,6 +340,12 @@
   .copied { margin-bottom: var(--space-4); }
   h2:focus { outline: none; }
   .rows { display: flex; flex-direction: column; }
+  /* A welcome question: the question in bold with its line under it in gray, and the box at the row's right end; the whole row is its label. */
+  .ask { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .ask:last-child { border-bottom: 0; }
+  .ask .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .ask .q { font-weight: 600; font-size: calc(var(--text-base) * var(--size-app)); color: var(--text); }
+  .ask .line { font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   h2 { margin: 0; font-family: var(--font-headings); font-size: calc(var(--text-2xl) * var(--size-headings)); line-height: 1.2; }
   .lead { margin: var(--space-1) 0 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); max-width: 56ch; }
   .body { padding: var(--space-4) var(--space-5) var(--space-1); overflow-y: auto; min-height: 0; }
