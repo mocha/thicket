@@ -52,6 +52,8 @@
   type Box = { top: number; left: number; width: number; height: number };
   type Place = { hole: Box | null; top: number; left: number; side: 'left' | 'top' | 'bottom' | null; at: number };
   let place = $state<Place | null>(null);
+  /** Placed once already: from then on the card glides to each new spot, but the first time it appears where it belongs. */
+  let settled = $state(false);
 
   // In development, ?tour shows it again on an account that has seen it.
   $effect(() => { if (import.meta.env.DEV && page.url.searchParams.has('tour')) tour.open = true; });
@@ -82,6 +84,7 @@
    */
   function measure() {
     if (!card) return;
+    if (place && !settled) settled = true;
     const el = target(s.key);
     el?.scrollIntoView({ block: 'nearest' });
     const W = innerWidth, H = innerHeight;
@@ -123,6 +126,7 @@
     }
     tour.open = false;
     place = null;
+    settled = false;
     dialog?.close();
     const after = tour.after;
     tour.after = null;
@@ -139,7 +143,7 @@
     {:else}
       <div class="dim" aria-hidden="true"></div>
     {/if}
-    <div class="card {place?.side ?? ''}" class:placed={!!place} bind:this={card} style:top="{place?.top ?? 0}px" style:left="{place?.left ?? 0}px" style:--at="{place?.at ?? 0}px">
+    <div class="card {place?.side ?? ''}" class:placed={!!place} class:settled bind:this={card} style:top="{place?.top ?? 0}px" style:left="{place?.left ?? 0}px" style:--at="{place?.at ?? 0}px">
       <div class="stage" aria-hidden="true">
         {#key s.key}
           <div class="scene" class:fit={FITS.includes(s.key)}>
@@ -190,8 +194,8 @@
     position: fixed; width: min(400px, calc(100vw - 32px)); display: flex; flex-direction: column;
     background: var(--surface); color: var(--text); border-radius: var(--radius-lg); box-shadow: var(--shadow-sheet);
     visibility: hidden;
-    transition: top 350ms cubic-bezier(0.2, 0.8, 0.2, 1), left 350ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
+  .card.settled { transition: top 350ms cubic-bezier(0.2, 0.8, 0.2, 1), left 350ms cubic-bezier(0.2, 0.8, 0.2, 1); }
   /* Hidden until it has been measured and placed, so it never flashes in the corner. */
   .card.placed { visibility: visible; }
   /* The pointer: a small square turned on its corner, half under the card's edge, at the item. */
@@ -226,6 +230,6 @@
   .dot.on::before { width: 20px; background: var(--accent); }
   .dot:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; border-radius: var(--radius-sm); }
   @media (prefers-reduced-motion: reduce) {
-    .hole, .card { transition: none; }
+    .hole, .card.settled { transition: none; }
   }
 </style>
