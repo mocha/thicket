@@ -34,6 +34,7 @@ import { myBookmarkIdSql, noteColumns, postAddressSql } from "../lib/notes.js";
 import { feedSlugSql } from "../lib/slug.js";
 import { sinceIntervalFrom, sinceSql } from "../lib/since.js";
 import { oneOf } from "../lib/one-of.js";
+import { languageSql, LanguageValidationError, parseLanguage, type LanguageFilter } from "../lib/language.js";
 
 export const search = new Hono();
 
@@ -58,6 +59,10 @@ type Exec = (query: SQL) => Promise<{ rows: any[] }>;
  * above it, which is the right direction to be wrong in.
  */
 const HIT_CAP = 4000;
+const ALL_LANGUAGES: LanguageFilter = { kind: "all" };
+/** Posts use their feed's declared language; the default adds no predicate. */
+const postLanguage = (language: LanguageFilter) => language.kind === "all" ? sql`` : sql`
+  and exists(select 1 from feeds lf where lf.id = i.feed_id and ${languageSql(sql`lf.language`, language)})`;
 
 /**
  * Snippets come back with the matched words fenced by two control characters
@@ -123,7 +128,7 @@ const ownerInNetwork = (ids: number[]) => userInNetwork("col.user_id", ids);
  * 3 = body only. ts_filter reads the weights already stored in the tsvector, so
  * this costs no re-tokenizing and only the sampled rows are touched.
  */
-const hits = (q: string) => sql`
+const hits = (q: string, language: LanguageFilter = ALL_LANGUAGES) => sql`
   hits as (
     select i.feed_id, i.id, i.published_at,
            case
@@ -132,7 +137,7 @@ const hits = (q: string) => sql`
              else 3
            end as w
     from items i
-    where i.search @@ websearch_to_tsquery('english', ${q})
+    where i.search @@ websearch_to_tsquery('english', ${q}) ${postLanguage(language)}
     order by i.published_at desc
     limit ${HIT_CAP}
   )`;
@@ -172,8 +177,8 @@ const EVIDENCE = sql`(
  * every search, which was most of a search's cost after JIT and grew with
  * every post stored.
  */
-const feedEvidence = (q: string) => sql`
-  ${hits(q)}
+const feedEvidence = (q: string, language: LanguageFilter = ALL_LANGUAGES) => sql`
+  ${hits(q, language)}
   , agg as (
     select feed_id, count(*)::int as matches, max(published_at) as last_match,
            count(*) filter (where w = 1)::numeric as t_hits,
@@ -213,12 +218,12 @@ export const feedSortFrom = oneOf(FEED_SORTS, DEFAULT_FEED_SORT);
  * row by walking the feed's last 30 days, which for a news feed meant reading
  * 400-odd posts' search vectors per row: 450 ms of a 950 ms search for "news".
  */
-const recentMentions = (q: string) => sql`
+const recentMentions = (q: string, language: LanguageFilter = ALL_LANGUAGES) => sql`
   recent as (
     select i.feed_id, count(*)::int as n,
            count(*) filter (where i.published_at > now() - interval '30 days')::int as n30
     from items i
-    where i.search @@ websearch_to_tsquery('english', ${q}) and i.published_at > now() - interval '90 days'
+    where i.search @@ websearch_to_tsquery('english', ${q}) and i.published_at > now() - interval '90 days' ${postLanguage(language)}
     group by i.feed_id
   )`;
 
@@ -291,7 +296,7 @@ function paged(rows: any[], limit: number, offset: number) {
  * order at all to the people using it (issue 182), so the list is sorted by a
  * plain fact the reader picks (see FeedSort) and the score only breaks ties.
  */
-async function searchFeeds(x: Exec, q: string, userId: number, limit: number, offset: number, net: number[] | null = null, sort: FeedSort = DEFAULT_FEED_SORT, since: string | null = null) {
+async function searchFeeds(x: Exec, q: string, userId: number, limit: number, offset: number, net: number[] | null = null, sort: FeedSort = DEFAULT_FEED_SORT, since: string | null = null, language: LanguageFilter = ALL_LANGUAGES) {
   const like = likeFor(q);
   const named = sql`coalesce((f.title ilike ${like} or f.description ilike ${like} or f.url ilike ${like} or f.site_url ilike ${like} or ${q} <% coalesce(f.title, '')), false)`;
   /** 0 to 1. The title is worth most; a description or URL hit is weaker evidence. */
@@ -301,7 +306,7 @@ async function searchFeeds(x: Exec, q: string, userId: number, limit: number, of
     (case when f.description ilike ${like} then 0.35 else 0 end)::real,
     (case when f.url ilike ${like} or f.site_url ilike ${like} then 0.3 else 0 end)::real)`;
   const base = sql`
-    with ${feedEvidence(q)}, ${recentMentions(q)}
+    with ${feedEvidence(q, language)}, ${recentMentions(q, language)}
     , cand as (
       select f.id, coalesce(a.matches, 0) as matches, coalesce(a.weight, 0) as weight, a.last_match,
              f.item_count::numeric as posts, coalesce(r.n30, 0) as n30,
@@ -310,6 +315,7 @@ async function searchFeeds(x: Exec, q: string, userId: number, limit: number, of
              ${SORT_KEY[sort]} as sort_key
       from feeds f left join feedw a on a.feed_id = f.id left join recent r on r.feed_id = f.id
       where (a.feed_id is not null or ${named}) and ${sinceSql("f.created_at", since)}${net ? sql` and ${feedInNetwork("f.id", net)}` : sql``}
+        ${language.kind === "all" ? sql`` : sql`and ${languageSql(sql`f.language`, language)}`}
     )
     , scored as (
       select *,
@@ -503,12 +509,13 @@ const saves = (sort: "bookmarked" | "noted") => sql`
  * matches someone saved, looked up by address against the sample alone, so
  * their total can be capped too: older saved posts past the sample are missed.
  */
-async function searchPosts(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null, sort: PostSort, since: string | null = null) {
+async function searchPosts(x: Exec, q: string, viewerId: number | null, limit: number, offset: number, net: number[] | null, sort: PostSort, since: string | null = null, language: LanguageFilter = ALL_LANGUAGES) {
   const me = viewerId ?? -1;
   const matched = sql`
     matched as materialized (
       select i.id, i.published_at, i.feed_id, i.url from items i
       where i.search @@ websearch_to_tsquery('english', ${q}) and ${notBlocked(me)} and ${sinceSql("i.published_at", since)}
+        ${postLanguage(language)}
         ${net ? sql`and ${feedInNetwork("i.feed_id", net)}` : sql``}
       order by i.published_at desc, i.id desc
       limit ${HIT_CAP}
@@ -558,16 +565,26 @@ async function searchPosts(x: Exec, q: string, viewerId: number | null, limit: n
  * posts to find theirs, unbounded for someone whose network reads little. So it
  * merges each network feed's own newest page instead, the way the river does
  * (routes/river.ts), which costs one index descent per feed. A "since" window
- * only stops each walk sooner.
+ * only stops each walk sooner. A language filter takes the same per-feed path,
+ * over feeds with that declaration, rather than rejecting unrelated languages
+ * while walking the whole instance's chronology.
  */
-async function latestPosts(x: Exec, viewerId: number | null, limit: number, offset: number, net: number[] | null, since: string | null = null) {
+async function latestPosts(x: Exec, viewerId: number | null, limit: number, offset: number, net: number[] | null, since: string | null = null, language: LanguageFilter = ALL_LANGUAGES) {
   const me = viewerId ?? -1;
   const want = limit + 1;
-  const pageOf = net
-    ? net.length
+  // A rare language must not walk past every newer post in other languages.
+  // Resolve matching feeds first, then merge their bounded newest pages just
+  // as the existing network path does. All languages keeps its original walk.
+  const perFeed = net !== null || language.kind !== "all";
+  const feedSet = net
+    ? sql`select distinct cf.feed_id from collection_feeds cf join collections col on col.id = cf.collection_id
+          where col.user_id in (${idList(net)})
+            ${language.kind === "all" ? sql`` : sql`and exists(select 1 from feeds lf where lf.id = cf.feed_id and ${languageSql(sql`lf.language`, language)})`}`
+    : sql`select f.id as feed_id from feeds f where ${languageSql(sql`f.language`, language)}`;
+  const pageOf = perFeed
+    ? net === null || net.length
       ? sql`
-        with nf as (select distinct cf.feed_id from collection_feeds cf join collections col on col.id = cf.collection_id
-                    where col.user_id in (${idList(net)}))
+        with nf as (${feedSet})
         select p.id, p.published_at from nf cross join lateral (
           select i.id, i.published_at from items i
           where i.feed_id = nf.feed_id and i.published_at <= now() and ${sinceSql("i.published_at", since)} and ${notBlocked(me)}
@@ -594,7 +611,7 @@ async function latestPosts(x: Exec, viewerId: number | null, limit: number, offs
  * per-feed walk like latestPosts needs), and its total is cheap to count.
  * An address no saved post still stands for (the post was pruned) drops out.
  */
-async function savedPosts(x: Exec, viewerId: number | null, limit: number, offset: number, net: number[] | null, since: string | null, sort: "bookmarked" | "noted") {
+async function savedPosts(x: Exec, viewerId: number | null, limit: number, offset: number, net: number[] | null, since: string | null, sort: "bookmarked" | "noted", language: LanguageFilter = ALL_LANGUAGES) {
   const me = viewerId ?? -1;
   const rows = await x(sql`
     with ${saves(sort)}
@@ -604,6 +621,7 @@ async function savedPosts(x: Exec, viewerId: number | null, limit: number, offse
       -- story whenever that copy was the one outside the network or window.
       select distinct on (p.url) i.id, i.published_at, p.n from saves p join items i on i.id = any(p.item_ids)
       where i.published_at <= now() and ${notBlocked(me)} and ${sinceSql("i.published_at", since)}
+        ${postLanguage(language)}
         ${net ? sql`and ${feedInNetwork("i.feed_id", net)}` : sql``}
       order by p.url, i.published_at desc, i.id desc
     )
@@ -690,7 +708,7 @@ async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: 
 }
 
 /**
- * GET /api/search?q=&scope=&sort=&network=&since=&offset=&limit=
+ * GET /api/search?q=&scope=&sort=&network=&since=&language=&offset=&limit=
  *
  * Answers with the one list asked for, under its scope's name, e.g.
  * `{ q, scope: "posts", sort, posts: { rows, total, nextOffset } }`. `sort` is
@@ -698,6 +716,9 @@ async function searchPeople(x: Exec, q: string, viewerId: number | null, limit: 
  *
  * Every scope takes the same two filters: network=1 ("People I follow", see
  * followSet) and since=24h|week|month|year (see sinceIntervalFrom).
+ * Feeds and Posts also take language: a declared feed language code/tag,
+ * unknown for no declaration, or missing/empty for All. It is ignored by
+ * People and Collections and is always applied before candidate caps.
  *
  * Posts with no words is the instance's posts: newest first (`total` null), or
  * most bookmarked or noted first (with a total). "relevance" with no words is
@@ -712,6 +733,15 @@ search.get("/", async (c) => {
   const viewerId = viewer?.id ?? null;
   const q = (c.req.query("q") ?? "").trim();
   const scope = scopeFrom(c.req.query("scope"));
+  let language: LanguageFilter = ALL_LANGUAGES;
+  try {
+    // The URL can keep a choice while changing tabs; it has no meaning for
+    // People or Collections, including when the retained value is invalid.
+    if (scope === "feeds" || scope === "posts") language = parseLanguage(c.req.query("language"));
+  } catch (err) {
+    if (err instanceof LanguageValidationError) return c.json({ error: err.message, field: "language" }, 400);
+    throw err;
+  }
   const limit = Math.min(50, Math.max(1, Number(c.req.query("limit") ?? 25)));
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
   const sortParam = c.req.query("sort");
@@ -732,12 +762,12 @@ search.get("/", async (c) => {
     // "People I follow": null = filter off; a (possibly empty) id list = filter on.
     const net = network ? await followSet(x, viewerId) : null;
     if (asked.scope === "posts") {
-      if (q) return searchPosts(x, q, viewerId, limit, offset, net, asked.sort, since);
+      if (q) return searchPosts(x, q, viewerId, limit, offset, net, asked.sort, since, language);
       return asked.sort === "bookmarked" || asked.sort === "noted"
-        ? savedPosts(x, viewerId, limit, offset, net, since, asked.sort)
-        : latestPosts(x, viewerId, limit, offset, net, since);
+        ? savedPosts(x, viewerId, limit, offset, net, since, asked.sort, language)
+        : latestPosts(x, viewerId, limit, offset, net, since, language);
     }
-    if (asked.scope === "feeds") return searchFeeds(x, q, viewerId ?? -1, limit, offset, net, asked.sort, since);
+    if (asked.scope === "feeds") return searchFeeds(x, q, viewerId ?? -1, limit, offset, net, asked.sort, since, language);
     if (asked.scope === "collections") return searchCollections(x, q, viewerId, limit, offset, net, asked.sort, since);
     return searchPeople(x, q, viewerId, limit, offset, net, asked.sort, since);
   });

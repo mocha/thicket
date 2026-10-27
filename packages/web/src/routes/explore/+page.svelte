@@ -7,7 +7,7 @@
   import { goto } from '$app/navigation';
   import {
     api, exploreApi, searchApi, collectionHref, profilesApi,
-    type Feed, type ExploreCollection, type ExploreUser,
+    type Feed, type ExploreCollection, type ExploreUser, type LanguageOption,
     type SearchResults, type SearchScope, type SearchFeed, type SearchCollection, type SearchPost, type SearchPerson,
     DEFAULT_SCOPE, scopeFrom
   } from '$lib/api';
@@ -88,6 +88,36 @@
    */
   const narrowToNetwork = $derived(page.url.searchParams.get('by') === 'following');
   const since = $derived(page.url.searchParams.get('since'));
+  const hasLanguageFilter = $derived(scope === 'feeds' || scope === 'posts');
+  // Keep the URL choice across tabs, but it has no meaning for People or Collections.
+  const language = $derived(hasLanguageFilter ? (page.url.searchParams.get('language') ?? '').trim() : '');
+  let languages = $state<LanguageOption[]>([]);
+  let languagesError = $state(false);
+  async function loadLanguages() {
+    languagesError = false;
+    try { languages = (await api.feedLanguages()).languages; }
+    catch { languagesError = true; }
+  }
+  function languageName(code: string): string {
+    if (!code) return 'All languages';
+    if (code === 'unknown') return 'Unknown';
+    const stored = languages.find((l) => l.code === code);
+    if (stored) return stored.label;
+    try {
+      // Language tags select the base language stored on the feed, not its region.
+      const base = new Intl.Locale(code.replace(/_/g, '-')).language;
+      return new Intl.DisplayNames(['en'], { type: 'language' }).of(base) ?? code;
+    } catch { return code; }
+  }
+  const languageOptions = $derived([
+    { value: '', label: 'All languages' },
+    { value: 'unknown', label: 'Unknown' },
+    ...languages.map((l) => ({ value: l.code, label: l.label })),
+    // A saved link remains meaningful even if no feed currently declares its code,
+    // or if loading choices failed. Never silently select All instead.
+    ...(language && language !== 'unknown' && !languages.some((l) => l.code === language)
+      ? [{ value: language, label: `${languageName(language)} (${language})` }] : [])
+  ]);
   /** What the time window is a window on, per tab: when a post was published, a feed or collection added, a person joined. */
   const WHEN: Record<SearchScope, string> = { posts: 'Posted', feeds: 'Added', collections: 'Added', people: 'Joined' };
   const ADDED: Record<string, string> = { '': 'Any time', '24h': 'Past 24 hours', week: 'Past week', month: 'Past month', year: 'Past year' };
@@ -132,6 +162,7 @@
       { id: 'newest', label: 'Newest to join' }
     ];
   });
+  $effect(() => { draft = q; });
   /**
    * The order chosen, from ?sort=; anything this tab doesn't offer is its
    * default. 'followers' is the old name for Feeds' 'popular'; saved links still land on it.
@@ -259,7 +290,7 @@
   function loadSearch(reset = false) {
     const s = scope;
     return load(reset, moreNext !== null,
-      (signal) => searchApi.run({ q, scope: s, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork, since, sort: sortId }, signal),
+      (signal) => searchApi.run({ q, scope: s, limit: 25, offset: reset ? 0 : moreNext ?? 0, network: feedsNetwork, since, language, sort: sortId }, signal),
       (r) => {
         const got = (r as Record<string, any>)[s] as { rows: any[]; nextOffset: number | null };
         res = r;
@@ -279,7 +310,7 @@
   let feedsNext = $state<number | null>(null);
   function loadFeeds(reset = false) {
     return load(reset, feedsNext !== null,
-      () => api.feeds({ network: feedsNetwork, since, sort: sortId, limit: 50, offset: reset ? 0 : feedsNext ?? 0 }),
+      () => api.feeds({ network: feedsNetwork, since, language, sort: sortId, limit: 50, offset: reset ? 0 : feedsNext ?? 0 }),
       (r) => {
         feeds = reset ? r.feeds : [...feeds, ...r.feeds];
         feedsTotal = r.total; feedsAll = r.indexTotal; feedsNext = r.nextOffset;
@@ -402,6 +433,7 @@
 
   onMount(() => {
     api.event('feeds_view'); draft = q;
+    void loadLanguages();
     if (back && back.followsAnyone !== null) return;
     if (session.user) profilesApi.get(session.user.handle).then((p) => { followsAnyone = !p.private && p.people.follows > 0; }).catch(() => (followsAnyone = false));
     else followsAnyone = false;
@@ -416,7 +448,7 @@
 
   $effect(() => {
     if (followsAnyone === null) return; // wait until we know the default
-    const key = `${q}|${scope}|${feedsNetwork}|${since}|${sortId}`;
+    const key = JSON.stringify([q, scope, feedsNetwork, since, sortId, language]);
     if (loadedKey === key) return;
     loadedKey = key;
     if (viaSearch) { res = null; more = []; moreNext = null; void loadSearch(true); }
@@ -446,6 +478,7 @@
   const filterSummary = $derived([
     narrowToNetwork ? 'Show people I follow' : 'Show everyone',
     `${WHEN[scope]} ${(ADDED[since ?? ''] ?? 'Any time').toLowerCase()}`,
+    ...(hasLanguageFilter ? [language ? `Language: ${languageName(language)}` : 'All languages'] : []),
     order.label
   ]);
   let filtersDialog = $state<HTMLDialogElement | null>(null);
@@ -518,6 +551,18 @@
 {/snippet}
 
 {#snippet filterFields()}
+    {#if hasLanguageFilter}
+      <Select
+        class="filter"
+        label="Language"
+        size="sm"
+        value={language}
+        options={languageOptions}
+        onchange={(e) => setParams({ language: e.currentTarget.value || null })}
+      />
+      <p class="language-help">The language declared by the feed, not inferred from its posts. Unknown means the feed declares none.</p>
+      {#if languagesError}<p class="language-help">Couldn’t load language choices. <button class="link" onclick={() => void loadLanguages()}>Try again</button>.</p>{/if}
+    {/if}
     <Select
       class="filter"
       label="Show"
@@ -615,7 +660,9 @@
 
 {#snippet emptyMessage()}
   <div class="empty">
-    {#if since}
+    {#if language}
+      <p>No {scopeLabel.toLowerCase()}{searching ? ` matching “${q}”` : ''} match these filters with language {languageName(language)}. <button class="link" onclick={() => setParams({ language: null })}>Show all languages</button>.</p>
+    {:else if since}
       <!-- A time window can empty any list, searched or not, so it says so before anything else. -->
       <p>Nothing {scope === 'posts' ? 'was posted' : scope === 'people' ? 'joined' : 'was added'}{searching ? ` that matches “${q}”` : ''} in that time. <button class="link" onclick={() => setParams({ since: null })}>Show any time</button>.</p>
     {:else if searching}
@@ -641,7 +688,10 @@
 <!-- What the tabs above switch between. -->
 <div id="explore-results" role="tabpanel" aria-label={scopeLabel}>
 {#if error}
-  <p class="status error" role="alert">Couldn’t load: {error}</p>
+  <Card kind="list" as="div" class="browse">
+    {@render filterBar()}
+    <p class="status error" role="alert">Couldn’t load: {error}</p>
+  </Card>
 {:else if nothing}
   <!-- The message takes the rows' place inside the list card, so a filter that empties the list leaves the filters where they were. -->
   <Card kind="list" as="div" class="browse">{@render filterBar()}{@render emptyMessage()}</Card>
@@ -708,4 +758,5 @@
   .empty { text-align: center; color: var(--text-2); padding: calc(var(--space-6) + var(--space-1)) var(--space-4); font-size: calc(var(--text-base) * var(--size-app)); }
   .empty p { margin: 0 auto; max-width: 480px; }
   .link { color: var(--accent); font-weight: 600; font-size: inherit; }
+  .language-help { margin: 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
 </style>

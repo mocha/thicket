@@ -79,6 +79,8 @@ export type FeedSettings = { feedId: number; displayName: string | null; hideSho
 /** A feed as the Add a feed box suggests it: just enough for a row to name it. */
 export type FeedSuggestion = Pick<Feed, 'id' | 'url' | 'siteUrl' | 'title'>;
 export type FeedIndexPage = { feeds: Feed[]; total: number; indexTotal: number; nextOffset: number | null };
+/** Declared feed languages present in the index; All and Unknown are explicit UI choices. */
+export type LanguageOption = { code: string; label: string };
 
 export type Collection = { id: number; parentId: number | null; name: string; slug: string; description: string | null; feedCount: number; visibility: ShareLevel };
 
@@ -157,10 +159,11 @@ export const api = {
   riverStats: () => j<{ feeds: number; collections: number; posts24h: number; feeds24h: number }>('/api/river/stats'),
   /** What's new: how many posts are newer than each point this device remembers. The server keeps nothing. */
   marksCounts: (anchors: Record<string, string>) => j<{ marks: Mark[]; seen: Record<number, string> }>('/api/marks/counts', { method: 'POST', body: JSON.stringify({ anchors }) }),
-  feeds: (opts: { q?: string; following?: '1' | '0' | null; network?: '1' | '2' | null; since?: string | null; sort?: string; limit?: number; offset?: number } = {}) => {
+  feeds: (opts: { q?: string; following?: '1' | '0' | null; network?: '1' | '2' | null; since?: string | null; language?: string | null; sort?: string; limit?: number; offset?: number } = {}) => {
     const q = new URLSearchParams();
     if (opts.q) q.set('q', opts.q);
     if (opts.following) q.set('following', opts.following);
+    if (opts.language) q.set('language', opts.language);
     if (opts.network) q.set('network', opts.network);
     if (opts.since) q.set('since', opts.since);
     if (opts.sort) q.set('sort', opts.sort);
@@ -168,6 +171,7 @@ export const api = {
     if (opts.offset) q.set('offset', String(opts.offset));
     return j<FeedIndexPage>(`/api/feeds?${q}`);
   },
+  feedLanguages: () => j<{ languages: LanguageOption[] }>('/api/feeds/languages'),
   /** Feeds already here whose name or address contains what was typed, for the Add a feed box. `signal` drops a lookup the next keystroke made stale. */
   suggestFeeds: (q: string, signal?: AbortSignal) => j<{ feeds: FeedSuggestion[] }>(`/api/feeds/suggest?q=${encodeURIComponent(q)}`, { signal }),
   feed: (id: number) => j<Feed>(`/api/feeds/${id}`),
@@ -772,12 +776,13 @@ export const searchApi = {
    * `signal` cancels the request, and the API then cancels its query in the
    * database, so a search nobody is waiting for stops costing anything.
    */
-  run: <S extends SearchScope>(opts: { q: string; scope: S; limit?: number; offset?: number; network?: string | null; since?: string | null; sort?: string | null }, signal?: AbortSignal) => {
+  run: <S extends SearchScope>(opts: { q: string; scope: S; limit?: number; offset?: number; network?: string | null; since?: string | null; language?: string | null; sort?: string | null }, signal?: AbortSignal) => {
     const p = new URLSearchParams({ q: opts.q, scope: opts.scope });
     if (opts.limit) p.set('limit', String(opts.limit));
     if (opts.offset) p.set('offset', String(opts.offset));
     if (opts.network) p.set('network', opts.network);
     if (opts.since) p.set('since', opts.since);
+    if (opts.language) p.set('language', opts.language);
     if (opts.sort) p.set('sort', opts.sort);
     return j<SearchResults<S>>(`/api/search?${p}`, { signal });
   }

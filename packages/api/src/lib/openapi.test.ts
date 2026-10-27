@@ -26,6 +26,16 @@ test("there are routes to check", () => {
   assert.ok(routes.length > 80, `found ${routes.length}`);
 });
 
+test("language options and declared-language semantics are documented", () => {
+  for (const path of ["/api/feeds", "/api/search"]) {
+    const endpoint = ENDPOINTS.find((e) => e.method === "GET" && e.path === path)!;
+    assert.match(endpoint.query!.language, /declared/i);
+    assert.match(endpoint.query!.language, /unknown/);
+    assert.match(endpoint.query!.language, /400/);
+  }
+  assert.ok(ENDPOINTS.some((e) => e.method === "GET" && e.path === "/api/feeds/languages"));
+});
+
 test("every route a token can reach is in the description", () => {
   const missing = routes.filter((r) => {
     const [method, path] = r.split(" ");

@@ -19,6 +19,7 @@ import { feedSlugSql } from "../lib/slug.js";
 import { PUBLIC_URL } from "../lib/config.js";
 import { sinceIntervalFrom, sinceSql } from "../lib/since.js";
 import { likeFor } from "../lib/like.js";
+import { languageLabel, languageSql, LanguageValidationError, parseLanguage, storedLanguageSql } from "../lib/language.js";
 
 export const feeds = new Hono();
 
@@ -72,6 +73,12 @@ feeds.get("/", async (c) => {
   const offset = Math.max(0, Number(c.req.query("offset") ?? 0));
 
   const where = [sql`true`];
+  try {
+    where.push(languageSql(sql`f.language`, parseLanguage(c.req.query("language"))));
+  } catch (err) {
+    if (err instanceof LanguageValidationError) return c.json({ error: err.message, field: "language" }, 400);
+    throw err;
+  }
   if (q) {
     const like = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
     where.push(sql`(f.title ilike ${like} or f.description ilike ${like} or f.url ilike ${like} or f.site_url ilike ${like}
@@ -128,6 +135,13 @@ feeds.get("/", async (c) => {
   const [{ indexTotal }] = (await db.execute<{ indexTotal: number }>(sql`select count(*)::int as "indexTotal" from feeds`)).rows;
   const page = rows.rows.slice(0, limit).map(shape);
   return c.json({ feeds: page, total, indexTotal, nextOffset: rows.rows.length > limit ? offset + limit : null });
+});
+/** Only the feed index is scanned, not posts. Options do not depend on the current filters. */
+feeds.get("/languages", async (c) => {
+  const rows = await db.execute<{ code: string }>(sql`select distinct ${storedLanguageSql(sql`language`)} as code from feeds where language is not null`);
+  const languages = rows.rows.map(({ code }) => ({ code, label: languageLabel(code) }))
+    .sort((a, b) => a.label.localeCompare(b.label, "en") || a.code.localeCompare(b.code));
+  return c.json({ languages });
 });
 
 /**
