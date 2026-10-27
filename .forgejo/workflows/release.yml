@@ -1,11 +1,9 @@
-# Publish a release to the public GitHub mirror (github.com/mocha/thicket).
-# Day-to-day work happens on Forge; GitHub receives main only as of each
-# release, plus the release tag.
+# Publish a release to the public GitHub mirror (github.com/mocha/thicket):
+# main as of the tag, plus the tag. Day-to-day work stays on Forge.
 #
-# To release:
-#   1. Set "version" in the root package.json on main (e.g. 0.2.0).
-#   2. git tag -a v0.2.0 -m "thicket 0.2.0" origin/main && git push origin v0.2.0
-# To publish an existing tag again, run this workflow by hand with that tag.
+# Triggered by pushing a v* tag that matches package.json; see "Cutting a
+# release" in CONTRIBUTING.md. To publish an existing tag again, run this
+# workflow by hand with that tag.
 #
 # Prerequisites:
 #   - Repo secret GH_MIRROR_DEPLOY_KEY: the private half of a deploy key with

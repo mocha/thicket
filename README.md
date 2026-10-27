@@ -210,8 +210,8 @@ moving, and a paragraph about what you expected to happen is worth more than
 a patch.
 
 This GitHub repository is updated at each release, so `main` here is the
-latest release rather than the latest commit. Pull requests against it are
-still welcome; they are carried into development by hand.
+latest release rather than the latest commit. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for how changes and releases move.
 
 ## License
 
