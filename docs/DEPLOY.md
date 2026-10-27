@@ -192,6 +192,63 @@ and investigate the audit rather than replaying a possible data migration.
 Postgres error details, hints, context, and statement positions are retained
 in startup errors; deferred constraint errors are identified as commit failures.
 
+## Fetch-log retention rollout
+
+Fetch logs still default to 14 days (`RETAIN_FETCH_LOG_DAYS=0` disables
+cleanup). Cleanup starts one minute after boot and runs hourly; events and
+opt-in post retention remain daily, with their existing windows. Posts remain
+indefinite by default. Fetch cleanup commits chunks of at most 5,000 rows,
+oldest first, with a fixed database-clock cutoff for the whole pass. Each pass
+stops after 40 chunks or a soft 30-second budget checked between chunks.
+Each chunk has a 10-second statement timeout and a one-second lock timeout;
+a timeout fails that pass, leaving prior chunks committed for the next hour.
+Other pass queries use the worker pool's statement timeout. Session advisory
+locking on a reserved worker connection prevents overlapping fetch-log passes
+across replicas. Do not use a transaction-mode pooler.
+
+This raises the row-budget ceiling from 200,000/day to 4.8 million/day, not
+a throughput guarantee. Successful passes log removed rows, chunks, cutoff,
+elapsed milliseconds, `backlog` (whether any rows older than this pass's cutoff
+remain), and `budgetExhausted`. Backlog produces a warning even when another
+deleter made a chunk short. Failures log partial committed progress and an
+unknown backlog, then retry next hour; overlapping/disabled invocations skip.
+Repeated backlog or failures require investigation of database load, blocking,
+and autovacuum, not a shorter retention window. Deletion makes space reusable;
+it does not immediately shrink the table's allocated files.
+
+Migration `0032_fetch_log_retention` adds `fetch_log_at_idx` on `(at)`, keeping
+the existing per-feed history index. The boot runner wraps the entire pending
+migration batch in one transaction: **do not put `CREATE INDEX CONCURRENTLY`
+in the migration SQL.** Ordinary index creation blocks fetch-log writes until
+that batch commits. The migration bounds lock acquisition to five seconds,
+but index build time and the rest of the batch still matter. For a small table,
+schedule a maintenance window and rehearse the full batch on a disposable copy.
+A lock timeout rolls back the batch and prevents boot; resolve blocking and
+retry rather than editing a recorded migration.
+
+For a large live table, an authorized operator should instead prebuild the
+exact index on a direct connection **before deploying**, in autocommit mode
+outside any `BEGIN`:
+
+```sql
+CREATE INDEX CONCURRENTLY IF NOT EXISTS fetch_log_at_idx ON public.fetch_log USING btree (at);
+```
+
+Check `pg_index.indisvalid` and `pg_index.indisready` and compare
+`pg_get_indexdef` with that exact definition before proceeding. `IF NOT EXISTS`
+only checks the name: an invalid or different index must not be treated as a
+successful prebuild. A failed concurrent build can leave an invalid index;
+investigate and, with operator approval, drop that invalid index concurrently
+outside a transaction before retrying. Never drop a healthy index blindly.
+Once the exact valid index exists, boot's `CREATE INDEX IF NOT EXISTS` skips
+the build and records the additive migration normally. Prebuilding removes
+the build cost, **not the table lock**: even when skipping an existing index,
+the ordinary statement takes a `ShareLock` until the entire migration batch
+commits. It can still hit the five-second lock timeout behind an existing
+writer, and block later writes until commit. Rehearse and schedule the full
+pending migration batch even with a prebuilt index. This is a rollout procedure,
+not an automatic production action.
+
 ## Rate limiting at the proxy
 
 Don't. A page of the feed index fetches around fifty small icons at once and

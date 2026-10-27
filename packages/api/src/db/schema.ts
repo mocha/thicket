@@ -661,4 +661,8 @@ export const fetchLog = pgTable("fetch_log", {
   durationMs: integer("duration_ms"),
   itemsNew: integer("items_new"),
   error: text("error"),
-}, (t) => [index("fetch_log_feed_at_idx").on(t.feedId, t.at)]);
+}, (t) => [
+  index("fetch_log_feed_at_idx").on(t.feedId, t.at),
+  /** Age-leading access path for global retention, independent of feed. */
+  index("fetch_log_at_idx").on(t.at),
+]);

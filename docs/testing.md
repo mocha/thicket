@@ -14,6 +14,15 @@ out-of-order merges, repeat starts, legacy baseline records, read-only audits,
 transaction rollback, concurrent starts, and the full migration history on a
 fresh database. Without this variable, the database tests are skipped.
 
+The retention regressions also use their own disposable database. They check
+the age-leading index, cutoff boundaries and disabled cleanup, cross-session
+coordination, chunk/budget limits, failure recovery, and a synthetic three-day
+workload of 400,008 newly expired rows/day. The workload advances logical hours
+by inserting expired rows before each hourly pass; it does not wait three real
+days or write to the admin connection's database. Unit tests cover scheduling
+and failure paths without a database. Run the complete API suite with the same
+`MIGRATION_TEST_DATABASE_URL` to include these checks.
+
 ## Email
 
 thicket never prints messages to the log, because they carry live reset links.
