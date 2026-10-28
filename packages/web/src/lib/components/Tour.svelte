@@ -28,12 +28,12 @@
 
   /** `key` is the menu item's `data-tour`. */
   const STEPS = [
+    { key: 'add', label: 'Add new feed', title: 'Follow any site you like', lead: 'Paste its address, and thicket finds its posts. Blogs, news sites, and YouTube all work.' },
     { key: 'new-posts', label: 'New posts', title: 'Every post, newest first', lead: 'From every site you follow. No algorithm picks what you see, so nothing gets buried.' },
-    { key: 'collections', label: 'Collections', title: 'Read one topic at a time', lead: 'Your collections live here. Copy one from Explore, or make your own, like Cooking or Tech.' },
+    { key: 'collections', label: 'Collections', title: 'Read one topic at a time', lead: 'Your collections live here. Copy one from another user, or make your own, like Cooking or Tech.' },
     { key: 'bookmarks', label: 'Bookmarks', title: 'Save posts for later', lead: 'Bookmark a post to keep it, and add a note with your thoughts. You choose who sees your notes.' },
-    { key: 'explore', label: 'Explore', title: 'See what people here read', lead: 'Browse the sites and collections others follow, and copy any you like.' },
-    { key: 'add', label: 'Add new feed', title: 'Follow any site you like', lead: 'Paste its address, and thicket finds its posts. Blogs, news sites, subreddits, and YouTube all work.' },
-    { key: 'you', label: 'Profile', title: 'Your page on thicket', lead: 'Your profile is in this menu. It’s what others see, and you choose who sees each part.' }
+    { key: 'explore', label: 'Explore', title: 'Discover new content', lead: 'Find new sites to follow, and browse collections made by other users.' },
+    { key: 'you', label: 'Profile', title: 'Your page on thicket', lead: 'It’s where you share your collections and bookmarks, so other people can discover the content you love.' }
   ];
   /** The pictures short enough to sit in the middle of the stage; the others fill it and fade at the bottom. */
   const FITS = ['add', 'explore', 'bookmarks', 'collections'];
@@ -241,8 +241,11 @@
   @keyframes words { from { opacity: 0; transform: translateY(6px); } }
   h2 { margin: 0; font-family: var(--font-headings); font-size: calc(var(--text-xl) * var(--size-headings)); line-height: 1.2; }
   .lead { margin: var(--space-2) 0 0; color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); line-height: 1.45; }
-  footer { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: var(--space-3) var(--space-4) var(--space-3); }
-  footer .go { justify-self: end; }
+  /* The dots sit in the middle, unless the button's label needs more room
+     (Review your feeds): then they move left rather than the label wrapping,
+     always keeping a clear gap from the button. */
+  footer { display: grid; grid-template-columns: 1fr auto minmax(max-content, 1fr); column-gap: var(--space-5); align-items: center; padding: var(--space-3) var(--space-4) var(--space-3); }
+  footer .go { justify-self: end; white-space: nowrap; }
   /* Holds the row's height when the last card drops Skip this tour, so the card doesn't shift. */
   footer .skip { min-height: 44px; display: flex; align-items: center; }
   .dots { display: flex; align-items: center; }
