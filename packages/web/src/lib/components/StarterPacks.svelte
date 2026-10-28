@@ -40,6 +40,8 @@
       packs = r.collections.filter((c) => !c.isMine);
       from = r.from;
       available = packs.length;
+      // The first one starts ticked, so the button is ready to use.
+      if (!picked?.length && packs.length) picked = [packs[0]];
     }).catch((e) => console.error('[starter packs] loading failed:', e)).finally(() => { loaded = true; });
   });
 </script>

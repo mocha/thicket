@@ -43,7 +43,7 @@
 
 {#if brandNew}
   <!-- Following nothing: the starting screen Collections shares, under this page's title. -->
-  <StarterWelcome title="New posts" sub="If you want an easy way to get started, copy one or more of these Collections." via="welcome" oncopied={(f) => { failed = f; return Promise.all([loadCollections(true), api.riverStats().then((s) => (stats = s))]); }} />
+  <StarterWelcome title="New posts" sub="We only show content from the sites you choose. To get started, add one of our collections, or add a site you love." via="welcome" oncopied={(f) => { failed = f; return Promise.all([loadCollections(true), api.riverStats().then((s) => (stats = s))]); }} />
 {:else}
   <PageHeader name="New posts">
     {#snippet description()}

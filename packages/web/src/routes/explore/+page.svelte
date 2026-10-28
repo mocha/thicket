@@ -657,8 +657,8 @@
 <div id="explore-results" role="tabpanel" aria-label={scopeLabel}>
 {#if copyFailed.length && browseAs === 'collections' && !starterCards}<div class="copy-failed"><CopyFailures failed={copyFailed} /></div>{/if}
 {#if starterCards}
-  <div class="starter-note"><TabBlurb text="If you want an easy way to get started, copy one or more of these Collections.">{#snippet icon()}{@render scopeIcon('collections')}{/snippet}</TabBlurb></div>
-  <StarterWelcome bare bind:none={noStarters} via="explore_collections" oncopied={(f) => { copyFailed = f; return loadCollections(true); }} />
+  <div class="starter-note"><TabBlurb text="Add one of our collections to get started.">{#snippet icon()}{@render scopeIcon('collections')}{/snippet}</TabBlurb></div>
+  <StarterWelcome bare bind:none={noStarters} via="explore_collections" oncopied={(f, done) => { copyFailed = f; copiedIds = new Set([...copiedIds, ...done.map((c) => c.id)]); return loadCollections(true); }} />
 {:else if error}
   <p class="status error" role="alert">Couldn’t load: {error}</p>
 {:else if nothing}

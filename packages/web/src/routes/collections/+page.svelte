@@ -46,7 +46,7 @@
 
 {#if me && cols && !cols.length && !error}
   <!-- No collections: the starting screen New posts shares. -->
-  <StarterWelcome title="Collections" sub="If you want an easy way to get started, copy one or more of these Collections." via="collections_welcome" oncopied={(f) => { failed = f; return Promise.all([load(me.handle), loadCollections(true)]); }} />
+  <StarterWelcome title="Collections" sub="We only show content from the sites you choose. To get started, add one of our collections, or add a site you love." via="collections_welcome" oncopied={(f) => { failed = f; return Promise.all([load(me.handle), loadCollections(true)]); }} />
 {:else if me}
   <PageHeader>
     {#snippet title()}<h1 class="pagetitle">Collections</h1>{/snippet}

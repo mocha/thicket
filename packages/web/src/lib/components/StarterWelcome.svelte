@@ -9,8 +9,9 @@
    * and goes back to its rows when `none` says there are no cards to show.
    *
    * Copies that fail are said above the cards, each with its reason, and
-   * handed to `oncopied` too: whatever did copy is in, so the page swaps to its
-   * usual view and says the failures there.
+   * handed to `oncopied` too, with the ones that did copy: those are in, so the
+   * page swaps to its usual view, says the failures there, and can mark the
+   * copied ones as copied.
    */
   import { type ExploreCollection } from '$lib/api';
   import { openAddFeed } from '$lib/addfeed.svelte';
@@ -22,7 +23,7 @@
   import Dot from './Dot.svelte';
   import Welcome from './Welcome.svelte';
 
-  let { title = '', sub = '', via, bare = false, none = $bindable(false), oncopied }: { title?: string; sub?: string; via: string; bare?: boolean; none?: boolean; oncopied: (failed: { name: string; why: string }[]) => Promise<unknown> | void } = $props();
+  let { title = '', sub = '', via, bare = false, none = $bindable(false), oncopied }: { title?: string; sub?: string; via: string; bare?: boolean; none?: boolean; oncopied: (failed: { name: string; why: string }[], copied: ExploreCollection[]) => Promise<unknown> | void } = $props();
 
   let picked = $state<ExploreCollection[]>([]);
   let available = $state(0);
@@ -30,14 +31,15 @@
   /** Told to the page once the answer is in: this site offers no starter collections (or they couldn't be loaded). */
   $effect(() => { none = loaded && available === 0; });
   let copying = $state(false);
-  let failed = $state<{ name: string; why: string }[]>([]);
+  let failed = $state<{ id: number; name: string; why: string }[]>([]);
 
   async function copyPicked() {
     if (copying || !picked.length) return;
     copying = true; failed = [];
-    failed = await copyPacks(picked, via);
+    const tried = picked;
+    failed = await copyPacks(tried, via);
     picked = [];
-    try { await oncopied(failed); } finally { copying = false; }
+    try { await oncopied(failed, tried.filter((c) => !failed.some((f) => f.id === c.id))); } finally { copying = false; }
   }
 </script>
 
@@ -47,7 +49,7 @@
 {#if available}
   <ActionBar>
     <Button variant="primary" onclick={copyPicked} disabled={copying || !picked.length}>
-      {copying ? 'Copying…' : picked.length === 1 ? 'Copy 1 collection' : picked.length ? `Copy ${picked.length} collections` : 'Copy collections'}
+      {copying ? 'Adding…' : picked.length === 1 ? 'Add 1 collection' : picked.length ? `Add ${picked.length} collections` : 'Add collections'}
     </Button>
   </ActionBar>
 {/if}
