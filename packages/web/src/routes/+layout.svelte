@@ -52,7 +52,8 @@
   $effect(() => {
     if (!session.loaded) return;
     if (!signedIn && !isPublic) void goto(`/login?next=${encodeURIComponent(path + page.url.search)}`, { replaceState: true });
-    else if (signedIn && (path === '/login' || path === '/signup')) void goto(page.url.searchParams.get('next') || '/new-posts', { replaceState: true });
+    // A new account follows nothing yet, so signing up lands where setup's welcome opens: Explore's Collections.
+    else if (signedIn && (path === '/login' || path === '/signup')) void goto(page.url.searchParams.get('next') || (path === '/signup' ? '/explore?scope=collections' : '/new-posts'), { replaceState: true });
     // Signed in, you change your password on Account (which can also email you a reset link). A reset link from an email still opens.
     else if (signedIn && path === '/forgot-password') void goto('/settings?tab=account', { replaceState: true });
   });

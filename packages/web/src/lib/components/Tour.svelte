@@ -29,7 +29,7 @@
   /** `key` is the menu item's `data-tour`. */
   const STEPS = [
     { key: 'new-posts', label: 'New posts', title: 'Every post, newest first', lead: 'From every site you follow. No algorithm picks what you see, so nothing gets buried.' },
-    { key: 'collections', label: 'Collections', title: 'Read one topic at a time', lead: 'The collections you picked are here. Make your own, like Cooking or Tech, and share them for others to copy.' },
+    { key: 'collections', label: 'Collections', title: 'Read one topic at a time', lead: 'Your collections live here. Copy one from Explore, or make your own, like Cooking or Tech.' },
     { key: 'bookmarks', label: 'Bookmarks', title: 'Save posts for later', lead: 'Bookmark a post to keep it, and add a note with your thoughts. You choose who sees your notes.' },
     { key: 'explore', label: 'Explore', title: 'See what people here read', lead: 'Browse the sites and collections others follow, and copy any you like.' },
     { key: 'add', label: 'Add new feed', title: 'Follow any site you like', lead: 'Paste its address, and thicket finds its posts. Blogs, news sites, subreddits, and YouTube all work.' },
@@ -76,6 +76,23 @@
     return null;
   }
 
+  /** A tab in the bottom bar (a phone, or the Pages layout on any screen), as opposed to a sidebar row. */
+  const inBar = (el: HTMLElement) => !!el.closest('.mobile-only');
+  /**
+   * The part of an item to light up. A tab in the bottom bar stretches to a
+   * share of the screen's width, which on a wide window (the Pages layout)
+   * would light a band hundreds of pixels wide: there, just its icon and
+   * label, with a little room around them.
+   */
+  function box(el: HTMLElement): DOMRect {
+    const r = el.getBoundingClientRect();
+    if (r.width <= 160 || !inBar(el)) return r;
+    const kids = [...el.children].map((c) => c.getBoundingClientRect()).filter((k) => k.width > 0);
+    if (!kids.length) return r;
+    const left = Math.min(...kids.map((k) => k.left)) - 16, right = Math.max(...kids.map((k) => k.right)) + 16;
+    return new DOMRect(left, r.top, right - left, r.height);
+  }
+
   /**
    * Beside an item in a sidebar (the left part of a wide screen); otherwise
    * above an item in the bottom half, below one in the top half. An item that
@@ -90,15 +107,18 @@
     const W = innerWidth, H = innerHeight;
     const w = card.offsetWidth, h = card.offsetHeight;
     if (!el) { place = { hole: null, top: (H - h) / 2, left: (W - w) / 2, side: null, at: 0 }; return; }
-    const r = el.getBoundingClientRect();
+    const r = box(el);
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
     // A little room around the item, kept on screen so its outline isn't cut off at an edge (the bottom bar's end tabs).
     const hl = clamp(r.left - 4, 2, W - 2), ht = clamp(r.top - 4, 2, H - 2);
     const hole = { left: hl, top: ht, width: clamp(r.right + 4, 2, W - 2) - hl, height: clamp(r.bottom + 4, 2, H - 2) - ht };
-    if (W >= 700 && r.right < W * 0.4) {
-      const top = clamp(cy - 48, EDGE, H - h - EDGE);
-      place = { hole, top, left: r.right + GAP + 8, side: 'left', at: cy - top };
+    // Beside a sidebar row, unless the row is so low the card can't come down
+    // far enough to point at it from its side (the account, at the sidebar's
+    // foot): then above it, like a tab.
+    const sideTop = clamp(cy - 48, EDGE, H - h - EDGE);
+    if (W >= 700 && r.right < W * 0.4 && !inBar(el) && cy - sideTop <= h - 48) {
+      place = { hole, top: sideTop, left: r.right + GAP + 8, side: 'left', at: clamp(cy - sideTop, 24, h - 24) };
     } else {
       const left = clamp(cx - w / 2, EDGE, W - w - EDGE);
       const above = cy > H / 2;
@@ -210,9 +230,11 @@
     border-bottom: 1px solid var(--line);
   }
   /* The picture fades out at the bottom edge rather than being cut off. */
-  .scene { position: absolute; inset: 0; mask-image: linear-gradient(to bottom, #000 70%, transparent); animation: scene 420ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  /* Room above the picture, so it never touches the card's top edge. */
+  .scene { position: absolute; inset: var(--space-3) 0 0; mask-image: linear-gradient(to bottom, #000 70%, transparent); animation: scene 420ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
   .scene.fit { mask-image: none; }
-  .scene.fit :global(.loop) { display: grid; align-content: center; }
+  /* Centered when it fits; on a short screen it starts at the top rather than spilling over it. */
+  .scene.fit :global(.loop) { display: grid; align-content: safe center; }
   @keyframes scene { from { opacity: 0; transform: translateX(28px); } }
   .words { padding: var(--space-4) var(--space-4) 0; }
   .enter { animation: words 380ms ease-out 80ms backwards; }

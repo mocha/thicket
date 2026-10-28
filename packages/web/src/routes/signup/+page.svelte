@@ -42,9 +42,11 @@
       const me = await authApi.signup(handleClean, password, displayName.trim() || undefined, inviteCode.trim() || undefined, hosted ? email.trim() : undefined);
       setMe(me);
       api.event('signed_up');
-      // Back to whatever brought you here (someone's collection, say), else Everything.
+      // Back to whatever brought you here (someone's collection, say), else
+      // Explore's Collections: a new account follows nothing yet, and setup's
+      // welcome opens over it.
       const next = page.url.searchParams.get('next');
-      await goto(next && next.startsWith('/') && !next.startsWith('//') ? next : '/new-posts', { replaceState: true });
+      await goto(next && next.startsWith('/') && !next.startsWith('//') ? next : '/explore?scope=collections', { replaceState: true });
     } catch (e) {
       error = e instanceof ApiError ? { message: e.message, field: e.field } : { message: e instanceof Error ? e.message : String(e) };
       // The policy changed while the form was open (say, to invite-only): catch up so the form matches.

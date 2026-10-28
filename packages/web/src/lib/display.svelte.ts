@@ -322,7 +322,7 @@ export function describeDisplay(d: Display): { key: 'appearance' | 'theme' | 'fo
     { key: 'fonts', label: 'Fonts', value: fonts[0].toUpperCase() + fonts.slice(1) },
     { key: 'reading', label: 'Opening a post', value: label(READING_MODES, d.reading) },
     { key: 'layout', label: 'Scrolling or pages', value: label(LAYOUTS, d.layout) },
-    { key: 'fresh', label: 'Unread posts', value: d.fresh ? 'Enabled' : 'Disabled' }
+    { key: 'fresh', label: 'Unread posts', value: d.fresh ? 'Counts in the sidebar' : 'No counts' }
   ];
 }
 
@@ -332,6 +332,6 @@ function snapshot(): Display {
 }
 
 export const FRESH_OPTIONS: { id: 'on' | 'off'; label: string; note: string }[] = [
-  { id: 'off', label: 'Disabled', note: 'Don’t show a count of new posts in the sidebar.' },
-  { id: 'on', label: 'Enabled', note: 'Show a count of new posts in the sidebar.' }
+  { id: 'off', label: 'No counts', note: 'Read without keeping track of what’s new.' },
+  { id: 'on', label: 'Show counts', note: 'See how many posts are new in each collection since you last opened it.' }
 ];

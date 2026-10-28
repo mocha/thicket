@@ -30,7 +30,8 @@
    * have once the tour closes, however it closes.
    *
    * When more than one of those three applies, setup opens on a welcome that
-   * asks about each as a question, each answered Yes to start (THICKET-34). Only
+   * asks about each as a question (THICKET-34): No to the import question to
+   * start, since most people aren't moving from another reader, Yes to the rest. Only
    * the ones left at Yes follow, in that order, so what's optional is clear up front.
    * No to the tour counts as seeing it.
    */
@@ -61,13 +62,13 @@
   /** The three parts of setup, in the order they run. */
   type Part = 'import' | 'looks' | 'tour';
   const QUESTIONS: { key: Part; question: string; line: string }[] = [
-    { key: 'import', question: 'Moving from Feedly or another reader?', line: 'Bring your sites and folders with you' },
-    { key: 'looks', question: 'Want to change how thicket looks?', line: 'Light or dark, colors, and fonts' },
-    { key: 'tour', question: 'Want a quick tour?', line: 'See where everything is in the menu' }
+    { key: 'import', question: 'Moving from Feedly or another reader?', line: 'Import your sites and folders' },
+    { key: 'looks', question: 'Customize how thicket looks?', line: 'Light or dark mode, colors, fonts, and more' },
+    { key: 'tour', question: 'Want a quick tour?', line: 'We’ll show you how thicket works' }
   ];
   const YES_NO = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }];
-  /** The welcome's answers, Yes to start. Only parts answered Yes run. */
-  let want = $state<Record<Part, boolean>>({ import: true, looks: true, tour: true });
+  /** The welcome's answers: No to importing to start, Yes to the rest. Only parts answered Yes run. */
+  let want = $state<Record<Part, boolean>>({ import: false, looks: true, tour: true });
   /** Whether this visit asks the welcome's questions at all: more than one part applies. */
   let asked = $state(false);
 
@@ -109,10 +110,9 @@
   /** A file has been read, so leaving setup leads to its review. */
   const importing = $derived(withImport && imp.step === 'review');
   const header = $derived(
-    // Once a file is read, the question under the title has been answered, so it goes.
-    view === 'import' ? { title: 'Import your feeds', lead: importing ? '' : 'Coming from another reader?' }
-    : view === 'welcome' ? { title: 'Welcome to thicket', lead: 'A few questions before you start reading' }
-    : view === 'list' ? { title: 'Set up your device', lead: fromSaved ? 'These are the settings you saved on another device' : 'You can update your choices at any time in Settings' }
+    view === 'import' ? { title: 'Import your feeds', lead: '' }
+    : view === 'welcome' ? { title: 'Welcome to thicket', lead: 'Answer a few questions to make it yours' }
+    : view === 'list' ? { title: 'Customize how thicket looks', lead: fromSaved ? 'These are the settings you saved on another device' : 'You can update your choices at any time in Settings' }
     : SETTINGS[view]
   );
 
@@ -149,12 +149,14 @@
     // ?setup in development always includes import and the tour, also when it's
     // this device's real first setup (a new dev port is a new device to the
     // browser), so the whole walkthrough can be reviewed on any account.
-    const review = again || (import.meta.env.DEV && page.url.searchParams.has('setup'));
+    // Signing in starts setup while still on the sign-in page, so ?setup can
+    // be inside the address it's about to go to.
+    const review = again || (import.meta.env.DEV && (page.url.searchParams.has('setup') || /[?&]setup\b/.test(page.url.searchParams.get('next') ?? '')));
     withTour = review || !session.user?.tourSeenAt;
     const saved = !again && !display.configured ? session.user?.savedDisplay ?? null : null;
     fromSaved = !!saved;
     tourOnly = !review && display.configured && withTour;
-    want = { import: true, looks: true, tour: true };
+    want = { import: false, looks: true, tour: true };
     if (saved) useDisplay(saved);
     else markConfigured();
     initial = Object.fromEntries(describeDisplay(display).map((r) => [r.key, r.value]));
@@ -203,7 +205,10 @@
   /** Moving on from this part ends setup (the tour, if it runs, opens as setup closes). */
   const endsSetup = (p: Part) => { const r = running(); return r[r.length - 1] === p; };
 
-  function openSetting(key: Setting) { cameFrom = null; view = key; }
+  /** What the open setting was when it opened: once it changes, the footer says it's saved (it saves as it's picked). */
+  let openedAt = $state('');
+  const current = (key: string) => describeDisplay(display).find((r) => r.key === key)?.value ?? '';
+  function openSetting(key: Setting) { cameFrom = null; openedAt = current(key); view = key; }
   function closeSetting() { cameFrom = view as Setting; view = 'list'; }
 
   /**
@@ -215,9 +220,9 @@
   function finish(how: 'done' | 'dismissed') {
     const toTour = how === 'done' && withTour && (!asked || want.tour);
     api.event('display_setup_closed', { how, step: view, withImport, importing, toTour, ...(asked ? { want } : {}) });
-    // Answering no to the tour is the same as seeing it: it doesn't come back.
+    // Answering no to the tour is the same as seeing it, however setup closes: it doesn't come back.
     const me = session.user;
-    if (how === 'done' && asked && withTour && !want.tour && me && !me.tourSeenAt) {
+    if (asked && withTour && !want.tour && me && !me.tourSeenAt) {
       me.tourSeenAt = new Date().toISOString();
       authApi.tourSeen();
     }
@@ -255,14 +260,16 @@
 
 {#if open}
   <dialog bind:this={dialog} onclose={() => { if (open) finish('dismissed'); }} onclick={(e) => { if (e.target === dialog) finish('dismissed'); }} aria-labelledby="setup-title">
-    <div class="box">
-      <header>
+    <div class="box" class:forest={view === 'welcome'}>
+      {#if view === 'welcome'}{#await import('./WelcomeFronds.svelte') then m}<m.default />{/await}{/if}
+      <div class="panel">
+      <header class:over={view === 'welcome'}>
         {#if welcome.copied && (view === 'welcome' || (!asked && (view === 'import' || (view === 'list' && !withImport))))}<div class="copied"><Banner tone="success" title="Copied “{welcome.copied}” to your collections" /></div>{/if}
         <h2 id="setup-title" tabindex="-1" bind:this={heading}>{header.title}</h2>
         {#if header.lead}<p class="lead">{header.lead}</p>{/if}
       </header>
 
-      <div class="body">
+      <div class="body" class:over={view === 'welcome'}>
         {#if view === 'welcome'}
           <div class="rows">
             {#each QUESTIONS.filter((q) => parts().includes(q.key)) as q (q.key)}
@@ -308,10 +315,12 @@
         {#if importing && imp.checking && view !== 'import'}<p class="status" aria-live="polite">Checking your feeds</p>{/if}
       </div>
 
-      <footer>
+      <footer class:over={view === 'welcome'}>
         <span class="spacer"></span>
+        <!-- Always there, so a screen reader hears "Saved" when it fills in. -->
+        <span class="saved" role="status">{#if view in SETTINGS && current(view) !== openedAt}<Icon name="check" size={16} />Saved{/if}</span>
         {#if view === 'welcome'}
-          <Button variant="primary" onclick={() => onFrom(null)}>{running().length ? 'Next' : 'Start reading'}</Button>
+          <Button variant="primary" size="lg" onclick={() => onFrom(null)}>{running().length ? 'Let’s get started' : 'Start reading'}</Button>
         {:else if view === 'import'}
           {#if asked}<Button onclick={() => backFrom('import')}>Back</Button>{/if}
           <Button variant={importing ? 'primary' : 'ghost'} onclick={() => onFrom('import')}>{importing ? 'Next' : 'Skip this step'}</Button>
@@ -322,6 +331,7 @@
           <Button variant="primary" onclick={closeSetting}>Back</Button>
         {/if}
       </footer>
+      </div>
     </div>
   </dialog>
 {/if}
@@ -329,6 +339,8 @@
 <style>
   dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; margin: 0; }
   dialog::backdrop { background: var(--scrim); }
+  /* Behind every setup screen, the page is blurred so it reads as a backdrop, not something to read. */
+  dialog::backdrop { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
   .box {
     position: fixed; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column;
     background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 92vh;
@@ -341,6 +353,34 @@
   .copied { margin-bottom: var(--space-4); }
   h2:focus { outline: none; }
   .rows { display: flex; flex-direction: column; }
+  /* Every screen but the welcome lays its parts straight into the window. */
+  .panel { display: contents; }
+  /* The welcome: the landing page's forest green around the window's edge,
+     fronds growing in from all sides (WelcomeFronds), and the questions on a
+     panel in front. */
+  .box.forest { padding: 56px 72px; background: #15291c; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35); }
+  .forest .panel {
+    display: flex; flex-direction: column; position: relative; min-height: 0;
+    background: var(--surface); border-radius: var(--radius-lg); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  }
+  /* On a phone the welcome fills the screen, the green all around and the questions in the middle. */
+  @media (max-width: 699px) {
+    .box.forest {
+      top: 0; max-height: none; border-radius: 0; display: grid; place-items: center; overflow-y: auto;
+      padding: calc(var(--space-5) + env(safe-area-inset-top, 0px)) var(--space-4) calc(var(--space-5) + var(--safe-b));
+    }
+    .forest .panel { width: 100%; }
+  }
+  .over { position: relative; }
+  /* The welcome is centered: its heading and line, and the questions in a
+     narrow column, so each question sits close to its Yes or No and the
+     corners are left to the fronds. */
+  header.over { text-align: center; }
+  header.over .lead { margin-inline: auto; }
+  .body.over .rows { max-width: 440px; margin-inline: auto; }
+  /* No line above the welcome's button, which sits centered under the questions. */
+  footer.over { border-top: 0; justify-content: center; padding-bottom: var(--space-5); }
+  footer.over .spacer { display: none; }
   /* A welcome question: the question in bold with its line under it in gray, and Yes or No at the row's right end. */
   .ask { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }
   .ask:last-child { border-bottom: 0; }
@@ -360,4 +400,7 @@
   .found .then { margin-top: var(--space-1); font-size: calc(var(--text-base) * var(--size-app)); color: var(--text-2); }
   .status { margin: var(--space-3) 0 0; font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
   .spacer { flex: 1; }
+  .saved { display: inline-flex; align-items: center; gap: var(--space-1); font-size: calc(var(--text-sm) * var(--size-app)); color: var(--text-2); }
+  .saved :global(svg) { color: var(--accent); }
+  .saved:not(:empty) { margin-right: var(--space-2); }
 </style>
