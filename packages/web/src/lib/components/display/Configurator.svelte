@@ -259,7 +259,7 @@
 </script>
 
 {#if open}
-  <dialog bind:this={dialog} onclose={() => { if (open) finish('dismissed'); }} onclick={(e) => { if (e.target === dialog) finish('dismissed'); }} aria-labelledby="setup-title">
+  <dialog bind:this={dialog} onclose={() => { if (open) finish('dismissed'); }} aria-labelledby="setup-title">
     <div class="box" class:forest={view === 'welcome'}>
       {#if view === 'welcome'}{#await import('./WelcomeFronds.svelte') then m}<m.default />{/await}{/if}
       <div class="panel">
