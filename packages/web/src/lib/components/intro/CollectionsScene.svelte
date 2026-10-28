@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * The tour's Collections picture: a loose scatter of feeds sorts itself into
-   * two collections, Cooking and Tech, then Cooking is shared and someone's
+   * two collections, Cooking and Tech, then Copy is tapped on Cooking and someone's
    * copy of it slides out below.
    */
   import { MENU_ICONS } from '$lib/menu-icons';
@@ -30,7 +30,7 @@
     <div class="pair">
       {#each GROUPS as g, gi (g.name)}
         <div class="col">
-          <p class="head">{@render icon(MENU_ICONS.collections)}<span>{g.name}</span>{#if gi === 0}<span class="share">Share</span>{/if}</p>
+          <p class="head">{@render icon(MENU_ICONS.collections)}<span>{g.name}</span>{#if gi === 0}<span class="take">Copy</span>{/if}</p>
           {#each g.feeds as f, i (f.site)}
             <div class="feed" style:--dx="{f.dx}px" style:--dy="{f.dy}px" style:--r="{f.r}deg" style:--at="{450 + (gi + i * 2) * 110}ms">
               <Monogram name={f.site} size={16} /><span>{f.site}</span>
@@ -55,7 +55,7 @@
   @keyframes frame { from { background: transparent; box-shadow: none; border-color: transparent; } }
   .head { display: flex; align-items: center; gap: 6px; margin: 0 0 2px; font-size: 12px; font-weight: 600; color: var(--text); animation: fade 360ms ease-out 1400ms backwards; }
   .head svg { color: var(--text-2); }
-  .share { margin-left: auto; padding: 1px 8px; border-radius: var(--radius-pill); font-size: 10px; background: var(--surface-2); color: var(--text-2); animation: tap 500ms ease-out 2500ms backwards; }
+  .take { margin-left: auto; padding: 1px 8px; border-radius: var(--radius-pill); font-size: 10px; background: var(--surface-2); color: var(--text-2); animation: tap 500ms ease-out 2500ms backwards; }
   @keyframes tap { from { background: var(--accent); color: var(--accent-ink); } }
 
   /* Each feed flies from the scatter into its collection. */
@@ -67,7 +67,7 @@
   .feed span { overflow: hidden; text-overflow: ellipsis; }
   @keyframes settle { from { transform: translate(var(--dx), var(--dy)) rotate(var(--r)); box-shadow: var(--shadow); } }
 
-  /* Shared: someone's copy slides out from under Cooking. */
+  /* Copied: someone's copy slides out from under Cooking. */
   .copy {
     display: flex; align-items: center; gap: var(--space-2); padding: 6px var(--space-3) 6px 6px; border-radius: var(--radius-pill);
     background: var(--surface); box-shadow: var(--shadow); border: var(--card-border, 0); font-size: 11px; color: var(--text-2);
