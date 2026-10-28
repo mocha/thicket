@@ -211,7 +211,7 @@
     transition: top 350ms cubic-bezier(0.2, 0.8, 0.2, 1), left 350ms cubic-bezier(0.2, 0.8, 0.2, 1), width 350ms cubic-bezier(0.2, 0.8, 0.2, 1), height 350ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   .card {
-    position: fixed; width: min(400px, calc(100vw - 32px)); display: flex; flex-direction: column;
+    position: fixed; width: min(400px, calc(100vw - 32px)); display: flex; flex-direction: column; container-type: inline-size;
     background: var(--surface); color: var(--text); border-radius: var(--radius-lg); box-shadow: var(--shadow-sheet);
     visibility: hidden;
   }
@@ -246,6 +246,14 @@
      always keeping a clear gap from the button. */
   footer { display: grid; grid-template-columns: 1fr auto minmax(max-content, 1fr); column-gap: var(--space-5); align-items: center; padding: var(--space-3) var(--space-4) var(--space-3); }
   footer .go { justify-self: end; white-space: nowrap; }
+  /* On a narrow card (a small phone) one row can't hold Skip, the dots, and
+     the button: the dots get a row of their own above the other two. */
+  @container (max-width: 399px) {
+    footer { grid-template-columns: 1fr auto; grid-template-areas: 'dots dots' 'skip go'; column-gap: var(--space-3); }
+    footer .skip { grid-area: skip; }
+    footer .dots { grid-area: dots; justify-self: center; }
+    footer .go { grid-area: go; }
+  }
   /* Holds the row's height when the last card drops Skip this tour, so the card doesn't shift. */
   footer .skip { min-height: 44px; display: flex; align-items: center; }
   .dots { display: flex; align-items: center; }
