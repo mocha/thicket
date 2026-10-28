@@ -32,7 +32,9 @@
   import Badge from '$lib/components/Badge.svelte';
   import { showToast } from '$lib/toast.svelte';
   import { recall, keepOnLeave } from '$lib/listmemory';
-  import { loadCollections } from '$lib/collections.svelte';
+  import { loadCollections, collectionStore } from '$lib/collections.svelte';
+  import StarterWelcome from '$lib/components/StarterWelcome.svelte';
+  import CopyFailures from '$lib/components/CopyFailures.svelte';
 
   /**
    * Explore is one search box and four tabs: Posts, Feeds, Collections,
@@ -74,11 +76,24 @@
   const scope = $derived(scopeFrom(page.url.searchParams.get('scope')));
   const searching = $derived(q.length > 0);
   /**
+   * Someone who follows nothing yet browses Collections as the starter
+   * collections' cards, to tick and copy, in place of the rows (THICKET-34).
+   * Once they follow something, it's the full list again, with its filters.
+   */
+  $effect(() => { if (session.user && !collectionStore.loaded) loadCollections().catch((e) => console.error('[explore] loading your collections failed:', e)); });
+  const startHere = $derived(!!session.user && collectionStore.loaded && !collectionStore.list.some((c) => c.feedCount > 0));
+  /** Starter collections that didn't copy, each with why, said above the rows that replace the cards. */
+  let copyFailed = $state<{ name: string; why: string }[]>([]);
+  /**
    * Posts always load through /api/search: with words, a search; without, the
    * newest posts. The other tabs have their own browse lists until you search.
    */
   const viaSearch = $derived(searching || scope === 'posts');
   const browseAs = $derived(scope === 'collections' ? 'collections' : scope === 'people' ? 'users' : 'feeds');
+  /** Explore's Collections, browsed by someone who follows nothing: the starter cards in place of the rows. */
+  /** Set when this site has no starter collections to offer: then the usual rows, cards or not. */
+  let noStarters = $state(false);
+  const starterCards = $derived(browseAs === 'collections' && !viaSearch && startHere && !noStarters);
 
   /**
    * Every tab offers the same three filters, searching or not: Show (everyone,
@@ -640,7 +655,11 @@
 
 <!-- What the tabs above switch between. -->
 <div id="explore-results" role="tabpanel" aria-label={scopeLabel}>
-{#if error}
+{#if copyFailed.length && browseAs === 'collections' && !starterCards}<div class="copy-failed"><CopyFailures failed={copyFailed} /></div>{/if}
+{#if starterCards}
+  <div class="starter-note"><TabBlurb text="If you want an easy way to get started, copy one or more of these Collections.">{#snippet icon()}{@render scopeIcon('collections')}{/snippet}</TabBlurb></div>
+  <StarterWelcome bare bind:none={noStarters} via="explore_collections" oncopied={(f) => { copyFailed = f; return loadCollections(true); }} />
+{:else if error}
   <p class="status error" role="alert">Couldn’t load: {error}</p>
 {:else if nothing}
   <!-- The message takes the rows' place inside the list card, so a filter that empties the list leaves the filters where they were. -->
@@ -674,8 +693,9 @@
 
 </div>
 
-{#if loading}<p class="status">Loading…</p>{/if}
-<div bind:this={sentinel} aria-hidden="true"></div>
+<!-- Not under the starter cards: the list they stand in for isn't showing, so neither is its loading. -->
+{#if loading && !starterCards}<p class="status">Loading…</p>{/if}
+<div bind:this={sentinel} aria-hidden="true" hidden={starterCards}></div>
 
 <Sheet title="Filters" lede="Choose what this list shows and in what order." bind:dialog={filtersDialog}>
   <div class="sheet-rows">{@render filterFields()}</div>
@@ -684,6 +704,9 @@
 
 <style>
   .pane { margin-bottom: var(--space-2); }
+  .copy-failed { margin-bottom: var(--space-4); }
+  /* Explore's caption for the view, alone above the cards since there's no list card for it to lead. */
+  .starter-note { padding: var(--space-2) 0 var(--space-3); }
   .head { margin-bottom: var(--space-5); }
   .pane :global(.scopes) { margin-bottom: var(--space-1); }
   /* The per-view explainer: the caption above the filters, saying what this

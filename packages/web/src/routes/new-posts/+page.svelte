@@ -6,10 +6,8 @@
   import River from '$lib/components/River.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import AddFeedButton from '$lib/components/AddFeedButton.svelte';
-  import Button from '$lib/components/Button.svelte';
-  import { openAddFeed } from '$lib/addfeed.svelte';
-  import StarterPacks from '$lib/components/StarterPacks.svelte';
-  import Welcome from '$lib/components/Welcome.svelte';
+  import StarterWelcome from '$lib/components/StarterWelcome.svelte';
+  import CopyFailures from '$lib/components/CopyFailures.svelte';
   import { session } from '$lib/session.svelte';
   import { loadCollections } from '$lib/collections.svelte';
   import { recall, keepOnLeave } from '$lib/listmemory';
@@ -23,6 +21,8 @@
   const n = (v: number, one: string, many: string) => `${v} ${v === 1 ? one : many}`;
   /** Following nothing is a different page, not an empty one: the first screen has to offer a first move. */
   const brandNew = $derived(stats !== null && stats.feeds === 0);
+  /** Starter collections that didn't copy, each with why, said above the posts that replace the welcome. */
+  let failed = $state<{ name: string; why: string }[]>([]);
   /**
    * readthicket.com: an account without a confirmed email can't get back in
    * after a forgotten password, so say so here until it has one. Accounts from
@@ -42,15 +42,8 @@
 {/if}
 
 {#if brandNew}
-  <!-- Following nothing: one centered call to add a first feed, as tall as
-       Explore's search box, then the starter collections as the other way in. -->
-  <Welcome title="Welcome{session.user?.displayName ? `, ${session.user.displayName}` : ''}" sub="Add a feed to start seeing posts here">
-    <div class="first">
-      <Button variant="primary" size="lg" onclick={() => openAddFeed({ via: 'welcome' })}><span class="plus" aria-hidden="true">+</span> Add your first feed</Button>
-    </div>
-    <p class="switch">Switching readers? <a href="/import">Import feeds</a></p>
-  </Welcome>
-  <StarterPacks heading="… or get started by copying a collection" lede="" quiet />
+  <!-- Following nothing: the starting screen Collections shares, under this page's title. -->
+  <StarterWelcome title="New posts" sub="If you want an easy way to get started, copy one or more of these Collections." via="welcome" oncopied={(f) => { failed = f; return Promise.all([loadCollections(true), api.riverStats().then((s) => (stats = s))]); }} />
 {:else}
   <PageHeader name="New posts">
     {#snippet description()}
@@ -62,13 +55,10 @@
     {/snippet}
     {#snippet actions()}<AddFeedButton via="all_collections" bottomBarOnly />{/snippet}
   </PageHeader>
+  {#if failed.length}<div class="nudge"><CopyFailures {failed} /></div>{/if}
   <River />
 {/if}
 
 <style>
   .nudge { margin-bottom: var(--space-4); }
-  .first { margin-top: var(--space-5); }
-  .switch { margin: var(--space-3) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); }
-  .switch a { color: var(--accent); font-weight: 600; }
-  .plus { font-size: 1.3em; line-height: 1; }
 </style>

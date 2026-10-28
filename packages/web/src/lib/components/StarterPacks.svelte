@@ -9,39 +9,23 @@
    * stream has something in it before you have learned what a feed is. The
    * copy is independent from that moment on — it is yours to add to and prune.
    *
-   * Shown signed out too (the landing page), where each card is a link: "here,
-   * copy mine" has to work as something you can send to a friend. There the
-   * Copy button goes to Sign up, named for the collection, and the copy is
-   * made when you come back (see lib/copyintent.svelte.ts).
-   *
-   * `quiet`: under a Welcome, the heading reads like the Welcome's gray line.
-   *
-   * With `bind:picked`, the cards are for picking instead (the Collections
-   * welcome): a checkbox in each card's top right corner, the whole card its
-   * label, and the page copies everything ticked with one button. `available` says how many there are,
-   * so the page knows whether to offer that button at all, and `loaded` that
-   * the answer is in (so "none" isn't said while they're still on the way).
+   * The cards are for picking (StarterWelcome): a checkbox in each card's top
+   * right corner, the whole card its label, and the page copies everything
+   * ticked with one button. `available` says how many there are, so the page
+   * knows whether to offer that button at all, and `loaded` that the answer is
+   * in (so "none" isn't said while they're still on the way).
    */
   import { onMount } from 'svelte';
-  import { api, exploreApi, profilesApi, collectionHref, profileHref, type ExploreCollection } from '$lib/api';
-  import { session } from '$lib/session.svelte';
-  import { showToast } from '$lib/toast.svelte';
-  import { loadCollections } from '$lib/collections.svelte';
+  import { exploreApi, type ExploreCollection } from '$lib/api';
   import SourceIcon from './SourceIcon.svelte';
   import Card from './Card.svelte';
   import CardMeta from './CardMeta.svelte';
-  import Button from './Button.svelte';
-  import Icon from './Icon.svelte';
   import Checkbox from './Checkbox.svelte';
-  import { copyNext } from '$lib/copyintent.svelte';
   import { plural } from '$lib/words';
 
-  let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false, quiet = false, picked = $bindable(), available = $bindable(0), loaded = $bindable(false) }:
-    { heading?: string; lede?: string; compact?: boolean; quiet?: boolean; picked?: ExploreCollection[]; available?: number; loaded?: boolean } = $props();
+  let { heading = 'Start with one of these', lede = 'Copy one and its sites become yours — add to it, prune it, rename it. The copy is independent from that moment on.', compact = false, picked = $bindable([]), available = $bindable(0), loaded = $bindable(false) }:
+    { heading?: string; lede?: string; compact?: boolean; picked?: ExploreCollection[]; available?: number; loaded?: boolean } = $props();
 
-  /** Picking, not copying one at a time: set once, by whether the page bound `picked`. */
-  // svelte-ignore state_referenced_locally
-  const picking = picked !== undefined;
   const isPicked = (c: ExploreCollection) => !!picked?.some((p) => p.id === c.id);
   function toggle(c: ExploreCollection) {
     picked = isPicked(c) ? picked!.filter((p) => p.id !== c.id) : [...(picked ?? []), c];
@@ -50,8 +34,6 @@
   let packs = $state<(ExploreCollection & { isMine: boolean })[]>([]);
   /** The account these came from, when the instance names one. Worth crediting: it has a profile, and notes and bookmarks on it. */
   let from = $state<string | null>(null);
-  let copying = $state<number | null>(null);
-  let copied = $state<Set<number>>(new Set());
 
   onMount(() => {
     exploreApi.featured().then((r) => {
@@ -60,32 +42,15 @@
       available = packs.length;
     }).catch((e) => console.error('[starter packs] loading failed:', e)).finally(() => { loaded = true; });
   });
-
-  async function copy(c: ExploreCollection) {
-    if (copying) return;
-    copying = c.id;
-    try {
-      await profilesApi.copyCollection(c.handle, c.slug);
-      copied = new Set([...copied, c.id]);
-      // Forced: the sidebar's list is already loaded, and without it the new collection wouldn't show until a reload.
-      await loadCollections(true);
-      api.event('starter_pack_copied', { collectionId: c.id });
-      showToast(`${c.name} is now in your collections.`);
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'That didn’t work. Try again in a moment.');
-    } finally {
-      copying = null;
-    }
-  }
 </script>
 
 {#if packs.length}
-  <section class="packs" class:compact class:quiet>
+  <section class="packs" class:compact>
     {#if heading}<h2>{heading}</h2>{/if}
     {#if lede}<p class="lede">{lede}</p>{/if}
     <ul>
       {#each packs as c (c.id)}
-        <Card as="li" class="pack{picking && isPicked(c) ? ' picked' : ''}" pad={false}>
+        <Card as="li" class="pack{isPicked(c) ? ' picked' : ''}" pad={false}>
           <!-- Laid out like an article card, with the same source line on top:
                here the sites inside, whose it is, and how many. When the
                instance names one account for all of them, that's said once
@@ -94,35 +59,14 @@
             {#snippet icon()}<span class="icons" aria-hidden="true">{#each c.sample as f (f.id)}<SourceIcon feedId={f.id} hasIcon={f.hasIcon} name={f.title} size={20} />{/each}</span>{/snippet}
             {#if !from}<Dot /><span class="count">{plural(c.feedCount, 'site')}</span>{/if}
           </CardMeta>
-          {#if picking}
-            <!-- Picking: the box in the card's top right corner, and the name its
-                 label, stretched over the whole card, so a tap anywhere ticks it. -->
-            <Checkbox class="tick" id="pack-{c.id}" checked={isPicked(c)} onchange={() => toggle(c)} />
-            <h3 class="card-title"><label class="name" for="pack-{c.id}">{c.name}</label></h3>
-            {#if c.description}<p class="card-summary">{c.description}</p>{/if}
-          {:else}
-          <!-- The name is the link, stretched over the whole card, so the card
-               still opens the collection while the button below stays its own control. -->
-          <h3 class="card-title"><a class="name" href={collectionHref(c.handle, c.slug)}>{c.name}</a></h3>
+          <!-- Picking: the box in the card's top right corner, and the name its
+               label, stretched over the whole card, so a tap anywhere ticks it. -->
+          <Checkbox class="tick" id="pack-{c.id}" checked={isPicked(c)} onchange={() => toggle(c)} />
+          <h3 class="card-title"><label class="name" for="pack-{c.id}">{c.name}</label></h3>
           {#if c.description}<p class="card-summary">{c.description}</p>{/if}
-          <div class="take">
-            {#if session.user}
-              <Button variant="secondary" size="sm" loading={copying === c.id} disabled={copied.has(c.id)} onclick={() => void copy(c)}>
-                {#if copied.has(c.id)}Added{:else if copying === c.id}Copying…{:else}<Icon name="copy" size={16} />Copy to my collections{/if}
-              </Button>
-            {:else}
-              <Button variant="secondary" size="sm" href="/signup?next={encodeURIComponent(copyNext(c.handle, c.slug, 'starter_card'))}" onclick={() => api.event('copy_signup_started', { handle: c.handle, slug: c.slug, from: 'starter_card' })}>
-                <Icon name="copy" size={16} />Copy to my collections
-              </Button>
-            {/if}
-          </div>
-          {/if}
         </Card>
       {/each}
     </ul>
-    {#if from && !picking}
-      <p class="from">These are <a href={profileHref(from)}>@{from}</a>’s collections.</p>
-    {/if}
   </section>
 {/if}
 
@@ -132,8 +76,8 @@
   /* With no lede, the heading needs its own room above the cards. */
   h2 + ul { margin-top: var(--space-4); }
   .lede { margin: 0 0 var(--space-4); color: var(--text-2); font-size: calc(var(--text-base) * var(--size-app)); max-width: 60ch; }
-  /* As many columns as fit, with every card wide enough for its button's
-     label and its small line of icons, count, and name. Counted from the space
+  /* As many columns as fit, with every card wide enough for its small line
+     of icons, count, and name. Counted from the space
      the list really has, not the window, so the sidebar can't squeeze three
      cards into room for two. */
   ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(17rem * var(--size-app))), 1fr)); }
@@ -141,9 +85,6 @@
      around it, so its icons sit 16px from the top and its title 12px below;
      this line has no button, so the card's own padding says the same. */
   ul :global(.pack) { display: flex; flex-direction: column; padding: var(--card-pad); }
-  /* Pressing the button presses the button, not the card: the card's own
-     press shrink is for opening the collection. */
-  ul :global(.pack:has(.take:active)) { transform: none; }
   /* Side by side, not stacked: site icons are rounded squares, and overlapping
      them clips their letters. */
   .icons { display: flex; flex: none; gap: var(--space-1); }
@@ -153,9 +94,6 @@
      specifically so it outranks the shared title's own zero margin. */
   .packs ul .card-title { margin-top: var(--space-3); }
   .name { color: inherit; text-decoration: none; }
-  /* The article card's cue that the card opens something (a name that ticks a box isn't a link, so it doesn't): the title underlines
-     softly while the pointer is anywhere on the card but the button. */
-  @media (hover: hover) { a.name:hover { text-decoration: underline; text-decoration-color: var(--text-3); text-underline-offset: 3px; } }
   .name::after { content: ''; position: absolute; inset: 0; }
   .name:focus-visible { outline: none; }
   label.name { cursor: pointer; }
@@ -167,14 +105,6 @@
   /* Picked: outlined in the accent, the same green that says "you have this" elsewhere. */
   ul :global(.pack.picked) { outline: 2px solid var(--accent); outline-offset: -1px; }
   ul :global(.pack:has(.name:focus-visible)) { outline: 2px solid var(--accent); outline-offset: 2px; }
-  /* Pinned to the bottom so the buttons line up across a row of uneven cards,
-     and lifted above the stretched link so a tap lands on the button. */
-  .take { margin-top: auto; padding-top: var(--space-3); position: relative; z-index: 1; }
-  .from { margin: var(--space-4) 0 0; color: var(--text-2); font-size: calc(var(--text-sm) * var(--size-app)); line-height: 1.5; max-width: 62ch; }
-  .from a { color: var(--accent); font-weight: 600; }
-  /* Under a Welcome: its serif is kept for the one headline, and the heading
-     here reads exactly like the gray line under it. */
-  .quiet h2 { font-family: var(--font); font-size: calc(var(--text-xl) * var(--size-app)); font-weight: 400; color: var(--text-2); }
   .compact h2 { font-size: calc(var(--text-xl) * var(--size-app)); }
   .compact .card-summary { display: none; }
   .compact ul { grid-template-columns: 1fr; }
